@@ -1,4 +1,5 @@
 import { app, dialog, shell } from 'electron';
+import { reopenLibrary } from './libraryOpen';
 import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
 import { createCampaignApi } from './campaignApi';
@@ -20,8 +21,6 @@ export interface ApiContext {
   icons: IconResources;
 }
 
-const RECENT_LIBRARIES = 10;
-
 /** The main-process implementation of `TrifoldApi`. Registered by `registerIpc`. */
 export function createApi(ctx: ApiContext): TrifoldApi {
   const requireStore = () => {
@@ -30,6 +29,11 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     return store;
   };
   let importing = false;
+  const requireBackups = () => {
+    const backups = ctx.session.backups;
+    if (!backups) throw new Error('No Library is open');
+    return backups;
+  };
 
   return {
     app: {
@@ -57,15 +61,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         return result.canceled ? null : (result.filePaths[0] ?? null);
       },
       async open(path) {
-        const info = await ctx.session.open(path);
-        if (info.ok) {
-          const recent = [
-            info.path,
-            ...ctx.config.get().recentLibraries.filter((p) => p !== info.path),
-          ].slice(0, RECENT_LIBRARIES);
-          await ctx.config.update({ libraryPath: info.path, recentLibraries: recent });
-        }
-        return info;
+        return reopenLibrary(ctx, path);
       },
       async openInExplorer() {
         const error = await shell.openPath(requireStore().root);
@@ -206,6 +202,26 @@ export function createApi(ctx: ApiContext): TrifoldApi {
 
     ...createCampaignApi(ctx.session, ctx.logger),
     ...createMusicApi(ctx.session, ctx.windows),
+
+    backups: {
+      async list() {
+        return requireBackups().list();
+      },
+      async create() {
+        return requireBackups().create('manual');
+      },
+      async restore(name) {
+        const service = requireBackups();
+        const root = requireStore().root;
+        await service.restore(name);
+        // Reopen so the index is rebuilt from the restored files.
+        return reopenLibrary(ctx, root);
+      },
+      async openFolder() {
+        const error = await shell.openPath(requireBackups().dir);
+        if (error) throw new Error(error);
+      },
+    },
 
     icons: {
       async tables() {

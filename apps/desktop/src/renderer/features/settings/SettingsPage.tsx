@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { AttributionEntry, IconCreditsInfo } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
+import { BackupsCard } from './BackupsCard';
 import { SourcesCard } from './SourcesCard';
 
 export function SettingsPage() {
@@ -60,6 +61,8 @@ export function SettingsPage() {
       </div>
 
       <SourcesCard />
+
+      <BackupsCard />
 
       <div className="card">
         <h2>Displays</h2>

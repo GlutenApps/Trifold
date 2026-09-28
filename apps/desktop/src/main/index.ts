@@ -7,6 +7,7 @@ import { registerIpc } from './ipc';
 import { LibrarySession } from './library/session';
 import { createLogger, errorMessage } from './log';
 import { IconResources } from './icons';
+import { runDailyBackup } from './libraryOpen';
 import { installMediaHandler, registerMediaScheme } from './media';
 import { PresenterHub } from './presenter';
 import { WindowManager } from './windows';
@@ -59,6 +60,9 @@ async function main(): Promise<void> {
   if (info.ok && config.get().libraryPath !== info.path) {
     await config.update({ libraryPath: info.path });
   }
+  // Daily rolling backup: at start and once an hour while the app is open.
+  void runDailyBackup({ session: activeSession, logger });
+  setInterval(() => void runDailyBackup({ session: activeSession, logger }), 60 * 60 * 1000);
 
   registerIpc(
     createApi({ config, session: activeSession, windows, presenter, logger, icons }),

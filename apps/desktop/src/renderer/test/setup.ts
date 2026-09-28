@@ -50,6 +50,18 @@ export function installBridgeMock(): TrifoldBridge {
       push: vi.fn(async () => undefined),
       get: vi.fn(async () => initialPresenterState),
     },
+    backups: {
+      list: vi.fn(async () => []),
+      create: vi.fn(async () => null),
+      restore: vi.fn(async () => ({
+        path: '',
+        ok: true,
+        error: null,
+        settings: defaultLibrarySettings(),
+        index: { ok: true, version: 0, error: null },
+      })),
+      openFolder: vi.fn(async () => undefined),
+    },
     music: {
       library: vi.fn(async () => ({ folders: [], tracks: [], lastScanAt: null })),
       chooseFolder: vi.fn(async () => null),

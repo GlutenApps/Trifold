@@ -196,6 +196,16 @@ export const initialPresenterState: PresenterState = {
   updatedAt: 0,
 };
 
+// ---------- backups (DESIGN.md §4.2, CLAUDE.md ground rule 6) ----------
+
+export interface BackupInfo {
+  /** File name inside Library/backups. */
+  name: string;
+  sizeBytes: number;
+  createdAt: string;
+  kind: 'daily' | 'manual' | 'preRestore';
+}
+
 // ---------- music (DESIGN.md §6.6) ----------
 
 export interface TrackView extends Track {
@@ -458,6 +468,14 @@ export interface TrifoldApi {
     /** Native picker; copies the image into the campaign and makes a display-size copy. */
     importImage(): Promise<SceneImage | null>;
   };
+  backups: {
+    list(): Promise<BackupInfo[]>;
+    /** Writes a zip now, regardless of the daily schedule. */
+    create(): Promise<BackupInfo | null>;
+    /** Extracts a backup over the Library (after a safety zip) and reopens it. */
+    restore(name: string): Promise<LibraryInfo>;
+    openFolder(): Promise<void>;
+  };
   music: {
     library(): Promise<MusicLibraryView>;
     /** Native folder picker; null when cancelled. */
@@ -516,6 +534,7 @@ export const API_METHODS = {
   scenes: ['save', 'remove', 'importImage'],
   pcs: ['save', 'remove', 'quickAdd'],
   encounters: ['save', 'remove', 'saveState', 'finish'],
+  backups: ['list', 'create', 'restore', 'openFolder'],
   music: [
     'library',
     'chooseFolder',

@@ -276,3 +276,13 @@ code {
   color: #cfcfcf;
   margin: 2vh 0 0;
 }
+
+.btn.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn.danger:hover {
+  background: var(--danger);
+  color: #fff;
+}

@@ -68,6 +68,10 @@ test('console, Library, import, search, stat block and player window all work en
     const importedRow = console_.getByTestId('source-row').filter({ hasText: 'compendium-sample' });
     await expect(importedRow).toHaveCount(1);
 
+    // A manual backup lands in Library/backups (the daily one may already be there).
+    await console_.getByRole('button', { name: 'Back up now' }).click();
+    await expect(console_.getByTestId('backup-row').filter({ hasText: 'manual' })).toHaveCount(1);
+
     // A second import of the same file is a no-op by hash.
     const again = await console_.evaluate(
       (path) => window.trifold.sources.importFile(path),
