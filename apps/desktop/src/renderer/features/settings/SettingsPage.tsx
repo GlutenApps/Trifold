@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { AttributionEntry, IconCreditsInfo } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
 import { BackupsCard } from './BackupsCard';
-import { SourcesCard } from './SourcesCard';
 
 export function SettingsPage() {
   const info = useAppStore((s) => s.info);
@@ -35,8 +34,6 @@ export function SettingsPage() {
 
   return (
     <section>
-      <h1>Settings</h1>
-
       <div className="card">
         <h2>Library</h2>
         <p>
@@ -59,8 +56,6 @@ export function SettingsPage() {
           </button>
         </div>
       </div>
-
-      <SourcesCard />
 
       <BackupsCard />
 
@@ -155,6 +150,12 @@ export function SettingsPage() {
           ) : (
             <p className="muted">No bundled icon set in this build; tokens show initials.</p>
           )}
+        </div>
+        <div className="attribution" data-testid="font-credits">
+          <p>
+            Type: Outfit by the Outfit Project Authors and IBM Plex Mono by IBM, both under the SIL
+            Open Font License 1.1 and bundled with the app.
+          </p>
         </div>
       </div>
     </section>

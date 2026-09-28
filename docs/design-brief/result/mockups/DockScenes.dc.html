@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Scenes tool</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf pnl db" style="width: {{w}}px; height: {{h}}px; gap: 8px">
+  <div class="in sm ph"><svg class="i s" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>Find scene</div>
+  <div class="row" style="gap: 2px">
+    <div class="in sm ph sp" style="margin-right: 4px">New scene title</div>
+    <div class="ib" title="New title card"><svg class="i" viewBox="0 0 24 24"><path d="M5 6h14M12 6v12M9 18h6"></path></svg></div>
+    <div class="ib" title="New image scene…"><svg class="i" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6"></path></svg></div>
+    <div class="ib" title="New map…"><svg class="i" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"></path></svg></div>
+    <div class="ib" title="New blank grid"><svg class="i" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"></path></svg></div>
+    <div class="ib" title="New folder"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"></path></svg></div>
+  </div>
+  <div class="col" style="gap: 2px">
+    <div class="sr"><svg class="i s mu" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg><svg class="i s mu" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"></path></svg><span class="b tr">Session 3</span></div>
+    <div class="sr" style="padding-left: 22px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M5 6h14M12 6v12M9 18h6"></path></svg><span class="tr sp">The Sunken Keep</span></div>
+    <div class="sr lv sel" style="padding-left: 22px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"></path></svg><span class="tr sp">Silt Springs Map</span><span class="bd ac">live</span><div class="ra on" title="Send to TV · Enter or double-click"><svg class="i s" viewBox="0 0 24 24"><path d="M3 5h18v11H3zM9 20h6M12 16v4"></path></svg></div><div class="ra on" title="Edit"><svg class="i s" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16zM13 6l3 3"></path></svg></div><div class="ra on" title="Move up"><svg class="i s" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"></path></svg></div><div class="ra on" title="Move down"><svg class="i s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+    <div class="sr" style="padding-left: 22px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6"></path></svg><span class="tr sp">The letter</span></div>
+    <div class="sr" style="padding-left: 22px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"></path></svg><span class="tr sp">Blank grid</span></div>
+    <div class="sr"><svg class="i s mu" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg><svg class="i s mu" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"></path></svg><span class="b tr">Session 2</span></div>
+  </div>
+  <div class="mu s12 tr">Recent: <span style="text-decoration: underline">Silt Springs Map</span> · <span style="text-decoration: underline">The Sunken Keep</span></div>
+  <div class="cd lv" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">
+    <div class="row" style="gap: 6px"><span class="cp" style="color: #E3D3B0">Selected · live</span><div class="sp"></div><span class="mu s11">click selects · Enter sends</span></div>
+    <div class="b tr">Silt Springs Map</div>
+    <div class="row" style="gap: 6px"><div class="btn sm dim">Send to TV</div><div class="btn sm">Open in Map</div><div class="sp"></div><div class="btn sm gh {{editBtn}}" title="Edit scene"><svg class="i s" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16zM13 6l3 3"></path></svg>Edit<svg class="i s" viewBox="0 0 24 24"><path d="{{chev}}"></path></svg></div></div>
+  </div>
+  <div class="col {{editCls}}" style="gap: 6px; padding: 0 2px">
+    <div class="col" style="gap: 3px"><span class="s12 mu">Title</span><div class="in sm">Silt Springs Map</div></div>
+    <div class="col" style="gap: 3px"><span class="s12 mu">Subtitle</span><div class="in sm ph">Subtitle</div></div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+      <div class="col" style="gap: 3px"><span class="s12 mu">Folder</span><div class="in sm">Session 3<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+      <div class="col" style="gap: 3px"><span class="s12 mu">Show title on TV</span><div class="in sm tr">Follow overlay setting<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+      <div class="col" style="gap: 3px"><span class="s12 mu">Music on go-live</span><div class="in sm">Tavern Night<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+      <div class="col" style="gap: 3px"><span class="s12 mu">Backdrop</span><div class="in sm">Dark<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+    </div>
+    <div class="col" style="gap: 3px"><span class="s12 mu">DM notes</span><div class="in sm ta" style="min-height: 48px">Party arrives at the east gate. The worg waits under the bridge.</div></div>
+    <div class="row"><div class="btn sm dg">Remove scene</div></div>
+  </div>
+  <div class="mu s11" style="line-height: 1.5">Click selects a scene and previews it; a map opens in Map. Enter, double-click or the row's ▶ sends it to the TV. Nothing goes live by accident.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"w":{"editor":"int","default":382},"h":{"editor":"int","default":650},"edit":{"editor":"boolean","default":true},"$preview":{"width":382,"height":650}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const edit = !(p.edit === false || p.edit === 'false' || p.edit === '0');
+    return { w: Number(p.w ?? 382), h: Number(p.h ?? 650), editCls: edit ? '' : 'gone', editBtn: edit ? 'on' : '', chev: edit ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6' };
+  }
+}
+</script>
+</body>
+</html>

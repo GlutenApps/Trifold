@@ -438,6 +438,8 @@ export interface TrifoldApi {
     current(): Promise<CampaignBundle | null>;
     close(): Promise<void>;
     update(patch: Partial<Campaign>): Promise<Campaign>;
+    /** Deletes the campaign folder for good, closing the campaign first if it is open. */
+    remove(campaignId: string): Promise<void>;
     /** Native file picker for campaign XML. Resolves to null when cancelled. */
     chooseXmlFile(): Promise<string | null>;
     /** Imports a Game Master campaign XML or a Fight Club GM export (DATA-FORMATS.md §3). */
@@ -540,7 +542,17 @@ export const API_METHODS = {
     'rebuildIndex',
     'attribution',
   ],
-  campaigns: ['list', 'create', 'open', 'current', 'close', 'update', 'chooseXmlFile', 'importXml'],
+  campaigns: [
+    'list',
+    'create',
+    'open',
+    'current',
+    'close',
+    'update',
+    'remove',
+    'chooseXmlFile',
+    'importXml',
+  ],
   adventures: ['save', 'remove'],
   notes: ['save', 'remove'],
   npcs: ['save', 'remove'],

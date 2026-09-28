@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Encounters</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf pnl" style="width: {{w}}px; height: {{h}}px; padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; position: relative">
+  <div class="row" style="gap: 8px">
+    <div class="btn sm gh"><svg class="i s" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"></path></svg>Back to list</div>
+    <div class="in sm b" style="width: 220px">Goblin ambush</div>
+    <span class="bd">fought 1×</span><span class="mu s12">saved as you go</span>
+    <div class="sp"></div>
+    <div class="btn sm dg">Delete</div>
+  </div>
+  <div class="th"><span class="sp">Combatant</span><span style="width: 64px">Count</span><span style="width: 190px">Role</span><span style="width: 28px"></span></div>
+  <div class="col" style="gap: 2px">
+    <div class="td"><span class="pcpip"></span><span class="b tr sp">Aria</span><span class="mu s12" style="width: 64px">PC</span><div class="seg sm" style="width: 190px"><span class="on">ally</span><span>enemy</span><span>neutral</span></div><div class="ra" title="Remove"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></div>
+    <div class="td"><span class="pcpip"></span><span class="b tr sp">Brannoc</span><span class="mu s12" style="width: 64px">PC</span><div class="seg sm" style="width: 190px"><span class="on">ally</span><span>enemy</span><span>neutral</span></div><div class="ra" title="Remove"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></div>
+    <div class="td hv"><span class="pcpip" style="background: #E0685E"></span><span class="b tr sp">Goblin Warrior</span><div class="in sm m n" style="width: 56px; justify-content: center">2</div><div class="seg sm" style="width: 190px; margin-left: 8px"><span>ally</span><span class="on">enemy</span><span>neutral</span></div><div class="ra on" title="Remove"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></div>
+    <div class="td"><span class="pcpip" style="background: #E0685E"></span><span class="b tr sp">Goblin Minion</span><div class="in sm m n" style="width: 56px; justify-content: center">3</div><div class="seg sm" style="width: 190px; margin-left: 8px"><span>ally</span><span class="on">enemy</span><span>neutral</span></div><div class="ra" title="Remove"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></div>
+    <div class="td"><span class="pcpip" style="background: #E0685E"></span><span class="b tr sp">Worg</span><div class="in sm m n" style="width: 56px; justify-content: center">1</div><div class="seg sm" style="width: 190px; margin-left: 8px"><span>ally</span><span class="on">enemy</span><span>neutral</span></div><div class="ra" title="Remove"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></div>
+  </div>
+  <div class="wrap" style="gap: 6px"><div class="btn sm">Add all PCs</div><div class="btn sm dim"><svg class="i s" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Aria</div><div class="btn sm dim"><svg class="i s" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>Brannoc</div><span class="mu s12">both in</span></div>
+  <div class="row" style="gap: 6px"><span class="lb">Add creature</span><div class="in sm fo" style="width: 240px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>mage</div><div class="in sm m n" style="width: 56px; justify-content: center">1</div></div>
+  <div class="fly" style="left: 112px; top: 304px; width: 340px; padding: 6px; display: flex; flex-direction: column; gap: 2px">
+    <div class="td hv" style="height: 28px"><span class="b sp">Mage</span><span class="m n s12 mu">6</span><span class="mu s12">humanoid</span><span class="bd">2024</span><span class="kb">Enter</span></div>
+    <div class="td" style="height: 28px"><span class="b sp">Mage</span><span class="m n s12 mu">6</span><span class="mu s12">humanoid</span><span class="bd">legacy</span></div>
+    <div class="td" style="height: 28px"><span class="b sp">Mage Apprentice</span><span class="m n s12 mu">2</span><span class="mu s12">humanoid</span><span class="bd">2024</span></div>
+  </div>
+  <div class="sp"></div>
+  <div class="cd" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px">
+    <div class="col" style="gap: 0"><span class="lb">Difficulty · 2024 budget</span><div class="row" style="gap: 8px"><span class="m s16">Enemy XP 275</span><span class="bd wa">Moderate</span><span class="mu s12">party of 2 at level 5 · low 100 · moderate 250 · high 375</span></div></div>
+    <div class="sp"></div>
+    <div class="btn pri"><svg class="i s" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6z"></path></svg>Start combat</div>
+  </div>
+  <div class="mu s12">Start combat opens the Combat tab with everyone rolled or waiting to roll. If a map scene is live, its tokens are placed and the fight is linked to the map.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"w":{"editor":"int","default":778},"h":{"editor":"int","default":772},"$preview":{"width":778,"height":772}}'>
+class Component extends DCLogic {
+  renderVals() { const p = this.props; return { w: Number(p.w ?? 778), h: Number(p.h ?? 772) }; }
+}
+</script>
+</body>
+</html>

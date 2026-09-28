@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Music tool</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf pnl db" style="width: {{w}}px; height: {{h}}px; gap: 8px">
+  <div class="col" style="gap: 1px">
+    <div class="b s16 tr">Low Tide</div>
+    <div class="mu s12 tr">No artist · Tavern Night · 1 of 5</div>
+  </div>
+  <div class="row" style="gap: 4px">
+    <div class="ib bd" title="Previous track · Ctrl+Alt+←"><svg class="i" viewBox="0 0 24 24"><path d="M6 5v14M18 5l-10 7 10 7z"></path></svg></div>
+    <div class="ib pri" title="Pause · Ctrl+Alt+P"><svg class="i f" viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"></path></svg></div>
+    <div class="ib bd" title="Next track · Ctrl+Alt+→"><svg class="i" viewBox="0 0 24 24"><path d="M18 5v14M6 5l10 7-10 7z"></path></svg></div>
+    <div class="ib bd" title="Stop"><svg class="i" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"></path></svg></div>
+    <div class="sp"></div>
+    <div class="btn sm" title="Panic mute · Ctrl+Alt+M"><svg class="i s" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10zM16 9l5 6M21 9l-5 6"></path></svg>Panic mute</div>
+  </div>
+  <div class="row"><span class="m n s11 mu">1:12</span><div class="sl"><i style="width: 30%"></i><b style="left: 30%"></b></div><span class="m n s11 mu">4:05</span></div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px">
+    <div class="row"><span class="lb" style="width: 44px">Master</span><div class="sl"><i style="width: 80%"></i><b style="left: 80%"></b></div><span class="m n s11 mu" style="width: 20px; text-align: right">80</span></div>
+    <div class="row"><span class="lb" style="width: 44px">Music</span><div class="sl"><i style="width: 65%"></i><b style="left: 65%"></b></div><span class="m n s11 mu" style="width: 20px; text-align: right">65</span></div>
+  </div>
+  <div class="row" style="gap: 6px"><span class="lb">Crossfade</span><div class="in sm m n" style="width: 48px; justify-content: center">4 s</div><div class="in sm sp tr">Speakers (laptop)<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+  <div class="mu s11">Measuring loudness: 3 tracks left</div>
+  <div class="hr"></div>
+  <div class="row" style="gap: 6px"><span class="lb">Playlists</span><div class="sp"></div><div class="in sm ph" style="width: 130px">New playlist</div><div class="btn sm">Add</div></div>
+  <div class="col" style="gap: 2px">
+    <div class="td sel" style="height: 28px; gap: 6px; padding: 0 6px"><span class="pip"></span><span class="b tr sp">Tavern Night</span><span class="mu s11">5 · 22:16</span><div class="ra on" title="Rename"><svg class="i s" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16zM13 6l3 3"></path></svg></div><div class="ra on" title="Play playlist"><svg class="i s f" viewBox="0 0 24 24"><path d="M7 5v14l12-7z"></path></svg></div></div>
+    <div class="td" style="height: 28px; gap: 6px; padding: 0 6px 0 19px"><span class="tr sp">Road Ambience</span><span class="mu s11">8</span></div>
+    <div class="td" style="height: 28px; gap: 6px; padding: 0 6px 0 19px"><span class="tr sp">Battle</span><span class="mu s11">6</span></div>
+  </div>
+  <div class="col" style="gap: 2px; padding-left: 12px; border-left: 2px solid #333D48; margin-left: 6px">
+    <div class="td" style="height: 26px; gap: 6px; padding: 0 4px"><svg class="i s grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"></path></svg><span class="m n s11 mu">1</span><span class="b tr sp">Low Tide</span><span class="m n s11 mu">4:05</span><div class="ra" title="Remove from playlist"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></div>
+    <div class="td" style="height: 26px; gap: 6px; padding: 0 4px"><svg class="i s grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"></path></svg><span class="m n s11 mu">2</span><span class="tr sp">Hearthside</span><span class="m n s11 mu">3:41</span></div>
+    <div class="td" style="height: 26px; gap: 6px; padding: 0 4px"><svg class="i s grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"></path></svg><span class="m n s11 mu">3</span><span class="tr sp">Rain on Slate</span><span class="m n s11 mu">6:12</span></div>
+    <div class="td" style="height: 26px; gap: 6px; padding: 0 4px"><svg class="i s grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"></path></svg><span class="m n s11 mu">4</span><span class="tr sp">Lantern Walk</span><span class="m n s11 mu">2:58</span></div>
+    <div class="td" style="height: 26px; gap: 6px; padding: 0 4px"><svg class="i s grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"></path></svg><span class="m n s11 mu">5</span><span class="tr sp">Owl Hour</span><span class="m n s11 mu">5:20</span></div>
+  </div>
+  <div class="hr"></div>
+  <div class="row" style="gap: 6px"><span class="lb">Tracks</span><div class="in sm ph sp"><svg class="i s" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>Search 184 tracks</div></div>
+  <div class="seg sm" style="align-self: flex-start"><span class="on">All</span><span>Music</span><span>Ambience</span><span>Effect</span></div>
+  <div class="col" style="gap: 1px">
+    <div class="td hv" style="height: 28px; gap: 6px; padding: 0 6px"><span class="tr sp">Cobbles</span><span class="bd">town</span><span class="m n s11 mu">3:07</span><span class="bd ok" title="Loudness measured">m</span><div class="ra on" title="Play now"><svg class="i s f" viewBox="0 0 24 24"><path d="M7 5v14l12-7z"></path></svg></div><div class="ra on" title="Add to…"><svg class="i s" viewBox="0 0 24 24"><path d="M4 6h12M4 12h12M4 18h8M18 15v6M15 18h6"></path></svg></div></div>
+    <div class="td" style="height: 28px; gap: 6px; padding: 0 6px"><span class="tr sp">Drums Under the Hill</span><span class="bd">battle</span><span class="m n s11 mu">4:44</span><span class="bd ok" title="Loudness measured">m</span><span style="width: 46px"></span></div>
+    <div class="td" style="height: 28px; gap: 6px; padding: 0 6px"><span class="tr sp">Door Creak</span><span class="bd">effect</span><span class="m n s11 mu">0:04</span><span class="bd ok" title="Loudness measured">m</span><span style="width: 46px"></span></div>
+    <div class="td" style="height: 28px; gap: 6px; padding: 0 6px"><span class="tr sp">Market Morning</span><span class="bd">town</span><span class="m n s11 mu">3:55</span><span class="bd ok" title="Loudness measured">m</span><span style="width: 46px"></span></div>
+    <div class="td" style="height: 28px; gap: 6px; padding: 0 6px"><span class="tr sp">Shore Wind</span><span class="bd">coast</span><span class="m n s11 mu">8:30</span><span class="bd" title="Measuring">…</span><span style="width: 46px"></span></div>
+    <div class="td" style="height: 28px; gap: 6px; padding: 0 6px"><span class="tr sp">Thunder Far Off</span><span class="bd">effect</span><span class="m n s11 mu">0:11</span><span class="bd ok" title="Loudness measured">m</span><span style="width: 46px"></span></div>
+  </div>
+  <div class="mu s11">Folders are added and rescanned in the Library. Hover a track for Play now and Add to…</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"w":{"editor":"int","default":382},"h":{"editor":"int","default":730},"$preview":{"width":382,"height":730}}'>
+class Component extends DCLogic {
+  renderVals() { const p = this.props; return { w: Number(p.w ?? 382), h: Number(p.h ?? 730) }; }
+}
+</script>
+</body>
+</html>

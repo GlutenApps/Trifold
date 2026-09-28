@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Live strip</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf strip" style="width: {{w}}px; height: 42px">
+  <div class="sec" title="TV · click opens TV controls in the dock">
+    <svg class="i mu" viewBox="0 0 24 24"><path d="M3 5h18v11H3zM9 20h6M12 16v4"></path></svg>
+    <span class="pip {{sceneOn}}"></span>
+    <span class="{{sceneCls}} tr" style="max-width: 170px">{{sceneText}}</span>
+    <div class="btn sm {{boCls}}" title="Toggle blackout · Ctrl+Shift+B">Blackout</div>
+    <div class="ib {{winCls}}" title="{{winTip}}"><svg class="i" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 9h18"></path></svg></div>
+    <div class="ib" title="Undo last scene · Ctrl+Shift+Z"><svg class="i" viewBox="0 0 24 24"><path d="M4 10h10a5 5 0 0 1 0 10H9M4 10l4-4M4 10l4 4"></path></svg></div>
+  </div>
+  <div class="sec" title="Combat · click focuses the Combat tab">
+    <svg class="i mu" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6z"></path></svg>
+    <span class="{{cbCls}}">{{cbText}}</span>
+    <div class="ib {{cbBtn}}" title="Previous turn · P"><svg class="i" viewBox="0 0 24 24"><path d="M6 5v14M18 5l-10 7 10 7z"></path></svg></div>
+    <div class="ib {{cbNext}}" title="Next turn · N"><svg class="i" viewBox="0 0 24 24"><path d="M18 5v14M6 5l10 7-10 7z"></path></svg></div>
+  </div>
+  <div class="sec" title="Music · click opens Music in the dock">
+    <svg class="i mu" viewBox="0 0 24 24"><path d="M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM9 18V5l11-2v12M20 15a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"></path></svg>
+    <span class="{{muCls}} tr" style="max-width: 190px">{{muText}}</span>
+    <div class="ib {{muBtn}}" title="Previous track · Ctrl+Alt+←"><svg class="i" viewBox="0 0 24 24"><path d="M6 5v14M18 5l-10 7 10 7z"></path></svg></div>
+    <div class="ib {{muBtn}}" title="Play or pause · Ctrl+Alt+P"><svg class="i f {{playIc}}" viewBox="0 0 24 24"><path d="M7 5v14l12-7z"></path></svg><svg class="i f {{pauseIc}}" viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"></path></svg></div>
+    <div class="ib {{muBtn}}" title="Next track · Ctrl+Alt+→"><svg class="i" viewBox="0 0 24 24"><path d="M18 5v14M6 5l10 7-10 7z"></path></svg></div>
+    <div class="ib {{mutedCls}}" title="Panic mute · Ctrl+Alt+M"><svg class="i" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10zM16 9l5 6M21 9l-5 6"></path></svg></div>
+  </div>
+  <div class="sec" title="Dice · click opens Dice in the dock · Ctrl+D" style="border-right: none">
+    <svg class="i mu" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12L4 7.5M12 12v9"></path></svg>
+    <div style="display: flex; gap: 4px; align-items: center">
+      <div class="chip c {{p.d100.c}}">d100<span class="cn {{p.d100.g}}">{{p.d100.n}}</span></div>
+      <div class="chip c {{p.d20.c}}">d20<span class="cn {{p.d20.g}}">{{p.d20.n}}</span></div>
+      <div class="chip c {{p.d12.c}}">d12<span class="cn {{p.d12.g}}">{{p.d12.n}}</span></div>
+      <div class="chip c {{p.d10.c}}">d10<span class="cn {{p.d10.g}}">{{p.d10.n}}</span></div>
+      <div class="chip c {{p.d8.c}}">d8<span class="cn {{p.d8.g}}">{{p.d8.n}}</span></div>
+      <div class="chip c {{p.d6.c}}">d6<span class="cn {{p.d6.g}}">{{p.d6.n}}</span></div>
+      <div class="chip c {{p.d4.c}}">d4<span class="cn {{p.d4.g}}">{{p.d4.n}}</span></div>
+    </div>
+    <div class="btn sm pri" style="margin-left: 4px">Roll</div>
+    <div class="ra" title="Clear the pool"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+    <span class="t" title="Last total">{{total}}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"w":{"editor":"int","default":1600},"scene":{"editor":"text","default":"Silt Springs Map","section":"TV"},"blackout":{"editor":"boolean","default":false,"section":"TV"},"win":{"editor":"boolean","default":true,"section":"TV"},"combat":{"editor":"text","default":"Round 3 · Aria","section":"Combat"},"music":{"editor":"text","default":"Tavern Night · Low Tide","section":"Music"},"playing":{"editor":"boolean","default":true,"section":"Music"},"muted":{"editor":"boolean","default":false,"section":"Music"},"pool":{"editor":"text","default":"d20:1,d8:1,d6:3","section":"Dice"},"total":{"editor":"text","default":"16","section":"Dice"},"$preview":{"width":1600,"height":42}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const t = v => v === true || v === 'true' || v === '1' || v === 'yes';
+    const bo = t(p.blackout ?? false), win = t(p.win ?? true), playing = t(p.playing ?? true), muted = t(p.muted ?? false);
+    const scene = String(p.scene ?? 'Silt Springs Map'), combat = String(p.combat ?? 'Round 3 · Aria'), music = String(p.music ?? 'Tavern Night · Low Tide');
+    const pool = {};
+    ['d100','d20','d12','d10','d8','d6','d4'].forEach(k => pool[k] = { c: '', g: 'gone', n: '' });
+    String(p.pool ?? 'd20:1,d8:1,d6:3').split(',').forEach(s => {
+      const [k, n] = s.split(':').map(x => x.trim());
+      if (pool[k] && Number(n) > 0) pool[k] = { c: 'on', g: '', n };
+    });
+    return {
+      w: Number(p.w ?? 1600),
+      sceneOn: bo ? 'gone' : '', sceneCls: bo ? 'wa b' : 'b', sceneText: bo ? 'Blackout' : 'Live: ' + scene,
+      boCls: bo ? 'pri' : '', winCls: win ? 'on' : '', winTip: (win ? 'Close' : 'Open') + ' the player window · Ctrl+Shift+P',
+      cbCls: combat ? 'b' : 'mu', cbText: combat || 'No fight', cbBtn: combat ? '' : 'dim', cbNext: combat ? 'pri' : 'dim',
+      muCls: muted ? 'wa b' : (music ? 'b' : 'mu'), muText: muted ? 'Muted' : (music || 'No music'), muBtn: music ? '' : 'dim',
+      playIc: playing ? 'gone' : '', pauseIc: playing ? '' : 'gone', mutedCls: muted ? 'pri' : '',
+      p: pool, total: String(p.total ?? '16')
+    };
+  }
+}
+</script>
+</body>
+</html>

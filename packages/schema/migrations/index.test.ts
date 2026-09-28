@@ -64,6 +64,23 @@ describe('migrate', () => {
     expect(() => broken('library', { schemaVersion: 1 })).toThrow(/no migration/);
   });
 
+  it('resets saved layouts when the Combat tab folds into Encounters (library 2 → 3)', () => {
+    const old = {
+      schemaVersion: 2,
+      theme: 'light',
+      workspace: {
+        presets: [{ name: 'Mine', layout: { stage: { groups: [{ tabs: ['combat'] }] } } }],
+        seeded: true,
+        consoles: { keep: { stage: { groups: [{ tabs: ['combat'] }] } } },
+      },
+    };
+    expect(migrate('library', old)).toEqual({
+      schemaVersion: 3,
+      theme: 'light',
+      workspace: { presets: [], seeded: false, consoles: {} },
+    });
+  });
+
   it('rejects non-objects', () => {
     expect(() => migrate('record', 'nope')).toThrow(MigrationError);
     expect(() => migrate('record', [1])).toThrow(MigrationError);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { PCCard } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { Icon } from '../shell/icons';
 
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
@@ -154,13 +155,9 @@ function blankPc(): PCCard {
 
 /** Campaign list, creation and PC cards (DESIGN.md §6.3). Adventures, notes and NPCs follow. */
 export function CampaignPage() {
-  const campaigns = useCampaignStore((s) => s.campaigns);
   const current = useCampaignStore((s) => s.current);
   const error = useCampaignStore((s) => s.error);
   const load = useCampaignStore((s) => s.load);
-  const create = useCampaignStore((s) => s.create);
-  const open = useCampaignStore((s) => s.open);
-  const close = useCampaignStore((s) => s.close);
   const quickAdd = useCampaignStore((s) => s.quickAdd);
   const savePc = useCampaignStore((s) => s.savePc);
   const removePc = useCampaignStore((s) => s.removePc);
@@ -172,7 +169,6 @@ export function CampaignPage() {
   const removeNpc = useCampaignStore((s) => s.removeNpc);
   const removeAdventure = useCampaignStore((s) => s.removeAdventure);
 
-  const [newName, setNewName] = useState('');
   const [quick, setQuick] = useState('');
   const [editing, setEditing] = useState<PCCard | null>(null);
 
@@ -182,7 +178,6 @@ export function CampaignPage() {
 
   return (
     <section className="campaign">
-      <h1>Campaign</h1>
       {error && (
         <div className="banner error" role="alert">
           <span>{error}</span>
@@ -208,56 +203,7 @@ export function CampaignPage() {
       )}
 
       {!current ? (
-        <>
-          <form
-            className="card row"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (newName.trim()) {
-                void create(newName.trim());
-                setNewName('');
-              }
-            }}
-          >
-            <input
-              type="text"
-              aria-label="New campaign name"
-              placeholder="New campaign name"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
-            <button type="submit" className="btn primary">
-              Create campaign
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={importing}
-              onClick={() => void importXml('new')}
-            >
-              Import campaign XML…
-            </button>
-          </form>
-          <div className="card">
-            <h2>Campaigns</h2>
-            {campaigns.length === 0 ? (
-              <p className="muted">No campaigns yet. Create one above.</p>
-            ) : (
-              campaigns.map((c) => (
-                <div key={c.id} className="row">
-                  <button type="button" className="btn" onClick={() => void open(c.id)}>
-                    Open
-                  </button>
-                  <strong>{c.name}</strong>
-                  <span className="muted">
-                    {c.pcCount} PCs · {c.encounterCount} encounters · updated{' '}
-                    {new Date(c.updatedAt).toLocaleDateString()}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </>
+        <p className="muted">Open a campaign from the Library.</p>
       ) : (
         <>
           <div className="row">
@@ -271,9 +217,6 @@ export function CampaignPage() {
               onClick={() => void importXml('merge')}
             >
               Import into this campaign…
-            </button>
-            <button type="button" className="btn" onClick={() => void close()}>
-              Close campaign
             </button>
           </div>
 
@@ -301,12 +244,26 @@ export function CampaignPage() {
                     {pc.initiativeBonus} · PP {pc.passives.perception}
                   </span>
                   <span className="spacer" />
-                  <button type="button" className="btn" onClick={() => setEditing(pc)}>
-                    Edit
-                  </button>
-                  <button type="button" className="btn" onClick={() => void removePc(pc.id)}>
-                    Remove
-                  </button>
+                  <span className="row-actions">
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-label={`Edit ${pc.name}`}
+                      title="Edit"
+                      onClick={() => setEditing(pc)}
+                    >
+                      <Icon name="pencil" size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className="chrome-btn xs danger"
+                      aria-label={`Remove ${pc.name}`}
+                      title="Remove"
+                      onClick={() => void removePc(pc.id)}
+                    >
+                      <Icon name="trash" size={13} />
+                    </button>
+                  </span>
                 </div>
               ),
             )}

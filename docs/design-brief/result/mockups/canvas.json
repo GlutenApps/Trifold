@@ -1,0 +1,394 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-09-28T16:12:00Z"
+ },
+ "title": "Trifold console shell",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1960,
+   "h": 900,
+   "title": "Shell anatomy · Table arrangement"
+  },
+  "Library.dc.html": {
+   "x": 2040,
+   "y": 0,
+   "w": 1600,
+   "h": 900,
+   "title": "Library · Campaigns (nothing open)"
+  },
+  "LibraryCompendium.dc.html": {
+   "x": 3720,
+   "y": 0,
+   "w": 1600,
+   "h": 900,
+   "title": "Library · Compendium sources (mid-session)"
+  },
+  "LibrarySettings.dc.html": {
+   "x": 5400,
+   "y": 0,
+   "w": 1600,
+   "h": 900,
+   "title": "Library · Settings (mid-session, Ctrl+,)"
+  },
+  "LibraryMusic.dc.html": {
+   "x": 7080,
+   "y": 0,
+   "w": 1600,
+   "h": 900,
+   "title": "Library · Music folders"
+  },
+  "CampaignSwitch.dc.html": {
+   "x": 8760,
+   "y": 0,
+   "w": 900,
+   "h": 320,
+   "title": "Campaign switcher · one at a time"
+  },
+  "ClosePrompt.dc.html": {
+   "x": 9740,
+   "y": 0,
+   "w": 1600,
+   "h": 900,
+   "title": "Closing with something on the TV"
+  },
+  "DockWide.dc.html": {
+   "x": 0,
+   "y": 1280,
+   "w": 1600,
+   "h": 900,
+   "title": "Dock wide · 400"
+  },
+  "DockNarrow.dc.html": {
+   "x": 1680,
+   "y": 1280,
+   "w": 1600,
+   "h": 900,
+   "title": "Dock narrow · 300"
+  },
+  "DockIcons.dc.html": {
+   "x": 3360,
+   "y": 1280,
+   "w": 1600,
+   "h": 900,
+   "title": "Dock icons only · 44, with a flyout"
+  },
+  "DockHidden.dc.html": {
+   "x": 5040,
+   "y": 1280,
+   "w": 1600,
+   "h": 900,
+   "title": "Dock hidden · flyout from the strip"
+  },
+  "DockOverflow.dc.html": {
+   "x": 6720,
+   "y": 1280,
+   "w": 1600,
+   "h": 900,
+   "title": "Dock overflow · last section scrolls inside"
+  },
+  "Split.dc.html": {
+   "x": 0,
+   "y": 2560,
+   "w": 1600,
+   "h": 900,
+   "title": "Dragging Combat to the right edge"
+  },
+  "ScenesDock.dc.html": {
+   "x": 1680,
+   "y": 2560,
+   "w": 1600,
+   "h": 900,
+   "title": "Scenes in the dock · hover preview · Map empty"
+  },
+  "MusicDock.dc.html": {
+   "x": 3360,
+   "y": 2560,
+   "w": 1600,
+   "h": 900,
+   "title": "Music in the dock · the whole library"
+  },
+  "StartCombat.dc.html": {
+   "x": 5040,
+   "y": 2560,
+   "w": 1600,
+   "h": 900,
+   "title": "Starting combat · from the builder or the map"
+  },
+  "HomebrewEdit.dc.html": {
+   "x": 6720,
+   "y": 2560,
+   "w": 1600,
+   "h": 900,
+   "title": "Homebrew edit inside the campaign"
+  },
+  "Prep.dc.html": {
+   "x": 0,
+   "y": 3840,
+   "w": 1600,
+   "h": 900,
+   "title": "Prep"
+  },
+  "Table.dc.html": {
+   "x": 1680,
+   "y": 3840,
+   "w": 1600,
+   "h": 900,
+   "title": "Table"
+  },
+  "CombatMax.dc.html": {
+   "x": 3360,
+   "y": 3840,
+   "w": 1600,
+   "h": 900,
+   "title": "Combat, maximized"
+  },
+  "PromptStack.dc.html": {
+   "x": 5040,
+   "y": 3840,
+   "w": 1600,
+   "h": 900,
+   "title": "Prompts stacking · pinned turn row"
+  },
+  "Tabs.dc.html": {
+   "x": 0,
+   "y": 5120,
+   "w": 1040,
+   "h": 640,
+   "title": "Stage and dock tab states"
+  },
+  "LayoutCapture.dc.html": {
+   "x": 1120,
+   "y": 5120,
+   "w": 560,
+   "h": 420,
+   "title": "What a layout captures"
+  },
+  "Layouts.dc.html": {
+   "x": 1760,
+   "y": 5120,
+   "w": 1600,
+   "h": 900,
+   "title": "Layouts in the dock"
+  },
+  "Check1366.dc.html": {
+   "x": 0,
+   "y": 6400,
+   "w": 1366,
+   "h": 768,
+   "title": "Table at 1366 × 768"
+  },
+  "Compendium.dc.html": {
+   "x": 0,
+   "y": 7548,
+   "w": 738,
+   "h": 806,
+   "title": "Compendium"
+  },
+  "Campaign.dc.html": {
+   "x": 818,
+   "y": 7548,
+   "w": 370,
+   "h": 806,
+   "title": "Campaign"
+  },
+  "Map.dc.html": {
+   "x": 1268,
+   "y": 7548,
+   "w": 1282,
+   "h": 772,
+   "title": "Map"
+  },
+  "Combat.dc.html": {
+   "x": 2630,
+   "y": 7548,
+   "w": 1474,
+   "h": 806,
+   "title": "Combat tracker, wide"
+  },
+  "Encounters.dc.html": {
+   "x": 4184,
+   "y": 7548,
+   "w": 778,
+   "h": 772,
+   "title": "Encounters builder"
+  },
+  "TopBar.dc.html": {
+   "x": 0,
+   "y": 8828,
+   "w": 1600,
+   "h": 34,
+   "title": "Top bar"
+  },
+  "LiveStrip.dc.html": {
+   "x": 0,
+   "y": 8902,
+   "w": 1600,
+   "h": 42,
+   "title": "Live strip"
+  },
+  "DockTabs.dc.html": {
+   "x": 1680,
+   "y": 8828,
+   "w": 284,
+   "h": 34,
+   "title": "Dock tabs"
+  },
+  "DockDice.dc.html": {
+   "x": 2044,
+   "y": 8828,
+   "w": 382,
+   "h": 380,
+   "title": "Dice, with the one log"
+  },
+  "DockTV.dc.html": {
+   "x": 2506,
+   "y": 8828,
+   "w": 282,
+   "h": 344,
+   "title": "TV controls"
+  },
+  "DockScenes.dc.html": {
+   "x": 2868,
+   "y": 8828,
+   "w": 382,
+   "h": 650,
+   "title": "Scenes"
+  },
+  "DockMusic.dc.html": {
+   "x": 3330,
+   "y": 8828,
+   "w": 382,
+   "h": 730,
+   "title": "Music"
+  },
+  "DockHotkeys.dc.html": {
+   "x": 3792,
+   "y": 8828,
+   "w": 382,
+   "h": 404,
+   "title": "Hotkey sheet"
+  },
+  "DockLayouts.dc.html": {
+   "x": 4254,
+   "y": 8828,
+   "w": 382,
+   "h": 396,
+   "title": "Layouts"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Library.dc.html",
+  "LibraryCompendium.dc.html",
+  "LibrarySettings.dc.html",
+  "LibraryMusic.dc.html",
+  "CampaignSwitch.dc.html",
+  "ClosePrompt.dc.html",
+  "DockWide.dc.html",
+  "DockNarrow.dc.html",
+  "DockIcons.dc.html",
+  "DockHidden.dc.html",
+  "DockOverflow.dc.html",
+  "Split.dc.html",
+  "ScenesDock.dc.html",
+  "MusicDock.dc.html",
+  "StartCombat.dc.html",
+  "HomebrewEdit.dc.html",
+  "Prep.dc.html",
+  "Table.dc.html",
+  "CombatMax.dc.html",
+  "PromptStack.dc.html",
+  "Tabs.dc.html",
+  "LayoutCapture.dc.html",
+  "Layouts.dc.html",
+  "Check1366.dc.html",
+  "Compendium.dc.html",
+  "Campaign.dc.html",
+  "Map.dc.html",
+  "Combat.dc.html",
+  "Encounters.dc.html",
+  "TopBar.dc.html",
+  "LiveStrip.dc.html",
+  "DockTabs.dc.html",
+  "DockDice.dc.html",
+  "DockTV.dc.html",
+  "DockScenes.dc.html",
+  "DockMusic.dc.html",
+  "DockHotkeys.dc.html",
+  "DockLayouts.dc.html"
+ ],
+ "notes": {
+  "t1": {
+   "x": 0,
+   "y": -260,
+   "text": "1 · Shell anatomy, and the Library outside the console",
+   "kind": "title1",
+   "maxW": 11340
+  },
+  "t2": {
+   "x": 0,
+   "y": 1020,
+   "text": "2 · Dock states: wide, narrow, icons only, hidden, overflowing",
+   "kind": "title1",
+   "maxW": 8320
+  },
+  "t3": {
+   "x": 0,
+   "y": 2300,
+   "text": "3 · Splitting · Scenes and Music in the dock · into combat · homebrew",
+   "kind": "title1",
+   "maxW": 8320
+  },
+  "t4": {
+   "x": 0,
+   "y": 3580,
+   "text": "4 · Screens: Prep, Table, Combat maximized, prompts stacking",
+   "kind": "title1",
+   "maxW": 6640
+  },
+  "t5": {
+   "x": 0,
+   "y": 4860,
+   "text": "5 · Tabs and switching · Layouts",
+   "kind": "title1",
+   "maxW": 3360
+  },
+  "t6": {
+   "x": 0,
+   "y": 6140,
+   "text": "6 · Check at 1366 × 768",
+   "kind": "title1",
+   "maxW": 1366
+  },
+  "t7": {
+   "x": 0,
+   "y": 7288,
+   "text": "Components: majors (stage only)",
+   "kind": "title1",
+   "maxW": 4962
+  },
+  "t8": {
+   "x": 0,
+   "y": 8568,
+   "text": "Components: chrome and minors (dock only)",
+   "kind": "title1",
+   "maxW": 4636
+  },
+  "s2": {
+   "x": 1446,
+   "y": 6400,
+   "w": 400,
+   "text": "At 1366 the Table layout still asks for a narrow dock; the shell trims it to icons while the stage is split so each group keeps about 647 px. Expanding the dock again is one click.",
+   "fill": "gray"
+  }
+ },
+ "designSystems": []
+}

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { defaultAppConfig } from './appConfig';
 import { defaultLibrarySettings, LibrarySettings } from './library';
+import { Scene } from './campaign';
 import { Source } from './source';
 
 describe('LibrarySettings', () => {
   it('fills every default from just a schemaVersion', () => {
     expect(defaultLibrarySettings()).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 3,
       indexVersion: 0,
       lastOpenCampaignSlug: null,
       theme: 'dark',
@@ -23,15 +24,16 @@ describe('LibrarySettings', () => {
         sfxVolume: 0.8,
         crossfadeSec: 4,
       },
+      workspace: { presets: [], seeded: false, consoles: {} },
     });
   });
 
   it('rejects an unknown schemaVersion', () => {
-    expect(LibrarySettings.safeParse({ schemaVersion: 2 }).success).toBe(false);
+    expect(LibrarySettings.safeParse({ schemaVersion: 4 }).success).toBe(false);
   });
 
   it('keeps explicit values', () => {
-    const parsed = LibrarySettings.parse({ schemaVersion: 1, theme: 'light', playerDisplayId: 42 });
+    const parsed = LibrarySettings.parse({ schemaVersion: 3, theme: 'light', playerDisplayId: 42 });
     expect(parsed.theme).toBe('light');
     expect(parsed.playerDisplayId).toBe(42);
   });
@@ -72,7 +74,7 @@ describe('Source', () => {
 
   it('rejects a non-ISO importedAt', () => {
     const result = Source.safeParse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       id: 'x',
       name: 'x',
       kind: 'xml',
@@ -80,5 +82,40 @@ describe('Source', () => {
       importedAt: 'yesterday',
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('Scene', () => {
+  const base = {
+    schemaVersion: 1,
+    id: 's1',
+    kind: 'map',
+    title: 'Old mill',
+    image: { path: 'images/a.png', displayPath: 'images/a.jpg', width: 1400, height: 1000 },
+    createdAt: '2026-09-28T00:00:00.000Z',
+    updatedAt: '2026-09-28T00:00:00.000Z',
+  };
+
+  it('reads a map saved before background variants existed', () => {
+    const parsed = Scene.parse(base);
+    expect(parsed.backgrounds).toBeUndefined();
+    expect(parsed.image?.width).toBe(1400);
+  });
+
+  it('keeps background variants and the active one', () => {
+    const parsed = Scene.parse({
+      ...base,
+      backgrounds: [
+        { id: 'b1', name: 'Day', image: base.image },
+        {
+          id: 'b2',
+          name: 'Night',
+          image: { path: 'images/b.png', displayPath: 'images/b.jpg', width: 1400, height: 1000 },
+        },
+      ],
+      activeBackgroundId: 'b2',
+    });
+    expect(parsed.backgrounds?.map((b) => b.name)).toEqual(['Day', 'Night']);
+    expect(parsed.activeBackgroundId).toBe('b2');
   });
 });

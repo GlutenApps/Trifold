@@ -42,6 +42,9 @@ export function createCampaignApi(
       async update(patch) {
         return repo().updateCampaign(patch);
       },
+      async remove(campaignId) {
+        await repo().remove(campaignId);
+      },
       async chooseXmlFile() {
         const result = await dialog.showOpenDialog({
           title: 'Import a campaign XML file',

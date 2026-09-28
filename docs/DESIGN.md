@@ -55,6 +55,8 @@ Settled decisions, in one place. Rationale is in the sections that follow.
 | Fog of war | Phase 2. |
 | Copyright posture | Lion's Den model: ship SRD only; import anything the user supplies; export flags records derived from non-SRD content. |
 | Native module pins | `electron` and `better-sqlite3` are pinned together to versions with prebuilt binaries (currently Electron 42 / better-sqlite3 12.11.1); no compiler on install. Window routes use the URL hash. See ADR 0001 and ADR 0002. |
+| Console layout | Library space plus a console per open campaign: a tabbed stage (one or two groups) for the majors, a right dock for the minor tools, a live strip for table state. Palette "Slate and bone", type Outfit + IBM Plex Mono (bundled, OFL). See ADR 0004 (supersedes 0003). |
+| Encounters and combat | One Encounters tab: the list and builder, replaced by the combat tracker while a fight runs (the list stays a click away). A built encounter can be placed on a map as hidden tokens, positioned, then started. See ADR 0005. |
 
 ---
 
@@ -273,7 +275,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Transitions.** Crossfade 400 ms default; "cut" setting.
 
-**Combat integration.** "Start combat" on a map scene builds an encounter from placed creature tokens (+ PCs) or opens the linked encounter with tokens matched by `tokenId`. During combat the active token is highlighted on both screens; killing a combatant grays its token; adding a creature mid-combat prompts for a click position.
+**Combat integration.** "Start combat" on a map scene builds an encounter from placed creature tokens (+ PCs) or opens the linked encounter with tokens matched by `tokenId`. "Place encounter…" drops a built encounter's creatures on the map hidden from the players and links it, so the DM can position them before starting (ADR 0005). During combat the active token is highlighted on both screens; killing a combatant grays its token; adding a creature mid-combat prompts for a click position.
 
 **Phase 2 (not in v1):** fog of war as a paint-to-reveal mask saved per scene with pre-revealed regions from prep; movement ruler; hex grids.
 
@@ -291,7 +293,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 ### 6.7 Dice and reference
 
-- Roller: expression input (`2d6+3`, `4d6kh3`, `d20 adv`), quick buttons, roll log shared with combat. Optional roll sounds.
+- Roller: a dice pool built by clicking (each click on d4…d100 adds one; right-click takes one away), a modifier stepper, advantage/disadvantage for a lone d20, then Roll. One pool is shared app-wide: the Dice panel, the tray drawer and the tray bar show and edit the same selection. A typed expression (`2d6+3`, `4d6kh3`, `d20 adv`) remains as a secondary field. Roll log shared with combat. Optional roll sounds.
 - Rules reference: DM-screen pages generated from SRD 5.2.1 rules text (conditions, actions, cover, travel, exhaustion, etc.), organized as tabs; DM can add custom markdown pages. The 2014 SRD rules are available under a "legacy" tab.
 
 ### 6.8 Token art pipeline
@@ -367,7 +369,8 @@ This section is binding for the codebase.
 
 ## 9. UX notes
 
-- Dark theme default; light theme available. Console layout: left rail (Campaign, Compendium, Encounters, Presenter, Music, Dice, Settings), main area, right inspector. Persistent bottom bar during a session: now playing, live scene, combat status, hotkeys.
+- Dark theme default; light theme available. Two spaces (ADR 0004): the **Library** (campaigns, compendium sources and homebrew, music folders, settings) and the **console**, the inside of exactly one open campaign. The console is a frameless window with a 34 px top bar (mark → Library, campaign breadcrumb → switcher, current layout, Hotkeys, Settings, dock toggle), a **stage** of one or two tab groups holding the majors (Campaign, Compendium, Encounters, Map; Encounters becomes the combat tracker while a fight runs; every tab keeps its place when switched or closed; two groups is how combat sits beside the map), a right-hand **dock** of minor tools (Dice, TV controls, Music, Scenes, Hotkeys, Layouts) that is wide, narrow, icons-only with flyouts, or hidden, and a 42 px **live strip** with table state only: what is on the TV with blackout and the player window, round and turn with next/previous, music and mute, the shared dice pool. Layouts capture the chrome (tabs, groups, dock) and are the DM's to save, overwrite, rename, reorder and delete; Prep, Table and Combat are copied in as starters.
+- Look: "Slate and bone" palette (near-monochrome slate, warm bone accent; ally, enemy, healthy, bloodied and down carry the colour). Outfit for UI text, IBM Plex Mono for numbers. Compact: 13 px base, 30 px buttons, 28 px icon buttons, row actions revealed on hover.
 - Keyboard-first: every table-time action has a hotkey; a cheat sheet is one key away.
 - Never lose work: autosave on every change; daily backup zip; "restore backup" in settings.
 - Performance budgets: compendium search < 50 ms; scene switch to TV < 150 ms; token drag at 60 fps on a 4096 px map; app start to campaign open < 3 s warm.

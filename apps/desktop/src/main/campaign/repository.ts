@@ -180,6 +180,16 @@ export class CampaignRepository {
     await this.store.updateSettings({ lastOpenCampaignSlug: null });
   }
 
+  /** Deletes the campaign folder and everything in it; closes it first when it is open. */
+  async remove(campaignId: string): Promise<void> {
+    const slug = await this.slugFor(campaignId);
+    if (this.currentSlug === slug || this.store.getSettings().lastOpenCampaignSlug === slug) {
+      await this.close();
+    }
+    await rm(this.store.resolvePath(this.dir(slug)), { recursive: true, force: true });
+    this.logger.info(`campaign folder campaigns/${slug} deleted`);
+  }
+
   private requireSlug(): string {
     if (!this.currentSlug) throw new Error('No campaign is open');
     return this.currentSlug;
@@ -201,8 +211,15 @@ export class CampaignRepository {
     const adventures = (
       await this.readAll(this.dir(slug, 'adventures'), Adventure, 'adventure')
     ).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
-    const notes = (await this.readAll(this.dir(slug, 'notes'), Note, 'note')).sort((a, b) =>
-      a.title.localeCompare(b.title),
+    // Notes read in the order they were written (for imports, the file's order). Notes saved in
+    // the same millisecond fall back to their place in an adventure, then to the ULID.
+    const adventureRank = new Map(adventures.flatMap((a) => a.noteIds).map((id, i) => [id, i]));
+    const rank = (id: string) => adventureRank.get(id) ?? Number.MAX_SAFE_INTEGER;
+    const notes = (await this.readAll(this.dir(slug, 'notes'), Note, 'note')).sort(
+      (a, b) =>
+        a.createdAt.localeCompare(b.createdAt) ||
+        rank(a.id) - rank(b.id) ||
+        a.id.localeCompare(b.id),
     );
     const npcs = (await this.readAll(this.dir(slug, 'npcs'), NPC, 'npc')).sort((a, b) =>
       a.name.localeCompare(b.name),

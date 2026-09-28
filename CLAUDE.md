@@ -22,7 +22,7 @@ Electron (current LTS) · electron-builder (NSIS + portable) · Vite · React 18
 apps/desktop/            Electron main + preload + renderer (two routes: /console, /player)
   src/main/              library store, sqlite index, importers, windows, audio device enum, backups, ipc handlers
   src/preload/           typed bridge → window.trifold (generated from packages/api)
-  src/renderer/          React app: features/{compendium,campaign,encounters,presenter,music,dice,settings}
+  src/renderer/          React app: features/{shell,library,compendium,campaign,encounters,presenter,music,dice,settings}; shell = top bar + stage (tab groups) + dock + live strip (ADR 0004)
 packages/schema/         Zod schemas + TS types for every stored object; migrations
 packages/api/            the single TypeScript interface between renderer and main
 packages/rules/          pure functions: dice, CR/XP tables, 2024 budgets, condition defs, damage math, parsers (regexes from DATA-FORMATS.md §2.5)
@@ -45,7 +45,7 @@ Rules of thumb: all parsing and rules math lives in `packages/*` as pure, tested
 - **Dates:** ISO 8601 UTC strings on disk; `Date` only at the edges.
 - **Errors:** importers return `{ records, warnings }`; UI surfaces warnings on the source page. Main-process failures are logged to `Library/logs/` and shown as a toast, never a silent no-op.
 - **Performance budgets** (`DESIGN.md` §9) are tests: search < 50 ms on the 5,000-monster fixture set, index rebuild < 10 s on a 31 MB XML, player-window frame updates ≤ 16 ms.
-- **UI:** dark theme default; sentence case; every table-time action has a hotkey registered in one `hotkeys.ts`; no modal dialogs during combat.
+- **UI:** dark theme default; sentence case; every table-time action has a hotkey registered in one `hotkeys.ts`; no modal dialogs during combat. Features render inside workspace panels (ADR 0003): no page-level `h1`, stretch to the panel body, scroll inside it; a control lives in one home (tray or panel), and where it must appear in both, the accessible names differ. Colours come from the tokens in `global.css`, never literals. Keep it compact: 13 px base type, 30 px buttons, 28 px icon buttons (`chrome-btn`, 22 px `xs` for row actions); prefer an icon toolbar with a `title` tooltip and an `aria-label` over a row of text buttons, and reveal per-row actions on hover/selection rather than always.
 - **Audio:** one `AudioContext`; per-layer and per-track gain nodes; every transition through a ramp (`linearRampToValueAtTime` on an equal-power curve). Never call `stop()` without a fade.
 - **Presenter:** state lives in the console's Zustand store; IPC to main; broadcast to player. The player window never mutates state or reads the Library.
 - **Tests:** a convention from `DATA-FORMATS.md` is not done until a fixture exercises it (hp/ac/speed/save formats, recharge codes, bonus-action suffix, legendary header + lair, attack triples incl. blank to-hit and compound dice, both attack regexes, both save regexes, Source line parsing, `[5.5e]` tagging, edition collapse, slots parsing, Proficiency Bonus trait extraction).

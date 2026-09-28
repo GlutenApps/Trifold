@@ -69,7 +69,6 @@ beforeEach(() => {
     },
     pendingDamage: [],
     selectedId: 'wolf',
-    rollMode: 'normal',
   });
 });
 
@@ -90,7 +89,7 @@ describe('rolled damage queue', () => {
     const piercing = pending[0]!.parts[0]!.amount;
     const fire = pending[0]!.parts[1]!.amount;
 
-    useCombatStore.getState().applyPendingDamage(pending[0]!.id, 'thora', false);
+    useCombatStore.getState().applyPendingDamage(pending[0]!.id, [{ id: 'thora', share: 'full' }]);
     const thora = useCombatStore.getState().state!.combatants[1]!;
     // Fire is resisted (halved, rounded down); piercing lands in full.
     expect(thora.hp.current).toBe(20 - piercing - Math.floor(fire / 2));
@@ -108,12 +107,69 @@ describe('rolled damage queue', () => {
     );
     const [p] = useCombatStore.getState().pendingDamage;
     expect(p?.parts).toEqual([{ amount: 10 }]);
-    useCombatStore.getState().applyPendingDamage(p!.id, 'thora', true);
+    useCombatStore.getState().applyPendingDamage(p!.id, [{ id: 'thora', share: 'half' }]);
     expect(useCombatStore.getState().state!.combatants[1]!.hp.current).toBe(15);
 
     store.rollAttackFor('wolf', bite, bite.attacks[0]!);
     const [q] = useCombatStore.getState().pendingDamage;
     useCombatStore.getState().dismissPendingDamage(q!.id);
     expect(useCombatStore.getState().pendingDamage).toEqual([]);
+  });
+});
+
+describe('damage to several targets', () => {
+  it('gives each target its own share of one roll', () => {
+    const store = useCombatStore.getState();
+    useCombatStore.setState({
+      state: {
+        ...useCombatStore.getState().state!,
+        combatants: [...useCombatStore.getState().state!.combatants, combatant('bandit')],
+      },
+    });
+    store.rollAttackFor(
+      'wolf',
+      { ...bite, attacks: [] },
+      { label: 'Breath', damage: '10', damageType: 'fire', extraDamage: [] },
+    );
+    const [p] = useCombatStore.getState().pendingDamage;
+    useCombatStore.getState().applyPendingDamage(p!.id, [
+      { id: 'thora', share: 'full' },
+      { id: 'bandit', share: 'half' },
+    ]);
+    const [, thora, bandit] = useCombatStore.getState().state!.combatants;
+    // Thora resists fire, so her full 10 lands as 5; the bandit's half share is 5.
+    expect(thora!.hp.current).toBe(15);
+    expect(bandit!.hp.current).toBe(15);
+    const log = useCombatStore.getState().state!.log.map((e) => e.text);
+    expect(log).toContain("wolf's Bite applied to thora, bandit (halved)");
+  });
+
+  it('applies a called save to the targets the DM picks, PCs included, then closes it', () => {
+    useCombatStore.setState({
+      saveCall: {
+        id: 'call',
+        sourceId: 'wolf',
+        sourceName: 'wolf',
+        featureName: 'Howl',
+        ability: 'wis',
+        dc: 12,
+        halfOnSuccess: true,
+        creatures: [],
+        pcs: [{ id: 'thora', name: 'Thora', bonus: 2 }],
+      },
+    });
+    useCombatStore.getState().applySaveDamage(9, 'psychic', [{ id: 'thora', share: 'half' }]);
+    expect(useCombatStore.getState().state!.combatants[1]!.hp.current).toBe(16);
+    expect(useCombatStore.getState().saveCall).toBeNull();
+  });
+});
+
+describe('roll mode per roll', () => {
+  it('rolls one attack with advantage and says so in the log', () => {
+    useCombatStore.getState().rollAttackFor('wolf', bite, bite.attacks[0]!, 'advantage');
+    const log = useCombatStore.getState().state!.log.map((e) => e.text);
+    expect(log.at(-1)).toMatch(/^wolf — Bite \[Bite\] with advantage: to hit/);
+    useCombatStore.getState().rollAttackFor('wolf', bite, bite.attacks[0]!);
+    expect(useCombatStore.getState().state!.log.at(-1)!.text).toMatch(/^wolf — Bite \[Bite\]: /);
   });
 });

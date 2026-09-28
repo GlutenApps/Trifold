@@ -13,6 +13,10 @@ export interface RollLogEntry {
   faces: string;
   actor?: string;
   note?: string;
+  /** Where the roll came from (ADR 0004, Decision 9): the pool, the tracker, or a save call. */
+  source: 'pool' | 'tracker' | 'save';
+  /** The fight the roll belongs to, when it came from the tracker. */
+  encounterId?: string;
 }
 
 const LIMIT = 500;

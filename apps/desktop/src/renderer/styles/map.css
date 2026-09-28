@@ -74,8 +74,8 @@
 
 .style-twoTone .token-face {
   background: #1d2028;
-  color: #c8a45c;
-  border-color: #c8a45c;
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .style-plain .token-face {
@@ -85,7 +85,7 @@
 }
 
 .token-disc.role-ally .token-face {
-  border-color: #4c9a6a;
+  border-color: var(--ok);
 }
 
 .token-disc.role-enemy .token-face {
@@ -107,8 +107,8 @@
   position: absolute;
   inset: -8%;
   border-radius: 50%;
-  border: 0.18em solid #c8a45c;
-  box-shadow: 0 0 0.6em #c8a45c;
+  border: 0.18em solid var(--accent);
+  box-shadow: 0 0 0.6em var(--accent);
   pointer-events: none;
 }
 
@@ -131,8 +131,8 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(45deg, transparent 46%, #d9534f 46%, #d9534f 54%, transparent 54%),
-    linear-gradient(-45deg, transparent 46%, #d9534f 46%, #d9534f 54%, transparent 54%);
+    linear-gradient(45deg, transparent 46%, var(--danger) 46%, var(--danger) 54%, transparent 54%),
+    linear-gradient(-45deg, transparent 46%, var(--danger) 46%, var(--danger) 54%, transparent 54%);
   border-radius: 50%;
 }
 
@@ -200,7 +200,7 @@
 
 .player-viewport {
   position: absolute;
-  border: 3px dashed #c8a45c;
+  border: 3px dashed var(--accent);
   box-sizing: border-box;
   pointer-events: none;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
@@ -224,7 +224,7 @@
   border-radius: 999px;
   border: 2px solid #fff;
   background: rgba(200, 164, 92, 0.9);
-  color: #1a1508;
+  color: var(--accent-contrast);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -259,26 +259,114 @@
   background: var(--bg-hover);
 }
 
-.map-side {
+.entry-marker.selected {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Tool pop-ups: beside the strip, or above the action bar */
+.map-pop-anchor {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
 }
 
-.map-group {
-  flex: 1 1 280px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 8px 10px;
+.map-pop {
+  position: absolute;
+  z-index: 20;
+  width: 272px;
+  max-height: min(60vh, 440px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px 10px;
   background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
 }
 
-.map-group h3 {
-  margin: 0 0 6px;
+.map-pop.right {
+  left: calc(100% + 8px);
+  top: -2px;
+}
+
+.map-pop.up {
+  left: 0;
+  bottom: calc(100% + 6px);
+}
+
+.map-pop > input[type='text'],
+.map-pop > .picker-list {
+  align-self: stretch;
+}
+
+.map-pop h3,
+.map-inspector h3 {
+  margin: 0;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
+}
+
+.map-pop-fields {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  align-items: end;
+}
+
+.map-pop-fields input:not([type='checkbox']),
+.map-pop-fields select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.map-pop-fields .field.inline {
+  grid-column: 1 / -1;
+}
+
+.map-pop-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Under the map: fixed actions, then options for whatever is selected */
+.map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Holds the token inspector's height so selecting doesn't resize (and refit) the map. */
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.map-context > p {
+  margin: 0;
+}
+
+.map-inspector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .picker-list {
@@ -325,5 +413,42 @@
 }
 
 .style-twoTone .token-glyph {
-  color: #c8a45c;
+  color: var(--accent);
+}
+
+/* Background variants in the map's Backgrounds pop-up */
+.bg-list li {
+  justify-content: flex-start;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.bg-list li.showing {
+  background: var(--bg-hover);
+}
+
+.bg-list input[type='text'] {
+  flex: 1;
+  min-width: 0;
+}
+
+.bg-thumb {
+  width: 44px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+/* Player window: a new background fades in over the old one */
+.map-image.incoming {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+
+.map-image.incoming.ready {
+  opacity: 1;
 }

@@ -1,0 +1,460 @@
+<!doctype html><html><head><meta charset='utf-8'><style>
+@font-face{font-family:Outfit;font-weight:400;src:url('fonts/outfit-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:Outfit;font-weight:600;src:url('fonts/outfit-latin-600-normal.woff2') format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-weight:400;src:url('fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-weight:500;src:url('fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2')}
+body{margin:0;background:#14181D}
+/* Trifold · Slate and bone (dark). Every value is from TOKENS.md. */
+.tf{font-family:Outfit,system-ui,sans-serif;font-size:13px;line-height:1.4;color:#E6E1D6;background:#14181D;box-sizing:border-box;overflow:hidden;position:relative}
+.tf *{box-sizing:border-box;min-width:0}
+.tf button,.tf input,.tf select,.tf textarea{font:inherit;color:inherit}
+.tf svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.tf svg.i.s{width:14px;height:14px}
+.tf svg.i.f{fill:currentColor;stroke:none}
+.m{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.mu{color:#9AA3AD}.ac{color:#E3D3B0}.wa{color:#E0B252}.ok{color:#6FB08A}.al{color:#6FA4E0}.en{color:#E0685E}.dg{color:#E0685E}
+.b{font-weight:600}.n{font-weight:400}.s12{font-size:12px}.s11{font-size:11px}.s16{font-size:16px}
+.tr{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.big{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;font-size:26px;line-height:1}
+.sp{flex:1 1 auto}
+.row{display:flex;align-items:center;gap:8px}
+.col{display:flex;flex-direction:column;gap:8px}
+.wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* buttons */
+.btn{height:30px;padding:0 12px;border:1px solid #333D48;border-radius:10px;background:#1C2229;color:#E6E1D6;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex:none;cursor:default}
+.btn.sm{height:26px;padding:0 10px;font-size:12px;border-radius:6px}
+.btn.pri{background:#E3D3B0;border-color:#E3D3B0;color:#14181D}
+.btn.on{background:#252D36}
+.btn.gh{background:transparent;color:#9AA3AD;border-color:transparent}
+.btn.dg{color:#E0685E}
+.btn.dis{color:#9AA3AD;opacity:.55}
+.ib{width:28px;height:28px;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:#9AA3AD;display:inline-flex;align-items:center;justify-content:center;flex:none;position:relative}
+.ib.on{background:#252D36;color:#E6E1D6;border-color:#333D48}
+.ib.pri{background:#E3D3B0;color:#14181D;border-color:#E3D3B0}
+.ib.ln{color:#E3D3B0}
+.ib.bd{border-color:#333D48;background:#1C2229;color:#E6E1D6}
+.ib .p{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:999px;background:#E3D3B0}
+.ib .q{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:999px;border:1.5px solid #9AA3AD}
+.ra{width:22px;height:22px;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:#9AA3AD;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.ra.on{background:#252D36;color:#E6E1D6;border-color:#333D48}
+.ra.dg{color:#E0685E}
+.hid{opacity:0}
+/* inputs */
+.in{height:30px;padding:0 10px;border:1px solid #333D48;border-radius:10px;background:#14181D;color:#E6E1D6;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+.in.ph{color:#9AA3AD}
+.in.sm{height:26px;padding:0 8px;font-size:12px;border-radius:6px}
+.in.fo{box-shadow:inset 0 0 0 2px #E3D3B0;border-color:#E3D3B0}
+.in.ta{height:auto;align-items:flex-start;padding:7px 10px;white-space:normal}
+.in .cv{margin-left:auto;color:#9AA3AD}
+.seg{display:inline-flex;height:30px;border:1px solid #333D48;border-radius:10px;overflow:hidden;background:#1C2229;flex:none}
+.seg>span{padding:0 10px;display:inline-flex;align-items:center;gap:6px;font-weight:600;color:#9AA3AD;border-right:1px solid #333D48;white-space:nowrap}
+.seg>span:last-child{border-right:none}
+.seg>span.on{background:#E3D3B0;color:#14181D}
+.seg>span.dis{opacity:.45}
+.seg.sm{height:26px;border-radius:6px}.seg.sm>span{padding:0 8px;font-size:12px}
+.chk{width:16px;height:16px;border:1px solid #333D48;border-radius:4px;background:#14181D;display:inline-flex;align-items:center;justify-content:center;flex:none;color:#14181D}
+.chk.on{background:#E3D3B0;border-color:#E3D3B0}
+/* dice */
+.chip{height:34px;min-width:46px;padding:0 10px;border:1px solid #333D48;border-radius:10px;background:#1C2229;color:#E6E1D6;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;font-size:13px;display:inline-flex;align-items:center;justify-content:center;position:relative;flex:none}
+.chip.on{border-color:#E3D3B0;background:rgba(227,211,176,.16)}
+.chip .cn{position:absolute;top:-7px;right:-7px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#E3D3B0;color:#14181D;font-size:11px;display:inline-flex;align-items:center;justify-content:center}
+.chip.c{height:26px;min-width:34px;padding:0 6px;font-size:12px;border-radius:6px}
+.chip.c .cn{top:-6px;right:-6px;min-width:14px;height:14px;font-size:10px;padding:0 3px}
+.pipr{display:inline-flex;gap:3px}
+.pipr i{width:9px;height:9px;border-radius:999px;border:1px solid #E3D3B0;background:#E3D3B0;display:block}
+.pipr i.o{background:transparent}
+/* badges */
+.bd{height:18px;padding:0 7px;border-radius:999px;border:1px solid #333D48;color:#9AA3AD;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex:none}
+.bd.ac{border-color:#E3D3B0;color:#E3D3B0}.bd.wa{border-color:#E0B252;color:#E0B252}.bd.al{border-color:#6FA4E0;color:#6FA4E0}.bd.en{border-color:#E0685E;color:#E0685E}.bd.ok{border-color:#6FB08A;color:#6FB08A}
+.bd.fill{background:#E3D3B0;color:#14181D;border-color:#E3D3B0}
+.kb{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;font-size:11px;padding:1px 6px;border:1px solid #333D48;border-radius:6px;color:#9AA3AD;background:#14181D;white-space:nowrap;flex:none}
+.pip{width:7px;height:7px;border-radius:999px;background:#E3D3B0;flex:none}
+.dft{width:7px;height:7px;border-radius:999px;border:1.5px solid #9AA3AD;flex:none}
+/* surfaces */
+.pn{background:#1C2229;border:1px solid #333D48;border-radius:14px}
+.cd{background:#14181D;border:1px solid #333D48;border-radius:10px;padding:12px}
+.cd.lv{border-color:#E3D3B0}
+.cd.sel{background:#252D36}
+.lb{font-size:12px;font-weight:600;color:#9AA3AD}
+.cp{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9AA3AD}
+.hr{height:1px;background:#333D48;flex:none}
+.pr{border:1px solid #E0B252;border-radius:10px;background:rgba(224,178,82,.08);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.fly{position:absolute;background:#1C2229;border:1px solid #333D48;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:5}
+.tt{position:absolute;background:#252D36;border:1px solid #333D48;border-radius:6px;padding:4px 8px;font-size:12px;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:6;display:inline-flex;gap:8px;align-items:center}
+/* stage tabs */
+.tabs{height:34px;display:flex;align-items:flex-end;gap:2px;padding:0 6px;background:#11151A;border-bottom:1px solid #333D48;border-radius:14px 14px 0 0;flex:none}
+.tab{height:28px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;color:#9AA3AD;font-weight:600;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;white-space:nowrap;max-width:180px;flex:none;margin-bottom:-1px;position:relative}
+.tab.on{background:#1C2229;color:#E6E1D6;border-color:#333D48;box-shadow:inset 0 2px 0 #E3D3B0}
+.tab.hv{background:#232A33;color:#E6E1D6}
+.tab.ic{padding:0 6px}
+.tab .x{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;color:#9AA3AD}
+.tab .x.on{background:#333D48;color:#E6E1D6}
+.tabend{display:flex;align-items:center;gap:2px;margin-left:auto;height:34px}
+/* initiative */
+.ir{display:flex;align-items:center;gap:8px;height:36px;padding:0 8px 0 11px;border:1px solid #333D48;border-radius:10px;background:#14181D;position:relative;flex:none}
+.ir.al{box-shadow:inset 3px 0 0 #6FA4E0}.ir.en{box-shadow:inset 3px 0 0 #E0685E}.ir.ne{box-shadow:inset 3px 0 0 #9AA3AD}
+.ir.act{border-color:#E3D3B0}
+.ir.sel{background:#252D36}
+.ir.dead{opacity:.55}
+.ini{width:36px;height:24px;border:1px solid #333D48;border-radius:6px;background:#1C2229;display:inline-flex;align-items:center;justify-content:center;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;flex:none}
+.hp{width:40px;height:4px;border-radius:999px;background:#333D48;overflow:hidden;flex:none}
+.hp>i{display:block;height:100%;border-radius:999px}
+.log{font-size:12px;color:#9AA3AD;display:flex;flex-direction:column}
+.log>div{padding:4px 0;border-bottom:1px solid #333D48;display:flex;gap:8px;align-items:baseline}
+.log>div>span:first-child{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;color:#9AA3AD;flex:none;width:22px}
+/* rail */
+.rail{width:64px;height:100%;background:#11151A;border-right:1px solid #333D48;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px;flex:none}
+.ri{width:56px;height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:10px;color:#9AA3AD;font-size:11px;font-weight:600;position:relative}
+.ri.on{background:#252D36;color:#E6E1D6;box-shadow:inset 3px 0 0 #E3D3B0}
+.ri .d{position:absolute;top:7px;right:9px;width:6px;height:6px;border-radius:999px;background:#9AA3AD}
+.ri .d.lv{background:#E3D3B0}
+/* live strip */
+.strip{height:42px;background:#11151A;border-top:1px solid #333D48;display:flex;align-items:center;padding:0 6px;flex:none}
+.sec{display:flex;align-items:center;gap:6px;padding:0 10px;height:42px;border-right:1px solid #333D48;white-space:nowrap;flex:none}
+.sec .t{font-size:18px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+/* dock */
+.dock{background:#11151A;border-left:1px solid #333D48;display:flex;flex-direction:column;padding:8px;gap:8px;flex:none;height:100%;position:relative}
+.dt{height:34px;display:flex;align-items:center;gap:2px;padding:0 2px;flex:none}
+.dh{height:34px;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;font-weight:600;flex:none}
+.db{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.dsec{display:flex;flex-direction:column;flex:none;overflow:hidden}
+.sl{height:4px;border-radius:999px;background:#333D48;position:relative;flex:1}
+.sl>i{position:absolute;left:0;top:0;height:100%;background:#E3D3B0;border-radius:999px}
+.sl>b{position:absolute;top:-4px;width:12px;height:12px;border-radius:999px;background:#E3D3B0;margin-left:-6px}
+/* stage groups */
+.grp{display:flex;flex-direction:column;background:#1C2229;border:1px solid #333D48;border-radius:14px;overflow:hidden;min-width:0;position:relative}
+.grp.fo{border-color:#333D48}
+.div{width:8px;flex:none;display:flex;align-items:center;justify-content:center}
+.div>i{width:2px;height:40px;border-radius:2px;background:#333D48;display:block}
+/* map tokens */
+.tk{width:26px;height:26px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;font-size:11px;position:absolute;border:2px solid #14181D;color:#14181D}
+.tk.al{background:#6FA4E0}.tk.en{background:#E0685E}
+.tk.hd{background:transparent;border:2px dashed #E0685E;color:#E0685E}
+.tk.dd{background:#333D48;color:#9AA3AD}
+.tk.mk{background:#E0685E}
+/* tables */
+.th{display:flex;gap:8px;align-items:center;height:26px;font-size:12px;font-weight:600;color:#9AA3AD;border-bottom:1px solid #333D48;padding:0 8px}
+.td{display:flex;gap:8px;align-items:center;height:30px;padding:0 8px;border-radius:6px;white-space:nowrap}
+.td.sel{background:#252D36}
+.td.hv{background:#232A33}
+/* callouts for anatomy */
+.co{position:absolute;width:24px;height:24px;border-radius:999px;background:#E3D3B0;color:#14181D;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;font-size:12px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:7}
+/* additions */
+.tf.pnl{background:#1C2229}
+.gone{display:none !important}
+.dim{opacity:.45}
+.gl{display:flex;gap:2px;width:44px;height:24px;flex:none}
+.gl>i{display:block;border:1px solid #9AA3AD;border-radius:3px;flex:1}
+.gl>i.k{background:#333D48;border-color:#333D48;flex:none;width:9px}
+.gl>i.a{border-color:#E3D3B0}
+.dz{position:absolute;border:2px dashed #E3D3B0;background:rgba(227,211,176,.16);border-radius:14px;display:flex;align-items:center;justify-content:center;color:#E3D3B0;font-weight:600;z-index:4}
+.ghost{position:absolute;height:28px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;background:#252D36;border:1px solid #E3D3B0;border-radius:8px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:8}
+.tools{width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;border-right:1px solid #333D48;flex:none}
+.tools .hr{width:20px;margin:3px 0}
+.map{position:relative;flex:1;background:#14181D;background-image:linear-gradient(#333D48 1px,transparent 1px),linear-gradient(90deg,#333D48 1px,transparent 1px);background-size:40px 40px;background-position:12px 12px;overflow:hidden}
+.cam{position:absolute;border:1px dashed #E3D3B0;border-radius:6px}
+.stat{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.abx{background:#14181D;border:1px solid #333D48;border-radius:6px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px}
+.sr{display:flex;align-items:center;gap:6px;height:28px;padding:0 6px;border-radius:6px;border:1px solid transparent;white-space:nowrap}
+.sr.lv{border-color:#E3D3B0}
+.sr.sel{background:#252D36}
+.tdc{display:flex;gap:8px;align-items:center;height:28px;padding:0 6px;border-radius:6px;border:1px solid transparent;white-space:nowrap}
+.tdc.act{border-color:#E3D3B0;background:#252D36}
+.leg{display:flex;flex-direction:column;gap:12px}
+.leg>div{display:flex;gap:10px;align-items:flex-start}
+.leg .co{position:static;flex:none;box-shadow:none}
+.hd2{height:34px;display:flex;align-items:center;gap:8px;flex:none}
+.pcpip{width:8px;height:8px;border-radius:999px;background:#6FA4E0;flex:none}
+.grip{color:#9AA3AD;width:14px;height:14px;flex:none}
+</style></head><body>
+<div class="tf" style="width: 1960px; height: 900px; display: flex"><div style="width: 1600px; height: 900px; display: flex; flex-direction: column; position: relative; flex: none"><div style="height: 34px; flex: none">
+<div class="tf" style="width: 1600px; height: 34px; background: #11151A; border-bottom: 1px solid #333D48; display: flex; align-items: center; padding: 0 0 0 10px; gap: 8px">
+  <svg width="20" height="17" viewBox="6 16 88 76" aria-label="Trifold · Library" style="flex: none"><polygon points="30.5,18 8,30 8,50 30.5,40" fill="#E3D3B0" fill-opacity="0.85"></polygon><polygon points="30.5,44.5 8,54.5 8,80 30.5,90" fill="#E3D3B0" fill-opacity="0.38"></polygon><polygon points="69.5,18 92,30 92,50 69.5,40" fill="#E3D3B0" fill-opacity="0.85"></polygon><polygon points="69.5,44.5 92,54.5 92,80 69.5,90" fill="#E3D3B0" fill-opacity="0.38"></polygon><rect x="35" y="18" width="30" height="72" fill="#E3D3B0"></rect></svg>
+  <span class="b gone" style="margin-left: 4px">Library</span>
+  <svg class="i s mu " viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+  <div class="row " style="gap: 6px" title="Switch campaign, close it, or go to the Library"><span class="b tr" style="max-width: 260px">Sunken Keep</span><span class="bd">2024 rules</span><svg class="i s mu" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+  <div class="sp"></div>
+  <div class="btn sm gone" title="Back to the console exactly as you left it"><svg class="i s" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"></path></svg>Back to <span class="pip"></span></div>
+  <div class="btn sm gh " title="Current layout · opens Layouts in the dock"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 12h18M12 12v8"></path></svg>Table<span class="kb">Ctrl+2</span></div>
+  <div class="btn sm gh " title="Hotkey sheet · Ctrl+/"><svg class="i" viewBox="0 0 24 24"><path d="M2 6h20v12H2zM6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"></path></svg>Hotkeys</div>
+  <div class="ib " title="Settings · Ctrl+, · opens Library › Settings"><svg class="i" viewBox="0 0 24 24"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"></path></svg></div>
+  <div class="ib on " title="Show or hide the dock"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM15 4v16"></path></svg></div>
+  <div style="width: 1px; height: 18px; background: #333D48; margin: 0 4px 0 6px"></div>
+  <div style="display: flex; height: 34px; color: #9AA3AD" title="Window controls, if the window is frameless">
+    <div style="width: 40px; display: flex; align-items: center; justify-content: center"><svg class="i s" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></div>
+    <div style="width: 40px; display: flex; align-items: center; justify-content: center"><svg class="i s" viewBox="0 0 24 24"><path d="M5 5h14v14H5z"></path></svg></div>
+    <div style="width: 40px; display: flex; align-items: center; justify-content: center"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+  </div>
+</div>
+</div><div style="flex: 1; min-height: 0; display: flex"><div style="flex: 1; min-width: 0; display: flex; gap: 8px; padding: 8px"><div class="grp" style="flex: 1"><div class="tabs"><div class="tab on "><span class="pip"></span>Map</div><div class="tab  ">Campaign</div><div class="tab  ">Encounters</div><div class="tabend"><div class="ib" title="Add a major to this group"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div><div class="ib" title="Split right"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM12 4v16"></path></svg></div><div class="ib" title="Maximize · Ctrl+Shift+M"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg></div></div></div><div style="flex: 1; min-height: 0">
+<div class="tf pnl" style="width: 636px; height: 772px; display: flex; flex-direction: column">
+  <div class="hd2 " style="padding: 0 8px 0 12px; border-bottom: 1px solid #333D48; gap: 6px">
+    <svg class="i mu" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"></path></svg>
+    <span class="b tr">Silt Springs Map</span><span class="bd ac">live</span><span class="mu s12 tr">40 px grid · 100 % · East gate</span>
+    <div class="sp"></div>
+    <div class="btn sm dim" title="Already on the TV">Send to TV</div>
+    <div class="ib" title="Edit this scene in the Scenes tool"><svg class="i" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16zM13 6l3 3"></path></svg></div>
+  </div>
+  <div class="" style="flex: 1; min-height: 0; display: flex">
+    <div class="tools">
+      <div class="ib" title="Zoom in"><svg class="i" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4M11 8v6M8 11h6"></path></svg></div>
+      <div class="ib" title="Zoom out"><svg class="i" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4M8 11h6"></path></svg></div>
+      <div class="ib" title="Fit map"><svg class="i" viewBox="0 0 24 24"><path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4M9 9h6v6H9z"></path></svg></div>
+      <div class="hr"></div>
+      <div class="ib" title="Align grid: click two opposite corners of one cell"><svg class="i" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"></path></svg></div>
+      <div class="ib" title="Place party: click the map or an entry marker"><svg class="i" viewBox="0 0 24 24"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM3 21a6 6 0 0 1 12 0M16 3.5a4 4 0 0 1 0 7.5M21 21a6 6 0 0 0-5-5.9"></path></svg></div>
+      <div class="ib" title="Entry markers: add, name, remove"><svg class="i" viewBox="0 0 24 24"><path d="M12 22s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"></path></svg></div>
+      <div class="ib" title="Find creature to place, with count"><svg class="i" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"></path></svg></div>
+      <div class="hr"></div>
+      <div class="ib" title="Token: hidden"><svg class="i" viewBox="0 0 24 24"><path d="M3 3l18 18M10 6.5A10 10 0 0 1 22 12a11 11 0 0 1-3 3.5M6.5 6.5A11 11 0 0 0 2 12s4 7 10 7a9 9 0 0 0 4-1M9.5 9.5a3 3 0 0 0 4.2 4.2"></path></svg></div>
+      <div class="ib" title="Token: masked"><svg class="i" viewBox="0 0 24 24"><path d="M4 10c0-3 3-5 8-5s8 2 8 5-3 9-8 9-8-6-8-9zM9 11h.01M15 11h.01"></path></svg></div>
+      <div class="ib" title="Token: dead"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a8 8 0 0 0-5 14.2V21h10v-3.8A8 8 0 0 0 12 3zM9 12h.01M15 12h.01M10 21v-3M14 21v-3"></path></svg></div>
+      <div class="hr"></div>
+      <div class="ib" title="Show the players what you see now"><svg class="i" viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v11H3zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path></svg></div>
+      <div class="ib" title="Camera presets"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"></path></svg></div>
+      <div class="hr"></div>
+      <div class="ib ln" title="Linked encounter: combat is running from these tokens · forget the link"><svg class="i" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg></div>
+    </div>
+    <div class="map">
+      <div class="cam" style="left: 44px; top: 36px; width: 420px; height: 300px" title="What the players see"></div>
+      <span class="bd ac" style="position: absolute; left: 52px; top: 42px">players' view</span>
+      <div style="position: absolute; left: 92px; top: 132px; display: flex; align-items: center; gap: 4px; color: #E3D3B0"><svg class="i" viewBox="0 0 24 24"><path d="M12 22s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"></path></svg><span class="s12 b">East gate</span></div>
+      <span class="tk al" style="left: 139px; top: 179px">Ar</span>
+      <span class="tk al" style="left: 179px; top: 179px">Br</span>
+      <span class="tk en" style="left: 259px; top: 139px">G1</span>
+      <span class="tk mk" style="left: 299px; top: 219px">?</span>
+      <span class="tk hd" style="left: 379px; top: 259px">W</span>
+      <span class="tk dd" style="left: 219px; top: 259px">G2</span>
+      <span class="tk en" style="left: 419px; top: 99px">M</span>
+      <div class="tt" style="left: 300px; top: 252px">Masked · players see “Goblin”</div>
+      <div style="position: absolute; right: 10px; bottom: 8px; display: flex; gap: 6px"><span class="kb">100 %</span><span class="kb">grid 40 px</span></div>
+      <div class="mu s12" style="position: absolute; left: 10px; bottom: 8px">Dragging a token mirrors to the TV.</div>
+    </div>
+  </div>
+  <div class="gone" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px">
+    <svg class="i mu" viewBox="0 0 24 24" style="width: 28px; height: 28px"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"></path></svg>
+    <div class="b s16">The Sunken Keep is a title card, so there is no map to edit.</div>
+    <div class="mu" style="max-width: 460px; text-align: center; line-height: 1.5">Select a map or blank grid in the Scenes tool to edit it here, or make one now.</div>
+    <div class="row" style="gap: 8px"><div class="btn"><svg class="i s" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"></path></svg>New map…</div><div class="btn"><svg class="i s" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"></path></svg>New blank grid</div></div>
+  </div>
+</div>
+</div></div><div class="grp" style="flex: 1"><div class="tabs"><div class="tab on "><span class="pip"></span>Combat</div><div class="tab  ">Compendium</div><div class="tabend"><div class="ib" title="Add a major to this group"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div><div class="ib" title="Split right"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM12 4v16"></path></svg></div><div class="ib" title="Maximize · Ctrl+Shift+M"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg></div></div></div><div style="flex: 1; min-height: 0">
+<div class="tf pnl" style="width: 636px; height: 772px; padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 8px">
+  <div class="hd2" style="gap: 6px">
+    <span class="lb">Round</span><span class="m" style="font-size: 20px; line-height: 1">3</span><span class="mu">·</span><span class="b ac tr">Aria</span>
+    <div class="sp"></div>
+    <div class="seg sm" title="Roll mode"><span class="on">Normal</span><span>Adv</span><span>Dis</span></div>
+    <div class="ib bd" title="Previous turn · P"><svg class="i" viewBox="0 0 24 24"><path d="M6 5v14M18 5l-10 7 10 7z"></path></svg></div>
+    <div class="btn sm pri" title="Next turn · N">Next turn<span class="kb" style="border-color: rgba(20,24,29,.3); color: #14181D; background: transparent">N</span></div>
+    <div class="ib bd" title="End combat · log kept with the encounter"><svg class="i" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"></path></svg></div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0">
+    <div style="flex: none; display: flex; flex-direction: column; gap: 4px">
+      <div class="ir en act sel gone" style="box-shadow: inset 3px 0 0 #E0685E, 0 8px 24px rgba(0,0,0,.35); z-index: 2" title="The turn row stays pinned while the list scrolls under it"><span class="ini">12</span><span class="b tr">Goblin Warrior</span><span class="bd">masked: Goblin</span><span class="mu s11">pinned · 2 rows above</span><div class="sp"></div><span class="m wa">4/10</span></div>
+      <div class="ir al act sel"><span class="ini">21</span><span class="b tr">Aria</span><span class="bd wa">concentrating</span><div class="sp"></div><span class="m">21/28</span><div class="row " style="gap: 0"><div class="ra" title="Move up"><svg class="i s" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"></path></svg></div><div class="ra" title="Move down"><svg class="i s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div></div>
+      <div class="pr gone">
+        <div><span class="b">Aria</span> must make a DC 13 Constitution save to keep concentrating.</div>
+        <div class="row" style="gap: 6px"><div class="btn sm pri">Roll d20 + 2</div><div class="btn sm">Keep</div><div class="btn sm">Drop</div><div class="sp"></div><span class="mu s12">7 piercing from Worg</span></div>
+      </div>
+      <div class="ir al"><span class="ini">19</span><span class="b tr">Brannoc</span><div class="sp"></div><span class="m">44/44</span><span class="mu s11 m n">+5 temp</span></div>
+      <div class="ir en  "><span class="ini">12</span><span class="b tr">Goblin Warrior</span><span class="bd" title="What the players see until revealed">masked: Goblin</span><div class="sp"></div><span class="m wa">4/10</span><div class="row hid" style="gap: 0"><div class="ra" title="Move up"><svg class="i s" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"></path></svg></div><div class="ra" title="Move down"><svg class="i s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div></div>
+      <div class="ir en dead"><span class="ini">8</span><span class="tr" style="text-decoration: line-through">Goblin Minion</span><span class="bd">dead</span><div class="sp"></div><span class="m">0/7</span></div>
+      <div class="ir en"><span class="ini">7</span><span class="b tr">Worg</span><span class="bd">hidden</span><div class="sp"></div><span class="m">13/13</span></div>
+      <div class="ir en"><span class="ini">5</span><span class="b tr">Mage</span><span class="bd">holding</span><span class="bd wa">Frightened · 2</span><div class="sp"></div><span class="m">81/81</span></div>
+      <div class="pr gone" style="gap: 6px"><div class="row" style="gap: 8px"><span class="b">Save call</span><span class="mu">DC 15 Dexterity · 2 targets · 3d6 fire</span><div class="sp"></div><div class="btn sm gh">Dismiss</div></div><div class="row" style="gap: 6px"><span class="pcpip"></span><span>Aria</span><span class="m">9</span><span class="bd en">fail</span><span class="pcpip" style="margin-left: 8px"></span><span>Brannoc</span><span class="m">17</span><span class="bd ok">save</span><div class="sp"></div><div class="btn sm pri">Apply full / half</div></div></div>
+      <div class="hd2 " style="margin-top: 4px; gap: 6px"><span class="lb">Log</span><span class="mu s12">14 entries</span><div class="sp"></div><div class="ra" title="Export as text"><svg class="i s" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"></path></svg></div><div class="ra" title="Hide"><svg class="i s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+    </div>
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+      <div class="cd " style="display: flex; flex-direction: column; gap: 8px">
+        <div class="row" style="gap: 6px">
+          <span class="b">Aria</span><span class="mu">AC 13 · init +2</span>
+          <div class="sp"></div>
+          <div class="ib dim" title="Reveal name (not masked)"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg></div>
+          <div class="ib" title="Hide"><svg class="i" viewBox="0 0 24 24"><path d="M3 3l18 18M10 6.5A10 10 0 0 1 22 12a11 11 0 0 1-3 3.5M6.5 6.5A11 11 0 0 0 2 12s4 7 10 7a9 9 0 0 0 4-1M9.5 9.5a3 3 0 0 0 4.2 4.2"></path></svg></div>
+          <div class="ib" title="Hold"><svg class="i" viewBox="0 0 24 24"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v6M11 5a1.5 1.5 0 0 1 3 0v7M14 7a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-12 0v-2a1.5 1.5 0 0 1 3 0"></path></svg></div>
+          <div class="ib" title="Mark dead"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a8 8 0 0 0-5 14.2V21h10v-3.8A8 8 0 0 0 12 3zM9 12h.01M15 12h.01M10 21v-3M14 21v-3"></path></svg></div>
+          <div class="ib dg" title="Remove"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></div>
+        </div>
+        <div class="wrap" style="gap: 6px"><div class="in sm ph" style="width: 64px">amount</div><div class="in sm" style="width: 104px">any type<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="btn sm pri">Damage</div><div class="btn sm">Heal</div><div class="btn sm">Temp HP</div></div>
+        <div class="wrap" style="gap: 6px"><div class="in sm" style="width: 120px">Frightened<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="in sm" style="width: 110px">no duration<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="btn sm">Add condition</div></div>
+        <div class="row" style="gap: 6px"><div class="in sm sp">Web<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="btn sm on">Concentrate</div></div>
+        <div class="row" style="gap: 10px; flex-wrap: wrap"><span class="lb">Spell slots</span><span class="row" style="gap: 5px"><span class="m n s11 mu">1st</span><span class="pipr"><i></i><i></i><i></i><i class="o"></i></span></span><span class="row" style="gap: 5px"><span class="m n s11 mu">2nd</span><span class="pipr"><i></i><i></i><i class="o"></i></span></span><span class="row" style="gap: 5px"><span class="m n s11 mu">3rd</span><span class="pipr"><i></i><i class="o"></i></span></span><span class="mu s12">click a pip to spend, again to restore</span></div>
+        <div class="mu">PC card: no stat block. Ask the player.</div>
+      </div>
+      <div class="cd gone" style="display: flex; flex-direction: column; gap: 8px">
+        <div class="row" style="gap: 6px">
+          <span class="b">Goblin Warrior</span><span class="mu">AC 15 · init +2</span><span class="bd">masked: Goblin</span>
+          <div class="sp"></div>
+          <div class="ib" title="Reveal name"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg></div>
+          <div class="ib" title="Hide"><svg class="i" viewBox="0 0 24 24"><path d="M3 3l18 18M10 6.5A10 10 0 0 1 22 12a11 11 0 0 1-3 3.5M6.5 6.5A11 11 0 0 0 2 12s4 7 10 7a9 9 0 0 0 4-1M9.5 9.5a3 3 0 0 0 4.2 4.2"></path></svg></div>
+          <div class="ib" title="Hold"><svg class="i" viewBox="0 0 24 24"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v6M11 5a1.5 1.5 0 0 1 3 0v7M14 7a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-12 0v-2a1.5 1.5 0 0 1 3 0"></path></svg></div>
+          <div class="ib" title="Mark dead"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a8 8 0 0 0-5 14.2V21h10v-3.8A8 8 0 0 0 12 3zM9 12h.01M15 12h.01M10 21v-3M14 21v-3"></path></svg></div>
+          <div class="ib dg" title="Remove"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></div>
+        </div>
+        <div class="wrap" style="gap: 6px"><div class="in sm ph" style="width: 64px">amount</div><div class="in sm" style="width: 104px">any type<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="btn sm pri">Damage</div><div class="btn sm">Heal</div><div class="btn sm">Temp HP</div><div class="in sm" style="width: 120px; margin-left: 8px">Prone<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="in sm" style="width: 110px">no duration<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="btn sm">Add condition</div></div>
+        <div class="row" style="gap: 6px"><div class="in sm ph" style="width: 220px">concentrating on…</div><div class="btn sm">Concentrate</div><span class="lb" style="margin-left: 12px">Recharges</span><span class="mu s12">none for this creature</span></div>
+        <div class="hr"></div>
+        <div class="row" style="gap: 8px"><span class="b">Goblin Warrior</span><span class="mu s12">Small Fey (Goblinoid) · AC 15 · HP 10 (3d6) · Speed 30 ft.</span></div>
+        <div class="m n s12 mu">STR 8 (−1) · DEX 15 (+2) · CON 10 (+0) · INT 10 (+0) · WIS 8 (−1) · CHA 8 (−1) · Stealth +6 · Darkvision 60 ft. · PP 9</div>
+        <div class="col" style="gap: 6px">
+          <span class="cp">Actions</span>
+          <div class="wrap" style="gap: 6px">
+            <div class="btn sm on" title="Rolls to hit and damage">Scimitar<span class="m n mu">+4 · 1d6+2 slashing</span></div>
+            <div class="btn sm" title="Rolls to hit and damage">Shortbow<span class="m n mu">+4 · 1d6+2 piercing · 80/320</span></div>
+          </div>
+          <div class="pr">
+            <div class="row" style="gap: 8px"><span class="b">Scimitar</span><span class="m">17</span><span class="mu s12">to hit (13 + 4)</span><span class="mu">·</span><span class="m">5</span><span class="mu s12">slashing (3 + 2)</span><span class="mu">· waiting for a target</span></div>
+            <div class="row" style="gap: 6px"><span class="lb">Apply to</span><div class="btn sm"><span class="pcpip"></span>Aria<span class="m n mu">AC 13</span></div><div class="btn sm"><span class="pcpip"></span>Brannoc<span class="m n mu">AC 18</span></div><div class="btn sm">Half</div><div class="btn sm gh">Dismiss</div></div>
+          </div>
+          <span class="cp">Bonus actions</span>
+          <div class="wrap" style="gap: 6px"><div class="btn sm">Nimble Escape<span class="mu n">Disengage or Hide</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="gone" style="width: 300px; flex: none; display: flex; flex-direction: column; gap: 6px">
+      <div class="row" style="gap: 6px"><span class="lb">Log</span><span class="mu s11">this fight · same log as Dice</span><div class="sp"></div><div class="btn sm gh">export</div><div class="btn sm gh">hide</div></div>
+      <div class="log">
+        <div><span>R3</span><span>Goblin Warrior: Scimitar 17 (d20 13 + 4) · 5 slashing (d6 3 + 2) · waiting for a target</span></div>
+        <div><span>R3</span><span>Goblin Warrior's turn</span></div>
+        <div><span>R3</span><span>Aria kept concentration: Con save 14 (d20 12 + 2) vs DC 13</span></div>
+        <div><span>R3</span><span>Aria took 7 piercing (28 → 21)</span></div>
+        <div><span>R3</span><span>Worg: Bite 19 vs Aria — hit</span></div>
+        <div><span>R3</span><span>Goblin Warrior took 6 slashing (10 → 4)</span></div>
+        <div><span>R3</span><span>Round 3</span></div>
+        <div><span>R2</span><span>Goblin Minion marked dead</span></div>
+        <div><span>R2</span><span>Mage holds</span></div>
+        <div><span>R2</span><span>Mage: Frightened, 2 rounds</span></div>
+        <div><span>R1</span><span>Aria concentrates on Web</span></div>
+        <div><span>R1</span><span>Round 1</span></div>
+        <div><span>R0</span><span>Rolled 4 initiatives</span></div>
+        <div><span>R0</span><span>Combat started from Silt Springs Map: 6 combatants</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div></div></div><div class="dock" style="width: 300px"><div style="height: 34px; flex: none">
+<div class="tf" style="width: 284px; height: 34px; display: flex; align-items: center; gap: 2px; padding: 0 2px; background: #11151A">
+  <div class="ib gone" title="Expand the dock"><svg class="i" viewBox="0 0 24 24"><path d="M21 12H9M13 8l-4 4 4 4M4 5v14"></path></svg></div>
+  <div class="hr gone" style="width: 20px; margin: 4px 0"></div>
+  <div class="ib " title="Dice · Ctrl+D"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12L4 7.5M12 12v9"></path></svg><span class="p gone"></span></div>
+  <div class="ib on" title="TV controls · Ctrl+T"><svg class="i" viewBox="0 0 24 24"><path d="M3 5h18v11H3zM9 20h6M12 16v4"></path></svg><span class="p "></span></div>
+  <div class="ib " title="Music: transport, playlists, tracks · Ctrl+M"><svg class="i" viewBox="0 0 24 24"><path d="M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM9 18V5l11-2v12M20 15a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"></path></svg><span class="p "></span></div>
+  <div class="ib on" title="Scenes: tree, send to TV, edit scene"><svg class="i" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6"></path></svg><span class="p "></span></div>
+  <div class="ib " title="Hotkey sheet · Ctrl+/"><svg class="i" viewBox="0 0 24 24"><path d="M2 6h20v12H2zM6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"></path></svg></div>
+  <div class="ib " title="Layouts"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 12h18M12 12v8"></path></svg></div>
+  <div class="sp "></div>
+  <div class="ib " title="Collapse the dock to icons"><svg class="i" viewBox="0 0 24 24"><path d="M3 12h12M11 8l4 4-4 4M20 5v14"></path></svg></div>
+</div>
+</div><div class="pn dsec"><div class="dh"><svg class="i mu" viewBox="0 0 24 24"><path d="M3 5h18v11H3zM9 20h6M12 16v4"></path></svg>TV controls<span class="pip"></span><div class="sp"></div><div class="ra" title="Collapse"><svg class="i s" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"></path></svg></div></div><div>
+<div class="tf pnl db" style="width: 282px; height: 344px; gap: 8px">
+  <div class="cd lv" style="padding: 8px 12px; display: flex; flex-direction: column; gap: 2px">
+    <div class="row" style="gap: 6px"><span class="pip"></span><span class="cp" style="color: #E3D3B0">Live on TV</span><div class="sp"></div><span class="bd">window open</span></div>
+    <div class="row" style="gap: 6px"><span class="b tr">Silt Springs Map</span><span class="mu s12 tr">· map · title shown</span></div>
+  </div>
+  <div class="wrap" style="gap: 6px">
+    <div class="btn sm" title="Toggle blackout · Ctrl+Shift+B"><svg class="i s" viewBox="0 0 24 24"><path d="M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10z"></path></svg>Blackout</div>
+    <div class="btn sm" title="Close the player window · Ctrl+Shift+P"><svg class="i s" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 9h18"></path></svg>Close player window</div>
+    <div class="ib bd" title="Undo last scene · Ctrl+Shift+Z"><svg class="i" viewBox="0 0 24 24"><path d="M4 10h10a5 5 0 0 1 0 10H9M4 10l4-4M4 10l4 4"></path></svg></div>
+    <div class="ib bd dim" title="Dismiss handout (none shown)"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM9 9l6 6M15 9l-6 6"></path></svg></div>
+    <div class="ib bd dim" title="End break (no break running)"><svg class="i" viewBox="0 0 24 24"><path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h2a2 2 0 0 1 0 4h-2M6 3v2M10 3v2M14 3v2"></path></svg></div>
+  </div>
+  <div class="col" style="gap: 4px">
+    <span class="lb">Overlays</span>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; font-size: 12px">
+      <div class="row" style="gap: 6px"><span class="chk on"><svg class="i s" viewBox="0 0 24 24"><path d="M5 12l5 5 9-11"></path></svg></span>Scene title</div>
+      <div class="row" style="gap: 6px"><span class="chk on"><svg class="i s" viewBox="0 0 24 24"><path d="M5 12l5 5 9-11"></path></svg></span>Initiative strip</div>
+      <div class="row" style="gap: 6px"><span class="chk"></span>PC health bars</div>
+      <div class="row" style="gap: 6px"><span class="chk on"><svg class="i s" viewBox="0 0 24 24"><path d="M5 12l5 5 9-11"></path></svg></span>Round counter</div>
+    </div>
+  </div>
+  <div class="col" style="gap: 4px">
+    <div class="row"><span class="lb">Handout</span><span class="dft" title="Typed, not shown yet"></span></div>
+    <div class="row" style="gap: 6px"><div class="in sm" style="width: 110px">The letter</div><div class="in sm ta sp" style="min-height: 26px; padding: 4px 8px">Meet me at the springs before the tide turns.</div></div>
+    <div class="row" style="gap: 6px"><div class="btn sm pri">Show text handout</div><div class="btn sm">Show image handout…</div></div>
+  </div>
+  <div class="col" style="gap: 4px">
+    <span class="lb">Break</span>
+    <div class="row" style="gap: 6px"><div class="in sm sp">Back in</div><div class="in sm m n" style="width: 64px; justify-content: space-between">10<span class="mu s11">min</span></div><div class="btn sm">Show break screen</div></div>
+  </div>
+</div>
+</div></div><div class="pn dsec"><div class="dh"><svg class="i mu" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6"></path></svg>Scenes<span class="pip"></span><div class="sp"></div><div class="ra" title="Collapse"><svg class="i s" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"></path></svg></div></div><div>
+<div class="tf pnl db" style="width: 282px; height: 298px; gap: 8px">
+  <div class="in sm ph"><svg class="i s" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>Find scene</div>
+  <div class="row" style="gap: 2px">
+    <div class="in sm ph sp" style="margin-right: 4px">New scene title</div>
+    <div class="ib" title="New title card"><svg class="i" viewBox="0 0 24 24"><path d="M5 6h14M12 6v12M9 18h6"></path></svg></div>
+    <div class="ib" title="New image scene…"><svg class="i" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6"></path></svg></div>
+    <div class="ib" title="New map…"><svg class="i" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"></path></svg></div>
+    <div class="ib" title="New blank grid"><svg class="i" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"></path></svg></div>
+    <div class="ib" title="New folder"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"></path></svg></div>
+  </div>
+  <div class="col" style="gap: 2px">
+    <div class="sr"><svg class="i s mu" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg><svg class="i s mu" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"></path></svg><span class="b tr">Session 3</span></div>
+    <div class="sr" style="padding-left: 22px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M5 6h14M12 6v12M9 18h6"></path></svg><span class="tr sp">The Sunken Keep</span></div>
+    <div class="sr lv sel" style="padding-left: 22px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"></path></svg><span class="tr sp">Silt Springs Map</span><span class="bd ac">live</span><div class="ra on" title="Send to TV · Enter or double-click"><svg class="i s" viewBox="0 0 24 24"><path d="M3 5h18v11H3zM9 20h6M12 16v4"></path></svg></div><div class="ra on" title="Edit"><svg class="i s" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16zM13 6l3 3"></path></svg></div><div class="ra on" title="Move up"><svg class="i s" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"></path></svg></div><div class="ra on" title="Move down"><svg class="i s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+    <div class="sr" style="padding-left: 22px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6"></path></svg><span class="tr sp">The letter</span></div>
+    <div class="sr" style="padding-left: 22px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"></path></svg><span class="tr sp">Blank grid</span></div>
+    <div class="sr"><svg class="i s mu" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg><svg class="i s mu" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"></path></svg><span class="b tr">Session 2</span></div>
+  </div>
+  <div class="mu s12 tr">Recent: <span style="text-decoration: underline">Silt Springs Map</span> · <span style="text-decoration: underline">The Sunken Keep</span></div>
+  <div class="cd lv" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">
+    <div class="row" style="gap: 6px"><span class="cp" style="color: #E3D3B0">Selected · live</span><div class="sp"></div><span class="mu s11">click selects · Enter sends</span></div>
+    <div class="b tr">Silt Springs Map</div>
+    <div class="row" style="gap: 6px"><div class="btn sm dim">Send to TV</div><div class="btn sm">Open in Map</div><div class="sp"></div><div class="btn sm gh " title="Edit scene"><svg class="i s" viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16zM13 6l3 3"></path></svg>Edit<svg class="i s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+  </div>
+  <div class="col gone" style="gap: 6px; padding: 0 2px">
+    <div class="col" style="gap: 3px"><span class="s12 mu">Title</span><div class="in sm">Silt Springs Map</div></div>
+    <div class="col" style="gap: 3px"><span class="s12 mu">Subtitle</span><div class="in sm ph">Subtitle</div></div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+      <div class="col" style="gap: 3px"><span class="s12 mu">Folder</span><div class="in sm">Session 3<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+      <div class="col" style="gap: 3px"><span class="s12 mu">Show title on TV</span><div class="in sm tr">Follow overlay setting<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+      <div class="col" style="gap: 3px"><span class="s12 mu">Music on go-live</span><div class="in sm">Tavern Night<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+      <div class="col" style="gap: 3px"><span class="s12 mu">Backdrop</span><div class="in sm">Dark<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+    </div>
+    <div class="col" style="gap: 3px"><span class="s12 mu">DM notes</span><div class="in sm ta" style="min-height: 48px">Party arrives at the east gate. The worg waits under the bridge.</div></div>
+    <div class="row"><div class="btn sm dg">Remove scene</div></div>
+  </div>
+  <div class="mu s11" style="line-height: 1.5">Click selects a scene and previews it; a map opens in Map. Enter, double-click or the row's ▶ sends it to the TV. Nothing goes live by accident.</div>
+</div>
+</div></div><div class="pn dsec"><div class="dh"><svg class="i mu" viewBox="0 0 24 24"><path d="M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM9 18V5l11-2v12M20 15a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"></path></svg><span class="tr">Low Tide</span><span class="pip"></span><div class="sp"></div><div class="ra on" title="Pause · Ctrl+Alt+P"><svg class="i s f" viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"></path></svg></div><div class="sp"></div><div class="ra" title="Expand"><svg class="i s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div></div></div></div><div style="height: 42px; flex: none">
+<div class="tf strip" style="width: 1600px; height: 42px">
+  <div class="sec" title="TV · click opens TV controls in the dock">
+    <svg class="i mu" viewBox="0 0 24 24"><path d="M3 5h18v11H3zM9 20h6M12 16v4"></path></svg>
+    <span class="pip "></span>
+    <span class="b tr" style="max-width: 170px">Live: Silt Springs Map</span>
+    <div class="btn sm " title="Toggle blackout · Ctrl+Shift+B">Blackout</div>
+    <div class="ib on" title="Close the player window · Ctrl+Shift+P"><svg class="i" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 9h18"></path></svg></div>
+    <div class="ib" title="Undo last scene · Ctrl+Shift+Z"><svg class="i" viewBox="0 0 24 24"><path d="M4 10h10a5 5 0 0 1 0 10H9M4 10l4-4M4 10l4 4"></path></svg></div>
+  </div>
+  <div class="sec" title="Combat · click focuses the Combat tab">
+    <svg class="i mu" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6z"></path></svg>
+    <span class="b">Round 3 · Aria</span>
+    <div class="ib " title="Previous turn · P"><svg class="i" viewBox="0 0 24 24"><path d="M6 5v14M18 5l-10 7 10 7z"></path></svg></div>
+    <div class="ib pri" title="Next turn · N"><svg class="i" viewBox="0 0 24 24"><path d="M18 5v14M6 5l10 7-10 7z"></path></svg></div>
+  </div>
+  <div class="sec" title="Music · click opens Music in the dock">
+    <svg class="i mu" viewBox="0 0 24 24"><path d="M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM9 18V5l11-2v12M20 15a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"></path></svg>
+    <span class="b tr" style="max-width: 190px">Tavern Night · Low Tide</span>
+    <div class="ib " title="Previous track · Ctrl+Alt+←"><svg class="i" viewBox="0 0 24 24"><path d="M6 5v14M18 5l-10 7 10 7z"></path></svg></div>
+    <div class="ib " title="Play or pause · Ctrl+Alt+P"><svg class="i f gone" viewBox="0 0 24 24"><path d="M7 5v14l12-7z"></path></svg><svg class="i f " viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"></path></svg></div>
+    <div class="ib " title="Next track · Ctrl+Alt+→"><svg class="i" viewBox="0 0 24 24"><path d="M18 5v14M6 5l10 7-10 7z"></path></svg></div>
+    <div class="ib " title="Panic mute · Ctrl+Alt+M"><svg class="i" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10zM16 9l5 6M21 9l-5 6"></path></svg></div>
+  </div>
+  <div class="sec" title="Dice · click opens Dice in the dock · Ctrl+D" style="border-right: none">
+    <svg class="i mu" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12L4 7.5M12 12v9"></path></svg>
+    <div style="display: flex; gap: 4px; align-items: center">
+      <div class="chip c ">d100<span class="cn gone"></span></div>
+      <div class="chip c ">d20<span class="cn gone"></span></div>
+      <div class="chip c ">d12<span class="cn gone"></span></div>
+      <div class="chip c ">d10<span class="cn gone"></span></div>
+      <div class="chip c ">d8<span class="cn gone"></span></div>
+      <div class="chip c on">d6<span class="cn ">2</span></div>
+      <div class="chip c ">d4<span class="cn gone"></span></div>
+    </div>
+    <div class="btn sm pri" style="margin-left: 4px">Roll</div>
+    <div class="ra" title="Clear the pool"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+    <span class="t" title="Last total">7</span>
+  </div>
+</div>
+</div><span class="co" style="left: 300px; top: 5px">1</span><span class="co" style="left: 150px; top: 46px">2</span><span class="co" style="left: 330px; top: 420px">3</span><span class="co" style="left: 638px; top: 460px">4</span><span class="co" style="left: 16px; top: 300px">5</span><span class="co" style="left: 1400px; top: 46px">6</span><span class="co" style="left: 1560px; top: 520px">7</span><span class="co" style="left: 1000px; top: 866px">8</span><span class="co" style="left: 250px; top: 866px">9</span></div><div style="width: 360px; flex: none; padding: 28px 24px 24px 28px; display: flex; flex-direction: column; gap: 12px; border-left: 1px solid #333D48"><div class="b s16">Shell anatomy · 1600 × 900</div><div class="leg" style="font-size: 12px; line-height: 1.45"><div><span class="co">1</span><span><span class="b">Top bar, 34 px.</span> The app's header and, since the window is frameless, its title bar: the mark opens the Library; the breadcrumb names the open campaign and drops the switcher; then the current layout, Hotkeys, Settings (in the Library), the dock toggle and the window controls. Nothing here is table state.</span></div><div><span class="co">2</span><span><span class="b">Stage tab strip, 34 px.</span> One 28 px tab per open major: Campaign, Compendium, Encounters, Combat, Map. All five are present by default; close what you don't need, + brings it back or moves it from the other group. Accent top line: active. Pip: live. Ring: unsaved changes. ⧉ splits right, ⤢ maximizes.</span></div><div><span class="co">3</span><span><span class="b">Stage group.</span> Holds the active major. Switching never resets a search, a selection, an open map or an encounter. Majors never appear in the dock.</span></div><div><span class="co">4</span><span><span class="b">Split divider, 8 px.</span> Drag to resize. Two groups is the ceiling: enough for combat beside the map, not enough to rebuild the old panel wall.</span></div><div><span class="co">5</span><span><span class="b">Contextual toolbar.</span> A major keeps its tools inside itself: the map editor's stand in a 36 px strip so the canvas stays wide at 600 px.</span></div><div><span class="co">6</span><span><span class="b">Dock tab strip.</span> Six toggles for the minors: Dice, TV controls, Music, Scenes, Hotkeys, Layouts. Several can be open at once. Pip: live. ⇥ collapses to icons. Minors never appear on the stage.</span></div><div><span class="co">7</span><span><span class="b">Dock sections.</span> Open minors stack as collapsible sections; the last open one takes what is left and scrolls inside. The dock is 400 wide, 300 narrow, 44 as icons, or hidden. Icons only or hidden, a tool opens as a flyout; Escape closes it.</span></div><div><span class="co">8</span><span><span class="b">Live strip, 42 px.</span> Table state only: what is on the TV or Blackout, player window, round and turn, music and mute, the shared dice pool and last total. Clicking a section opens its dock tool or focuses the Combat tab.</span></div><div><span class="co">9</span><span><span class="b">One tap from anywhere.</span> Blackout, player window, undo scene, previous and next turn, panic mute and Roll all live on the strip, each with its hotkey.</span></div></div></div></div>
+</body></html>

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dock hidden</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf" style="width: 1600px; height: 900px; display: flex; flex-direction: column"><div style="height: 34px; flex: none"><dc-import name="TopBar" w="1600" space="campaign" campaign="Sunken Keep" layout="Prep" dock="false" hint-size="1600px,34px"></dc-import></div><div style="flex: 1; min-height: 0; display: flex"><div style="flex: 1; min-width: 0; display: flex; gap: 8px; padding: 8px"><div class="grp" style="flex: 1"><div class="tabs"><div class="tab on ">Compendium</div><div class="tabend"><div class="ib" title="Add a major to this group"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div><div class="ib" title="Split right"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM12 4v16"></path></svg></div><div class="ib" title="Maximize · Ctrl+Shift+M"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg></div></div></div><div style="flex: 1; min-height: 0"><dc-import name="Compendium" w="1582" h="772"  hint-size="1582px,772px"></dc-import></div></div></div></div><div style="height: 42px; flex: none"><dc-import name="LiveStrip" w="1600" scene="" blackout="true" win="false" combat="" music="" playing="false" muted="false" pool="d20:1,d8:1,d6:3" total="16" hint-size="1600px,42px"></dc-import></div><div class="fly" style="left: 690px; top: 434px; width: 384px; display: flex; flex-direction: column"><div class="dh"><svg class="i mu" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12L4 7.5M12 12v9"></path></svg>Dice<span class="kb">Ctrl+D</span><div class="sp"></div><span class="mu s12 n">rises from the strip's dice section</span><div class="ra" title="Close"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div></div><div><dc-import name="DockDice" w="382" h="380" compact="false" hint-size="382px,380px"></dc-import></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

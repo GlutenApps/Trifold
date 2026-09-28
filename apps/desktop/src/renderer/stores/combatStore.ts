@@ -19,6 +19,7 @@ import {
   type SavePrompt,
 } from '@trifold/rules';
 import type {
+  EncounterResult,
   Attack,
   Combatant,
   CombatState,
@@ -37,6 +38,8 @@ import { facesText, useRollLogStore } from './rollLogStore';
 
 /** A save call in progress: creature results auto-rolled, PC bonuses shown for the table. */
 export interface SaveCallView {
+  id: string;
+  sourceId: string;
   sourceName: string;
   featureName: string;
   ability: string;
@@ -58,12 +61,17 @@ export interface PendingDamage {
   parts: Array<{ amount: number; type?: string }>;
 }
 
+/** One target of a damage assignment: the full amount or half of it (rounded down, per part). */
+export interface DamageTarget {
+  id: string;
+  share: 'full' | 'half';
+}
+
 interface CombatStoreState {
   encounterId: string | null;
   state: CombatState | null;
   records: Record<string, CompendiumRecord>;
   selectedId: string | null;
-  rollMode: RollMode;
   missing: string[];
   savePrompts: SavePrompt[];
   saveCall: SaveCallView | null;
@@ -72,6 +80,10 @@ interface CombatStoreState {
   /** XP total of enemy templates, for the encounter result. */
   enemyXp: number;
   error: string | null;
+  /** The Encounters tab shows its list over a running fight (ADR 0005). */
+  browsing: boolean;
+  /** The fight that just ended, shown once in the Encounters tab until dismissed. */
+  finished: { encounterId: string; result: EncounterResult } | null;
 
   begin(
     encounter: Encounter,
@@ -80,7 +92,8 @@ interface CombatStoreState {
   ): Promise<void>;
   resume(encounter: Encounter): Promise<void>;
   leave(): void;
-  setRollMode(mode: RollMode): void;
+  setBrowsing(browsing: boolean): void;
+  dismissFinished(): void;
   select(id: string | null): void;
   setInitiative(id: string, value: number | null): void;
   rollInitiativeFor(id: string): void;
@@ -105,21 +118,22 @@ interface CombatStoreState {
   move(id: string, direction: -1 | 1): void;
   useCounter(id: string, counterId: string, delta: number): void;
   spendRecharge(id: string, rechargeId: string): void;
-  rollAttackFor(id: string, feature: Feature, attack: Attack): void;
-  applyPendingDamage(pendingId: string, targetId: string, half: boolean): void;
+  rollAttackFor(id: string, feature: Feature, attack: Attack, mode?: RollMode): void;
+  /** Deals the parts to each target (halved per part for a half share) and logs who took what. */
+  damageTargets(
+    targets: DamageTarget[],
+    parts: Array<{ amount: number; type?: string }>,
+    source?: string,
+  ): void;
+  applyPendingDamage(pendingId: string, targets: DamageTarget[]): void;
   dismissPendingDamage(pendingId: string): void;
   rollFeature(id: string, feature: Feature, button: RollButton): void;
-  rollMultiattack(id: string, feature: Feature): void;
+  rollMultiattack(id: string, feature: Feature, mode?: RollMode): void;
   callSave(id: string, feature: Feature, save: SaveCall): void;
-  applySaveDamage(amount: number, type: string | undefined): void;
+  applySaveDamage(amount: number, type: string | undefined, targets: DamageTarget[]): void;
   clearSaveCall(): void;
   addLog(kind: LogEntry['kind'], text: string, actorId?: string): void;
-  end(): Promise<{
-    endedAt: string;
-    xpEarned: number;
-    rounds: number;
-    casualties: string[];
-  } | null>;
+  end(): Promise<EncounterResult | null>;
 }
 
 const LOG_LIMIT = 2000;
@@ -210,7 +224,6 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     state: null,
     records: {},
     selectedId: null,
-    rollMode: 'normal',
     missing: [],
     savePrompts: [],
     saveCall: null,
@@ -218,6 +231,8 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     pendingDamage: [],
     enemyXp: 0,
     error: null,
+    browsing: false,
+    finished: null,
 
     async begin(encounter, pcs, initiativeMode) {
       const records = await loadRecords(null, encounter);
@@ -257,6 +272,8 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         concentrationPrompt: null,
         enemyXp: enemyXpOf(encounter),
         error: null,
+        browsing: false,
+        finished: null,
       });
       log('note', `Combat prepared: ${state.combatants.length} combatants`);
     },
@@ -278,6 +295,8 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         concentrationPrompt: null,
         enemyXp: enemyXpOf(encounter),
         error: null,
+        browsing: false,
+        finished: null,
       });
     },
 
@@ -291,11 +310,16 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         saveCall: null,
         concentrationPrompt: null,
         pendingDamage: [],
+        browsing: false,
       });
     },
 
-    setRollMode(mode) {
-      set({ rollMode: mode });
+    setBrowsing(browsing) {
+      set({ browsing });
+    },
+
+    dismissFinished() {
+      set({ finished: null });
     },
 
     select(id) {
@@ -567,10 +591,10 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       if (c && r) log('note', `${c.name} uses ${r.featureName}`, id);
     },
 
-    rollAttackFor(id, feature, attack) {
+    rollAttackFor(id, feature, attack, mode = 'normal') {
       const c = find(id);
       if (!c) return;
-      const result = rollAttack(attack, get().rollMode);
+      const result = rollAttack(attack, mode);
       const hit = result.toHit;
       const parts: string[] = [];
       if (attack.toHit !== undefined) {
@@ -587,7 +611,8 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         );
       for (const x of result.extraDamage)
         parts.push(`+${x.total} ${x.damageType ?? ''} (${facesText(x)})`);
-      const text = `${c.name} — ${feature.displayName} [${attack.label}]: ${parts.join('; ')}`;
+      const modeText = attack.toHit !== undefined && mode !== 'normal' ? ` with ${mode}` : '';
+      const text = `${c.name} — ${feature.displayName} [${attack.label}]${modeText}: ${parts.join('; ')}`;
       log('attack', text, id);
       const damageParts: PendingDamage['parts'] = [];
       if (result.damage) {
@@ -633,22 +658,29 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         total: result.damage?.total ?? hit.total,
         faces: parts.join('; '),
         actor: c.name,
+        source: 'tracker',
+        ...(get().encounterId ? { encounterId: get().encounterId! } : {}),
       });
     },
 
-    applyPendingDamage(pendingId, targetId, half) {
-      const pending = get().pendingDamage.find((p) => p.id === pendingId);
-      const target = find(targetId);
-      if (!pending || !target) return;
-      for (const part of pending.parts) {
-        const amount = half ? Math.floor(part.amount / 2) : part.amount;
-        if (amount > 0) get().damage(targetId, amount, part.type);
+    damageTargets(targets, parts, source) {
+      const names: string[] = [];
+      for (const t of targets) {
+        const target = find(t.id);
+        if (!target) continue;
+        for (const part of parts) {
+          const amount = t.share === 'half' ? Math.floor(part.amount / 2) : part.amount;
+          if (amount > 0) get().damage(t.id, amount, part.type);
+        }
+        names.push(`${target.name}${t.share === 'half' ? ' (halved)' : ''}`);
       }
-      log(
-        'note',
-        `${pending.sourceName}'s ${pending.featureName} applied to ${target.name}${half ? ' (halved)' : ''}`,
-        targetId,
-      );
+      if (source && names.length > 0) log('note', `${source} applied to ${names.join(', ')}`);
+    },
+
+    applyPendingDamage(pendingId, targets) {
+      const pending = get().pendingDamage.find((p) => p.id === pendingId);
+      if (!pending) return;
+      get().damageTargets(targets, pending.parts, `${pending.sourceName}'s ${pending.featureName}`);
       set({ pendingDamage: get().pendingDamage.filter((p) => p.id !== pendingId) });
     },
 
@@ -672,10 +704,12 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         total: result.total,
         faces: facesText(result),
         actor: c.name,
+        source: 'tracker',
+        ...(get().encounterId ? { encounterId: get().encounterId! } : {}),
       });
     },
 
-    rollMultiattack(id, feature) {
+    rollMultiattack(id, feature, mode = 'normal') {
       const c = find(id);
       const record = c?.recordId ? get().records[c.recordId] : undefined;
       if (!c || !record || record.kind !== 'monster') return;
@@ -691,7 +725,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       for (const name of names) {
         const f = all.find((x) => x.displayName === name);
         if (!f) continue;
-        for (const a of f.attacks) get().rollAttackFor(id, f, a);
+        for (const a of f.attacks) get().rollAttackFor(id, f, a, mode);
       }
     },
 
@@ -719,6 +753,8 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       }
       set({
         saveCall: {
+          id: ulid(),
+          sourceId: id,
           sourceName: source.name,
           featureName: feature.displayName,
           ability: save.ability,
@@ -735,13 +771,15 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       );
     },
 
-    applySaveDamage(amount, type) {
+    applySaveDamage(amount, type, targets) {
       const call = get().saveCall;
       if (!call || amount <= 0) return;
-      for (const c of call.creatures) {
-        if (c.success && !call.halfOnSuccess) continue;
-        get().damage(c.id, c.success ? Math.floor(amount / 2) : amount, type);
-      }
+      get().damageTargets(
+        targets,
+        [{ amount, ...(type ? { type } : {}) }],
+        `${call.sourceName}'s ${call.featureName}`,
+      );
+      set({ saveCall: null });
     },
 
     clearSaveCall() {
@@ -759,7 +797,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       const casualties = state.combatants
         .filter((c) => c.ref.kind === 'pc' && c.dead)
         .map((c) => c.name);
-      const result = {
+      const result: EncounterResult = {
         endedAt: nowIso(),
         rounds: state.round,
         xpEarned: enemyXp,
@@ -773,6 +811,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         return null;
       }
       get().leave();
+      set({ finished: { encounterId, result } });
       return result;
     },
   };

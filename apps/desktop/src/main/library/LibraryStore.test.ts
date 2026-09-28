@@ -25,7 +25,7 @@ describe('LibraryStore.open', () => {
       expect(entries).toContain(folder.split('/')[0]);
     }
     const settings = JSON.parse(await readFile(join(root, 'library.json'), 'utf8'));
-    expect(settings.schemaVersion).toBe(1);
+    expect(settings.schemaVersion).toBe(3);
     expect(store.getSettings().theme).toBe('dark');
   });
 

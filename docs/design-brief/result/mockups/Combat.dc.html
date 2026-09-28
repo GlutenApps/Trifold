@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Combat tracker</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf pnl" style="width: {{w}}px; height: {{h}}px; padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 8px">
+  <div class="hd2" style="gap: 6px">
+    <span class="lb">Round</span><span class="m" style="font-size: 20px; line-height: 1">3</span><span class="mu">·</span><span class="b ac tr">{{turn}}</span>
+    <div class="sp"></div>
+    <div class="seg sm" title="Roll mode"><span class="on">Normal</span><span>Adv</span><span>Dis</span></div>
+    <div class="ib bd" title="Previous turn · P"><svg class="i" viewBox="0 0 24 24"><path d="M6 5v14M18 5l-10 7 10 7z"></path></svg></div>
+    <div class="btn sm pri" title="Next turn · N">Next turn<span class="kb" style="border-color: rgba(20,24,29,.3); color: #14181D; background: transparent">N</span></div>
+    <div class="ib bd" title="End combat · log kept with the encounter"><svg class="i" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"></path></svg></div>
+  </div>
+  <div style="display: flex; flex-direction: {{dir}}; gap: 10px; flex: 1; min-height: 0">
+    <div style="{{listSt}}; display: flex; flex-direction: column; gap: 4px">
+      <div class="ir en act sel {{pinCls}}" style="box-shadow: inset 3px 0 0 #E0685E, 0 8px 24px rgba(0,0,0,.35); z-index: 2" title="The turn row stays pinned while the list scrolls under it"><span class="ini">12</span><span class="b tr">Goblin Warrior</span><span class="bd">masked: Goblin</span><span class="mu s11">pinned · 2 rows above</span><div class="sp"></div><span class="m wa">4/10</span></div>
+      <div class="ir al {{ariaAct}} {{ariaSel}}"><span class="ini">21</span><span class="b tr">Aria</span><span class="bd wa">concentrating</span><div class="sp"></div><span class="m">21/28</span><div class="row {{ariaRa}}" style="gap: 0"><div class="ra" title="Move up"><svg class="i s" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"></path></svg></div><div class="ra" title="Move down"><svg class="i s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div></div>
+      <div class="pr {{concCls}}">
+        <div><span class="b">Aria</span> must make a DC 13 Constitution save to keep concentrating.</div>
+        <div class="row" style="gap: 6px"><div class="btn sm pri">Roll d20 + 2</div><div class="btn sm">Keep</div><div class="btn sm">Drop</div><div class="sp"></div><span class="mu s12">7 piercing from Worg</span></div>
+      </div>
+      <div class="ir al"><span class="ini">19</span><span class="b tr">Brannoc</span><div class="sp"></div><span class="m">44/44</span><span class="mu s11 m n">+5 temp</span></div>
+      <div class="ir en {{gobAct}} {{gobSel}}"><span class="ini">12</span><span class="b tr">Goblin Warrior</span><span class="bd" title="What the players see until revealed">masked: Goblin</span><div class="sp"></div><span class="m wa">4/10</span><div class="row {{gobRa}}" style="gap: 0"><div class="ra" title="Move up"><svg class="i s" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"></path></svg></div><div class="ra" title="Move down"><svg class="i s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div></div>
+      <div class="ir en dead"><span class="ini">8</span><span class="tr" style="text-decoration: line-through">Goblin Minion</span><span class="bd">dead</span><div class="sp"></div><span class="m">0/7</span></div>
+      <div class="ir en"><span class="ini">7</span><span class="b tr">Worg</span><span class="bd">hidden</span><div class="sp"></div><span class="m">13/13</span></div>
+      <div class="ir en"><span class="ini">5</span><span class="b tr">Mage</span><span class="bd">holding</span><span class="bd wa">Frightened · 2</span><div class="sp"></div><span class="m">81/81</span></div>
+      <div class="pr {{saveCls}}" style="gap: 6px"><div class="row" style="gap: 8px"><span class="b">Save call</span><span class="mu">DC 15 Dexterity · 2 targets · 3d6 fire</span><div class="sp"></div><div class="btn sm gh">Dismiss</div></div><div class="row" style="gap: 6px"><span class="pcpip"></span><span>Aria</span><span class="m">9</span><span class="bd en">fail</span><span class="pcpip" style="margin-left: 8px"></span><span>Brannoc</span><span class="m">17</span><span class="bd ok">save</span><div class="sp"></div><div class="btn sm pri">Apply full / half</div></div></div>
+      <div class="hd2 {{logRowCls}}" style="margin-top: 4px; gap: 6px"><span class="lb">Log</span><span class="mu s12">14 entries</span><div class="sp"></div><div class="ra" title="Export as text"><svg class="i s" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"></path></svg></div><div class="ra" title="Hide"><svg class="i s" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+    </div>
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+      <div class="cd {{ariaIns}}" style="display: flex; flex-direction: column; gap: 8px">
+        <div class="row" style="gap: 6px">
+          <span class="b">Aria</span><span class="mu">AC 13 · init +2</span>
+          <div class="sp"></div>
+          <div class="ib dim" title="Reveal name (not masked)"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg></div>
+          <div class="ib" title="Hide"><svg class="i" viewBox="0 0 24 24"><path d="M3 3l18 18M10 6.5A10 10 0 0 1 22 12a11 11 0 0 1-3 3.5M6.5 6.5A11 11 0 0 0 2 12s4 7 10 7a9 9 0 0 0 4-1M9.5 9.5a3 3 0 0 0 4.2 4.2"></path></svg></div>
+          <div class="ib" title="Hold"><svg class="i" viewBox="0 0 24 24"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v6M11 5a1.5 1.5 0 0 1 3 0v7M14 7a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-12 0v-2a1.5 1.5 0 0 1 3 0"></path></svg></div>
+          <div class="ib" title="Mark dead"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a8 8 0 0 0-5 14.2V21h10v-3.8A8 8 0 0 0 12 3zM9 12h.01M15 12h.01M10 21v-3M14 21v-3"></path></svg></div>
+          <div class="ib dg" title="Remove"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></div>
+        </div>
+        <div class="wrap" style="gap: 6px"><div class="in sm ph" style="width: 64px">amount</div><div class="in sm" style="width: 104px">any type<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="btn sm pri">Damage</div><div class="btn sm">Heal</div><div class="btn sm">Temp HP</div></div>
+        <div class="wrap" style="gap: 6px"><div class="in sm" style="width: 120px">Frightened<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="in sm" style="width: 110px">no duration<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="btn sm">Add condition</div></div>
+        <div class="row" style="gap: 6px"><div class="in sm sp">Web<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="btn sm on">Concentrate</div></div>
+        <div class="row" style="gap: 10px; flex-wrap: wrap"><span class="lb">Spell slots</span><span class="row" style="gap: 5px"><span class="m n s11 mu">1st</span><span class="pipr"><i></i><i></i><i></i><i class="o"></i></span></span><span class="row" style="gap: 5px"><span class="m n s11 mu">2nd</span><span class="pipr"><i></i><i></i><i class="o"></i></span></span><span class="row" style="gap: 5px"><span class="m n s11 mu">3rd</span><span class="pipr"><i></i><i class="o"></i></span></span><span class="mu s12">click a pip to spend, again to restore</span></div>
+        <div class="mu">PC card: no stat block. Ask the player.</div>
+      </div>
+      <div class="cd {{gobIns}}" style="display: flex; flex-direction: column; gap: 8px">
+        <div class="row" style="gap: 6px">
+          <span class="b">Goblin Warrior</span><span class="mu">AC 15 · init +2</span><span class="bd">masked: Goblin</span>
+          <div class="sp"></div>
+          <div class="ib" title="Reveal name"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></svg></div>
+          <div class="ib" title="Hide"><svg class="i" viewBox="0 0 24 24"><path d="M3 3l18 18M10 6.5A10 10 0 0 1 22 12a11 11 0 0 1-3 3.5M6.5 6.5A11 11 0 0 0 2 12s4 7 10 7a9 9 0 0 0 4-1M9.5 9.5a3 3 0 0 0 4.2 4.2"></path></svg></div>
+          <div class="ib" title="Hold"><svg class="i" viewBox="0 0 24 24"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v6M11 5a1.5 1.5 0 0 1 3 0v7M14 7a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-12 0v-2a1.5 1.5 0 0 1 3 0"></path></svg></div>
+          <div class="ib" title="Mark dead"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a8 8 0 0 0-5 14.2V21h10v-3.8A8 8 0 0 0 12 3zM9 12h.01M15 12h.01M10 21v-3M14 21v-3"></path></svg></div>
+          <div class="ib dg" title="Remove"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></div>
+        </div>
+        <div class="wrap" style="gap: 6px"><div class="in sm ph" style="width: 64px">amount</div><div class="in sm" style="width: 104px">any type<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="btn sm pri">Damage</div><div class="btn sm">Heal</div><div class="btn sm">Temp HP</div><div class="in sm" style="width: 120px; margin-left: 8px">Prone<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="in sm" style="width: 110px">no duration<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div><div class="btn sm">Add condition</div></div>
+        <div class="row" style="gap: 6px"><div class="in sm ph" style="width: 220px">concentrating on…</div><div class="btn sm">Concentrate</div><span class="lb" style="margin-left: 12px">Recharges</span><span class="mu s12">none for this creature</span></div>
+        <div class="hr"></div>
+        <div class="row" style="gap: 8px"><span class="b">Goblin Warrior</span><span class="mu s12">Small Fey (Goblinoid) · AC 15 · HP 10 (3d6) · Speed 30 ft.</span></div>
+        <div class="m n s12 mu">STR 8 (−1) · DEX 15 (+2) · CON 10 (+0) · INT 10 (+0) · WIS 8 (−1) · CHA 8 (−1) · Stealth +6 · Darkvision 60 ft. · PP 9</div>
+        <div class="col" style="gap: 6px">
+          <span class="cp">Actions</span>
+          <div class="wrap" style="gap: 6px">
+            <div class="btn sm on" title="Rolls to hit and damage">Scimitar<span class="m n mu">+4 · 1d6+2 slashing</span></div>
+            <div class="btn sm" title="Rolls to hit and damage">Shortbow<span class="m n mu">+4 · 1d6+2 piercing · 80/320</span></div>
+          </div>
+          <div class="pr">
+            <div class="row" style="gap: 8px"><span class="b">Scimitar</span><span class="m">17</span><span class="mu s12">to hit (13 + 4)</span><span class="mu">·</span><span class="m">5</span><span class="mu s12">slashing (3 + 2)</span><span class="mu">· waiting for a target</span></div>
+            <div class="row" style="gap: 6px"><span class="lb">Apply to</span><div class="btn sm"><span class="pcpip"></span>Aria<span class="m n mu">AC 13</span></div><div class="btn sm"><span class="pcpip"></span>Brannoc<span class="m n mu">AC 18</span></div><div class="btn sm">Half</div><div class="btn sm gh">Dismiss</div></div>
+          </div>
+          <span class="cp">Bonus actions</span>
+          <div class="wrap" style="gap: 6px"><div class="btn sm">Nimble Escape<span class="mu n">Disengage or Hide</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="{{logColCls}}" style="width: 300px; flex: none; display: flex; flex-direction: column; gap: 6px">
+      <div class="row" style="gap: 6px"><span class="lb">Log</span><span class="mu s11">this fight · same log as Dice</span><div class="sp"></div><div class="btn sm gh">export</div><div class="btn sm gh">hide</div></div>
+      <div class="log">
+        <div><span>R3</span><span>Goblin Warrior: Scimitar 17 (d20 13 + 4) · 5 slashing (d6 3 + 2) · waiting for a target</span></div>
+        <div><span>R3</span><span>Goblin Warrior's turn</span></div>
+        <div><span>R3</span><span>Aria kept concentration: Con save 14 (d20 12 + 2) vs DC 13</span></div>
+        <div><span>R3</span><span>Aria took 7 piercing (28 → 21)</span></div>
+        <div><span>R3</span><span>Worg: Bite 19 vs Aria — hit</span></div>
+        <div><span>R3</span><span>Goblin Warrior took 6 slashing (10 → 4)</span></div>
+        <div><span>R3</span><span>Round 3</span></div>
+        <div><span>R2</span><span>Goblin Minion marked dead</span></div>
+        <div><span>R2</span><span>Mage holds</span></div>
+        <div><span>R2</span><span>Mage: Frightened, 2 rounds</span></div>
+        <div><span>R1</span><span>Aria concentrates on Web</span></div>
+        <div><span>R1</span><span>Round 1</span></div>
+        <div><span>R0</span><span>Rolled 4 initiatives</span></div>
+        <div><span>R0</span><span>Combat started from Silt Springs Map: 6 combatants</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"w":{"editor":"int","default":1474},"h":{"editor":"int","default":806},"wide":{"editor":"boolean","default":true},"prompt":{"editor":"enum","default":"dmg","options":["dmg","conc","none","stack"]},"$preview":{"width":1474,"height":806}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const wide = !(p.wide === false || p.wide === 'false' || p.wide === '0');
+    const prompt = String(p.prompt ?? 'dmg');
+    const stack = prompt === 'stack';
+    const gob = prompt === 'dmg' || stack;
+    return {
+      w: Number(p.w ?? 1474), h: Number(p.h ?? 806),
+      dir: wide ? 'row' : 'column',
+      listSt: wide ? 'width: 340px; flex: none' : 'flex: none',
+      turn: gob ? 'Goblin Warrior' : 'Aria',
+      ariaAct: gob ? '' : 'act', ariaSel: gob ? '' : 'sel', ariaRa: gob ? 'hid' : '',
+      gobAct: gob ? 'act' : '', gobSel: gob ? 'sel' : '', gobRa: gob ? '' : 'hid',
+      concCls: (prompt === 'conc' || stack) ? '' : 'gone',
+      saveCls: stack ? '' : 'gone',
+      pinCls: stack ? '' : 'gone',
+      ariaIns: gob ? 'gone' : '',
+      gobIns: gob ? '' : 'gone',
+      logColCls: wide ? '' : 'gone',
+      logRowCls: wide ? 'gone' : ''
+    };
+  }
+}
+</script>
+</body>
+</html>

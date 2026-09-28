@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Top bar</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf" style="width: {{w}}px; height: 34px; background: #11151A; border-bottom: 1px solid #333D48; display: flex; align-items: center; padding: 0 0 0 10px; gap: 8px">
+  <svg width="20" height="17" viewBox="6 16 88 76" aria-label="Trifold · Library" style="flex: none"><polygon points="30.5,18 8,30 8,50 30.5,40" fill="#E3D3B0" fill-opacity="0.85"></polygon><polygon points="30.5,44.5 8,54.5 8,80 30.5,90" fill="#E3D3B0" fill-opacity="0.38"></polygon><polygon points="69.5,18 92,30 92,50 69.5,40" fill="#E3D3B0" fill-opacity="0.85"></polygon><polygon points="69.5,44.5 92,54.5 92,80 69.5,90" fill="#E3D3B0" fill-opacity="0.38"></polygon><rect x="35" y="18" width="30" height="72" fill="#E3D3B0"></rect></svg>
+  <span class="b {{libCls}}" style="margin-left: 4px">Library</span>
+  <svg class="i s mu {{campCls}}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg>
+  <div class="row {{campCls}}" style="gap: 6px" title="Switch campaign, close it, or go to the Library"><span class="b tr" style="max-width: 260px">{{campaign}}</span><span class="bd">2024 rules</span><svg class="i s mu" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+  <div class="sp"></div>
+  <div class="btn sm {{backCls}}" title="Back to the console exactly as you left it"><svg class="i s" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"></path></svg>Back to {{back}}<span class="pip"></span></div>
+  <div class="btn sm gh {{campCls}}" title="Current layout · opens Layouts in the dock"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 12h18M12 12v8"></path></svg>{{layout}}<span class="kb">Ctrl+2</span></div>
+  <div class="btn sm gh {{campCls}}" title="Hotkey sheet · Ctrl+/"><svg class="i" viewBox="0 0 24 24"><path d="M2 6h20v12H2zM6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"></path></svg>Hotkeys</div>
+  <div class="ib {{campCls}}" title="Settings · Ctrl+, · opens Library › Settings"><svg class="i" viewBox="0 0 24 24"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"></path></svg></div>
+  <div class="ib {{dockCls}} {{campCls}}" title="Show or hide the dock"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM15 4v16"></path></svg></div>
+  <div style="width: 1px; height: 18px; background: #333D48; margin: 0 4px 0 6px"></div>
+  <div style="display: flex; height: 34px; color: #9AA3AD" title="Window controls, if the window is frameless">
+    <div style="width: 40px; display: flex; align-items: center; justify-content: center"><svg class="i s" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></div>
+    <div style="width: 40px; display: flex; align-items: center; justify-content: center"><svg class="i s" viewBox="0 0 24 24"><path d="M5 5h14v14H5z"></path></svg></div>
+    <div style="width: 40px; display: flex; align-items: center; justify-content: center"><svg class="i s" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"w":{"editor":"int","default":1600},"space":{"editor":"enum","default":"campaign","options":["campaign","library"]},"campaign":{"editor":"text","default":"Sunken Keep"},"layout":{"editor":"text","default":"Table"},"back":{"editor":"text","default":""},"dock":{"editor":"boolean","default":true},"$preview":{"width":1600,"height":34}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const lib = String(p.space ?? 'campaign') === 'library';
+    const back = String(p.back ?? '');
+    return { w: Number(p.w ?? 1600), campaign: String(p.campaign ?? 'Sunken Keep'), layout: String(p.layout ?? 'Table'), libCls: lib ? '' : 'gone', campCls: lib ? 'gone' : '', back, backCls: (lib && back) ? '' : 'gone', dockCls: (p.dock === false || p.dock === 'false' || p.dock === '0') ? '' : 'on' };
+  }
+}
+</script>
+</body>
+</html>

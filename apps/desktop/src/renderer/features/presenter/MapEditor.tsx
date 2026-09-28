@@ -4,22 +4,41 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from 'react';
 import { ulid } from 'ulid';
 import { mediaUrl, type CompendiumRow } from '@trifold/api';
-import type { CombatantTemplate, Encounter, EntryMarker, Scene, Token } from '@trifold/schema';
+import { numberedNames } from '@trifold/rules';
+import type {
+  CombatantTemplate,
+  Encounter,
+  EntryMarker,
+  PCCard,
+  Scene,
+  Token,
+} from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useIconStore } from '../../stores/iconStore';
-import { useUiStore } from '../../stores/uiStore';
+import { useShellStore } from '../../stores/shellStore';
+import { Icon } from '../shell/icons';
 import { GridLines } from './MapLayer';
 import { TokenDisc } from './TokenDisc';
 import {
   DEFAULT_BLANK,
   DEFAULT_GRID,
+  activeBackgroundOf,
+  addBackground,
   alignFromClicks,
+  backgroundsOf,
+  removeBackground,
+  renameBackground,
+  replaceBackgroundImage,
+  sameShape,
+  showBackground,
   cameraRect,
+  encounterFormation,
   footprintForSize,
   mapSize,
   partyFormation,
@@ -30,10 +49,14 @@ import {
 
 type Mode = 'select' | 'align' | 'marker' | 'party' | 'place';
 
-interface Pending {
-  kind: 'creature' | 'marker';
-  row?: CompendiumRow;
-}
+type Pending =
+  { kind: 'creature'; row: CompendiumRow } | { kind: 'marker' } | { kind: 'pc'; pc: PCCard };
+
+/** What the panel under the map is showing options for. */
+type Selection = { kind: 'token'; id: string } | { kind: 'entry'; id: string } | null;
+
+/** The tool strip's and action bar's pop-ups; one open at a time. */
+type Pop = 'grid' | 'backgrounds' | 'camera' | 'party' | 'creature' | 'encounter';
 
 interface DmCamera {
   x: number;
@@ -73,7 +96,7 @@ export function MapEditor({
   const combatEncounterId = useCombatStore((s) => s.encounterId);
   const begin = useCombatStore((s) => s.begin);
   const resume = useCombatStore((s) => s.resume);
-  const setSection = useUiStore((s) => s.setSection);
+  const openMajor = useShellStore((s) => s.openMajor);
   const glyphFor = useIconStore((s) => s.glyphForCreature);
   const loadIcons = useIconStore((s) => s.load);
   const aspect = usePresenterStore((s) => s.liveOptions.aspect);
@@ -84,10 +107,11 @@ export function MapEditor({
   const [mode, setMode] = useState<Mode>('select');
   const [pending, setPending] = useState<Pending | null>(null);
   const [alignFirst, setAlignFirst] = useState<Point | null>(null);
-  const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Selection>(null);
   const [menu, setMenu] = useState<{ tokenId: string; x: number; y: number } | null>(null);
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState<CompendiumRow[]>([]);
+  const [pop, setPop] = useState<Pop | null>(null);
   const drag = useRef<{ tokenId: string; dx: number; dy: number } | null>(null);
   const pan = useRef<{ startX: number; startY: number; camX: number; camY: number } | null>(null);
   const debounce = useRef<number | null>(null);
@@ -111,7 +135,15 @@ export function MapEditor({
     aspect,
     activeTokenId,
   );
+  const selectedTokenId = selection?.kind === 'token' ? selection.id : null;
   const selectedToken = scene.tokens.find((t) => t.id === selectedTokenId) ?? null;
+  const selectedEntry =
+    selection?.kind === 'entry'
+      ? (scene.entryMarkers.find((m) => m.id === selection.id) ?? null)
+      : null;
+  const selectToken = (id: string) => setSelection({ kind: 'token', id });
+  const togglePop = (p: Pop) => setPop(pop === p ? null : p);
+  const closePop = () => setPop(null);
 
   // Fit the DM camera to the container whenever the scene (or its size) changes.
   useLayoutEffect(() => {
@@ -150,15 +182,38 @@ export function MapEditor({
     }, 150);
   }, [query]);
 
-  const patch = (p: Partial<Scene>) => onChange({ ...scene, ...p, updatedAt: nowIso() });
+  const commit = (next: Scene) => onChange({ ...next, updatedAt: nowIso() });
+  const patch = (p: Partial<Scene>) => commit({ ...scene, ...p });
+  const backgrounds = backgroundsOf(scene);
+  const activeBackground = activeBackgroundOf(scene);
+  const addBackgroundFile = async () => {
+    const image = await importSceneImage();
+    if (!image) return;
+    const name = `Background ${backgrounds.length + 1}`;
+    commit(addBackground(scene, { id: ulid(), name, image }));
+  };
+  const replaceBackgroundFile = async (id: string) => {
+    const image = await importSceneImage();
+    if (image) commit(replaceBackgroundImage(scene, id, image));
+  };
   const patchGrid = (p: Partial<Scene['grid'] & object>) => patch({ grid: { ...grid, ...p } });
   const patchToken = (id: string, p: Partial<Token>) =>
     patch({ tokens: scene.tokens.map((t) => (t.id === id ? { ...t, ...p } : t)) });
   const removeToken = (id: string) => {
     patch({ tokens: scene.tokens.filter((t) => t.id !== id) });
-    if (selectedTokenId === id) setSelectedTokenId(null);
+    if (selectedTokenId === id) setSelection(null);
     setMenu(null);
   };
+  const patchEntry = (id: string, p: Partial<EntryMarker>) =>
+    patch({ entryMarkers: scene.entryMarkers.map((m) => (m.id === id ? { ...m, ...p } : m)) });
+  const removeEntry = (id: string) => {
+    patch({ entryMarkers: scene.entryMarkers.filter((m) => m.id !== id) });
+    setSelection(null);
+  };
+  const entryPoint = (m: EntryMarker): Point => ({
+    x: grid.offsetX + m.x * grid.cellPx,
+    y: grid.offsetY + m.y * grid.cellPx,
+  });
 
   const mapPoint = (e: { clientX: number; clientY: number }): Point => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -168,34 +223,46 @@ export function MapEditor({
     };
   };
 
+  const pcToken = (pc: PCCard, at: Point): Token => ({
+    id: ulid(),
+    kind: 'pc',
+    ref: { kind: 'pc', pcId: pc.id, name: pc.name },
+    label: pc.name,
+    x: at.x,
+    y: at.y,
+    footprint: 1,
+    role: 'ally',
+    hidden: false,
+    nameMasked: false,
+    dead: false,
+  });
+
   const placeParty = (at: Point) => {
     const others = scene.tokens.filter((t) => t.kind !== 'pc');
     const spots = partyFormation(pcs.length, pixelToGrid(at.x, at.y, grid));
-    const party: Token[] = pcs.map((pc, i) => ({
-      id: ulid(),
-      kind: 'pc',
-      ref: { kind: 'pc', pcId: pc.id, name: pc.name },
-      label: pc.name,
-      x: spots[i]!.x,
-      y: spots[i]!.y,
-      footprint: 1,
-      role: 'ally',
-      hidden: false,
-      nameMasked: false,
-      dead: false,
-    }));
-    patch({ tokens: [...others, ...party] });
+    patch({ tokens: [...others, ...pcs.map((pc, i) => pcToken(pc, spots[i]!))] });
   };
 
   const placePending = (at: Point) => {
     if (!pending) return;
     const cell = snap(pixelToGrid(at.x, at.y, grid));
+    if (pending.kind === 'pc') {
+      // One token per PC: placing a PC again moves them.
+      const token = pcToken(pending.pc, cell);
+      const others = scene.tokens.filter(
+        (t) => !(t.kind === 'pc' && t.ref.kind === 'pc' && t.ref.pcId === pending.pc.id),
+      );
+      patch({ tokens: [...others, token] });
+      selectToken(token.id);
+      return;
+    }
     const markerGlyph = glyphFor({ name: 'marker' }, 'marker');
-    const creatureGlyph = pending.row
-      ? glyphFor({ name: pending.row.displayName, type: pending.row.type }, 'creature')
-      : null;
+    const creatureGlyph =
+      pending.kind === 'creature'
+        ? glyphFor({ name: pending.row.displayName, type: pending.row.type }, 'creature')
+        : null;
     const token: Token =
-      pending.kind === 'marker' || !pending.row
+      pending.kind === 'marker'
         ? {
             id: ulid(),
             kind: 'marker',
@@ -235,7 +302,21 @@ export function MapEditor({
             ...(creatureGlyph ? { glyph: creatureGlyph } : {}),
           };
     patch({ tokens: [...scene.tokens, token] });
-    setSelectedTokenId(token.id);
+    selectToken(token.id);
+  };
+
+  /** A click on the map (or an entry marker) while a placing mode is on. */
+  const placeAt = (at: Point, keepPlacing: boolean) => {
+    if (mode === 'party') {
+      placeParty(at);
+      setMode('select');
+      return;
+    }
+    placePending(at);
+    if (!keepPlacing || pending?.kind === 'pc') {
+      setPending(null);
+      setMode('select');
+    }
   };
 
   const onBackgroundDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -262,23 +343,15 @@ export function MapEditor({
         y: Math.round(cell.y * 2) / 2,
       };
       patch({ entryMarkers: [...scene.entryMarkers, marker] });
+      setSelection({ kind: 'entry', id: marker.id });
       setMode('select');
       return;
     }
-    if (mode === 'party') {
-      placeParty(at);
-      setMode('select');
+    if (mode === 'party' || mode === 'place') {
+      placeAt(at, e.shiftKey);
       return;
     }
-    if (mode === 'place') {
-      placePending(at);
-      if (!e.shiftKey) {
-        setPending(null);
-        setMode('select');
-      }
-      return;
-    }
-    setSelectedTokenId(null);
+    setSelection(null);
     pan.current = { startX: e.clientX, startY: e.clientY, camX: cam.x, camY: cam.y };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -311,7 +384,7 @@ export function MapEditor({
     e.stopPropagation();
     if (e.button === 2) return;
     setMenu(null);
-    setSelectedTokenId(token.id);
+    selectToken(token.id);
     if (mode !== 'select') return;
     const at = mapPoint(e);
     const cell = pixelToGrid(at.x, at.y, grid);
@@ -340,7 +413,7 @@ export function MapEditor({
     e.preventDefault();
     e.stopPropagation();
     const rect = containerRef.current?.getBoundingClientRect();
-    setSelectedTokenId(token.id);
+    selectToken(token.id);
     setMenu({
       tokenId: token.id,
       x: e.clientX - (rect?.left ?? 0),
@@ -367,55 +440,75 @@ export function MapEditor({
     });
   };
 
+  /** A combat template for a creature token on this map, with its record's cached values. */
+  const templateFromToken = async (token: Token): Promise<CombatantTemplate> => {
+    let cache: CombatantTemplate['cache'];
+    if (token.ref.kind === 'record') {
+      const record = await window.trifold.compendium.get(token.ref.ref.recordId);
+      if (record?.kind === 'monster') {
+        cache = {
+          xp: record.data.xp,
+          cr: record.data.cr,
+          type: record.data.type,
+          hp: record.data.hp?.average ?? 0,
+          ac: record.data.ac?.value ?? 10,
+        };
+      }
+    }
+    return {
+      id: ulid(),
+      ref: token.ref,
+      label: token.label,
+      quantity: 1,
+      role: token.role,
+      hidden: token.hidden,
+      tokenId: token.id,
+      ...(cache ? { cache } : {}),
+    };
+  };
+
+  const pcTokenId = (pcId: string) =>
+    scene.tokens.find((t) => t.kind === 'pc' && t.ref.kind === 'pc' && t.ref.pcId === pcId)?.id;
+
   const startCombat = async () => {
     if (linkedEncounter) {
       if (combatEncounterId === linkedEncounter.id) {
-        setSection('encounters');
+        openMajor('encounters', { avoid: 'map' });
         return;
       }
-      if (linkedEncounter.state) await resume(linkedEncounter);
-      else await begin(linkedEncounter, pcs, initiativeMode);
-      setSection('encounters');
+      if (linkedEncounter.state) {
+        await resume(linkedEncounter);
+        openMajor('encounters', { avoid: 'map' });
+        return;
+      }
+      // Creatures dropped on the map besides the linked ones join the fight; PCs find their tokens.
+      const linked = new Set(
+        linkedEncounter.combatants.flatMap((t) => t.tokenIds ?? (t.tokenId ? [t.tokenId] : [])),
+      );
+      const loose = scene.tokens.filter((t) => t.kind === 'creature' && !linked.has(t.id));
+      const combatants = linkedEncounter.combatants.map((t) => {
+        if (t.ref.kind !== 'pc' || t.tokenId) return t;
+        const tokenId = pcTokenId(t.ref.pcId);
+        return tokenId ? { ...t, tokenId } : t;
+      });
+      combatants.push(...(await Promise.all(loose.map(templateFromToken))));
+      const saved = await saveEncounter({ ...linkedEncounter, combatants, updatedAt: nowIso() });
+      if (!saved) return;
+      await begin(saved, pcs, initiativeMode);
+      openMajor('encounters', { avoid: 'map' });
       return;
     }
     const creatures = scene.tokens.filter((t) => t.kind === 'creature');
-    const templates: CombatantTemplate[] = [];
-    for (const token of creatures) {
-      let cache: CombatantTemplate['cache'];
-      if (token.ref.kind === 'record') {
-        const record = await window.trifold.compendium.get(token.ref.ref.recordId);
-        if (record?.kind === 'monster') {
-          cache = {
-            xp: record.data.xp,
-            cr: record.data.cr,
-            type: record.data.type,
-            hp: record.data.hp?.average ?? 0,
-            ac: record.data.ac?.value ?? 10,
-          };
-        }
-      }
-      templates.push({
-        id: ulid(),
-        ref: token.ref,
-        label: token.label,
-        quantity: 1,
-        role: token.role,
-        hidden: token.hidden,
-        tokenId: token.id,
-        ...(cache ? { cache } : {}),
-      });
-    }
+    const templates: CombatantTemplate[] = await Promise.all(creatures.map(templateFromToken));
     for (const pc of pcs) {
-      const token = scene.tokens.find(
-        (t) => t.kind === 'pc' && t.ref.kind === 'pc' && t.ref.pcId === pc.id,
-      );
+      const tokenId = pcTokenId(pc.id);
       templates.push({
         id: ulid(),
         ref: { kind: 'pc', pcId: pc.id, name: pc.name },
         quantity: 1,
         role: 'ally',
         hidden: false,
-        ...(token ? { tokenId: token.id } : {}),
+        ...(tokenId ? { tokenId } : {}),
       });
     }
     const encounter: Encounter = {
@@ -434,8 +527,84 @@ export function MapEditor({
     if (!saved) return;
     patch({ encounterId: saved.id });
     await begin(saved, pcs, initiativeMode);
-    setSection('encounters');
+    openMajor('encounters', { avoid: 'map' });
   };
+
+  /**
+   * Drops a built encounter's creatures on the map, hidden from the players, near the middle of
+   * the DM's view, and links the encounter to the scene so Start combat runs it (ADR 0005).
+   * Creatures already placed here keep their tokens; PCs use the party's own tokens.
+   */
+  const placeEncounter = async (encounter: Encounter) => {
+    closePop();
+    const el = containerRef.current;
+    const rect = el?.getBoundingClientRect();
+    const middle = mapPoint({
+      clientX: (rect?.left ?? 0) + (el?.clientWidth ?? 0) / 2,
+      clientY: (rect?.top ?? 0) + (el?.clientHeight ?? 0) / 2,
+    });
+    const centre = pixelToGrid(middle.x, middle.y, grid);
+    const onMap = new Set(scene.tokens.map((t) => t.id));
+    const added: Token[] = [];
+    const combatants: CombatantTemplate[] = [];
+    for (const template of encounter.combatants) {
+      if (template.ref.kind === 'pc') {
+        combatants.push(template);
+        continue;
+      }
+      let size: string | null | undefined;
+      let type = template.cache?.type;
+      if (template.ref.kind === 'record') {
+        const record = await window.trifold.compendium.get(template.ref.ref.recordId);
+        if (record?.kind === 'monster') {
+          size = record.data.size;
+          type = record.data.type || type;
+        }
+      }
+      const glyph = glyphFor({ name: template.ref.name, ...(type ? { type } : {}) }, 'creature');
+      const had = template.tokenIds ?? (template.tokenId ? [template.tokenId] : []);
+      const names = numberedNames(template.label || template.ref.name, template.quantity);
+      const tokenIds = names.map((label, i) => {
+        const kept = had[i];
+        if (kept && onMap.has(kept)) return kept;
+        const token: Token = {
+          id: ulid(),
+          kind: 'creature',
+          ref: template.ref,
+          label,
+          maskedLabel: type ? capitalize(type) : 'Creature',
+          x: 0,
+          y: 0,
+          footprint: footprintForSize(size),
+          role: template.role,
+          hidden: true,
+          nameMasked: true,
+          dead: false,
+          ...(glyph ? { glyph } : {}),
+        };
+        added.push(token);
+        return token.id;
+      });
+      const { tokenId: _single, ...rest } = template;
+      combatants.push({ ...rest, tokenIds });
+    }
+    const spots = encounterFormation(
+      added.map((t) => t.footprint),
+      centre,
+    );
+    const placed = added.map((t, i) => ({ ...t, ...spots[i] }));
+    const saved = await saveEncounter({
+      ...encounter,
+      sceneId: scene.id,
+      combatants,
+      updatedAt: nowIso(),
+    });
+    if (!saved) return;
+    patch({ tokens: [...scene.tokens, ...placed], encounterId: saved.id });
+  };
+
+  const hiddenCreatures = scene.tokens.filter((t) => t.kind === 'creature' && t.hidden);
+  const placeable = encounters.filter((e) => !e.state && e.id !== combatEncounterId);
 
   const cursor =
     mode === 'select'
@@ -446,72 +615,455 @@ export function MapEditor({
         ? 'crosshair'
         : 'copy';
 
+  const hint =
+    mode === 'align'
+      ? alignFirst
+        ? 'Now click the opposite corner of that cell'
+        : 'Click one corner of a cell'
+      : mode === 'party'
+        ? 'Click the map or an entry marker to place the party'
+        : mode === 'marker'
+          ? 'Click the map to drop an entry marker'
+          : mode === 'place'
+            ? pending?.kind === 'pc'
+              ? `Click to place ${pending.pc.name}`
+              : `Click to place ${pending?.kind === 'creature' ? pending.row.displayName : 'a marker'} (Shift keeps placing)`
+            : null;
+
+  const cancelMode = () => {
+    setMode('select');
+    setPending(null);
+    setAlignFirst(null);
+  };
+  /** Starts a placing mode from a pop-up and hands the keyboard to the map. */
+  const beginPlacing = (next: Mode, p: Pending | null = null) => {
+    setPending(p);
+    setMode(next);
+    closePop();
+    containerRef.current?.focus();
+  };
+
   return (
     <div className="map-editor">
-      <div className="row map-toolbar">
+      <div className="map-toolbar" role="toolbar" aria-label="Map tools">
         <button
           type="button"
-          className="btn tiny"
+          className={`chrome-btn${mode === 'select' ? ' on' : ''}`}
           aria-pressed={mode === 'select'}
-          onClick={() => setMode('select')}
-        >
-          Select
-        </button>
-        <button
-          type="button"
-          className="btn tiny"
-          aria-pressed={mode === 'align'}
+          aria-label="Move"
+          title="Move: drag tokens, drag the map to pan"
           onClick={() => {
-            setAlignFirst(null);
-            setMode(mode === 'align' ? 'select' : 'align');
+            cancelMode();
+            closePop();
           }}
-          title="Click two opposite corners of one cell"
         >
-          Align grid
+          <Icon name="hand" size={16} />
         </button>
+
+        <MapPop
+          open={pop === 'grid'}
+          onClose={closePop}
+          label="Grid settings"
+          side="right"
+          trigger={
+            <button
+              type="button"
+              className={`chrome-btn${pop === 'grid' || mode === 'align' ? ' on' : ''}`}
+              aria-label="Grid"
+              aria-haspopup="dialog"
+              aria-expanded={pop === 'grid'}
+              title="Grid: align it to the map, cell size, colour"
+              onClick={() => togglePop('grid')}
+            >
+              <Icon name="grid" size={16} />
+            </button>
+          }
+        >
+          <h3>Grid</h3>
+          <button
+            type="button"
+            className="btn small"
+            title="Click two opposite corners of one cell on the map"
+            onClick={() => {
+              setAlignFirst(null);
+              beginPlacing('align');
+            }}
+          >
+            Align grid to map
+          </button>
+          <div className="map-pop-fields">
+            <label className="field">
+              Cell px
+              <input
+                type="number"
+                className="narrow"
+                min={4}
+                step={0.5}
+                value={grid.cellPx}
+                onChange={(e) => patchGrid({ cellPx: Math.max(4, Number(e.target.value) || 70) })}
+              />
+            </label>
+            <label className="field">
+              Offset x
+              <input
+                type="number"
+                className="narrow"
+                value={grid.offsetX}
+                onChange={(e) => patchGrid({ offsetX: Number(e.target.value) || 0 })}
+              />
+            </label>
+            <label className="field">
+              Offset y
+              <input
+                type="number"
+                className="narrow"
+                value={grid.offsetY}
+                onChange={(e) => patchGrid({ offsetY: Number(e.target.value) || 0 })}
+              />
+            </label>
+            <label className="field">
+              Colour
+              <input
+                type="color"
+                value={grid.color}
+                onChange={(e) => patchGrid({ color: e.target.value })}
+              />
+            </label>
+            <label className="field">
+              Opacity
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={grid.opacity}
+                onChange={(e) => patchGrid({ opacity: Number(e.target.value) })}
+              />
+            </label>
+            <label className="field inline">
+              <input
+                type="checkbox"
+                checked={grid.showToPlayers}
+                onChange={(e) => patchGrid({ showToPlayers: e.target.checked })}
+              />
+              Show to players
+            </label>
+          </div>
+          {scene.kind === 'blankGrid' && (
+            <div className="map-pop-fields">
+              <label className="field">
+                Columns
+                <input
+                  type="number"
+                  className="narrow"
+                  min={1}
+                  max={200}
+                  value={(scene.blank ?? DEFAULT_BLANK).cols}
+                  onChange={(e) =>
+                    patch({
+                      blank: {
+                        ...(scene.blank ?? DEFAULT_BLANK),
+                        cols: Math.max(1, Number(e.target.value) || 1),
+                      },
+                    })
+                  }
+                />
+              </label>
+              <label className="field">
+                Rows
+                <input
+                  type="number"
+                  className="narrow"
+                  min={1}
+                  max={200}
+                  value={(scene.blank ?? DEFAULT_BLANK).rows}
+                  onChange={(e) =>
+                    patch({
+                      blank: {
+                        ...(scene.blank ?? DEFAULT_BLANK),
+                        rows: Math.max(1, Number(e.target.value) || 1),
+                      },
+                    })
+                  }
+                />
+              </label>
+              <label className="field">
+                Backdrop
+                <select
+                  value={scene.backdrop ?? 'parchment'}
+                  onChange={(e) => patch({ backdrop: e.target.value as Scene['backdrop'] })}
+                >
+                  <option value="parchment">Parchment</option>
+                  <option value="stone">Stone</option>
+                  <option value="dark">Dark</option>
+                </select>
+              </label>
+            </div>
+          )}
+        </MapPop>
+
+        {scene.kind === 'map' && (
+          <MapPop
+            open={pop === 'backgrounds'}
+            onClose={closePop}
+            label="Backgrounds"
+            side="right"
+            trigger={
+              <button
+                type="button"
+                className={`chrome-btn${pop === 'backgrounds' ? ' on' : ''}`}
+                aria-label="Backgrounds"
+                aria-haspopup="dialog"
+                aria-expanded={pop === 'backgrounds'}
+                title="Backgrounds: switch the map's art (day, night…) and keep tokens and grid"
+                onClick={() => togglePop('backgrounds')}
+              >
+                <Icon name="image" size={16} />
+              </button>
+            }
+          >
+            <h3>Backgrounds</h3>
+            <ul className="picker-list bg-list">
+              {backgrounds.map((b, i) => {
+                const showing = b.id === activeBackground?.id;
+                return (
+                  <li key={b.id} className={showing ? 'showing' : undefined}>
+                    <img
+                      className="bg-thumb"
+                      src={mediaUrl(slug, b.image.displayPath)}
+                      alt=""
+                      draggable={false}
+                    />
+                    <input
+                      type="text"
+                      aria-label={`Background ${i + 1} name`}
+                      value={b.name}
+                      onChange={(e) => commit(renameBackground(scene, b.id, e.target.value))}
+                    />
+                    <button
+                      type="button"
+                      className="btn tiny"
+                      disabled={showing}
+                      aria-label={`${showing ? 'Showing' : 'Show'} ${b.name}`}
+                      onClick={() => commit(showBackground(scene, b.id))}
+                    >
+                      {showing ? 'Showing' : 'Show'}
+                    </button>
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-label={`Replace ${b.name} image`}
+                      title="Replace image…: pick a new file, keep the name"
+                      onClick={() => void replaceBackgroundFile(b.id)}
+                    >
+                      <Icon name="folder" size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      className="chrome-btn xs danger"
+                      aria-label={`Remove ${b.name}`}
+                      title="Remove this background (the image stays in the campaign folder)"
+                      disabled={backgrounds.length < 2}
+                      onClick={() => commit(removeBackground(scene, b.id))}
+                    >
+                      <Icon name="trash" size={12} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            {activeBackground &&
+              backgrounds.some((b) => !sameShape(b.image, activeBackground.image)) && (
+                <p className="muted small">
+                  Some art has a different shape; check the grid after switching.
+                </p>
+              )}
+            <button type="button" className="btn small" onClick={() => void addBackgroundFile()}>
+              Add background…
+            </button>
+            <p className="muted small">
+              Tokens, grid and entry markers stay put; the TV crossfades.
+            </p>
+          </MapPop>
+        )}
+
+        <MapPop
+          open={pop === 'camera'}
+          onClose={closePop}
+          label="Player camera"
+          side="right"
+          trigger={
+            <button
+              type="button"
+              className={`chrome-btn${pop === 'camera' ? ' on' : ''}`}
+              aria-label="Camera"
+              aria-haspopup="dialog"
+              aria-expanded={pop === 'camera'}
+              title="Player camera: what the TV shows (the dashed box)"
+              onClick={() => togglePop('camera')}
+            >
+              <Icon name="camera" size={16} />
+            </button>
+          }
+        >
+          <h3>Player camera</h3>
+          <div className="map-pop-choices">
+            {(
+              [
+                ['fitMap', 'Fit map'],
+                ['fitTokens', 'Fit tokens'],
+                ['follow', 'Follow active'],
+              ] as const
+            ).map(([m, label]) => (
+              <button
+                key={m}
+                type="button"
+                className="btn small"
+                aria-pressed={scene.playerCamera.mode === m}
+                onClick={() => patch({ playerCamera: { ...scene.playerCamera, mode: m } })}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="btn small"
+              aria-pressed={scene.playerCamera.mode === 'manual'}
+              onClick={useMyView}
+              title="Show the players what you see now"
+            >
+              Use my view
+            </button>
+          </div>
+        </MapPop>
+
+        <MapPop
+          open={pop === 'party'}
+          onClose={closePop}
+          label="Place player characters"
+          side="right"
+          trigger={
+            <button
+              type="button"
+              className={`chrome-btn${pop === 'party' || mode === 'party' || pending?.kind === 'pc' ? ' on' : ''}`}
+              aria-label="Add player characters"
+              aria-haspopup="dialog"
+              aria-expanded={pop === 'party'}
+              title="Add player characters: the whole party or one at a time"
+              onClick={() => togglePop('party')}
+            >
+              <Icon name="party" size={16} />
+            </button>
+          }
+        >
+          <h3>Player characters</h3>
+          <button
+            type="button"
+            className="btn small primary"
+            disabled={pcs.length === 0}
+            title="Click the map or an entry marker to drop the party there"
+            onClick={() => beginPlacing('party')}
+          >
+            Place whole party
+          </button>
+          {pcs.length === 0 ? (
+            <p className="muted small">No player characters in this campaign.</p>
+          ) : (
+            <ul className="picker-list">
+              {pcs.map((pc) => {
+                const verb = pcTokenId(pc.id) ? 'Move' : 'Place';
+                return (
+                  <li key={pc.id}>
+                    <span>
+                      {pc.name} {verb === 'Move' && <span className="muted small">on map</span>}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn tiny"
+                      aria-label={`${verb} ${pc.name}`}
+                      onClick={() => beginPlacing('place', { kind: 'pc', pc })}
+                    >
+                      {verb}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </MapPop>
+
+        <MapPop
+          open={pop === 'creature'}
+          onClose={closePop}
+          label="Place a creature"
+          side="right"
+          trigger={
+            <button
+              type="button"
+              className={`chrome-btn${pop === 'creature' || pending?.kind === 'creature' || pending?.kind === 'marker' ? ' on' : ''}`}
+              aria-label="Add creature or marker"
+              aria-haspopup="dialog"
+              aria-expanded={pop === 'creature'}
+              title="Add a creature or a marker token"
+              onClick={() => togglePop('creature')}
+            >
+              <Icon name="paw" size={16} />
+            </button>
+          }
+        >
+          <h3>Creatures</h3>
+          <input
+            type="text"
+            aria-label="Find creature to place"
+            placeholder="Find a creature…"
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {rows.length > 0 && (
+            <ul className="picker-list">
+              {rows.map((row) => (
+                <li key={row.id}>
+                  <span>
+                    {row.displayName}{' '}
+                    <span className="muted small">{row.cr ? `CR ${row.cr}` : ''}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn tiny"
+                    aria-label={`Place ${row.displayName}`}
+                    onClick={() => beginPlacing('place', { kind: 'creature', row })}
+                  >
+                    Place
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <button
+            type="button"
+            className="btn small"
+            title="A plain disc for objects, traps and notes"
+            onClick={() => beginPlacing('place', { kind: 'marker' })}
+          >
+            Place marker token
+          </button>
+        </MapPop>
+
         <button
           type="button"
-          className="btn tiny"
+          className={`chrome-btn${mode === 'marker' ? ' on' : ''}`}
           aria-pressed={mode === 'marker'}
-          onClick={() => setMode(mode === 'marker' ? 'select' : 'marker')}
-        >
-          Add entry marker
-        </button>
-        <button
-          type="button"
-          className="btn tiny"
-          aria-pressed={mode === 'party'}
-          disabled={pcs.length === 0}
-          onClick={() => setMode(mode === 'party' ? 'select' : 'party')}
-          title="Click the map (or an entry marker) to drop the party there"
-        >
-          Place party
-        </button>
-        <button
-          type="button"
-          className="btn tiny"
-          aria-pressed={mode === 'place' && pending?.kind === 'marker'}
+          aria-label="Add entry marker"
+          title="Add entry marker: click the map to drop one"
           onClick={() => {
-            setPending({ kind: 'marker' });
-            setMode('place');
+            closePop();
+            if (mode === 'marker') cancelMode();
+            else beginPlacing('marker');
           }}
         >
-          Add marker token
+          <Icon name="door" size={16} />
         </button>
-        <span className="spacer" />
-        <span className="muted small">
-          {mode === 'align'
-            ? alignFirst
-              ? 'Now click the opposite corner of that cell'
-              : 'Click one corner of a cell'
-            : mode === 'party'
-              ? 'Click where the party enters'
-              : mode === 'marker'
-                ? 'Click to drop an entry marker'
-                : mode === 'place'
-                  ? `Click to place ${pending?.row?.displayName ?? 'a marker'} (Shift keeps placing)`
-                  : 'Drag tokens; Alt for free placement; wheel to zoom'}
-        </span>
       </div>
 
       <div
@@ -528,11 +1080,11 @@ export function MapEditor({
         onContextMenu={(e) => e.preventDefault()}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
-            setMode('select');
-            setPending(null);
+            cancelMode();
             setMenu(null);
           }
           if (e.key === 'Delete' && selectedTokenId) removeToken(selectedTokenId);
+          if (e.key === 'Delete' && selectedEntry) removeEntry(selectedEntry.id);
         }}
       >
         <div
@@ -573,32 +1125,29 @@ export function MapEditor({
               borderWidth: Math.max(2, 3 / cam.zoom),
             }}
           />
-          {scene.entryMarkers.map((m) => (
-            <button
-              type="button"
-              key={m.id}
-              className="entry-marker"
-              data-testid="entry-marker"
-              title={`Place the party at ${m.name}`}
-              style={{
-                left: grid.offsetX + m.x * grid.cellPx,
-                top: grid.offsetY + m.y * grid.cellPx,
-                fontSize: grid.cellPx * 0.3,
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (pcs.length)
-                  placeParty({
-                    x: grid.offsetX + m.x * grid.cellPx,
-                    y: grid.offsetY + m.y * grid.cellPx,
-                  });
-                setMode('select');
-              }}
-            >
-              {m.name}
-            </button>
-          ))}
+          {scene.entryMarkers.map((m) => {
+            const placing = mode === 'party' || mode === 'place';
+            return (
+              <button
+                type="button"
+                key={m.id}
+                className={`entry-marker${selectedEntry?.id === m.id ? ' selected' : ''}`}
+                data-testid="entry-marker"
+                aria-pressed={selectedEntry?.id === m.id}
+                title={placing ? `Place here: ${m.name}` : `${m.name}: select to edit`}
+                style={{ ...pointStyle(entryPoint(m)), fontSize: grid.cellPx * 0.3 }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenu(null);
+                  if (placing) placeAt(entryPoint(m), e.shiftKey);
+                  else setSelection({ kind: 'entry', id: m.id });
+                }}
+              >
+                {m.name}
+              </button>
+            );
+          })}
           {scene.tokens.map((token) => {
             const px = token.footprint * grid.cellPx;
             return (
@@ -692,341 +1241,300 @@ export function MapEditor({
         )}
       </div>
 
-      <div className="map-side">
-        <div className="map-group">
-          <h3>Player camera</h3>
-          <div className="row">
-            {(
-              [
-                ['fitMap', 'Fit map'],
-                ['fitTokens', 'Fit tokens'],
-                ['follow', 'Follow active'],
-              ] as const
-            ).map(([m, label]) => (
-              <button
-                key={m}
-                type="button"
-                className="btn tiny"
-                aria-pressed={scene.playerCamera.mode === m}
-                onClick={() => patch({ playerCamera: { ...scene.playerCamera, mode: m } })}
-              >
-                {label}
-              </button>
-            ))}
+      <div className="map-actions">
+        <button
+          type="button"
+          className="btn small primary"
+          onClick={() => void startCombat()}
+          disabled={!linkedEncounter && scene.tokens.every((t) => t.kind !== 'creature')}
+        >
+          {linkedEncounter
+            ? combatEncounterId === linkedEncounter.id
+              ? 'Go to combat'
+              : linkedEncounter.state
+                ? 'Resume linked combat'
+                : 'Start linked encounter'
+            : 'Start combat from tokens'}
+        </button>
+        <MapPop
+          open={pop === 'encounter'}
+          onClose={closePop}
+          label="Place an encounter"
+          side="up"
+          trigger={
             <button
               type="button"
-              className="btn tiny"
-              aria-pressed={scene.playerCamera.mode === 'manual'}
-              onClick={useMyView}
-              title="Show the players what you see now"
+              className="btn small"
+              aria-haspopup="dialog"
+              aria-expanded={pop === 'encounter'}
+              disabled={!!combatEncounterId}
+              title={
+                combatEncounterId
+                  ? 'End the current fight first'
+                  : "Drop a built encounter's creatures here, hidden from the players"
+              }
+              onClick={() => togglePop('encounter')}
             >
-              Use my view
+              Place encounter…
             </button>
-          </div>
-        </div>
+          }
+        >
+          <h3>Built encounters</h3>
+          <ul className="picker-list">
+            {placeable.length === 0 && <li className="muted">No built encounters to place.</li>}
+            {placeable.map((e) => (
+              <li key={e.id}>
+                <span>
+                  {e.name}{' '}
+                  <span className="muted small">
+                    {e.combatants
+                      .filter((t) => t.ref.kind !== 'pc')
+                      .reduce((n, t) => n + t.quantity, 0)}{' '}
+                    creatures
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  className="btn tiny"
+                  aria-label={`Place ${e.name}`}
+                  onClick={() => void placeEncounter(e)}
+                >
+                  Place
+                </button>
+              </li>
+            ))}
+          </ul>
+        </MapPop>
+        <button
+          type="button"
+          className="btn small"
+          disabled={!scene.tokens.some((t) => t.kind === 'pc')}
+          title="Take every player character token off this map"
+          onClick={() => {
+            patch({ tokens: scene.tokens.filter((t) => t.kind !== 'pc') });
+            if (selectedToken?.kind === 'pc') setSelection(null);
+          }}
+        >
+          Remove party
+        </button>
+        {hiddenCreatures.length > 0 && (
+          <button
+            type="button"
+            className="btn small"
+            title="Show every hidden creature token to the players"
+            onClick={() =>
+              patch({
+                tokens: scene.tokens.map((t) =>
+                  t.kind === 'creature' && t.hidden ? { ...t, hidden: false } : t,
+                ),
+              })
+            }
+          >
+            Reveal creatures ({hiddenCreatures.length})
+          </button>
+        )}
+        {linkedEncounter && (
+          <button
+            type="button"
+            className="btn small"
+            onClick={() => patch({ encounterId: undefined })}
+            title="Forget the linked encounter so a new one is built from the tokens"
+          >
+            Unlink {linkedEncounter.name}
+          </button>
+        )}
+      </div>
 
-        <div className="map-group">
-          <h3>Grid</h3>
-          <div className="row">
+      <div className="map-context">
+        {hint ? (
+          <>
+            <p className="muted small" role="status">
+              {hint}
+            </p>
+            <button type="button" className="btn tiny" onClick={cancelMode}>
+              Cancel
+            </button>
+          </>
+        ) : selectedToken ? (
+          <div className="map-inspector" data-testid="token-inspector">
+            <h3>{TOKEN_KIND_LABEL[selectedToken.kind]}</h3>
             <label className="field inline">
-              Cell px
+              Label
               <input
-                type="number"
-                className="narrow"
-                min={4}
-                step={0.5}
-                value={grid.cellPx}
-                onChange={(e) => patchGrid({ cellPx: Math.max(4, Number(e.target.value) || 70) })}
+                type="text"
+                value={selectedToken.label}
+                onChange={(e) => patchToken(selectedToken.id, { label: e.target.value })}
               />
             </label>
             <label className="field inline">
-              Offset x
-              <input
-                type="number"
-                className="narrow"
-                value={grid.offsetX}
-                onChange={(e) => patchGrid({ offsetX: Number(e.target.value) || 0 })}
-              />
+              Role
+              <select
+                value={selectedToken.role}
+                onChange={(e) =>
+                  patchToken(selectedToken.id, { role: e.target.value as Token['role'] })
+                }
+              >
+                <option value="enemy">Enemy</option>
+                <option value="ally">Ally</option>
+                <option value="neutral">Neutral</option>
+              </select>
             </label>
             <label className="field inline">
-              Offset y
-              <input
-                type="number"
-                className="narrow"
-                value={grid.offsetY}
-                onChange={(e) => patchGrid({ offsetY: Number(e.target.value) || 0 })}
-              />
+              Size
+              <select
+                value={selectedToken.footprint}
+                onChange={(e) =>
+                  patchToken(selectedToken.id, {
+                    footprint: Number(e.target.value) as Token['footprint'],
+                  })
+                }
+              >
+                <option value={1}>1 cell</option>
+                <option value={2}>2 cells</option>
+                <option value={3}>3 cells</option>
+                <option value={4}>4 cells</option>
+              </select>
             </label>
+            {selectedToken.kind === 'creature' && (
+              <label className="field inline">
+                <input
+                  type="checkbox"
+                  checked={selectedToken.nameMasked}
+                  onChange={(e) => patchToken(selectedToken.id, { nameMasked: e.target.checked })}
+                />
+                Mask name on TV
+              </label>
+            )}
             <label className="field inline">
-              Colour
               <input
-                type="color"
-                value={grid.color}
-                onChange={(e) => patchGrid({ color: e.target.value })}
+                type="checkbox"
+                checked={selectedToken.hidden}
+                onChange={(e) => patchToken(selectedToken.id, { hidden: e.target.checked })}
               />
-            </label>
-            <label className="field inline">
-              Opacity
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={grid.opacity}
-                onChange={(e) => patchGrid({ opacity: Number(e.target.value) })}
-              />
+              Hidden from players
             </label>
             <label className="field inline">
               <input
                 type="checkbox"
-                checked={grid.showToPlayers}
-                onChange={(e) => patchGrid({ showToPlayers: e.target.checked })}
+                checked={selectedToken.dead}
+                onChange={(e) => patchToken(selectedToken.id, { dead: e.target.checked })}
               />
-              Show to players
+              Dead
             </label>
-          </div>
-          {scene.kind === 'blankGrid' && (
-            <div className="row">
-              <label className="field inline">
-                Columns
-                <input
-                  type="number"
-                  className="narrow"
-                  min={1}
-                  max={200}
-                  value={(scene.blank ?? DEFAULT_BLANK).cols}
-                  onChange={(e) =>
-                    patch({
-                      blank: {
-                        ...(scene.blank ?? DEFAULT_BLANK),
-                        cols: Math.max(1, Number(e.target.value) || 1),
-                      },
-                    })
-                  }
-                />
-              </label>
-              <label className="field inline">
-                Rows
-                <input
-                  type="number"
-                  className="narrow"
-                  min={1}
-                  max={200}
-                  value={(scene.blank ?? DEFAULT_BLANK).rows}
-                  onChange={(e) =>
-                    patch({
-                      blank: {
-                        ...(scene.blank ?? DEFAULT_BLANK),
-                        rows: Math.max(1, Number(e.target.value) || 1),
-                      },
-                    })
-                  }
-                />
-              </label>
-              <label className="field inline">
-                Backdrop
-                <select
-                  value={scene.backdrop ?? 'parchment'}
-                  onChange={(e) => patch({ backdrop: e.target.value as Scene['backdrop'] })}
-                >
-                  <option value="parchment">Parchment</option>
-                  <option value="stone">Stone</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </label>
-            </div>
-          )}
-        </div>
-
-        <div className="map-group">
-          <h3>Creatures</h3>
-          <input
-            type="text"
-            aria-label="Find creature to place"
-            placeholder="Find a creature to place…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          {rows.length > 0 && (
-            <ul className="picker-list">
-              {rows.map((row) => (
-                <li key={row.id}>
-                  <span>
-                    {row.displayName}{' '}
-                    <span className="muted small">{row.cr ? `CR ${row.cr}` : ''}</span>
-                  </span>
-                  <button
-                    type="button"
-                    className="btn tiny"
-                    onClick={() => {
-                      setPending({ kind: 'creature', row });
-                      setMode('place');
-                      containerRef.current?.focus();
-                    }}
-                  >
-                    Place
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="row">
+            <span className="spacer" />
             <button
               type="button"
-              className="btn primary"
-              onClick={() => void startCombat()}
-              disabled={!linkedEncounter && scene.tokens.every((t) => t.kind !== 'creature')}
+              className="chrome-btn"
+              aria-label="Set token art"
+              title="Set art…"
+              onClick={() => void setArt(selectedToken.id)}
             >
-              {linkedEncounter
-                ? combatEncounterId === linkedEncounter.id
-                  ? 'Go to combat'
-                  : linkedEncounter.state
-                    ? 'Resume linked combat'
-                    : 'Start linked encounter'
-                : 'Start combat from tokens'}
+              <Icon name="image" size={15} />
             </button>
-            {linkedEncounter && (
-              <button
-                type="button"
-                className="btn tiny"
-                onClick={() => patch({ encounterId: undefined })}
-                title="Forget the linked encounter so a new one is built from the tokens"
-              >
-                Unlink
-              </button>
-            )}
-            {scene.tokens.some((t) => t.kind === 'pc') && (
-              <button
-                type="button"
-                className="btn tiny"
-                onClick={() => patch({ tokens: scene.tokens.filter((t) => t.kind !== 'pc') })}
-              >
-                Remove party
-              </button>
-            )}
+            <button
+              type="button"
+              className="chrome-btn danger"
+              aria-label="Remove token"
+              title="Remove token (Delete)"
+              onClick={() => removeToken(selectedToken.id)}
+            >
+              <Icon name="trash" size={15} />
+            </button>
           </div>
-        </div>
-
-        {selectedToken && (
-          <div className="map-group" data-testid="token-inspector">
-            <h3>Token</h3>
-            <div className="row">
-              <label className="field inline">
-                Label
-                <input
-                  type="text"
-                  value={selectedToken.label}
-                  onChange={(e) => patchToken(selectedToken.id, { label: e.target.value })}
-                />
-              </label>
-              <label className="field inline">
-                Role
-                <select
-                  value={selectedToken.role}
-                  onChange={(e) =>
-                    patchToken(selectedToken.id, { role: e.target.value as Token['role'] })
-                  }
-                >
-                  <option value="enemy">Enemy</option>
-                  <option value="ally">Ally</option>
-                  <option value="neutral">Neutral</option>
-                </select>
-              </label>
-              <label className="field inline">
-                Size
-                <select
-                  value={selectedToken.footprint}
-                  onChange={(e) =>
-                    patchToken(selectedToken.id, {
-                      footprint: Number(e.target.value) as Token['footprint'],
-                    })
-                  }
-                >
-                  <option value={1}>1 cell</option>
-                  <option value={2}>2 cells</option>
-                  <option value={3}>3 cells</option>
-                  <option value={4}>4 cells</option>
-                </select>
-              </label>
-            </div>
-            <div className="row">
-              {selectedToken.kind === 'creature' && (
-                <label className="field inline">
-                  <input
-                    type="checkbox"
-                    checked={selectedToken.nameMasked}
-                    onChange={(e) => patchToken(selectedToken.id, { nameMasked: e.target.checked })}
-                  />
-                  Mask name on TV
-                </label>
-              )}
-              <label className="field inline">
-                <input
-                  type="checkbox"
-                  checked={selectedToken.hidden}
-                  onChange={(e) => patchToken(selectedToken.id, { hidden: e.target.checked })}
-                />
-                Hidden from players
-              </label>
-              <label className="field inline">
-                <input
-                  type="checkbox"
-                  checked={selectedToken.dead}
-                  onChange={(e) => patchToken(selectedToken.id, { dead: e.target.checked })}
-                />
-                Dead
-              </label>
-              <button
-                type="button"
-                className="btn tiny"
-                onClick={() => void setArt(selectedToken.id)}
-              >
-                Set art…
-              </button>
-              <button
-                type="button"
-                className="btn tiny"
-                onClick={() => removeToken(selectedToken.id)}
-              >
-                Remove
-              </button>
-            </div>
+        ) : selectedEntry ? (
+          <div className="map-inspector" data-testid="entry-inspector">
+            <h3>Entry marker</h3>
+            <label className="field inline">
+              Name
+              <input
+                type="text"
+                value={selectedEntry.name}
+                onChange={(e) => patchEntry(selectedEntry.id, { name: e.target.value })}
+              />
+            </label>
+            <button
+              type="button"
+              className="btn small"
+              disabled={pcs.length === 0}
+              onClick={() => placeParty(entryPoint(selectedEntry))}
+            >
+              Place party here
+            </button>
+            <span className="spacer" />
+            <button
+              type="button"
+              className="chrome-btn danger"
+              aria-label="Remove entry marker"
+              title="Remove entry marker (Delete)"
+              onClick={() => removeEntry(selectedEntry.id)}
+            >
+              <Icon name="trash" size={15} />
+            </button>
           </div>
-        )}
-
-        {scene.entryMarkers.length > 0 && (
-          <div className="map-group">
-            <h3>Entry markers</h3>
-            <ul className="picker-list">
-              {scene.entryMarkers.map((m) => (
-                <li key={m.id}>
-                  <input
-                    type="text"
-                    aria-label="Entry marker name"
-                    value={m.name}
-                    onChange={(e) =>
-                      patch({
-                        entryMarkers: scene.entryMarkers.map((x) =>
-                          x.id === m.id ? { ...x, name: e.target.value } : x,
-                        ),
-                      })
-                    }
-                  />
-                  <button
-                    type="button"
-                    className="btn tiny"
-                    onClick={() =>
-                      patch({ entryMarkers: scene.entryMarkers.filter((x) => x.id !== m.id) })
-                    }
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+        ) : (
+          <p className="muted small">
+            Select a token or entry marker to edit it. Drag tokens (Alt for free placement), drag
+            the map to pan, wheel to zoom.
+          </p>
         )}
       </div>
+    </div>
+  );
+}
+
+const TOKEN_KIND_LABEL: Record<Token['kind'], string> = {
+  pc: 'Player character',
+  creature: 'Creature',
+  marker: 'Marker',
+};
+
+function pointStyle(p: Point) {
+  return { left: p.x, top: p.y };
+}
+
+/**
+ * A pop-up anchored to its trigger: beside the tool strip or above the action bar. Not modal;
+ * a click elsewhere or Escape closes it.
+ */
+function MapPop({
+  open,
+  onClose,
+  label,
+  side,
+  trigger,
+  children,
+}: {
+  open: boolean;
+  onClose(): void;
+  label: string;
+  side: 'right' | 'up';
+  trigger: ReactNode;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, onClose]);
+  return (
+    <div className="map-pop-anchor" ref={ref}>
+      {trigger}
+      {open && (
+        <div className={`map-pop ${side}`} role="dialog" aria-label={label}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }

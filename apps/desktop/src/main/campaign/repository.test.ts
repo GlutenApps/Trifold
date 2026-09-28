@@ -117,4 +117,25 @@ describe('CampaignRepository', () => {
     expect(store.getSettings().lastOpenCampaignSlug).toBeNull();
     expect(await again.reopenLast()).toBeNull();
   });
+
+  it('deletes a campaign folder and closes it when it was open', async () => {
+    const keep = await repo.create('Keep');
+    const gone = await repo.create('Gone');
+    await repo.quickAdd('Thora, Sam, Fighter 4, 30, 17, +1, 30, 11');
+    await repo.remove(gone.campaign.id);
+    expect(repo.current).toBeNull();
+    expect(store.getSettings().lastOpenCampaignSlug).toBeNull();
+    expect(await readdir(store.resolvePath('campaigns'))).toEqual(['keep']);
+    expect((await repo.list()).map((c) => c.id)).toEqual([keep.campaign.id]);
+  });
+
+  it('deletes a closed campaign without touching the open one', async () => {
+    const other = await repo.create('Other');
+    const open = await repo.create('Open');
+    await repo.remove(other.campaign.id);
+    expect(repo.current).toBe('open');
+    expect(store.getSettings().lastOpenCampaignSlug).toBe('open');
+    expect((await repo.list()).map((c) => c.id)).toEqual([open.campaign.id]);
+    await expect(repo.remove(other.campaign.id)).rejects.toThrow(/not found/);
+  });
 });

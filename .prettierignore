@@ -8,3 +8,4 @@ pnpm-lock.yaml
 resources
 fixtures/local
 *.md
+docs/design-brief/result/

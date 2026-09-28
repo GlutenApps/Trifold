@@ -70,9 +70,13 @@ export class WindowManager {
       minWidth: 1000,
       minHeight: 640,
       title: 'Trifold',
-      backgroundColor: '#14161a',
+      backgroundColor: '#14181d',
       show: false,
       autoHideMenuBar: true,
+      // The renderer draws the title bar (ADR 0004 §2.1); Windows draws the window controls
+      // over its right end so snap layouts and double-click keep working.
+      titleBarStyle: 'hidden',
+      titleBarOverlay: { color: '#11151a', symbolColor: '#9aa3ad', height: 34 },
       webPreferences: WindowManager.webPreferences(),
     });
     win.once('ready-to-show', () => {

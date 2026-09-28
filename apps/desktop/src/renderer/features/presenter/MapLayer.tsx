@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CombatSummary, MapScene } from '@trifold/api';
 import { TokenDisc } from './TokenDisc';
 import { viewTransform } from './mapMath';
@@ -39,6 +39,53 @@ export function GridLines({
   );
 }
 
+const FADE_MS = 900;
+
+/**
+ * A map's art. A new background on the same scene fades in over the old one once it has loaded
+ * (keyed by scene, so a different scene cuts straight to its own art).
+ */
+function MapArt({ url, width, height }: { url: string; width: number; height: number }) {
+  const [shown, setShown] = useState(url);
+  const [readyUrl, setReadyUrl] = useState<string | null>(null);
+  const incoming = url !== shown ? url : null;
+  const ready = incoming !== null && readyUrl === incoming;
+
+  // transitionend is the usual finish; the timer covers a window that never paints it.
+  useEffect(() => {
+    if (!ready || !incoming) return;
+    const timer = window.setTimeout(() => setShown(incoming), FADE_MS + 200);
+    return () => window.clearTimeout(timer);
+  }, [ready, incoming]);
+
+  return (
+    <>
+      <img
+        className="map-image"
+        src={shown}
+        alt=""
+        width={width}
+        height={height}
+        draggable={false}
+      />
+      {incoming && (
+        <img
+          key={incoming}
+          className={`map-image incoming${ready ? ' ready' : ''}`}
+          data-testid="map-image-incoming"
+          src={incoming}
+          alt=""
+          width={width}
+          height={height}
+          draggable={false}
+          onLoad={() => requestAnimationFrame(() => setReadyUrl(incoming))}
+          onTransitionEnd={() => setShown(incoming)}
+        />
+      )}
+    </>
+  );
+}
+
 /**
  * The map as the TV shows it: the camera rectangle letterboxed into the window, tokens placed in
  * map pixels so a transform on the whole map moves everything at once.
@@ -76,14 +123,7 @@ export function MapLayer({ scene, combat }: { scene: MapScene; combat: CombatSum
         }}
       >
         {scene.imageUrl ? (
-          <img
-            className="map-image"
-            src={scene.imageUrl}
-            alt=""
-            width={scene.width}
-            height={scene.height}
-            draggable={false}
-          />
+          <MapArt key={scene.id} url={scene.imageUrl} width={scene.width} height={scene.height} />
         ) : (
           <div
             className={`map-blank backdrop-${scene.backdrop}`}

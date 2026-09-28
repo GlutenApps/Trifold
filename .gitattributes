@@ -3,3 +3,4 @@
 *.jpg binary
 *.webp binary
 *.ico binary
+*.cmd text eol=crlf

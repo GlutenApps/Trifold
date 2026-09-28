@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>What a layout captures</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf" style="width: 560px; height: 420px; padding: 24px 28px; display: flex; flex-direction: column; gap: 14px">
+  <div class="row" style="gap: 8px"><span class="kb">Ctrl+2</span><span class="b s16">Table</span><span class="bd ac">current</span><div class="sp"></div><span class="mu s12">saved 8:02 PM</span></div>
+  <div class="cd" style="display: flex; flex-direction: column; gap: 10px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.6">
+    <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 4px 12px">
+      <span class="mu">stage</span><span>2 groups · split 50 / 50</span>
+      <span class="mu">group 1</span><span>Map <span class="ac">·active</span>, Campaign, Encounters</span>
+      <span class="mu">group 2</span><span>Combat <span class="ac">·active</span>, Compendium</span>
+      <span class="mu">maximized</span><span>no</span>
+      <span class="mu">dock</span><span>narrow · 300 px</span>
+      <span class="mu">tools</span><span>TV controls <span class="ac">·open</span>, Scenes <span class="ac">·open</span>, Music ·collapsed</span>
+      <span class="mu">majors</span><span>only on the stage · minors only in the dock</span>
+    </div>
+  </div>
+  <div class="col" style="gap: 4px">
+    <span class="lb">Not saved, on purpose</span>
+    <div class="mu s12" style="line-height: 1.5">What is live on the TV, the combat and its round, what is playing, the dice pool, every tab's contents (search, selection, drafts). Applying a layout only moves chrome; nothing at the table changes.</div>
+  </div>
+  <div class="col" style="gap: 4px">
+    <span class="lb">Applying</span>
+    <div class="mu s12" style="line-height: 1.5">Ctrl+2 or a click on the row. Tabs that the layout names are summoned into their groups; tabs it does not name stay open in group 1. The live strip does not move. The row is highlighted while the screen still matches; touch anything and the highlight drops, and Overwrite becomes the way to keep it.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":560,"height":420}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

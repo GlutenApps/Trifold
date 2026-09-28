@@ -124,6 +124,27 @@ describe('buildCombatants', () => {
     expect(result.combatants[5]).toMatchObject({ isLair: true, initiative: 20 });
   });
 
+  it('links each numbered creature to its own placed token, and a lone token to all', () => {
+    const base = encounter();
+    const [thora, goblins, aboleth] = base.combatants;
+    const e = encounter({
+      combatants: [
+        { ...thora!, tokenId: 'pc-token' },
+        { ...goblins!, tokenId: 'shared', tokenIds: ['g1', 'g2', 'g3'] },
+        { ...aboleth!, tokenId: 'ab' },
+      ],
+    });
+    const result = buildCombatants(e, [pc], byId, { initiativeMode: 'perGroup', rng: () => 0.5 });
+    expect(result.combatants.map((c) => c.tokenId)).toEqual([
+      'pc-token',
+      'g1',
+      'g2',
+      'g3',
+      'ab',
+      undefined,
+    ]);
+  });
+
   it('rolls per creature when asked and falls back to cached values for missing records', () => {
     let n = 0;
     const rng = () => [0.1, 0.9, 0.5][n++ % 3]!;

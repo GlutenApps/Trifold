@@ -77,7 +77,6 @@ export function CompendiumPage() {
 
   return (
     <section className="compendium">
-      <h1>Compendium</h1>
       {error && (
         <div className="banner error" role="alert">
           <span>{error}</span>

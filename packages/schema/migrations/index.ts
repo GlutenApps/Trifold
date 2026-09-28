@@ -31,7 +31,7 @@ export type VersionTable = Record<FileKind, number>;
 
 export const CURRENT_SCHEMA_VERSION: VersionTable = {
   appConfig: 1,
-  library: 1,
+  library: 3,
   source: 1,
   record: 1,
   campaign: 1,
@@ -48,7 +48,20 @@ export const CURRENT_SCHEMA_VERSION: VersionTable = {
 /** Registered migrations, oldest first. Add an entry whenever a schema version is bumped. */
 export const MIGRATIONS: MigrationRegistry = {
   appConfig: [],
-  library: [],
+  library: [
+    {
+      from: 1,
+      to: 2,
+      // ADR 0004: the panel-column workspace became stage + dock; old layouts cannot be mapped.
+      migrate: (doc) => ({ ...doc, workspace: { presets: [], seeded: false, consoles: {} } }),
+    },
+    {
+      from: 2,
+      to: 3,
+      // ADR 0005: the Combat tab folded into Encounters; layouts and starters are reset.
+      migrate: (doc) => ({ ...doc, workspace: { presets: [], seeded: false, consoles: {} } }),
+    },
+  ],
   source: [],
   record: [],
   campaign: [],

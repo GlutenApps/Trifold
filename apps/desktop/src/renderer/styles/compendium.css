@@ -373,8 +373,25 @@ input.narrow-text {
   min-height: 0;
 }
 
-.combat-bar h1 {
+.combat-bar {
+  flex-wrap: nowrap;
+}
+
+/* The round and whose turn it is take the spare width, truncating before the controls wrap. */
+.combat-bar h2 {
+  flex: 1;
+  min-width: 0;
   margin: 0;
+  font-size: 18px;
+  color: var(--text);
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combat-bar .btn {
+  white-space: nowrap;
 }
 
 .combat-split {
@@ -411,7 +428,7 @@ input.narrow-text {
 }
 
 .combatant-row.role-ally {
-  border-left-color: #4c9a6a;
+  border-left-color: var(--ok);
 }
 
 .combatant-row.role-neutral {
@@ -483,10 +500,6 @@ input.narrow-text {
   color: var(--text);
 }
 
-.save-call {
-  border-color: var(--warn);
-}
-
 .entity-row {
   border-top: 1px solid var(--border);
   padding: 6px 0;
@@ -496,8 +509,185 @@ input.narrow-text {
   cursor: pointer;
 }
 
-.pending-damage {
-  border-color: var(--accent);
+/* The selected combatant's controls slide open under its row. */
+/* The wrapper adds no box, so the active row still pins to the top of the list. */
+.combatant-item {
+  display: contents;
+}
+
+.combatant-row.open {
+  margin-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.combatant-drawer {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-bottom: 6px;
+  animation: drawer-open 160ms ease-out;
+}
+
+.combatant-drawer .drawer-body {
+  min-height: 0;
+  overflow: hidden;
+  padding: 2px 8px 4px;
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--bg);
+}
+
+.combatant-drawer .row {
+  margin: 4px 0;
+}
+
+@keyframes drawer-open {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+/* Damage pop-up: floats at the bottom of the tracker, no backdrop, the fight stays clickable. */
+.damage-anchor {
+  position: sticky;
+  bottom: 0;
+  height: 0;
+  z-index: 30;
+}
+
+.damage-popup {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(460px, calc(100% - 8px));
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow);
+  animation: popup-in 140ms ease-out;
+}
+
+.damage-popup:focus {
+  outline: none;
+}
+
+.damage-popup .row {
+  margin: 4px 0;
+}
+
+.damage-popup .popup-head {
+  flex-wrap: nowrap;
+}
+
+.damage-popup .popup-head strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.damage-popup .popup-total {
+  font-variant-numeric: tabular-nums;
+  margin: 2px 0;
+}
+
+.damage-targets {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+}
+
+.dmg-target {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 0 3px 6px;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+}
+
+.dmg-target.role-enemy {
+  border-left-color: var(--danger);
+}
+
+.dmg-target.role-ally {
+  border-left-color: var(--ok);
+}
+
+.dmg-target.role-neutral {
+  border-left-color: var(--warn);
+}
+
+.dmg-target.assigned {
+  background: var(--bg-active);
+}
+
+.dmg-name {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.dmg-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* Per-roll advantage and disadvantage sit beside each d20 badge and show on hover or focus. */
+.d20-roll {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.d20-roll .roll-modes {
+  display: inline-flex;
+  gap: 2px;
+  visibility: hidden;
+}
+
+.sb-feature-head:hover .roll-modes,
+.d20-roll:focus-within .roll-modes {
+  visibility: visible;
+}
+
+.badge.roll-mode {
+  font-size: 11px;
+  padding: 0 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .combatant-drawer,
+  .damage-popup {
+    animation: none;
+  }
 }
 
 .crit {
@@ -675,17 +865,17 @@ input.narrow-text {
 }
 
 .chip.role-enemy {
-  border-color: rgba(217, 83, 79, 0.6);
+  border-color: color-mix(in srgb, var(--enemy) 60%, transparent);
 }
 
 .chip.role-ally {
-  border-color: rgba(76, 154, 106, 0.6);
+  border-color: color-mix(in srgb, var(--ally) 60%, transparent);
 }
 
 .chip.active {
-  background: #c8a45c;
-  color: #1a1508;
-  border-color: #c8a45c;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
 }
 
 .chip.dead .chip-name {
@@ -695,7 +885,7 @@ input.narrow-text {
 
 .chip.bloodied .chip-name::after {
   content: ' •';
-  color: #d9534f;
+  color: var(--danger);
 }
 
 .hp-bar {
@@ -709,7 +899,7 @@ input.narrow-text {
 .hp-fill {
   display: block;
   height: 100%;
-  background: #4c9a6a;
+  background: var(--ok);
 }
 
 .round-counter {
@@ -777,7 +967,7 @@ input.narrow-text {
 .break-screen .countdown {
   font-size: 8vw;
   font-variant-numeric: tabular-nums;
-  color: #c8a45c;
+  color: var(--accent);
   margin: 0;
 }
 
@@ -851,7 +1041,7 @@ input[type='range'].wide {
 
 .badge.warn {
   background: var(--warn);
-  color: #1a1508;
+  color: var(--accent-contrast);
 }
 
 /* Spell slot tracker (DESIGN.md §6.4) */

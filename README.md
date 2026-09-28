@@ -35,7 +35,8 @@ Local-only test content such as a full community compendium file must stay out o
 Two things worth knowing:
 
 - `pnpm i` finishes by running `scripts/rebuild-native.mjs`, which makes sure Electron's binary is downloaded and fetches the prebuilt `better-sqlite3` for the pinned Electron version. If Electron is missing or fails to load the index, run `pnpm rebuild:native`. The Electron and better-sqlite3 pins move together; see [ADR 0001](docs/adr/0001-electron-and-native-module-pins.md).
-- Some editor and extension-host terminals export `ELECTRON_RUN_AS_NODE=1`, which makes Electron start as plain Node and refuse to open windows. If `pnpm dev` exits with "bad option", unset that variable first (`env -u ELECTRON_RUN_AS_NODE pnpm dev`). The smoke test strips it automatically.
+- Some editor and extension-host terminals export `ELECTRON_RUN_AS_NODE=1`, which makes Electron start as plain Node and refuse to open windows. `pnpm dev` (via `scripts/dev.mjs`) and the smoke test strip it automatically; the packaged exe does not, so unset it before launching that from such a terminal.
+- To start dev mode without a terminal, double-click `Trifold.cmd` in the repo root (or a shortcut to it).
 
 ## Content and licensing
 

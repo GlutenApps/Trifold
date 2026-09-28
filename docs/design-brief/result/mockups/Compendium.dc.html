@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Compendium</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf pnl" style="width: {{w}}px; height: {{h}}px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px">
+  <div class="row">
+    <div class="seg"><span class="on">Monsters</span><span>Spells</span><span>Items</span><span>Feats</span><span>Species</span><span>Backgrounds</span><span>Classes</span></div>
+  </div>
+  <div class="wrap" style="gap: 6px">
+    <div class="in fo" style="width: 220px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"></path></svg>goblin</div>
+    <div class="in">All sources<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+    <div class="in">2024<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+    <div class="in" title="CR from · CR to"><span class="mu">CR</span><span class="m n">¼ – 5</span><svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+    <div class="in">Any type<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+    <div class="in">Any size<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+    <div class="in">Any environment<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+    <div class="in">NPCs and monsters<svg class="i s cv" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></div>
+  </div>
+  <div style="display: flex; gap: 12px; flex: 1; min-height: 0">
+    <div style="width: 300px; flex: none; display: flex; flex-direction: column; gap: 2px; overflow: hidden">
+      <div class="mu s12" style="padding: 4px 8px">12 results · 0.6 ms</div>
+      <div class="td"><span class="b tr" style="width: 108px">Goblin Minion</span><span class="m n s12 mu">⅛</span><span class="mu s12">fey</span><span class="mu s12">Small</span><span class="bd">2024</span></div>
+      <div class="td sel"><span class="b tr" style="width: 108px">Goblin Warrior</span><span class="m n s12 mu">¼</span><span class="mu s12">fey</span><span class="mu s12">Small</span><span class="bd">2024</span></div>
+      <div class="td"><span class="b tr" style="width: 108px">Goblin</span><span class="m n s12 mu">¼</span><span class="mu s12">humanoid</span><span class="mu s12">Small</span><span class="bd">legacy</span></div>
+      <div class="td"><span class="b tr" style="width: 108px">Goblin Boss</span><span class="m n s12 mu">1</span><span class="mu s12">fey</span><span class="mu s12">Small</span><span class="bd">2024</span></div>
+      <div class="td"><span class="b tr" style="width: 108px">Worg</span><span class="m n s12 mu">½</span><span class="mu s12">fey</span><span class="mu s12">Large</span><span class="bd">2024</span></div>
+      <div class="td"><span class="b tr" style="width: 108px">Worg</span><span class="m n s12 mu">½</span><span class="mu s12">monstrosity</span><span class="mu s12">Large</span><span class="bd">legacy</span></div>
+      <div class="td"><span class="b tr" style="width: 108px">Hobgoblin Warrior</span><span class="m n s12 mu">½</span><span class="mu s12">fey</span><span class="mu s12">Medium</span><span class="bd">2024</span></div>
+      <div class="td"><span class="b tr" style="width: 108px">Hobgoblin</span><span class="m n s12 mu">½</span><span class="mu s12">humanoid</span><span class="mu s12">Medium</span><span class="bd">legacy</span></div>
+      <div class="td"><span class="b tr" style="width: 108px">Bugbear Warrior</span><span class="m n s12 mu">1</span><span class="mu s12">fey</span><span class="mu s12">Medium</span><span class="bd">2024</span></div>
+      <div class="td"><span class="b tr" style="width: 108px">Bugbear</span><span class="m n s12 mu">1</span><span class="mu s12">humanoid</span><span class="mu s12">Medium</span><span class="bd">legacy</span></div>
+      <div class="td"><span class="b tr" style="width: 108px">Hobgoblin Captain</span><span class="m n s12 mu">3</span><span class="mu s12">fey</span><span class="mu s12">Medium</span><span class="bd">2024</span></div>
+      <div class="td"><span class="b tr" style="width: 108px">Bugbear Stalker</span><span class="m n s12 mu">3</span><span class="mu s12">fey</span><span class="mu s12">Medium</span><span class="bd">2024</span></div>
+    </div>
+    <div class="cd {{sbCls}}" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; overflow: hidden">
+      <div class="row">
+        <span class="b s16 tr">Goblin Warrior</span><span class="bd">2024</span><span class="bd tr" style="max-width: 120px">System Reference Document</span>
+        <div class="sp"></div>
+        <div class="btn sm" title="Switch edition"><svg class="i s" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"></path></svg>Legacy</div>
+        <div class="btn sm" title="Duplicate to homebrew"><svg class="i s" viewBox="0 0 24 24"><path d="M8 8h12v12H8zM4 16V4h12"></path></svg>Duplicate to homebrew</div>
+      </div>
+      <div class="mu s12">Small Fey (Goblinoid), Chaotic Neutral</div>
+      <div class="wrap" style="gap: 14px">
+        <span><span class="lb">AC</span> <span class="m">15</span></span>
+        <span><span class="lb">Initiative</span> <span class="m">+2</span> <span class="mu s12">(12)</span></span>
+        <span><span class="lb">HP</span> <span class="m">10</span> <span class="mu s12">(3d6)</span></span>
+        <span><span class="lb">Speed</span> <span class="m">30 ft.</span></span>
+      </div>
+      <div class="stat">
+        <div class="abx"><span class="lb">STR</span><span class="m">8</span><span class="m n s11 mu">−1 / −1</span></div>
+        <div class="abx"><span class="lb">DEX</span><span class="m">15</span><span class="m n s11 mu">+2 / +2</span></div>
+        <div class="abx"><span class="lb">CON</span><span class="m">10</span><span class="m n s11 mu">+0 / +0</span></div>
+        <div class="abx"><span class="lb">INT</span><span class="m">10</span><span class="m n s11 mu">+0 / +0</span></div>
+        <div class="abx"><span class="lb">WIS</span><span class="m">8</span><span class="m n s11 mu">−1 / −1</span></div>
+        <div class="abx"><span class="lb">CHA</span><span class="m">8</span><span class="m n s11 mu">−1 / −1</span></div>
+      </div>
+      <div class="col" style="gap: 3px; font-size: 12px">
+        <div><span class="lb">Skills</span> Stealth +6</div>
+        <div><span class="lb">Senses</span> Darkvision 60 ft.; Passive Perception 9</div>
+        <div><span class="lb">Languages</span> Common, Goblin</div>
+        <div><span class="lb">CR</span> ¼ (XP 50; PB +2)</div>
+      </div>
+      <div class="hr"></div>
+      <div class="col" style="gap: 6px">
+        <span class="cp">Actions</span>
+        <div><span class="b">Scimitar.</span> <span class="mu">Melee Attack Roll:</span> +4, reach 5 ft. <span class="mu">Hit:</span> 5 (1d6 + 2) Slashing damage.</div>
+        <div><span class="b">Shortbow.</span> <span class="mu">Ranged Attack Roll:</span> +4, range 80/320 ft. <span class="mu">Hit:</span> 5 (1d6 + 2) Piercing damage.</div>
+      </div>
+      <div class="col" style="gap: 6px">
+        <span class="cp">Bonus actions</span>
+        <div><span class="b">Nimble Escape.</span> The goblin takes the Disengage or Hide action.</div>
+      </div>
+      <div class="mu s12" style="margin-top: auto">Spell names in a stat block open the spell here; Back returns to this record.</div>
+    </div>
+    <div class="cd {{hbCls}}" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; overflow: hidden">
+      <div class="row"><span class="b s16 tr">Goblin Warrior</span><span class="bd ac">homebrew</span><span class="dft" title="Unsaved changes"></span><div class="sp"></div><div class="btn sm">Changes from original</div><div class="btn sm pri">Save</div><div class="btn sm dg">Delete…</div></div>
+      <div class="mu s12">Copied from System Reference Document 5.2. The original stays as it is; this copy is yours and searches with everything else.</div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: 8px"><div class="col" style="gap: 3px"><span class="s12 mu">Name</span><div class="in sm">Goblin Warrior, keep guard</div></div><div class="col" style="gap: 3px"><span class="s12 mu">CR</span><div class="in sm m n">1/2</div></div></div>
+      <div class="col" style="gap: 3px"><span class="s12 mu">Abilities</span><div class="stat"><div class="abx"><span class="lb">STR</span><div class="in sm m n" style="width: 40px; justify-content: center">10</div></div><div class="abx"><span class="lb">DEX</span><div class="in sm m n" style="width: 40px; justify-content: center">15</div></div><div class="abx"><span class="lb">CON</span><div class="in sm m n" style="width: 40px; justify-content: center">12</div></div><div class="abx"><span class="lb">INT</span><div class="in sm m n" style="width: 40px; justify-content: center">10</div></div><div class="abx"><span class="lb">WIS</span><div class="in sm m n" style="width: 40px; justify-content: center">8</div></div><div class="abx"><span class="lb">CHA</span><div class="in sm m n" style="width: 40px; justify-content: center">8</div></div></div></div>
+      <div class="col" style="gap: 3px; flex: 1"><span class="s12 mu">Features</span><div class="in sm ta" style="flex: 1; align-items: flex-start; white-space: pre-line">Scimitar. Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d6 + 3) Slashing damage.
+Shortbow. Ranged Attack Roll: +4, range 80/320 ft. Hit: 5 (1d6 + 2) Piercing damage.
+Keep Guard. Advantage on Perception checks inside the keep.</div></div>
+      <div class="mu s12">Name, CR, abilities and features only. Imports and sources are managed in the Library.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"w":{"editor":"int","default":738},"h":{"editor":"int","default":806},"homebrew":{"editor":"boolean","default":false},"$preview":{"width":738,"height":806}}'>
+class Component extends DCLogic {
+  renderVals() { const p = this.props; const hb = p.homebrew === true || p.homebrew === 'true' || p.homebrew === '1'; return { w: Number(p.w ?? 738), h: Number(p.h ?? 806), sbCls: hb ? 'gone' : '', hbCls: hb ? '' : 'gone' }; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Campaign switcher</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf" style="width: 900px; height: 320px; display: flex; flex-direction: column">
+  <div style="height: 34px; flex: none"><dc-import name="TopBar" w="900" space="campaign" campaign="Sunken Keep" layout="Table" hint-size="900px,34px"></dc-import></div>
+  <div style="flex: 1; display: flex; gap: 8px; padding: 8px">
+    <div class="grp" style="flex: 1"><div class="tabs"><div class="tab on"><span class="pip"></span>Map</div><div class="tab">Campaign</div><div class="tab ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 4l16 16M20 4L4 20"></path></svg></div></div></div>
+    <div class="grp" style="flex: 1"><div class="tabs"><div class="tab on"><span class="pip"></span>Combat</div><div class="tab">Compendium</div></div></div>
+  </div>
+  <div class="fly" style="left: 34px; top: 36px; width: 300px; padding: 6px; display: flex; flex-direction: column; gap: 2px">
+    <div class="lb" style="padding: 4px 8px 6px">Campaigns</div>
+    <div class="td sel" style="height: 30px; gap: 8px"><svg class="i s ac" viewBox="0 0 24 24"><path d="M5 12l5 5 9-11"></path></svg><span class="b sp">Sunken Keep</span><span class="bd">2024 rules</span></div>
+    <div class="td" style="height: 30px; gap: 8px"><span style="width: 14px"></span><span class="sp">Harbor Watch</span><span class="mu s11">closes Sunken Keep first</span></div>
+    <div class="hr" style="margin: 4px 0"></div>
+    <div class="td" style="height: 30px; gap: 8px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg><span class="sp">New campaign…</span></div>
+    <div class="td" style="height: 30px; gap: 8px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"></path></svg><span class="sp">Import campaign XML…</span></div>
+    <div class="hr" style="margin: 4px 0"></div>
+    <div class="td" style="height: 30px; gap: 8px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg><span class="sp">Close campaign</span><span class="mu s11">ends the session</span></div>
+    <div class="td hv" style="height: 30px; gap: 8px"><svg class="i s mu" viewBox="0 0 24 24"><path d="M4 19a2 2 0 0 1 2-2h14V3H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 0 2 2h14v-4"></path></svg><span class="sp">Library</span><span class="mu s11">campaigns, compendium, settings</span><svg class="i s mu" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"></path></svg></div>
+  </div>
+  <div class="mu s12" style="position: absolute; left: 360px; top: 120px; width: 500px; line-height: 1.5">One campaign at a time. Opening another closes this one first; if something is on the TV or in combat it warns before stopping the share. A closed campaign's console, encounter and log come back exactly as they were when you open it again. Going to the Library without closing leaves everything live.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":900,"height":320}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

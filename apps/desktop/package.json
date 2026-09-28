@@ -7,7 +7,7 @@
   "author": "Trifold contributors",
   "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "node ../../scripts/dev.mjs",
     "build:bundle": "electron-vite build",
     "build": "electron-vite build && electron-builder --config electron-builder.yml",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",

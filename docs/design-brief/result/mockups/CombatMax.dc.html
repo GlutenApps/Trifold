@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Combat, maximized · 1600 × 900</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf" style="width: 1600px; height: 900px; display: flex; flex-direction: column"><div style="height: 34px; flex: none"><dc-import name="TopBar" w="1600" space="campaign" campaign="Sunken Keep" layout="Combat" dock="true" hint-size="1600px,34px"></dc-import></div><div style="flex: 1; min-height: 0; display: flex"><div style="flex: 1; min-width: 0; display: flex; gap: 8px; padding: 8px"><div class="grp" style="flex: 1"><div class="tabs"><div class="tab on "><span class="pip"></span>Combat</div><div class="tab  "><span class="pip"></span>Map</div><div class="tab  ">Compendium</div><div class="tabend"><span class="mu s12" style="margin-right: 6px">Maximized · the other group and the dock come back on restore</span><div class="ib dim" title="Split right (unavailable while maximized)"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM12 4v16"></path></svg></div><div class="ib on" title="Restore · Ctrl+Shift+M"><svg class="i" viewBox="0 0 24 24"><path d="M8 4h12v12M4 8h12v12H4z"></path></svg></div></div></div><div style="flex: 1; min-height: 0"><dc-import name="Combat" w="1538" h="772" wide="true" prompt="dmg" hint-size="1538px,772px"></dc-import></div></div></div><div class="dock" style="width: 44px; padding: 8px 6px"><dc-import name="DockTabs" mode="col" h="808" on="" live="tv,turn,music,scenes" hint-size="32px,808px"></dc-import></div></div><div style="height: 42px; flex: none"><dc-import name="LiveStrip" w="1600" scene="Silt Springs Map" blackout="false" win="true" combat="Round 3 · Goblin Warrior" music="Tavern Night · Low Tide" playing="true" muted="false" pool="" total="5" hint-size="1600px,42px"></dc-import></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

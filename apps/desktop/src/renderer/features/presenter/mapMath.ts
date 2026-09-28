@@ -1,5 +1,12 @@
 import type { CameraRect } from '@trifold/api';
-import type { GridSpec, PlayerCamera, Scene, Token } from '@trifold/schema';
+import type {
+  GridSpec,
+  PlayerCamera,
+  Scene,
+  SceneBackground,
+  SceneImage,
+  Token,
+} from '@trifold/schema';
 
 /** Pure geometry for map scenes (DESIGN.md §6.5): grid, snapping, cameras, party placement. */
 
@@ -167,6 +174,23 @@ export function partyFormation(count: number, centre: Point): Point[] {
   return out;
 }
 
+/**
+ * Placing a built encounter (ADR 0005): a near-square block around `centre` with one free cell
+ * between neighbours, so each token is easy to grab. Returns each token's top-left cell, in order.
+ */
+export function encounterFormation(footprints: readonly number[], centre: Point): Point[] {
+  if (footprints.length === 0) return [];
+  const step = Math.max(...footprints) + 1;
+  const cols = Math.ceil(Math.sqrt(footprints.length));
+  const rows = Math.ceil(footprints.length / cols);
+  const originX = Math.round(centre.x - (cols * step - 1) / 2);
+  const originY = Math.round(centre.y - (rows * step - 1) / 2);
+  return footprints.map((_, i) => ({
+    x: originX + (i % cols) * step,
+    y: originY + Math.floor(i / cols) * step,
+  }));
+}
+
 /** The transform that shows `rect` inside a viewport of `vw` × `vh` CSS pixels, letterboxed. */
 export function viewTransform(
   rect: CameraRect,
@@ -190,4 +214,92 @@ export function initials(label: string): string {
   if (words.length === 0) return '?';
   if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
   return (words[0]![0]! + words[words.length - 1]![0]!).toUpperCase();
+}
+
+/** Id for the one image of a map saved before it had background variants. */
+export const ORIGINAL_BACKGROUND_ID = 'original';
+
+/** A map's backgrounds; a map with only `image` has that one, named "Original". */
+export function backgroundsOf(scene: Scene): SceneBackground[] {
+  if (scene.backgrounds?.length) return scene.backgrounds;
+  return scene.image ? [{ id: ORIGINAL_BACKGROUND_ID, name: 'Original', image: scene.image }] : [];
+}
+
+export function activeBackgroundOf(scene: Scene): SceneBackground | null {
+  const all = backgroundsOf(scene);
+  return all.find((b) => b.id === scene.activeBackgroundId) ?? all[0] ?? null;
+}
+
+/** True when two images have the same proportions, so one grid fits both. */
+export function sameShape(a: SceneImage, b: SceneImage): boolean {
+  return Math.abs(a.width / a.height - b.width / b.height) < 0.01;
+}
+
+/** Adds a variant without showing it (the DM may be preparing it while the map is live). */
+export function addBackground(scene: Scene, background: SceneBackground): Scene {
+  const all = backgroundsOf(scene);
+  return {
+    ...scene,
+    backgrounds: [...all, background],
+    activeBackgroundId: activeBackgroundOf(scene)?.id ?? background.id,
+    ...(scene.image ? {} : { image: background.image }),
+  };
+}
+
+/**
+ * Shows a variant. Tokens and entry markers are in grid cells, so they stay put; the grid (and a
+ * manual player camera) scale with the art's width, so a night render at another resolution
+ * still lines up.
+ */
+export function showBackground(scene: Scene, id: string): Scene {
+  const all = backgroundsOf(scene);
+  const next = all.find((b) => b.id === id);
+  if (!next) return scene;
+  const ratio = scene.image ? next.image.width / scene.image.width : 1;
+  const grid = scene.grid
+    ? {
+        ...scene.grid,
+        cellPx: scene.grid.cellPx * ratio,
+        offsetX: scene.grid.offsetX * ratio,
+        offsetY: scene.grid.offsetY * ratio,
+      }
+    : scene.grid;
+  const camera =
+    scene.playerCamera.mode === 'manual'
+      ? { ...scene.playerCamera, x: scene.playerCamera.x * ratio, y: scene.playerCamera.y * ratio }
+      : scene.playerCamera;
+  return {
+    ...scene,
+    backgrounds: all,
+    activeBackgroundId: id,
+    image: next.image,
+    ...(grid ? { grid } : {}),
+    playerCamera: camera,
+  };
+}
+
+export function renameBackground(scene: Scene, id: string, name: string): Scene {
+  return {
+    ...scene,
+    backgrounds: backgroundsOf(scene).map((b) => (b.id === id ? { ...b, name } : b)),
+  };
+}
+
+/** Removes a variant (never the last); removing the one showing switches to the first left. */
+export function removeBackground(scene: Scene, id: string): Scene {
+  const remaining = backgroundsOf(scene).filter((b) => b.id !== id);
+  if (remaining.length === 0) return scene;
+  const next = { ...scene, backgrounds: remaining };
+  return activeBackgroundOf(scene)?.id === id ? showBackground(next, remaining[0]!.id) : next;
+}
+
+/**
+ * Swaps one variant's art for a new file, keeping its name. If it is the one showing, the map
+ * switches to the new art the same way `showBackground` does (grid scaled to the new width).
+ */
+export function replaceBackgroundImage(scene: Scene, id: string, image: SceneImage): Scene {
+  const all = backgroundsOf(scene);
+  if (!all.some((b) => b.id === id)) return scene;
+  const next = { ...scene, backgrounds: all.map((b) => (b.id === id ? { ...b, image } : b)) };
+  return activeBackgroundOf(scene)?.id === id ? showBackground(next, id) : next;
 }

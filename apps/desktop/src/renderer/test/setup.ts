@@ -133,6 +133,7 @@ export function installBridgeMock(): TrifoldBridge {
       update: vi.fn(async () => {
         throw new Error('not mocked');
       }),
+      remove: vi.fn(async () => undefined),
       chooseXmlFile: vi.fn(async () => null),
       importXml: vi.fn(async () => {
         throw new Error('not mocked');

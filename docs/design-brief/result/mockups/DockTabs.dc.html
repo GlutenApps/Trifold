@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dock tabs</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf" style="{{rootSt}}; background: #11151A">
+  <div class="ib {{colOnly}}" title="Expand the dock"><svg class="i" viewBox="0 0 24 24"><path d="M21 12H9M13 8l-4 4 4 4M4 5v14"></path></svg></div>
+  <div class="hr {{colOnly}}" style="width: 20px; margin: 4px 0"></div>
+  <div class="ib {{c.dice}}" title="Dice · Ctrl+D"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12L4 7.5M12 12v9"></path></svg><span class="p {{l.dice}}"></span></div>
+  <div class="ib {{c.tv}}" title="TV controls · Ctrl+T"><svg class="i" viewBox="0 0 24 24"><path d="M3 5h18v11H3zM9 20h6M12 16v4"></path></svg><span class="p {{l.tv}}"></span></div>
+  <div class="ib {{c.music}}" title="Music: transport, playlists, tracks · Ctrl+M"><svg class="i" viewBox="0 0 24 24"><path d="M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM9 18V5l11-2v12M20 15a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"></path></svg><span class="p {{l.music}}"></span></div>
+  <div class="ib {{c.scenes}}" title="Scenes: tree, send to TV, edit scene"><svg class="i" viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6"></path></svg><span class="p {{l.scenes}}"></span></div>
+  <div class="ib {{c.hotkeys}}" title="Hotkey sheet · Ctrl+/"><svg class="i" viewBox="0 0 24 24"><path d="M2 6h20v12H2zM6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"></path></svg></div>
+  <div class="ib {{c.layouts}}" title="Layouts"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 12h18M12 12v8"></path></svg></div>
+  <div class="sp {{rowOnly}}"></div>
+  <div class="ib {{rowOnly}}" title="Collapse the dock to icons"><svg class="i" viewBox="0 0 24 24"><path d="M3 12h12M11 8l4 4-4 4M20 5v14"></path></svg></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","default":"row","options":["row","col"]},"w":{"editor":"int","default":284},"h":{"editor":"int","default":808},"on":{"editor":"text","default":"tv,turn"},"live":{"editor":"text","default":"tv,turn,music"},"$preview":{"width":284,"height":34}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const col = String(p.mode ?? 'row') === 'col';
+    const on = String(p.on ?? '').split(',').map(s => s.trim());
+    const live = String(p.live ?? '').split(',').map(s => s.trim());
+    const c = {}, l = {};
+    ['dice','tv','music','scenes','hotkeys','layouts'].forEach(k => { c[k] = on.includes(k) ? 'on' : ''; l[k] = live.includes(k) ? '' : 'gone'; });
+    return {
+      rootSt: col ? ('width: 32px; height: ' + Number(p.h ?? 808) + 'px; display: flex; flex-direction: column; align-items: center; gap: 2px') : ('width: ' + Number(p.w ?? 284) + 'px; height: 34px; display: flex; align-items: center; gap: 2px; padding: 0 2px'),
+      colOnly: col ? '' : 'gone', rowOnly: col ? 'gone' : '', c, l
+    };
+  }
+}
+</script>
+</body>
+</html>

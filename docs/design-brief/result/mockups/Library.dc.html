@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Library · Campaigns · 1600 × 900</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf" style="width: 1600px; height: 900px; display: flex; flex-direction: column">
+  <div style="height: 34px; flex: none"><dc-import name="TopBar" w="1600" space="library" hint-size="1600px,34px"></dc-import></div>
+  <div style="flex: 1; min-height: 0; display: flex">
+    <div style="width: 220px; flex: none; background: #11151A; border-right: 1px solid #333D48; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px">
+      <div class="td sel" style="gap: 8px"><svg class="i mu" viewBox="0 0 24 24"><path d="M4 19a2 2 0 0 1 2-2h14V3H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 0 2 2h14v-4"></path></svg><span class="b sp">Campaigns</span><span class="mu s11">2</span></div>
+      <div class="td" style="gap: 8px"><svg class="i mu" viewBox="0 0 24 24"><path d="M12 6a4 4 0 0 0-4-2H3v15h5a4 4 0 0 1 4 2zM12 6a4 4 0 0 1 4-2h5v15h-5a4 4 0 0 0-4 2zM12 6v15"></path></svg><span class="sp">Compendium</span><span class="mu s11">3 sources</span></div>
+      <div class="td" style="gap: 8px"><svg class="i mu" viewBox="0 0 24 24"><path d="M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM9 18V5l11-2v12M20 15a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"></path></svg><span class="sp">Music folders</span><span class="mu s11">184 tracks</span></div>
+      <div class="td" style="gap: 8px"><svg class="i mu" viewBox="0 0 24 24"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"></path></svg><span class="sp">Settings</span><span class="kb">Ctrl+,</span></div>
+      <div class="sp"></div>
+      <div class="mu s12" style="padding: 0 8px; line-height: 1.5">Everything here is shared by every campaign. Open a campaign to reach the console.</div>
+    </div>
+    <div style="flex: 1; min-width: 0; padding: 28px 40px; display: flex; flex-direction: column; gap: 18px; overflow: hidden">
+      <div class="row"><span class="b" style="font-size: 20px">Campaigns</span><div class="sp"></div><div class="btn sm"><svg class="i s" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"></path></svg>Import campaign XML…</div></div>
+      <div class="row" style="gap: 8px"><div class="in ph" style="width: 320px">New campaign name</div><div class="btn pri">Create campaign</div></div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 880px">
+        <div class="cd" style="display: flex; flex-direction: column; gap: 10px; padding: 16px">
+          <div class="row" style="gap: 8px"><span class="b s16 tr">Sunken Keep</span><span class="bd">2024 rules</span><div class="sp"></div><span class="mu s12">last played Saturday</span></div>
+          <div class="row" style="gap: 6px"><span class="pcpip"></span><span class="s12">Aria</span><span class="pcpip"></span><span class="s12">Brannoc</span><span class="mu s12">· 4 scenes · 3 encounters · 2 notes</span></div>
+          <div class="row" style="gap: 8px; margin-top: 4px"><div class="btn sm pri">Open</div><div class="ib bd" title="Import into this campaign…"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg></div></div>
+        </div>
+        <div class="cd" style="display: flex; flex-direction: column; gap: 10px; padding: 16px">
+          <div class="row" style="gap: 8px"><span class="b s16 tr">Harbor Watch</span><span class="bd">2024 rules</span><div class="sp"></div><span class="mu s12">never played</span></div>
+          <div class="mu s12">No party yet · 1 scene · 1 encounter</div>
+          <div class="row" style="gap: 8px; margin-top: 4px"><div class="btn sm">Open</div><div class="ib bd" title="Import into this campaign…"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg></div></div>
+        </div>
+      </div>
+      <div class="mu s12" style="max-width: 640px; line-height: 1.5">A campaign holds its party, adventures, NPCs, notes, encounters, scenes and playlists. Opening one enters the console with its tabs, dock and layouts as you left them; the Library stays a click away on the mark.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

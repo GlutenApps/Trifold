@@ -204,6 +204,7 @@ function customCombatant(template: CombatantTemplate, name: string): Combatant {
     hidden: template.hidden,
     held: false,
     isLair: false,
+    ...(template.tokenId ? { tokenId: template.tokenId } : {}),
   };
 }
 
@@ -234,6 +235,13 @@ export function lairCombatant(): Combatant {
     held: false,
     isLair: true,
   };
+}
+
+/** The template as seen by its i-th creature: that creature's own token when one was placed. */
+function forToken(template: CombatantTemplate, i: number): CombatantTemplate {
+  const tokenId = template.tokenIds?.[i] ?? template.tokenId;
+  const { tokenId: _shared, ...rest } = template;
+  return tokenId ? { ...rest, tokenId } : rest;
 }
 
 /**
@@ -267,13 +275,13 @@ export function buildCombatants(
       const bonus = record.data.initiativeBonus ?? abilityModifier(record.data.abilities.dex);
       const groupRoll =
         options.initiativeMode === 'perGroup' ? rollInitiative(bonus, 'normal', rng) : null;
-      for (const name of names) {
+      names.forEach((name, i) => {
         const initiative = groupRoll ?? rollInitiative(bonus, 'normal', rng);
-        combatants.push(combatantFromMonster(record, template, name, initiative));
-      }
+        combatants.push(combatantFromMonster(record, forToken(template, i), name, initiative));
+      });
     } else {
       if (ref.kind === 'record') missing.push(ref.name);
-      for (const name of names) combatants.push(customCombatant(template, name));
+      names.forEach((name, i) => combatants.push(customCombatant(forToken(template, i), name)));
     }
   }
   if (hasLair) combatants.push(lairCombatant());

@@ -90,6 +90,8 @@ export const CombatantTemplate = z.object({
   hpOverride: int.min(1).optional(),
   hidden: z.boolean().default(false),
   tokenId: z.string().optional(),
+  /** One map token per creature when quantity > 1, in numbering order; wins over `tokenId`. */
+  tokenIds: z.array(z.string()).optional(),
   /** Display values cached from the record at add time (DESIGN.md difficultyCache). */
   cache: z
     .object({
@@ -300,6 +302,14 @@ export const SceneImage = z.object({
 });
 export type SceneImage = z.infer<typeof SceneImage>;
 
+/** One art variant of a map (day, night, burning); grid, tokens and markers are shared. */
+export const SceneBackground = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  image: SceneImage,
+});
+export type SceneBackground = z.infer<typeof SceneBackground>;
+
 export const GridSpec = z.object({
   cellPx: z.number().positive().default(70),
   offsetX: z.number().default(0),
@@ -360,7 +370,11 @@ export const Scene = z.object({
   parentId: z.string().nullable().default(null),
   order: int.default(0),
   notes: z.string().default(''),
+  /** The art shown now; on a map with `backgrounds`, a copy of the active one's image. */
   image: SceneImage.optional(),
+  /** Map scenes: saved art variants to switch between. Absent = just `image`. */
+  backgrounds: z.array(SceneBackground).optional(),
+  activeBackgroundId: z.string().optional(),
   backdrop: z.enum(['parchment', 'stone', 'dark']).optional(),
   grid: GridSpec.optional(),
   /** Blank-grid scenes: size in cells. */

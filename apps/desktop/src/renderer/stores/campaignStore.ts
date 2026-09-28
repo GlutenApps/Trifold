@@ -22,6 +22,8 @@ interface CampaignState {
   create(name: string): Promise<void>;
   open(campaignId: string): Promise<void>;
   close(): Promise<void>;
+  /** Deletes a campaign for good; resolves true when it is gone. */
+  remove(campaignId: string): Promise<boolean>;
   update(patch: Partial<Campaign>): Promise<void>;
   quickAdd(text: string): Promise<PCCard[]>;
   savePc(pc: PCCard): Promise<void>;
@@ -170,6 +172,15 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
         set({ current: null });
         await refreshList();
       });
+    },
+
+    async remove(campaignId) {
+      return guard(async () => {
+        await window.trifold.campaigns.remove(campaignId);
+        if (get().current?.campaign.id === campaignId) set({ current: null });
+        await refreshList();
+        return true;
+      }).then((ok) => ok ?? false);
     },
 
     async update(patch) {

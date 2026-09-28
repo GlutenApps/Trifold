@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hotkey sheet tool</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf pnl db" style="width: {{w}}px; height: {{h}}px; gap: 0; padding-top: 6px">
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+Shift+B</span><span class="s12 tr">Toggle blackout on the player window</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+Shift+P</span><span class="s12 tr">Open or close the player window</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+Shift+Z</span><span class="s12 tr">Undo the last scene change</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+K</span><span class="s12 tr">Jump to the compendium search</span></div>
+  <div class="row" style="height: 24px"><span class="kb">N / P</span><span class="s12 tr">Next / previous turn</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+Alt+P</span><span class="s12 tr">Play or pause music</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+Alt+→ / ←</span><span class="s12 tr">Next / previous track</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+Alt+M</span><span class="s12 tr">Panic mute all audio</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+D</span><span class="s12 tr">Dice</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+M</span><span class="s12 tr">Music: transport, playlists, tracks</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+T</span><span class="s12 tr">TV controls</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+/</span><span class="s12 tr">Hotkey sheet</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+,</span><span class="s12 tr">Settings, in the Library</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+Shift+M</span><span class="s12 tr">Maximize or restore the focused stage group</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Ctrl+1 … Ctrl+9</span><span class="s12 tr">Apply layout 1 … 9</span></div>
+  <div class="row" style="height: 24px"><span class="kb">Escape</span><span class="s12 tr">Close the open flyout</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"w":{"editor":"int","default":382},"h":{"editor":"int","default":404},"$preview":{"width":382,"height":404}}'>
+class Component extends DCLogic {
+  renderVals() { const p = this.props; return { w: Number(p.w ?? 382), h: Number(p.h ?? 404) }; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+/** The trifold mark: a centre leaf with two folded wings, in the accent colour. */
+export function Logo({ size = 28 }: { size?: number }) {
+  const width = size;
+  const height = Math.round((size * 76) / 88);
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="6 16 88 76"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      className="logo"
+    >
+      <polygon points="30.5,18 8,30 8,50 30.5,40" fill="currentColor" fillOpacity="0.85" />
+      <polygon points="30.5,44.5 8,54.5 8,80 30.5,90" fill="currentColor" fillOpacity="0.38" />
+      <polygon points="69.5,18 92,30 92,50 69.5,40" fill="currentColor" fillOpacity="0.85" />
+      <polygon points="69.5,44.5 92,54.5 92,80 69.5,90" fill="currentColor" fillOpacity="0.38" />
+      <rect x="35" y="18" width="30" height="72" fill="currentColor" />
+    </svg>
+  );
+}

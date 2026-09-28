@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dice tool</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../tokens/tf.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div class="tf pnl db" style="width: {{w}}px; height: {{h}}px; gap: 10px">
+  <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px">
+    <div class="chip {{cc}}">d100</div>
+    <div class="chip on {{cc}}">d20<span class="cn">1</span></div>
+    <div class="chip {{cc}}">d12</div>
+    <div class="chip {{cc}}">d10</div>
+    <div class="chip on {{cc}}">d8<span class="cn">1</span></div>
+    <div class="chip on {{cc}}">d6<span class="cn">3</span></div>
+    <div class="chip {{cc}}">d4</div>
+  </div>
+  <div class="wrap" style="gap: 6px">
+    <div class="row" style="gap: 2px">
+      <div class="ra on"><svg class="i s" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></div>
+      <div class="in sm m" style="width: 44px; justify-content: center">+2</div>
+      <div class="ra on"><svg class="i s" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg></div>
+    </div>
+    <div class="seg sm" title="Advantage and disadvantage apply to a lone d20"><span class="on">Normal</span><span class="dis">Adv</span><span class="dis">Dis</span></div>
+    <div class="sp"></div>
+    <div class="btn sm">Clear</div>
+  </div>
+  <div class="btn pri" style="justify-content: flex-start">Roll<span class="m n" style="font-weight: 400">1d20 + 1d8 + 3d6 + 2</span></div>
+  <div class="row" style="align-items: baseline">
+    <span class="big">16</span>
+    <span class="mu s12 m n tr">d20: 4 · d8: 2 · d6: 1, 4, 3 · +2</span>
+  </div>
+  <div class="row">
+    <span class="lb" style="flex: none">Or type</span>
+    <div class="in sm ph sp m n">4d6kh3, 2d4×10, d20+5 adv</div>
+    <div class="btn sm">Roll typed</div>
+  </div>
+  <div class="row" style="margin-top: 2px">
+    <span class="lb">Roll log</span><span class="mu s11">one log: pool, tracker and map rolls</span>
+    <div class="sp"></div>
+    <div class="btn sm gh">Clear</div>
+  </div>
+  <div class="log">
+    <div><span class="m" style="font-size: 14px; color: #E6E1D6; width: 26px">16</span><span class="bd">pool</span><span class="m n tr" style="color: #E6E1D6">1d20+1d8+3d6+2</span><span class="tr sp">4 · 2 · 1, 4, 3</span><span class="s11">8:24</span></div>
+    <div><span class="m" style="font-size: 14px; color: #E6E1D6; width: 26px">17</span><span class="bd en">Goblin Warrior · Scimitar</span><span class="m n tr" style="color: #E6E1D6">d20+4</span><span class="tr sp">13</span><span class="s11">8:23</span></div>
+    <div><span class="m" style="font-size: 14px; color: #E6E1D6; width: 26px">14</span><span class="bd al">Aria · Con save</span><span class="m n tr" style="color: #E6E1D6">d20+2</span><span class="tr sp">12 · vs DC 13</span><span class="s11">8:22</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"w":{"editor":"int","default":382},"h":{"editor":"int","default":380},"compact":{"editor":"boolean","default":false},"$preview":{"width":382,"height":380}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const compact = p.compact === true || p.compact === 'true' || p.compact === '1';
+    return { w: Number(p.w ?? 382), h: Number(p.h ?? 380), cc: compact ? 'c' : '' };
+  }
+}
+</script>
+</body>
+</html>

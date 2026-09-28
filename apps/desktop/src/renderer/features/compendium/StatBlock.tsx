@@ -1,3 +1,4 @@
+import type { RollMode } from '@trifold/rules';
 import type { Attack, Feature, MonsterRecord, RollButton, SaveCall } from '@trifold/schema';
 import type React from 'react';
 import {
@@ -13,10 +14,68 @@ import {
 
 /** Roll handlers supplied by the combat tracker; without them badges are inert. */
 export interface StatBlockActions {
-  onAttack(feature: Feature, attack: Attack): void;
+  onAttack(feature: Feature, attack: Attack, mode: RollMode): void;
   onRoll(feature: Feature, roll: RollButton): void;
   onSave(feature: Feature, save: SaveCall): void;
-  onMultiattack(feature: Feature): void;
+  onMultiattack(feature: Feature, mode: RollMode): void;
+}
+
+/** Shift-click rolls with advantage, Ctrl-click with disadvantage; a plain click rolls normally. */
+function modeFromClick(e: React.MouseEvent): RollMode {
+  if (e.shiftKey) return 'advantage';
+  if (e.ctrlKey || e.metaKey) return 'disadvantage';
+  return 'normal';
+}
+
+const MODE_HINT = 'Shift-click: advantage · Ctrl-click: disadvantage';
+
+/**
+ * A d20 roll badge with its own advantage and disadvantage buttons, so the mode is chosen per
+ * roll rather than set once for the fight. The two small buttons show on hover or focus.
+ */
+function D20Roll({
+  name,
+  title,
+  onRoll,
+  children,
+}: {
+  name: string;
+  title?: string;
+  onRoll(mode: RollMode): void;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="d20-roll">
+      <button
+        type="button"
+        className="badge roll clickable"
+        title={title ? `${title} · ${MODE_HINT}` : MODE_HINT}
+        onClick={(e) => onRoll(modeFromClick(e))}
+      >
+        {children}
+      </button>
+      <span className="roll-modes">
+        <button
+          type="button"
+          className="badge roll-mode clickable"
+          aria-label={`Roll ${name} with advantage`}
+          title="Roll with advantage (Shift-click)"
+          onClick={() => onRoll('advantage')}
+        >
+          Adv
+        </button>
+        <button
+          type="button"
+          className="badge roll-mode clickable"
+          aria-label={`Roll ${name} with disadvantage`}
+          title="Roll with disadvantage (Ctrl-click)"
+          onClick={() => onRoll('disadvantage')}
+        >
+          Dis
+        </button>
+      </span>
+    </span>
+  );
 }
 
 interface Props {
@@ -114,33 +173,47 @@ function FeatureList({
           <div className="sb-feature-head">
             <strong>{f.displayName}</strong>
             {actions && /^multiattack$/i.test(f.displayName) && (
-              <button
-                type="button"
-                className="badge roll clickable"
-                onClick={() => actions.onMultiattack(f)}
-              >
+              <D20Roll name="all attacks" onRoll={(mode) => actions.onMultiattack(f, mode)}>
                 Roll all
-              </button>
+              </D20Roll>
             )}
             {usesText(f) && <span className="sb-uses">({usesText(f)})</span>}
             {f.cost !== undefined && f.cost > 1 && (
               <span className="sb-uses">(Costs {f.cost} Actions)</span>
             )}
             {f.tags.includes('variant') && <span className="badge">variant</span>}
-            {f.attacks.map((a, j) => (
-              <Badge
-                key={j}
-                className="badge roll"
-                title={a.reach ? `reach ${a.reach}` : a.range ? `range ${a.range}` : undefined}
-                onClick={actions ? () => actions.onAttack(f, a) : undefined}
-              >
-                {a.toHit !== undefined ? signed(a.toHit) : ''}
-                {a.toHit !== undefined && a.damage ? ' · ' : ''}
-                {a.damage ?? ''}
-                {a.damageType ? ` ${a.damageType}` : ''}
-                {a.extraDamage.map((x) => ` + ${x.damage} ${x.damageType ?? ''}`).join('')}
-              </Badge>
-            ))}
+            {f.attacks.map((a, j) => {
+              const title = a.reach ? `reach ${a.reach}` : a.range ? `range ${a.range}` : undefined;
+              const text = (
+                <>
+                  {a.toHit !== undefined ? signed(a.toHit) : ''}
+                  {a.toHit !== undefined && a.damage ? ' · ' : ''}
+                  {a.damage ?? ''}
+                  {a.damageType ? ` ${a.damageType}` : ''}
+                  {a.extraDamage.map((x) => ` + ${x.damage} ${x.damageType ?? ''}`).join('')}
+                </>
+              );
+              // Damage-only attacks roll no d20, so they have no mode to pick.
+              return actions && a.toHit !== undefined ? (
+                <D20Roll
+                  key={j}
+                  name={f.displayName}
+                  title={title}
+                  onRoll={(mode) => actions.onAttack(f, a, mode)}
+                >
+                  {text}
+                </D20Roll>
+              ) : (
+                <Badge
+                  key={j}
+                  className="badge roll"
+                  title={title}
+                  onClick={actions ? () => actions.onAttack(f, a, 'normal') : undefined}
+                >
+                  {text}
+                </Badge>
+              );
+            })}
             {f.rolls.map((r, j) => (
               <Badge
                 key={`r${j}`}
