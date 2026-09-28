@@ -4,7 +4,16 @@
  * until the document reaches the app's current version, then stamps `schemaVersion`.
  */
 export type FileKind =
-  'appConfig' | 'library' | 'source' | 'record' | 'campaign' | 'pc' | 'encounter';
+  | 'appConfig'
+  | 'library'
+  | 'source'
+  | 'record'
+  | 'campaign'
+  | 'pc'
+  | 'encounter'
+  | 'adventure'
+  | 'note'
+  | 'npc';
 
 export type JsonObject = Record<string, unknown>;
 
@@ -25,6 +34,9 @@ export const CURRENT_SCHEMA_VERSION: VersionTable = {
   campaign: 1,
   pc: 1,
   encounter: 1,
+  adventure: 1,
+  note: 1,
+  npc: 1,
 };
 
 /** Registered migrations, oldest first. Add an entry whenever a schema version is bumped. */
@@ -36,6 +48,9 @@ export const MIGRATIONS: MigrationRegistry = {
   campaign: [],
   pc: [],
   encounter: [],
+  adventure: [],
+  note: [],
+  npc: [],
 };
 
 export class MigrationError extends Error {

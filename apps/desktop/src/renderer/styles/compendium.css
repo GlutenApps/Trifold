@@ -486,3 +486,12 @@ input.narrow-text {
 .save-call {
   border-color: var(--warn);
 }
+
+.entity-row {
+  border-top: 1px solid var(--border);
+  padding: 6px 0;
+}
+
+.entity-row summary {
+  cursor: pointer;
+}

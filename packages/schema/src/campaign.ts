@@ -227,3 +227,55 @@ export const Encounter = z.object({
   updatedAt: IsoDateTime,
 });
 export type Encounter = z.infer<typeof Encounter>;
+
+// ---------- adventures, notes, NPCs (DESIGN.md §5.2) ----------
+
+export const EntityLink = z.object({
+  kind: z.enum(['npc', 'scene', 'encounter', 'record', 'note', 'pc']),
+  id: z.string(),
+  name: z.string(),
+});
+export type EntityLink = z.infer<typeof EntityLink>;
+
+export const Adventure = z.object({
+  schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+  id: z.string().min(1),
+  name: z.string().min(1),
+  summary: z.string().default(''),
+  sceneIds: z.array(z.string()).default([]),
+  encounterIds: z.array(z.string()).default([]),
+  noteIds: z.array(z.string()).default([]),
+  order: int.default(0),
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+});
+export type Adventure = z.infer<typeof Adventure>;
+
+export const Note = z.object({
+  schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+  id: z.string().min(1),
+  title: z.string().min(1),
+  /** Markdown. */
+  body: z.string().default(''),
+  tags: z.array(z.string()).default([]),
+  links: z.array(EntityLink).default([]),
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+});
+export type Note = z.infer<typeof Note>;
+
+export const NPC = z.object({
+  schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+  id: z.string().min(1),
+  name: z.string().min(1),
+  /** Stat block, when the NPC has one (any monster record). */
+  recordRef: RecordRef.optional(),
+  portrait: z.string().optional(),
+  role: z.string().default(''),
+  location: z.string().default(''),
+  notes: z.string().default(''),
+  isAlive: z.boolean().default(true),
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+});
+export type NPC = z.infer<typeof NPC>;

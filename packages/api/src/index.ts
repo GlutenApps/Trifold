@@ -1,10 +1,13 @@
 import type {
+  Adventure,
   Campaign,
   CombatState,
   CompendiumRecord,
   Encounter,
   EncounterResult,
   LibrarySettings,
+  Note,
+  NPC,
   PCCard,
   RecordKind,
   Source,
@@ -193,6 +196,26 @@ export interface CampaignBundle {
   campaign: Campaign;
   pcs: PCCard[];
   encounters: Encounter[];
+  adventures: Adventure[];
+  notes: Note[];
+  npcs: NPC[];
+}
+
+export interface CampaignImportReport {
+  campaignId: string;
+  name: string;
+  mode: 'new' | 'merge';
+  counts: {
+    pcs: number;
+    npcs: number;
+    notes: number;
+    adventures: number;
+    encounters: number;
+    statBlocks: number;
+  };
+  /** Combatant names that matched no record and no PC; imported as custom combatants. */
+  unresolved: string[];
+  warnings: string[];
 }
 
 export interface TrifoldApi {
@@ -243,6 +266,22 @@ export interface TrifoldApi {
     current(): Promise<CampaignBundle | null>;
     close(): Promise<void>;
     update(patch: Partial<Campaign>): Promise<Campaign>;
+    /** Native file picker for campaign XML. Resolves to null when cancelled. */
+    chooseXmlFile(): Promise<string | null>;
+    /** Imports a Game Master campaign XML or a Fight Club GM export (DATA-FORMATS.md §3). */
+    importXml(path: string, mode: 'new' | 'merge'): Promise<CampaignImportReport>;
+  };
+  adventures: {
+    save(adventure: Adventure): Promise<Adventure>;
+    remove(adventureId: string): Promise<void>;
+  };
+  notes: {
+    save(note: Note): Promise<Note>;
+    remove(noteId: string): Promise<void>;
+  };
+  npcs: {
+    save(npc: NPC): Promise<NPC>;
+    remove(npcId: string): Promise<void>;
   };
   pcs: {
     save(pc: PCCard): Promise<PCCard>;
@@ -285,7 +324,10 @@ export const API_METHODS = {
     'rebuildIndex',
     'attribution',
   ],
-  campaigns: ['list', 'create', 'open', 'current', 'close', 'update'],
+  campaigns: ['list', 'create', 'open', 'current', 'close', 'update', 'chooseXmlFile', 'importXml'],
+  adventures: ['save', 'remove'],
+  notes: ['save', 'remove'],
+  npcs: ['save', 'remove'],
   pcs: ['save', 'remove', 'quickAdd'],
   encounters: ['save', 'remove', 'saveState', 'finish'],
   compendium: ['search', 'get', 'findByKey', 'facets'],

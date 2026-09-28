@@ -165,6 +165,12 @@ export function CampaignPage() {
   const savePc = useCampaignStore((s) => s.savePc);
   const removePc = useCampaignStore((s) => s.removePc);
   const clearError = useCampaignStore((s) => s.clearError);
+  const importXml = useCampaignStore((s) => s.importXml);
+  const importing = useCampaignStore((s) => s.importing);
+  const lastImport = useCampaignStore((s) => s.lastImport);
+  const removeNote = useCampaignStore((s) => s.removeNote);
+  const removeNpc = useCampaignStore((s) => s.removeNpc);
+  const removeAdventure = useCampaignStore((s) => s.removeAdventure);
 
   const [newName, setNewName] = useState('');
   const [quick, setQuick] = useState('');
@@ -184,6 +190,21 @@ export function CampaignPage() {
             Dismiss
           </button>
         </div>
+      )}
+
+      {lastImport && (
+        <p className="muted" data-testid="campaign-import-report">
+          {lastImport.mode === 'new' ? 'Imported' : 'Merged'} {lastImport.name}:{' '}
+          {lastImport.counts.pcs} PCs, {lastImport.counts.npcs} NPCs, {lastImport.counts.notes}{' '}
+          notes, {lastImport.counts.adventures} adventures, {lastImport.counts.encounters}{' '}
+          encounters
+          {lastImport.counts.statBlocks
+            ? `, ${lastImport.counts.statBlocks} inline stat blocks`
+            : ''}
+          {lastImport.warnings.length
+            ? ` · ${lastImport.warnings.length} warnings: ${lastImport.warnings.join('; ')}`
+            : ''}
+        </p>
       )}
 
       {!current ? (
@@ -207,6 +228,14 @@ export function CampaignPage() {
             />
             <button type="submit" className="btn primary">
               Create campaign
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={importing}
+              onClick={() => void importXml('new')}
+            >
+              Import campaign XML…
             </button>
           </form>
           <div className="card">
@@ -235,6 +264,14 @@ export function CampaignPage() {
             <h2 className="campaign-title">{current.campaign.name}</h2>
             <span className="badge">{current.campaign.preferredEdition} rules</span>
             <span className="spacer" />
+            <button
+              type="button"
+              className="btn"
+              disabled={importing}
+              onClick={() => void importXml('merge')}
+            >
+              Import into this campaign…
+            </button>
             <button type="button" className="btn" onClick={() => void close()}>
               Close campaign
             </button>
@@ -312,8 +349,64 @@ export function CampaignPage() {
           </div>
 
           <div className="card">
-            <h2>Adventures, notes and NPCs</h2>
-            <p className="muted">Arrive next in M1. Encounters live in their own section.</p>
+            <h2>Adventures</h2>
+            {current.adventures.length === 0 && <p className="muted">No adventures yet.</p>}
+            {current.adventures.map((a) => (
+              <div key={a.id} className="entity-row" data-testid="adventure-row">
+                <div className="row">
+                  <strong>{a.name}</strong>
+                  <span className="muted">
+                    {a.encounterIds.length} encounters · {a.noteIds.length} notes
+                  </span>
+                  <span className="spacer" />
+                  <button
+                    type="button"
+                    className="btn tiny"
+                    onClick={() => void removeAdventure(a.id)}
+                  >
+                    Remove
+                  </button>
+                </div>
+                {a.summary && <p className="muted">{a.summary}</p>}
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h2>NPCs</h2>
+            {current.npcs.length === 0 && <p className="muted">No NPCs yet.</p>}
+            {current.npcs.map((n) => (
+              <div key={n.id} className="entity-row" data-testid="npc-row">
+                <div className="row">
+                  <strong>{n.name}</strong>
+                  {n.role && <span className="muted">{n.role}</span>}
+                  {n.location && <span className="muted">· {n.location}</span>}
+                  {n.recordRef && <span className="badge">stat block</span>}
+                  {!n.isAlive && <span className="badge">dead</span>}
+                  <span className="spacer" />
+                  <button type="button" className="btn tiny" onClick={() => void removeNpc(n.id)}>
+                    Remove
+                  </button>
+                </div>
+                {n.notes && <p className="muted">{n.notes}</p>}
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <h2>Notes</h2>
+            {current.notes.length === 0 && <p className="muted">No notes yet.</p>}
+            {current.notes.map((n) => (
+              <details key={n.id} className="entity-row" data-testid="note-row">
+                <summary>
+                  <strong>{n.title}</strong>
+                </summary>
+                <pre className="source-text">{n.body}</pre>
+                <button type="button" className="btn tiny" onClick={() => void removeNote(n.id)}>
+                  Remove
+                </button>
+              </details>
+            ))}
           </div>
         </>
       )}

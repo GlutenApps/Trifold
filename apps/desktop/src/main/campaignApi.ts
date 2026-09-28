@@ -1,15 +1,21 @@
+import { dialog } from 'electron';
 import type { TrifoldApi } from '@trifold/api';
+import { CampaignEntities } from './campaign/entities';
+import { importCampaignXml } from './campaign/importCampaign';
 import type { LibrarySession } from './library/session';
+import type { Logger } from './log';
 
-/** The campaign, PC card and encounter namespaces of the API, backed by CampaignRepository. */
+/** Campaign, PC card, encounter, adventure, note and NPC namespaces, backed by CampaignRepository. */
 export function createCampaignApi(
   session: LibrarySession,
-): Pick<TrifoldApi, 'campaigns' | 'pcs' | 'encounters'> {
+  logger: Logger,
+): Pick<TrifoldApi, 'campaigns' | 'pcs' | 'encounters' | 'adventures' | 'notes' | 'npcs'> {
   const repo = () => {
     const campaigns = session.campaigns;
     if (!campaigns) throw new Error('No Library is open');
     return campaigns;
   };
+  const entities = () => new CampaignEntities(repo());
   return {
     campaigns: {
       async list() {
@@ -31,6 +37,21 @@ export function createCampaignApi(
       },
       async update(patch) {
         return repo().updateCampaign(patch);
+      },
+      async chooseXmlFile() {
+        const result = await dialog.showOpenDialog({
+          title: 'Import a campaign XML file',
+          properties: ['openFile'],
+          filters: [
+            { name: 'Campaign XML', extensions: ['xml'] },
+            { name: 'All files', extensions: ['*'] },
+          ],
+        });
+        return result.canceled ? null : (result.filePaths[0] ?? null);
+      },
+      async importXml(path, mode) {
+        const { store, sources, index } = session.require();
+        return importCampaignXml({ store, sources, index, campaigns: repo(), logger }, path, mode);
       },
     },
     pcs: {
@@ -56,6 +77,30 @@ export function createCampaignApi(
       },
       async finish(encounterId, result) {
         return repo().finishEncounter(encounterId, result);
+      },
+    },
+    adventures: {
+      async save(adventure) {
+        return entities().saveAdventure(adventure);
+      },
+      async remove(id) {
+        await entities().removeAdventure(id);
+      },
+    },
+    notes: {
+      async save(note) {
+        return entities().saveNote(note);
+      },
+      async remove(id) {
+        await entities().removeNote(id);
+      },
+    },
+    npcs: {
+      async save(npc) {
+        return entities().saveNpc(npc);
+      },
+      async remove(id) {
+        await entities().removeNpc(id);
       },
     },
   };

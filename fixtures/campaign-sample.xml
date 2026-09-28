@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Trifold test fixture for campaign XML import (docs/DATA-FORMATS.md §3). Hand-written; the exact
+  element names of a Game Master export are marked (verify) in the design, so this file uses the
+  plausible shapes the parser tolerates. Creature names are SRD; every other word is our own.
+-->
+<campaign version="5">
+  <name>Sample One-Shot</name>
+  <text>A one-shot in a drowned keep.</text>
+  <adventure>
+    <name>The Sunken Keep</name>
+    <text>The party arrives at the ruined keep at dusk.</text>
+    <note>
+      <name>Read-aloud: the gate</name>
+      <text>Moss-covered stones lean against a rusted portcullis.</text>
+    </note>
+    <encounter>
+      <name>Gate guards</name>
+      <text>Two goblins watch the gate.</text>
+      <monster>
+        <name>Goblin Warrior [5.5e]</name>
+        <count>2</count>
+      </monster>
+      <pc>
+        <name>Thora</name>
+      </pc>
+    </encounter>
+  </adventure>
+  <pc>
+    <name>Thora</name>
+    <player>Sam</player>
+    <class>Fighter 5</class>
+    <size>M</size>
+    <type>humanoid</type>
+    <ac>18</ac>
+    <hp>44</hp>
+    <speed>30 ft.</speed>
+    <str>16</str>
+    <dex>12</dex>
+    <con>14</con>
+    <int>10</int>
+    <wis>12</wis>
+    <cha>8</cha>
+    <save>Str +6, Con +5</save>
+    <passive>12</passive>
+    <init>+1</init>
+    <text>Shield-bearer of the northern clans.</text>
+  </pc>
+  <pc>
+    <name>Zed</name>
+    <player>Kim</player>
+    <class>Wizard</class>
+    <level>5</level>
+    <ac>12</ac>
+    <hp>28</hp>
+    <dex>14</dex>
+    <spellDc>14</spellDc>
+  </pc>
+  <npc>
+    <name>Old Marla</name>
+    <role>innkeeper</role>
+    <location>The Drowned Rat</location>
+    <text>Knows the way into the keep and wants her brother's ring back.</text>
+  </npc>
+  <npc>
+    <name>Keep Warden</name>
+    <size>M</size>
+    <type>humanoid</type>
+    <alignment>neutral evil</alignment>
+    <ac>15</ac>
+    <hp>27 (5d8+5)</hp>
+    <speed>30 ft.</speed>
+    <str>14</str>
+    <dex>12</dex>
+    <con>12</con>
+    <int>10</int>
+    <wis>11</wis>
+    <cha>10</cha>
+    <cr>1</cr>
+    <action>
+      <name>Spear</name>
+      <text>Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage.</text>
+      <attack>Spear|+4|1d6+2</attack>
+    </action>
+    <description>The warden was once a knight of the keep.</description>
+  </npc>
+  <note>
+    <name>Rumours</name>
+    <text>Three rumours circulate in the village.
+
+The third one is true.</text>
+  </note>
+  <encounter>
+    <name>Warden's chamber</name>
+    <combatant>
+      <name>Keep Warden</name>
+      <role>enemy</role>
+    </combatant>
+    <combatant>
+      <name>Goblin Warrior [5.5e]</name>
+      <quantity>3</quantity>
+      <label>Archers</label>
+      <hidden>YES</hidden>
+    </combatant>
+    <combatant>
+      <name>Old Marla</name>
+      <role>ally</role>
+    </combatant>
+    <surprise>NO</surprise>
+  </encounter>
+  <item>
+    <name>Potion of Healing</name>
+    <quantity>2</quantity>
+  </item>
+</campaign>

@@ -88,7 +88,7 @@ export async function importXmlSource(
   const kind = detectXmlKind(await readHead(filePath, 8192));
   if (kind === 'campaign') {
     throw new ImportError(
-      'This is a campaign file. Campaign import arrives with the Campaign section; use Settings → Sources for compendium files.',
+      'This is a campaign file. Import it from the Campaign section (Import campaign XML); Settings → Sources is for compendium files.',
     );
   }
   if (kind !== 'compendium') {

@@ -1,14 +1,20 @@
 import { create } from 'zustand';
-import type { CampaignBundle, CampaignSummary } from '@trifold/api';
+import type { CampaignBundle, CampaignImportReport, CampaignSummary } from '@trifold/api';
 import type { Campaign, Encounter, PCCard } from '@trifold/schema';
 
 interface CampaignState {
   campaigns: CampaignSummary[];
   current: CampaignBundle | null;
   loading: boolean;
+  importing: boolean;
+  lastImport: CampaignImportReport | null;
   error: string | null;
 
   load(): Promise<void>;
+  importXml(mode: 'new' | 'merge'): Promise<void>;
+  removeNote(noteId: string): Promise<void>;
+  removeNpc(npcId: string): Promise<void>;
+  removeAdventure(adventureId: string): Promise<void>;
   create(name: string): Promise<void>;
   open(campaignId: string): Promise<void>;
   close(): Promise<void>;
@@ -42,7 +48,57 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
     campaigns: [],
     current: null,
     loading: false,
+    importing: false,
+    lastImport: null,
     error: null,
+
+    async importXml(mode) {
+      const path = await window.trifold.campaigns.chooseXmlFile().catch(() => null);
+      if (!path) return;
+      set({ importing: true, lastImport: null });
+      await guard(async () => {
+        const report = await window.trifold.campaigns.importXml(path, mode);
+        const [campaigns, current] = await Promise.all([
+          window.trifold.campaigns.list(),
+          window.trifold.campaigns.current(),
+        ]);
+        set({ lastImport: report, campaigns, current });
+      });
+      set({ importing: false });
+    },
+
+    async removeNote(noteId) {
+      await guard(async () => {
+        await window.trifold.notes.remove(noteId);
+        const current = get().current;
+        if (current)
+          set({ current: { ...current, notes: current.notes.filter((n) => n.id !== noteId) } });
+      });
+    },
+
+    async removeNpc(npcId) {
+      await guard(async () => {
+        await window.trifold.npcs.remove(npcId);
+        const current = get().current;
+        if (current)
+          set({ current: { ...current, npcs: current.npcs.filter((n) => n.id !== npcId) } });
+      });
+    },
+
+    async removeAdventure(adventureId) {
+      await guard(async () => {
+        await window.trifold.adventures.remove(adventureId);
+        const current = get().current;
+        if (current) {
+          set({
+            current: {
+              ...current,
+              adventures: current.adventures.filter((a) => a.id !== adventureId),
+            },
+          });
+        }
+      });
+    },
 
     async load() {
       set({ loading: true });

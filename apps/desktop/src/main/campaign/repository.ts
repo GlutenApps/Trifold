@@ -4,10 +4,13 @@ import type { ZodType } from 'zod';
 import type { CampaignBundle, CampaignSummary } from '@trifold/api';
 import { normalizeKey, parseQuickAdd } from '@trifold/rules';
 import {
+  Adventure,
   CAMPAIGN_SCHEMA_VERSION,
   Campaign,
   CombatState,
   Encounter,
+  Note,
+  NPC,
   nowIso,
   PCCard,
   type EncounterResult,
@@ -63,7 +66,7 @@ export class CampaignRepository {
   private async readAll<T>(
     relative: string,
     schema: ZodType<T>,
-    kind: 'pc' | 'encounter',
+    kind: 'pc' | 'encounter' | 'adventure' | 'note' | 'npc',
   ): Promise<T[]> {
     const out: T[] = [];
     for (const file of await this.listDir(relative)) {
@@ -194,7 +197,16 @@ export class CampaignRepository {
     const encounters = (
       await this.readAll(this.dir(slug, 'encounters'), Encounter, 'encounter')
     ).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-    return { campaign, pcs, encounters };
+    const adventures = (
+      await this.readAll(this.dir(slug, 'adventures'), Adventure, 'adventure')
+    ).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+    const notes = (await this.readAll(this.dir(slug, 'notes'), Note, 'note')).sort((a, b) =>
+      a.title.localeCompare(b.title),
+    );
+    const npcs = (await this.readAll(this.dir(slug, 'npcs'), NPC, 'npc')).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    return { campaign, pcs, encounters, adventures, notes, npcs };
   }
 
   async updateCampaign(patch: Partial<Campaign>): Promise<Campaign> {
@@ -216,8 +228,22 @@ export class CampaignRepository {
     return next;
   }
 
-  private async touch(): Promise<void> {
+  async touch(): Promise<void> {
     await this.updateCampaign({});
+  }
+
+  /** Absolute path of one entity file; used by CampaignEntities for removal. */
+  entityPath(folder: 'adventures' | 'notes' | 'npcs', id: string): string {
+    return this.store.resolvePath(this.dir(this.requireSlug(), folder, `${id}.json`));
+  }
+
+  async writeEntity(
+    folder: 'adventures' | 'notes' | 'npcs',
+    id: string,
+    value: unknown,
+  ): Promise<void> {
+    await this.store.writeJson(this.dir(this.requireSlug(), folder, `${id}.json`), value);
+    await this.touch();
   }
 
   // ---------- PC cards ----------

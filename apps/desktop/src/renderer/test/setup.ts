@@ -89,6 +89,22 @@ export function installBridgeMock(): TrifoldBridge {
       update: vi.fn(async () => {
         throw new Error('not mocked');
       }),
+      chooseXmlFile: vi.fn(async () => null),
+      importXml: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
+    },
+    adventures: {
+      save: vi.fn(async (a) => a),
+      remove: vi.fn(async () => undefined),
+    },
+    notes: {
+      save: vi.fn(async (n) => n),
+      remove: vi.fn(async () => undefined),
+    },
+    npcs: {
+      save: vi.fn(async (n) => n),
+      remove: vi.fn(async () => undefined),
     },
     pcs: {
       save: vi.fn(async (pc) => pc),

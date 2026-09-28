@@ -201,7 +201,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       },
     },
 
-    ...createCampaignApi(ctx.session),
+    ...createCampaignApi(ctx.session, ctx.logger),
 
     compendium: {
       async search(query) {
