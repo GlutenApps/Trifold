@@ -363,9 +363,21 @@ export function EncountersPage() {
                   Resume combat
                 </button>
               ) : (
-                <button type="button" className="btn" onClick={() => setDraft(e)}>
-                  Edit
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={e.combatants.length === 0}
+                    onClick={() =>
+                      void begin(e, current.pcs, current.campaign.settings.initiativeMode)
+                    }
+                  >
+                    Start combat
+                  </button>
+                  <button type="button" className="btn" onClick={() => setDraft(e)}>
+                    Edit
+                  </button>
+                </>
               )}
               <button type="button" className="btn" onClick={() => void removeEncounter(e.id)}>
                 Remove
