@@ -1,4 +1,5 @@
-import type { Feature, MonsterRecord } from '@trifold/schema';
+import type { Attack, Feature, MonsterRecord, RollButton, SaveCall } from '@trifold/schema';
+import type React from 'react';
 import {
   capitalize,
   crText,
@@ -10,9 +11,40 @@ import {
   usesText,
 } from './formatting';
 
+/** Roll handlers supplied by the combat tracker; without them badges are inert. */
+export interface StatBlockActions {
+  onAttack(feature: Feature, attack: Attack): void;
+  onRoll(feature: Feature, roll: RollButton): void;
+  onSave(feature: Feature, save: SaveCall): void;
+  onMultiattack(feature: Feature): void;
+}
+
 interface Props {
   record: MonsterRecord;
   onOpenSpell(key: string): void;
+  actions?: StatBlockActions;
+}
+
+function Badge({
+  className,
+  title,
+  onClick,
+  children,
+}: {
+  className: string;
+  title?: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  return onClick ? (
+    <button type="button" className={`${className} clickable`} title={title} onClick={onClick}>
+      {children}
+    </button>
+  ) : (
+    <span className={className} title={title}>
+      {children}
+    </span>
+  );
 }
 
 const ABILITIES = [
@@ -63,12 +95,14 @@ function FeatureList({
   spells,
   onOpenSpell,
   intro,
+  actions,
 }: {
   title: string;
   features: Feature[];
   spells: readonly string[];
   onOpenSpell(key: string): void;
   intro?: string;
+  actions?: StatBlockActions;
 }) {
   if (features.length === 0 && !intro) return null;
   return (
@@ -79,34 +113,52 @@ function FeatureList({
         <div key={`${f.name}-${i}`} className="sb-feature">
           <div className="sb-feature-head">
             <strong>{f.displayName}</strong>
+            {actions && /^multiattack$/i.test(f.displayName) && (
+              <button
+                type="button"
+                className="badge roll clickable"
+                onClick={() => actions.onMultiattack(f)}
+              >
+                Roll all
+              </button>
+            )}
             {usesText(f) && <span className="sb-uses">({usesText(f)})</span>}
             {f.cost !== undefined && f.cost > 1 && (
               <span className="sb-uses">(Costs {f.cost} Actions)</span>
             )}
             {f.tags.includes('variant') && <span className="badge">variant</span>}
             {f.attacks.map((a, j) => (
-              <span
+              <Badge
                 key={j}
                 className="badge roll"
                 title={a.reach ? `reach ${a.reach}` : a.range ? `range ${a.range}` : undefined}
+                onClick={actions ? () => actions.onAttack(f, a) : undefined}
               >
                 {a.toHit !== undefined ? signed(a.toHit) : ''}
                 {a.toHit !== undefined && a.damage ? ' · ' : ''}
                 {a.damage ?? ''}
                 {a.damageType ? ` ${a.damageType}` : ''}
                 {a.extraDamage.map((x) => ` + ${x.damage} ${x.damageType ?? ''}`).join('')}
-              </span>
+              </Badge>
             ))}
             {f.rolls.map((r, j) => (
-              <span key={`r${j}`} className="badge roll">
+              <Badge
+                key={`r${j}`}
+                className="badge roll"
+                onClick={actions ? () => actions.onRoll(f, r) : undefined}
+              >
                 {r.label}: {r.dice}
-              </span>
+              </Badge>
             ))}
             {f.saves.map((s, j) => (
-              <span key={`s${j}`} className="badge save">
+              <Badge
+                key={`s${j}`}
+                className="badge save"
+                onClick={actions ? () => actions.onSave(f, s) : undefined}
+              >
                 DC {s.dc} {s.ability.toUpperCase()}
                 {s.halfOnSuccess ? ' · half' : ''}
-              </span>
+              </Badge>
             ))}
           </div>
           <Paragraphs text={f.text} spells={spells} onOpenSpell={onOpenSpell} />
@@ -117,7 +169,7 @@ function FeatureList({
 }
 
 /** Monster stat block in the 2024 layout regardless of the record's edition (DESIGN.md §6.1). */
-export function StatBlock({ record, onOpenSpell }: Props) {
+export function StatBlock({ record, onOpenSpell, actions }: Props) {
   const d = record.data;
   const spells = d.spellcasting?.spells ?? [];
   const treasure = d.traits.filter((t) => /^treasure$/i.test(t.displayName));
@@ -232,8 +284,20 @@ export function StatBlock({ record, onOpenSpell }: Props) {
         <dd>{crText(d)}</dd>
       </dl>
 
-      <FeatureList title="Traits" features={traits} spells={spells} onOpenSpell={onOpenSpell} />
-      <FeatureList title="Actions" features={d.actions} spells={spells} onOpenSpell={onOpenSpell} />
+      <FeatureList
+        title="Traits"
+        features={traits}
+        spells={spells}
+        onOpenSpell={onOpenSpell}
+        actions={actions}
+      />
+      <FeatureList
+        title="Actions"
+        features={d.actions}
+        spells={spells}
+        onOpenSpell={onOpenSpell}
+        actions={actions}
+      />
       <FeatureList
         title="Bonus actions"
         features={d.bonusActions}
@@ -251,12 +315,19 @@ export function StatBlock({ record, onOpenSpell }: Props) {
         features={d.legendary.actions}
         spells={spells}
         onOpenSpell={onOpenSpell}
+        actions={actions}
         intro={
           d.legendary.header ??
           (d.legendary.perTurn ? `Legendary Action Uses: ${d.legendary.perTurn}.` : undefined)
         }
       />
-      <FeatureList title="Lair" features={d.lair} spells={spells} onOpenSpell={onOpenSpell} />
+      <FeatureList
+        title="Lair"
+        features={d.lair}
+        spells={spells}
+        onOpenSpell={onOpenSpell}
+        actions={actions}
+      />
 
       {spells.length > 0 && (
         <section className="sb-section">

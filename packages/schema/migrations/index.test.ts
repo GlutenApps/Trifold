@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { createMigrator, migrate, MigrationError, type MigrationRegistry } from './index';
 
-const versions = { appConfig: 1, library: 3, source: 1, record: 1 };
+const versions = {
+  appConfig: 1,
+  library: 3,
+  source: 1,
+  record: 1,
+  campaign: 1,
+  pc: 1,
+  encounter: 1,
+};
 const registry: MigrationRegistry = {
   appConfig: [],
   library: [
@@ -10,6 +18,9 @@ const registry: MigrationRegistry = {
   ],
   source: [],
   record: [],
+  campaign: [],
+  pc: [],
+  encounter: [],
 };
 const run = createMigrator(registry, versions);
 

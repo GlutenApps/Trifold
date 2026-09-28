@@ -3,7 +3,8 @@
  * A migration takes a document at `from` and returns it at `to`. `migrate()` applies them in order
  * until the document reaches the app's current version, then stamps `schemaVersion`.
  */
-export type FileKind = 'appConfig' | 'library' | 'source' | 'record';
+export type FileKind =
+  'appConfig' | 'library' | 'source' | 'record' | 'campaign' | 'pc' | 'encounter';
 
 export type JsonObject = Record<string, unknown>;
 
@@ -21,6 +22,9 @@ export const CURRENT_SCHEMA_VERSION: VersionTable = {
   library: 1,
   source: 1,
   record: 1,
+  campaign: 1,
+  pc: 1,
+  encounter: 1,
 };
 
 /** Registered migrations, oldest first. Add an entry whenever a schema version is bumped. */
@@ -29,6 +33,9 @@ export const MIGRATIONS: MigrationRegistry = {
   library: [],
   source: [],
   record: [],
+  campaign: [],
+  pc: [],
+  encounter: [],
 };
 
 export class MigrationError extends Error {

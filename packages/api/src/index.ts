@@ -1,4 +1,14 @@
-import type { CompendiumRecord, LibrarySettings, RecordKind, Source } from '@trifold/schema';
+import type {
+  Campaign,
+  CombatState,
+  CompendiumRecord,
+  Encounter,
+  EncounterResult,
+  LibrarySettings,
+  PCCard,
+  RecordKind,
+  Source,
+} from '@trifold/schema';
 
 /**
  * The one interface between the renderer and the main process (DESIGN.md §4.4).
@@ -167,6 +177,24 @@ export interface IndexStats {
   tookMs: number;
 }
 
+// ---------- campaigns, PC cards, encounters (DESIGN.md §6.3–6.4) ----------
+
+export interface CampaignSummary {
+  id: string;
+  name: string;
+  slug: string;
+  updatedAt: string;
+  pcCount: number;
+  encounterCount: number;
+}
+
+/** Everything the console needs when a campaign is open. */
+export interface CampaignBundle {
+  campaign: Campaign;
+  pcs: PCCard[];
+  encounters: Encounter[];
+}
+
 export interface TrifoldApi {
   app: {
     getInfo(): Promise<AppInfo>;
@@ -207,6 +235,28 @@ export interface TrifoldApi {
     /** License statements for bundled content, always shown in About. */
     attribution(): Promise<AttributionEntry[]>;
   };
+  campaigns: {
+    list(): Promise<CampaignSummary[]>;
+    create(name: string): Promise<CampaignBundle>;
+    open(campaignId: string): Promise<CampaignBundle>;
+    /** The campaign opened last time, reopened on start; null when none. */
+    current(): Promise<CampaignBundle | null>;
+    close(): Promise<void>;
+    update(patch: Partial<Campaign>): Promise<Campaign>;
+  };
+  pcs: {
+    save(pc: PCCard): Promise<PCCard>;
+    remove(pcId: string): Promise<void>;
+    /** One PC per line: `Name, Player, Class L, HP, AC, Init, Speed, PP`. */
+    quickAdd(text: string): Promise<PCCard[]>;
+  };
+  encounters: {
+    save(encounter: Encounter): Promise<Encounter>;
+    remove(encounterId: string): Promise<void>;
+    /** Autosave of live combat; null clears it. */
+    saveState(encounterId: string, state: CombatState | null): Promise<Encounter>;
+    finish(encounterId: string, result: EncounterResult): Promise<Encounter>;
+  };
   compendium: {
     search(query: CompendiumQuery): Promise<CompendiumSearchResult>;
     get(recordId: string): Promise<CompendiumRecord | null>;
@@ -235,6 +285,9 @@ export const API_METHODS = {
     'rebuildIndex',
     'attribution',
   ],
+  campaigns: ['list', 'create', 'open', 'current', 'close', 'update'],
+  pcs: ['save', 'remove', 'quickAdd'],
+  encounters: ['save', 'remove', 'saveState', 'finish'],
   compendium: ['search', 'get', 'findByKey', 'facets'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };
 

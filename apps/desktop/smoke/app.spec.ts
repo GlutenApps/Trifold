@@ -111,6 +111,65 @@ test('console, Library, import, search, stat block and player window all work en
     expect(timing.total).toBe(1);
     expect(timing.tookMs).toBeLessThan(50);
 
+    // Campaign: create one and quick-add two PCs.
+    await console_.getByRole('button', { name: 'Campaign' }).click();
+    await console_.getByLabel('New campaign name').fill('Smoke Campaign');
+    await console_.getByRole('button', { name: 'Create campaign' }).click();
+    await expect(console_.getByRole('heading', { name: 'Smoke Campaign' })).toBeVisible();
+    await console_
+      .getByLabel('Quick add')
+      .fill('Thora, Sam, Fighter 5, 44, 18, +1, 30, 12\nZed, Kim, Wizard 5, 28, 12, +2, 30, 10');
+    await console_.getByRole('button', { name: 'Add PCs' }).click();
+    await expect(console_.getByTestId('pc-row')).toHaveCount(2);
+    await expect(
+      stat(join(library, 'campaigns', 'smoke-campaign', 'campaign.json')),
+    ).resolves.toBeTruthy();
+
+    // Encounter: party plus three goblins from the fixture, budget shown, then combat.
+    await console_.getByRole('button', { name: 'Encounters' }).click();
+    await console_.getByRole('button', { name: 'New encounter' }).click();
+    await console_.getByRole('button', { name: 'Add all PCs' }).click();
+    await console_.getByLabel('Add creature').fill('goblin warrior');
+    await console_
+      .getByRole('option', { name: /Goblin Warrior/ })
+      .first()
+      .click();
+    await expect(console_.getByTestId('template-row')).toHaveCount(3);
+    await console_
+      .getByTestId('template-row')
+      .filter({ hasText: 'Goblin Warrior' })
+      .locator('input[type="number"]')
+      .fill('3');
+    await expect(console_.getByTestId('difficulty')).toContainText('Enemy XP 150');
+    await console_.getByRole('button', { name: 'Start combat' }).click();
+    await expect(console_.getByRole('heading', { name: /Set initiative/ })).toBeVisible();
+    await expect(console_.getByTestId('combatant-row')).toHaveCount(5);
+    await console_.getByRole('button', { name: /Roll remaining/ }).click();
+    await console_.getByRole('button', { name: 'Begin' }).click();
+    await expect(console_.getByRole('heading', { name: /Round 1/ })).toBeVisible();
+
+    await console_.getByTestId('combatant-row').filter({ hasText: 'Goblin Warrior 1' }).click();
+    await console_
+      .getByRole('button', { name: /1d6\+2 slashing/ })
+      .first()
+      .click();
+    await expect(console_.getByRole('list', { name: 'Combat log' })).toContainText('Scimitar');
+    await console_.getByLabel('Amount').fill('4');
+    await console_.getByRole('button', { name: 'Damage', exact: true }).click();
+    await expect(
+      console_.getByTestId('combatant-row').filter({ hasText: 'Goblin Warrior 1' }),
+    ).toContainText('/');
+    await console_.getByRole('button', { name: /Next turn/ }).click();
+    await expect(console_.getByRole('list', { name: 'Combat log' })).toContainText("'s turn");
+    await console_.getByRole('button', { name: 'End combat' }).click();
+    await expect(console_.getByTestId('encounter-row')).toContainText('fought 1×');
+
+    // Dice page rolls into the shared log.
+    await console_.getByRole('button', { name: 'Dice' }).click();
+    await console_.getByLabel('Dice expression').fill('2d6+3');
+    await console_.getByRole('button', { name: 'Roll', exact: true }).click();
+    await expect(console_.getByRole('list', { name: 'Roll log' })).toContainText('2d6+3');
+
     // Open the player window and push a title card through main.
     await console_.getByRole('button', { name: 'Presenter' }).click();
     const playerPromise = app.waitForEvent('window');

@@ -76,6 +76,35 @@ export function installBridgeMock(): TrifoldBridge {
       rebuildIndex: vi.fn(async () => ({ records: 0, sources: 0, version: 1, tookMs: 0 })),
       attribution: vi.fn(async () => []),
     },
+    campaigns: {
+      list: vi.fn(async () => []),
+      create: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
+      open: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
+      current: vi.fn(async () => null),
+      close: vi.fn(async () => undefined),
+      update: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
+    },
+    pcs: {
+      save: vi.fn(async (pc) => pc),
+      remove: vi.fn(async () => undefined),
+      quickAdd: vi.fn(async () => []),
+    },
+    encounters: {
+      save: vi.fn(async (e) => e),
+      remove: vi.fn(async () => undefined),
+      saveState: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
+      finish: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
+    },
     compendium: {
       search: vi.fn(async () => ({ rows: [], total: 0, tookMs: 0 })),
       get: vi.fn(async () => null),

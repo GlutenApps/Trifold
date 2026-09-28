@@ -257,3 +257,232 @@ textarea {
   padding: 6px 8px;
   font: inherit;
 }
+
+/* Dice, campaign and combat */
+.badge.clickable,
+button.badge {
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  background: transparent;
+}
+
+.badge.clickable:hover {
+  background: var(--bg-hover);
+}
+
+.roll-log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-width: 900px;
+}
+
+.roll-entry {
+  display: grid;
+  grid-template-columns: 56px 1fr 2fr auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.roll-total {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--accent);
+  text-align: right;
+}
+
+.roll-faces,
+.roll-time {
+  font-size: 12px;
+}
+
+.grid-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.field.inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.field input,
+.field textarea,
+.field select {
+  font-size: 14px;
+  color: var(--text);
+}
+
+input[type='number'] {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font: inherit;
+  width: 90px;
+}
+
+input.narrow {
+  width: 64px;
+}
+
+input.narrow-text {
+  min-width: 120px;
+}
+
+.btn.tiny {
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+.campaign-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.picker {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  max-height: 260px;
+  overflow: auto;
+  padding: 4px;
+}
+
+.combat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.combat-bar h1 {
+  margin: 0;
+}
+
+.combat-split {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.2fr) minmax(380px, 2fr) minmax(220px, 0.9fr);
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.initiative-list,
+.combat-inspector,
+.combat-log {
+  overflow: auto;
+  min-height: 0;
+}
+
+.combatant-row {
+  display: grid;
+  grid-template-columns: 96px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+.combatant-row.role-enemy {
+  border-left-color: var(--danger);
+}
+
+.combatant-row.role-ally {
+  border-left-color: #4c9a6a;
+}
+
+.combatant-row.role-neutral {
+  border-left-color: var(--warn);
+}
+
+.combatant-row.active {
+  outline: 2px solid var(--accent);
+}
+
+.combatant-row.selected {
+  background: var(--bg-active);
+}
+
+.combatant-row.dead {
+  opacity: 0.5;
+}
+
+.combatant-row .name {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.combatant-row .init {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.hp {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hp.bloodied {
+  color: var(--danger);
+}
+
+.counter {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.counter.spent {
+  opacity: 0.6;
+}
+
+.combat-log ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+}
+
+.combat-log li {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.combat-log .log-attack,
+.combat-log .log-damage {
+  color: var(--text);
+}
+
+.save-call {
+  border-color: var(--warn);
+}

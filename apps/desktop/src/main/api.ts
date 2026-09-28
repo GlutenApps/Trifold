@@ -1,6 +1,7 @@
 import { app, dialog, shell } from 'electron';
 import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
+import { createCampaignApi } from './campaignApi';
 import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
@@ -199,6 +200,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         return ctx.session.bundled.attribution();
       },
     },
+
+    ...createCampaignApi(ctx.session),
 
     compendium: {
       async search(query) {

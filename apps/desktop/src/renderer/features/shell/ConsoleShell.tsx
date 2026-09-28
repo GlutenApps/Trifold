@@ -3,7 +3,11 @@ import { installHotkeys, registerHotkey } from '../../hotkeys';
 import { useAppStore } from '../../stores/appStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { SECTIONS, useUiStore, type SectionId } from '../../stores/uiStore';
+import { useCombatStore } from '../../stores/combatStore';
+import { CampaignPage } from '../campaign/CampaignPage';
 import { CompendiumPage } from '../compendium/CompendiumPage';
+import { DicePage } from '../dice/DicePage';
+import { EncountersPage } from '../encounters/EncountersPage';
 import { PresenterPage } from '../presenter/PresenterPage';
 import { SettingsPage } from '../settings/SettingsPage';
 import { Placeholder } from './Placeholder';
@@ -11,18 +15,11 @@ import { Placeholder } from './Placeholder';
 function Page({ section }: { section: SectionId }) {
   switch (section) {
     case 'campaign':
-      return (
-        <Placeholder title="Campaign" text="Adventures, notes, NPCs and PC cards arrive in M1." />
-      );
+      return <CampaignPage />;
     case 'compendium':
       return <CompendiumPage />;
     case 'encounters':
-      return (
-        <Placeholder
-          title="Encounters"
-          text="Encounter builder with the 2024 budget and the combat tracker arrive in M1."
-        />
-      );
+      return <EncountersPage />;
     case 'presenter':
       return <PresenterPage />;
     case 'music':
@@ -33,7 +30,7 @@ function Page({ section }: { section: SectionId }) {
         />
       );
     case 'dice':
-      return <Placeholder title="Dice" text="The roller and roll log arrive in M1." />;
+      return <DicePage />;
     case 'settings':
       return <SettingsPage />;
   }
@@ -50,6 +47,7 @@ export function ConsoleShell() {
   const library = useAppStore((s) => s.library);
   const scene = usePresenterStore((s) => s.state.scene);
   const blackout = usePresenterStore((s) => s.state.blackout);
+  const combat = useCombatStore((s) => s.state);
 
   useEffect(() => {
     void load();
@@ -89,6 +87,30 @@ export function ConsoleShell() {
             document.querySelector<HTMLInputElement>('.compendium input[type="text"]')?.focus();
           }, 0);
         },
+      }),
+      registerHotkey({
+        id: 'combat.next',
+        combo: 'N',
+        description: 'Next turn',
+        run: () => {
+          const combat = useCombatStore.getState();
+          if (combat.state && combat.state.turnIndex >= 0) combat.next();
+        },
+      }),
+      registerHotkey({
+        id: 'combat.previous',
+        combo: 'P',
+        description: 'Previous turn',
+        run: () => {
+          const combat = useCombatStore.getState();
+          if (combat.state && combat.state.turnIndex >= 0) combat.previous();
+        },
+      }),
+      registerHotkey({
+        id: 'nav.dice',
+        combo: 'Ctrl+D',
+        description: 'Open the dice roller',
+        run: () => useUiStore.getState().setSection('dice'),
       }),
       registerHotkey({
         id: 'nav.settings',
@@ -139,7 +161,14 @@ export function ConsoleShell() {
       <footer className="statusbar">
         <span>Live scene: {blackout ? 'blackout' : scene ? scene.title : 'none'}</span>
         <span>Player window: {playerOpen ? 'open' : 'closed'}</span>
-        <span>Combat: none</span>
+        <span>
+          Combat:{' '}
+          {combat
+            ? combat.turnIndex < 0
+              ? 'setting initiative'
+              : `round ${combat.round}`
+            : 'none'}
+        </span>
         <span>Now playing: nothing</span>
         <span className="spacer" />
         <span>

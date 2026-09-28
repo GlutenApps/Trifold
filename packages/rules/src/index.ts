@@ -7,3 +7,4 @@ export * from './statblock/edition';
 export * from './statblock/sourceLine';
 export * from './statblock/attacks';
 export * from './statblock/modifier';
+export * from './combat/index';
