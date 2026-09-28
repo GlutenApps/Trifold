@@ -3,6 +3,7 @@ import { CR_ORDER, crToNumber } from '@trifold/rules';
 import type { RecordKind } from '@trifold/schema';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
+import { MonsterEditor } from './MonsterEditor';
 import { RecordDetail } from './RecordDetail';
 
 const KINDS: Array<{ id: RecordKind; label: string }> = [
@@ -45,6 +46,13 @@ export function CompendiumPage() {
   const switchEdition = useCompendiumStore((s) => s.switchEdition);
   const back = useCompendiumStore((s) => s.back);
   const clearError = useCompendiumStore((s) => s.clearError);
+  const editing = useCompendiumStore((s) => s.editing);
+  const saving = useCompendiumStore((s) => s.saving);
+  const duplicateSelected = useCompendiumStore((s) => s.duplicateSelected);
+  const startEdit = useCompendiumStore((s) => s.startEdit);
+  const cancelEdit = useCompendiumStore((s) => s.cancelEdit);
+  const saveHomebrew = useCompendiumStore((s) => s.saveHomebrew);
+  const removeHomebrew = useCompendiumStore((s) => s.removeHomebrew);
   const sources = useSourcesStore((s) => s.sources);
   const loadSources = useSourcesStore((s) => s.load);
 
@@ -269,7 +277,15 @@ export function CompendiumPage() {
           )}
         </div>
         <div className="inspector">
-          {selected ? (
+          {editing && editing.kind === 'monster' ? (
+            <MonsterEditor
+              key={editing.id}
+              record={editing}
+              saving={saving}
+              onCancel={cancelEdit}
+              onSave={(r) => void saveHomebrew(r)}
+            />
+          ) : selected ? (
             <RecordDetail
               record={selected}
               editions={editions}
@@ -278,6 +294,11 @@ export function CompendiumPage() {
               onSwitchEdition={switchEdition}
               onOpenSpell={(key) => void openByKey('spell', key)}
               sourceNames={Object.fromEntries(sources.map((s) => [s.id, s.name]))}
+              homebrew={{
+                onDuplicate: () => void duplicateSelected(),
+                onEdit: startEdit,
+                onRemove: (id) => void removeHomebrew(id),
+              }}
             />
           ) : (
             <p className="muted">Select a record to see its stat block.</p>

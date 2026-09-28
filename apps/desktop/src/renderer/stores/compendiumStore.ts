@@ -28,6 +28,14 @@ interface CompendiumState {
   switchEdition(record: CompendiumRecord): void;
   back(): void;
   clearError(): void;
+  /** Homebrew (DESIGN.md §6.2): copy the selected record, save an edited copy, delete one. */
+  editing: CompendiumRecord | null;
+  saving: boolean;
+  duplicateSelected(): Promise<void>;
+  startEdit(): void;
+  cancelEdit(): void;
+  saveHomebrew(record: CompendiumRecord): Promise<boolean>;
+  removeHomebrew(recordId: string): Promise<void>;
 }
 
 const EMPTY_FACETS: CompendiumFacets = { types: [], sizes: [], environments: [] };
@@ -49,6 +57,8 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
   selected: null,
   editions: [],
   history: [],
+  editing: null,
+  saving: false,
   error: null,
 
   async setKind(kind) {
@@ -138,6 +148,52 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
       .findByKey(previous.kind, previous.key)
       .then((editions) => set({ editions }))
       .catch(() => undefined);
+  },
+
+  async duplicateSelected() {
+    const selected = get().selected;
+    if (!selected) return;
+    try {
+      const copy = await window.trifold.homebrew.duplicate(selected.id);
+      await get().search();
+      await get().select(copy.id);
+      set({ editing: copy });
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : String(err) });
+    }
+  },
+
+  startEdit() {
+    const selected = get().selected;
+    if (selected?.sourceId === 'homebrew') set({ editing: selected });
+  },
+
+  cancelEdit() {
+    set({ editing: null });
+  },
+
+  async saveHomebrew(record) {
+    set({ saving: true });
+    try {
+      const saved = await window.trifold.homebrew.save(record);
+      set({ editing: null, saving: false });
+      await get().search();
+      await get().select(saved.id);
+      return true;
+    } catch (err) {
+      set({ saving: false, error: err instanceof Error ? err.message : String(err) });
+      return false;
+    }
+  },
+
+  async removeHomebrew(recordId) {
+    try {
+      await window.trifold.homebrew.remove(recordId);
+      set({ selected: null, editing: null, editions: [] });
+      await get().search();
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : String(err) });
+    }
   },
 
   clearError() {

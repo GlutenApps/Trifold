@@ -99,6 +99,21 @@ test('console, Library, import, search, stat block and player window all work en
       .click();
     await expect(console_.getByRole('heading', { name: 'Legendary actions' })).toBeVisible();
 
+    // Homebrew: duplicate, edit, see the diff, delete (DESIGN.md §6.2).
+    await console_.getByRole('button', { name: 'Duplicate to homebrew' }).click();
+    const editor = console_.getByTestId('monster-editor');
+    await expect(editor).toBeVisible();
+    await editor.getByLabel('Name', { exact: true }).fill('Aboleth Elder');
+    await editor.getByLabel('Challenge rating').selectOption('12');
+    await editor.getByRole('button', { name: 'Save' }).first().click();
+    await expect(console_.getByRole('heading', { name: 'Aboleth Elder' })).toBeVisible();
+    await console_.getByRole('button', { name: 'Changes from original' }).click();
+    await expect(console_.getByTestId('record-diff')).toContainText('Aboleth Elder');
+    await expect(console_.getByTestId('record-diff')).toContainText('12');
+    await console_.getByRole('button', { name: 'Delete…' }).click();
+    await console_.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(console_.getByRole('heading', { name: 'Aboleth Elder' })).toHaveCount(0);
+
     await console_.getByLabel('Search').fill('');
     await console_.getByLabel('Edition', { exact: true }).selectOption('all');
     await console_.getByRole('option', { name: /^Mage/ }).click();

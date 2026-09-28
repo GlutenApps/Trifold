@@ -112,3 +112,20 @@ function mergeAttack(
   }
   return attack;
 }
+
+/**
+ * A feature from a name and body alone (homebrew editor, DESIGN.md §6.2): the same parse the
+ * XML importer runs, so attacks, saves, uses and recharge come out of the text.
+ */
+export function featureFromText(name: string, body: string): Feature {
+  const node: XmlNode = {
+    name: 'trait',
+    attrs: {},
+    text: '',
+    children: [
+      { name: 'name', attrs: {}, text: name, children: [] },
+      ...body.split(/\n{2,}/).map((t) => ({ name: 'text', attrs: {}, text: t, children: [] })),
+    ],
+  };
+  return buildFeature(node, { warn: () => undefined } as unknown as NormalizeContext);
+}

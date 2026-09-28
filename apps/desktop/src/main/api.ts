@@ -121,8 +121,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         if (!catalog) return [];
         return (await catalog.list()).map((s) => ({
           ...s,
-          stale: s.kind !== 'srd' && isStale(s),
-          bundled: s.kind === 'srd',
+          stale: s.kind !== 'srd' && s.kind !== 'homebrew' && isStale(s),
+          bundled: s.kind === 'srd' || s.kind === 'homebrew',
         }));
       },
       async chooseFile() {
@@ -214,6 +214,34 @@ export function createApi(ctx: ApiContext): TrifoldApi {
 
     ...createCampaignApi(ctx.session, ctx.logger),
     ...createMusicApi(ctx.session, ctx.windows),
+
+    homebrew: {
+      async duplicate(recordId) {
+        const { index, catalog, store } = ctx.session.require();
+        const homebrew = ctx.session.homebrew;
+        if (!homebrew) throw new Error('No Library is open');
+        const original = index.get(recordId);
+        if (!original) throw new Error('Record not found');
+        const copy = await homebrew.duplicate(original);
+        await syncIndex(index, catalog, store, ctx.logger);
+        return copy;
+      },
+      async save(record) {
+        const { index, catalog, store } = ctx.session.require();
+        const homebrew = ctx.session.homebrew;
+        if (!homebrew) throw new Error('No Library is open');
+        const saved = await homebrew.save(record);
+        await syncIndex(index, catalog, store, ctx.logger);
+        return saved;
+      },
+      async remove(recordId) {
+        const { index, catalog, store } = ctx.session.require();
+        const homebrew = ctx.session.homebrew;
+        if (!homebrew) throw new Error('No Library is open');
+        await homebrew.remove(recordId);
+        await syncIndex(index, catalog, store, ctx.logger);
+      },
+    },
 
     backups: {
       async list() {

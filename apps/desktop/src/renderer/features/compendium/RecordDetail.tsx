@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CompendiumRecord } from '@trifold/schema';
+import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
 
 interface Props {
@@ -11,6 +12,98 @@ interface Props {
   onOpenSpell(key: string): void;
   /** Source names by id, used to tell apart editions that come from different sources. */
   sourceNames?: Record<string, string>;
+  homebrew?: {
+    onDuplicate(): void;
+    onEdit(): void;
+    onRemove(recordId: string): void;
+  };
+}
+
+/** Duplicate / Edit / Delete / Changes (DESIGN.md §6.2). Monsters only in M1. */
+function HomebrewBar({
+  record,
+  actions,
+}: {
+  record: CompendiumRecord;
+  actions: NonNullable<Props['homebrew']>;
+}) {
+  const [confirm, setConfirm] = useState(false);
+  const [diff, setDiff] = useState<DiffLine[] | null>(null);
+  const isHomebrew = record.sourceId === 'homebrew';
+  useEffect(() => {
+    setConfirm(false);
+    setDiff(null);
+  }, [record.id]);
+  if (record.kind !== 'monster') return null;
+  const showDiff = async () => {
+    if (diff) {
+      setDiff(null);
+      return;
+    }
+    const original = record.basedOn
+      ? await window.trifold.compendium.get(record.basedOn.recordId)
+      : null;
+    setDiff(original ? diffRecords(original, record) : []);
+  };
+  return (
+    <div className="homebrew-bar" data-testid="homebrew-bar">
+      <div className="row">
+        <button type="button" className="btn tiny" onClick={actions.onDuplicate}>
+          Duplicate to homebrew
+        </button>
+        {isHomebrew && (
+          <>
+            <button type="button" className="btn tiny primary" onClick={actions.onEdit}>
+              Edit
+            </button>
+            {record.basedOn && (
+              <button type="button" className="btn tiny" onClick={() => void showDiff()}>
+                {diff ? 'Hide changes' : 'Changes from original'}
+              </button>
+            )}
+            {confirm ? (
+              <>
+                <span className="small">Delete this homebrew record?</span>
+                <button
+                  type="button"
+                  className="btn tiny danger"
+                  onClick={() => actions.onRemove(record.id)}
+                >
+                  Delete
+                </button>
+                <button type="button" className="btn tiny" onClick={() => setConfirm(false)}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button type="button" className="btn tiny" onClick={() => setConfirm(true)}>
+                Delete…
+              </button>
+            )}
+          </>
+        )}
+      </div>
+      {diff && (
+        <div className="diff" data-testid="record-diff">
+          {diff.length === 0 ? (
+            <p className="muted small">No changes from the original.</p>
+          ) : (
+            <dl className="sb-details">
+              {diff.map((l) => (
+                <div key={l.field} className="dl-row">
+                  <dt>{l.field}</dt>
+                  <dd>
+                    <span className="diff-from">{l.from}</span> →{' '}
+                    <span className="diff-to">{l.to}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const SCHOOLS: Record<string, string> = {
@@ -241,6 +334,7 @@ export function RecordDetail({
   onSwitchEdition,
   onOpenSpell,
   sourceNames = {},
+  homebrew,
 }: Props) {
   const [tab, setTab] = useState<'block' | 'source'>('block');
   const extra = Object.keys(record.data.extra);
@@ -300,7 +394,10 @@ export function RecordDetail({
       </div>
 
       {tab === 'block' ? (
-        <Body record={record} onOpenSpell={onOpenSpell} />
+        <>
+          {homebrew && <HomebrewBar record={record} actions={homebrew} />}
+          <Body record={record} onOpenSpell={onOpenSpell} />
+        </>
       ) : (
         <article className="statblock">
           <h2>{record.name}</h2>

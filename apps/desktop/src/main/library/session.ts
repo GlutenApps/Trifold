@@ -8,6 +8,7 @@ import { MusicRepository } from '../music/repository';
 import { errorMessage, type Logger } from '../log';
 import { BundledSources } from '../sources/bundled';
 import { CombinedCatalog } from '../sources/catalog';
+import { HomebrewRepository } from '../sources/homebrew';
 import { SourceRepository } from '../sources/repository';
 import { LibraryStore } from './LibraryStore';
 
@@ -24,6 +25,7 @@ export class LibrarySession {
   store: LibraryStore | null = null;
   sources: SourceRepository | null = null;
   catalog: CombinedCatalog | null = null;
+  homebrew: HomebrewRepository | null = null;
   campaigns: CampaignRepository | null = null;
   music: MusicRepository | null = null;
   backups: BackupService | null = null;
@@ -52,7 +54,8 @@ export class LibrarySession {
       this.store = await LibraryStore.open(path);
       this.sources = new SourceRepository(this.store, this.logger);
       await this.bundled.load();
-      this.catalog = new CombinedCatalog(this.bundled, this.sources, this.store);
+      this.homebrew = new HomebrewRepository(this.store, this.logger);
+      this.catalog = new CombinedCatalog(this.bundled, this.sources, this.store, this.homebrew);
       this.campaigns = new CampaignRepository(this.store, this.logger);
       this.music = new MusicRepository(this.store, this.logger);
       this.backups = new BackupService(this.store, this.logger);
@@ -62,6 +65,7 @@ export class LibrarySession {
       this.store = null;
       this.sources = null;
       this.catalog = null;
+      this.homebrew = null;
       this.campaigns = null;
       this.music = null;
       this.backups = null;
@@ -115,6 +119,7 @@ export class LibrarySession {
     this.index?.close();
     this.index = null;
     this.catalog = null;
+    this.homebrew = null;
     this.campaigns = null;
     this.music = null;
     this.backups = null;

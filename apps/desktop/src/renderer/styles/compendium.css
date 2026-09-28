@@ -886,3 +886,56 @@ input[type='range'].wide {
 .slot-pip:hover {
   transform: scale(1.15);
 }
+
+/* Homebrew (DESIGN.md §6.2) */
+.homebrew-bar {
+  margin-bottom: 8px;
+}
+
+.diff-from {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.diff-to {
+  color: var(--accent);
+}
+
+.monster-editor {
+  max-width: 900px;
+}
+
+.monster-editor .grid-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.monster-editor .abilities {
+  grid-template-columns: repeat(6, minmax(80px, 1fr));
+}
+
+.feature-list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  margin: 0 0 12px;
+}
+
+.feature-list legend {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.feature-edit {
+  margin-bottom: 8px;
+}
+
+.feature-edit textarea,
+.monster-editor textarea {
+  width: 100%;
+  box-sizing: border-box;
+}

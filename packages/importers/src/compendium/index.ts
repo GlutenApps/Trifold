@@ -202,3 +202,4 @@ export function parseCompendiumXml(
   const stats = importer.end();
   return { records, ...stats };
 }
+export { featureFromText } from './feature';

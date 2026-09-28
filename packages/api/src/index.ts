@@ -496,6 +496,13 @@ export interface TrifoldApi {
     savePlaylist(playlist: Playlist): Promise<Playlist>;
     removePlaylist(playlistId: string): Promise<void>;
   };
+  homebrew: {
+    /** Copies any record into the homebrew source with `basedOn` provenance (DESIGN.md §6.2). */
+    duplicate(recordId: string): Promise<CompendiumRecord>;
+    /** Validates, re-derives monster feature buttons from text, writes, and re-indexes. */
+    save(record: CompendiumRecord): Promise<CompendiumRecord>;
+    remove(recordId: string): Promise<void>;
+  };
   icons: {
     /** The mapping tables from resources/icons/mapping.json. */
     tables(): Promise<IconTables>;
@@ -552,6 +559,7 @@ export const API_METHODS = {
     'savePlaylist',
     'removePlaylist',
   ],
+  homebrew: ['duplicate', 'save', 'remove'],
   icons: ['tables', 'available', 'credits', 'reportMiss'],
   compendium: ['search', 'get', 'findByKey', 'facets'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };
