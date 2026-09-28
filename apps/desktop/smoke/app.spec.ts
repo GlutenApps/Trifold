@@ -159,6 +159,9 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(console_.getByTestId('combatant-row')).toHaveCount(6);
     await console_.getByRole('button', { name: /Roll remaining/ }).click();
 
+    // The log can be exported as text (the save dialog itself is native, so only the control).
+    await expect(console_.getByRole('button', { name: 'export', exact: true })).toBeVisible();
+
     // The Mage's slot tracker: one pip per slot, click to spend.
     await console_.getByTestId('combatant-row').filter({ hasText: 'Mage' }).click();
     const tracker = console_.getByTestId('slot-tracker');

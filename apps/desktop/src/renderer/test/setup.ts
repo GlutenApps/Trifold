@@ -17,6 +17,7 @@ export function installBridgeMock(): TrifoldBridge {
         platform: 'win32',
         userDataPath: 'C:\\test',
       })),
+      saveTextFile: vi.fn(async () => null),
     },
     library: {
       getInfo: vi.fn(async () => ({

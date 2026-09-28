@@ -102,6 +102,7 @@ describe('CampaignRepository', () => {
       rounds: 3,
       xpEarned: 450,
       casualties: [],
+      log: [],
     });
     expect(finished.state).toBeNull();
     expect(finished.results).toHaveLength(1);

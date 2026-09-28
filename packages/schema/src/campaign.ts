@@ -214,6 +214,8 @@ export const EncounterResult = z.object({
   rounds: int.min(0),
   xpEarned: int.min(0),
   casualties: z.array(z.string()),
+  /** The fight's log, kept so it stays exportable after combat ends (DESIGN.md §6.4). */
+  log: z.array(LogEntry).default([]),
 });
 export type EncounterResult = z.infer<typeof EncounterResult>;
 

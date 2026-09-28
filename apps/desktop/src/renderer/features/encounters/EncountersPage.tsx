@@ -6,6 +6,7 @@ import type { CombatantTemplate, Encounter } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { CombatView } from './CombatView';
+import { formatResultLog, logFileName } from './logExport';
 
 function newEncounter(name: string): Encounter {
   const now = new Date().toISOString();
@@ -358,6 +359,23 @@ export function EncountersPage() {
                 <span className="badge warn">combat in progress · round {e.state.round}</span>
               )}
               <span className="spacer" />
+              {e.results.length > 0 && (
+                <button
+                  type="button"
+                  className="btn tiny"
+                  title="Export the last fight's log as text"
+                  onClick={() => {
+                    const last = e.results[e.results.length - 1]!;
+                    void window.trifold.app.saveTextFile({
+                      title: 'Export combat log',
+                      defaultName: logFileName(e.name, last.endedAt),
+                      text: formatResultLog(e.name, last),
+                    });
+                  }}
+                >
+                  Export log
+                </button>
+              )}
               {e.state ? (
                 <button type="button" className="btn primary" onClick={() => void resume(e)}>
                   Resume combat

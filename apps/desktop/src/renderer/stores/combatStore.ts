@@ -759,7 +759,13 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       const casualties = state.combatants
         .filter((c) => c.ref.kind === 'pc' && c.dead)
         .map((c) => c.name);
-      const result = { endedAt: nowIso(), rounds: state.round, xpEarned: enemyXp, casualties };
+      const result = {
+        endedAt: nowIso(),
+        rounds: state.round,
+        xpEarned: enemyXp,
+        casualties,
+        log: state.log,
+      };
       try {
         await window.trifold.encounters.finish(encounterId, result);
       } catch (err) {

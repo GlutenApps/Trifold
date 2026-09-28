@@ -387,6 +387,12 @@ export interface CampaignImportReport {
 export interface TrifoldApi {
   app: {
     getInfo(): Promise<AppInfo>;
+    /** Save-as dialog plus write; resolves to the path, or null when cancelled. */
+    saveTextFile(options: {
+      title: string;
+      defaultName: string;
+      text: string;
+    }): Promise<string | null>;
   };
   library: {
     getInfo(): Promise<LibraryInfo>;
@@ -512,7 +518,7 @@ export type ApiNamespace = keyof TrifoldApi;
 
 /** Every method, by namespace. The preload and the IPC registry iterate this table. */
 export const API_METHODS = {
-  app: ['getInfo'],
+  app: ['getInfo', 'saveTextFile'],
   library: ['getInfo', 'chooseFolder', 'open', 'openInExplorer', 'getSettings', 'updateSettings'],
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],

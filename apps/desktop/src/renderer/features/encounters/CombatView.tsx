@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Combatant, ConditionDuration } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore, type PendingDamage } from '../../stores/combatStore';
+import { formatCombatLog, logFileName } from './logExport';
 import { StatBlock } from '../compendium/StatBlock';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -794,6 +795,23 @@ export function CombatView() {
           <div className="row">
             <h2>Log</h2>
             <span className="spacer" />
+            <button
+              type="button"
+              className="btn tiny"
+              onClick={() => {
+                const encounterId = useCombatStore.getState().encounterId;
+                const name =
+                  useCampaignStore.getState().current?.encounters.find((e) => e.id === encounterId)
+                    ?.name ?? 'Encounter';
+                void window.trifold.app.saveTextFile({
+                  title: 'Export combat log',
+                  defaultName: logFileName(name, state.startedAt),
+                  text: formatCombatLog(name, state),
+                });
+              }}
+            >
+              export
+            </button>
             <button type="button" className="btn tiny" onClick={() => setShowLog((v) => !v)}>
               {showLog ? 'hide' : 'show'}
             </button>
