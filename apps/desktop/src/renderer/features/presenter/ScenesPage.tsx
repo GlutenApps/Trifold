@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { mediaUrl, type PresenterOverlays } from '@trifold/api';
-import type { Scene } from '@trifold/schema';
+import type { Playlist, Scene } from '@trifold/schema';
 import { registerHotkey } from '../../hotkeys';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { useMusicStore } from '../../stores/musicStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { MapEditor } from './MapEditor';
 import { DEFAULT_BLANK, DEFAULT_GRID } from './mapMath';
@@ -52,11 +53,13 @@ function blankScene(
 function SceneEditor({
   scene,
   folders,
+  playlists,
   onChange,
   onRemove,
 }: {
   scene: Scene;
   folders: Scene[];
+  playlists: Playlist[];
   onChange(s: Scene): void;
   onRemove(): void;
 }) {
@@ -123,6 +126,30 @@ function SceneEditor({
             </select>
           </label>
         )}
+        {scene.kind !== 'folder' && (
+          <label className="field">
+            Music on go-live
+            <select
+              value={scene.audio?.playlistId ?? ''}
+              onChange={(e) =>
+                onChange({
+                  ...scene,
+                  audio: {
+                    ambienceIds: scene.audio?.ambienceIds ?? [],
+                    ...(e.target.value ? { playlistId: e.target.value } : {}),
+                  },
+                })
+              }
+            >
+              <option value="">Keep current audio</option>
+              {playlists.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {scene.kind === 'title' && (
           <label className="field">
             Backdrop
@@ -165,6 +192,8 @@ export function ScenesPage() {
   const removeScene = useCampaignStore((s) => s.removeScene);
   const importSceneImage = useCampaignStore((s) => s.importSceneImage);
   const presenter = usePresenterStore();
+  const playlists = useMusicStore((s) => s.playlists);
+  const playPlaylist = useMusicStore((s) => s.playPlaylist);
   const playerOpen = useAppStore((s) => s.playerOpen);
   const openPlayer = useAppStore((s) => s.openPlayer);
   const closePlayer = useAppStore((s) => s.closePlayer);
@@ -218,7 +247,10 @@ export function ScenesPage() {
   const goLive = (scene: Scene) => {
     setSelectedId(scene.id);
     if (scene.kind === 'folder') return;
-    presenter.showScene(scene, slug);
+    if (presenter.showScene(scene, slug) && scene.audio?.playlistId) {
+      // Scene-linked music (DESIGN.md §6.6): crossfade only when the playlist changes.
+      void playPlaylist(scene.audio.playlistId, { ifDifferent: true });
+    }
   };
 
   const parentForNew = () =>
@@ -626,6 +658,7 @@ export function ScenesPage() {
             <SceneEditor
               scene={draft}
               folders={folders}
+              playlists={playlists}
               onChange={setDraft}
               onRemove={() => {
                 void removeScene(selected.id);

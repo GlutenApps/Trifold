@@ -15,6 +15,14 @@ describe('LibrarySettings', () => {
       edition2024Books: [],
       disabledSourceIds: [],
       backups: { enabled: true, keepDays: 14 },
+      music: {
+        outputDeviceId: null,
+        masterVolume: 0.8,
+        musicVolume: 0.8,
+        ambienceVolume: 0.6,
+        sfxVolume: 0.8,
+        crossfadeSec: 4,
+      },
     });
   });
 

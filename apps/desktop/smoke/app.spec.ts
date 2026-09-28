@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test } from '@playwright/test';
@@ -210,13 +210,34 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(player.getByTestId('player-token')).toHaveCount(2);
     await expect(player.getByTestId('map-layer')).toContainText('Thora');
 
+    // Music: a folder is scanned in place, the track lists, and Play reaches the status bar.
+    const songs = await mkdtemp(join(tmpdir(), 'trifold-songs-'));
+    await writeFile(join(songs, 'Tavern Night.wav'), silentWav(2));
+    await console_.evaluate((dir) => window.trifold.music.addFolder(dir), songs);
+    await console_.getByRole('button', { name: 'Music' }).click();
+    await expect(console_.getByTestId('track-row')).toHaveCount(1);
+    await expect(console_.getByTestId('track-row')).toContainText('Tavern Night');
+    await console_.getByTestId('track-row').getByRole('button', { name: 'Play now' }).click();
+    await expect(console_.getByRole('contentinfo')).toContainText('Now playing: Tavern Night');
+    await expect(console_.getByTestId('music-player')).toContainText('Pause');
+    await console_.getByRole('button', { name: 'Presenter' }).click();
+
     // Bundled glyphs are served to the player over the media scheme (only when fetched).
     if (existsSync(join(__dirname, '..', '..', '..', 'resources', 'icons', 'svg'))) {
       const loads = (url: string) =>
         player.evaluate(
           (src) =>
             new Promise<boolean>((resolve) => {
-              const img = new Image();
+              // The smoke project has no DOM lib; this runs in the page.
+              type Img = {
+                onload: (() => void) | null;
+                onerror: (() => void) | null;
+                src: string;
+                naturalWidth: number;
+              };
+              const doc = (globalThis as unknown as { document: { createElement(t: 'img'): Img } })
+                .document;
+              const img = doc.createElement('img');
               img.onload = () => resolve(img.naturalWidth > 0);
               img.onerror = () => resolve(false);
               img.src = src;
@@ -234,3 +255,24 @@ test('console, Library, import, search, stat block and player window all work en
     await rm(library, { recursive: true, force: true });
   }
 });
+
+/** A valid silent 16-bit mono PCM WAV of `seconds` at 8 kHz. */
+function silentWav(seconds: number): Buffer {
+  const rate = 8000;
+  const data = Buffer.alloc(Math.round(seconds * rate) * 2);
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + data.length, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(rate, 24);
+  header.writeUInt32LE(rate * 2, 28);
+  header.writeUInt16LE(2, 32);
+  header.writeUInt16LE(16, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(data.length, 40);
+  return Buffer.concat([header, data]);
+}

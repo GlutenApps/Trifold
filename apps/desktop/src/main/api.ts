@@ -2,6 +2,7 @@ import { app, dialog, shell } from 'electron';
 import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
 import { createCampaignApi } from './campaignApi';
+import { createMusicApi } from './musicApi';
 import type { IconResources } from './icons';
 import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
@@ -204,6 +205,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     },
 
     ...createCampaignApi(ctx.session, ctx.logger),
+    ...createMusicApi(ctx.session, ctx.windows),
 
     icons: {
       async tables() {

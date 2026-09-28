@@ -2,7 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { initialPresenterState, type TrifoldBridge } from '@trifold/api';
-import { defaultLibrarySettings } from '@trifold/schema';
+import { defaultLibrarySettings, type Playlist } from '@trifold/schema';
 
 /** A fully mocked `window.trifold` so renderer tests never touch Electron. */
 export function installBridgeMock(): TrifoldBridge {
@@ -49,6 +49,17 @@ export function installBridgeMock(): TrifoldBridge {
     presenter: {
       push: vi.fn(async () => undefined),
       get: vi.fn(async () => initialPresenterState),
+    },
+    music: {
+      library: vi.fn(async () => ({ folders: [], tracks: [], lastScanAt: null })),
+      chooseFolder: vi.fn(async () => null),
+      addFolder: vi.fn(async () => ({ folders: [], tracks: [], lastScanAt: null })),
+      removeFolder: vi.fn(async () => ({ folders: [], tracks: [], lastScanAt: null })),
+      rescan: vi.fn(async () => ({ folders: [], tracks: [], lastScanAt: null })),
+      updateTrack: vi.fn(async () => null),
+      listPlaylists: vi.fn(async () => []),
+      savePlaylist: vi.fn(async (p: Playlist) => p),
+      removePlaylist: vi.fn(async () => undefined),
     },
     icons: {
       tables: vi.fn(async () => ({

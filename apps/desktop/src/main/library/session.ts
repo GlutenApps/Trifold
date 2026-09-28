@@ -3,6 +3,7 @@ import type { LibraryInfo } from '@trifold/api';
 import { INDEX_VERSION, IndexDb } from '../index/IndexDb';
 import { syncIndex } from '../index/sync';
 import { CampaignRepository } from '../campaign/repository';
+import { MusicRepository } from '../music/repository';
 import { errorMessage, type Logger } from '../log';
 import { BundledSources } from '../sources/bundled';
 import { CombinedCatalog } from '../sources/catalog';
@@ -23,6 +24,7 @@ export class LibrarySession {
   sources: SourceRepository | null = null;
   catalog: CombinedCatalog | null = null;
   campaigns: CampaignRepository | null = null;
+  music: MusicRepository | null = null;
   index: IndexDb | null = null;
   readonly bundled: BundledSources;
   private path = '';
@@ -50,6 +52,7 @@ export class LibrarySession {
       await this.bundled.load();
       this.catalog = new CombinedCatalog(this.bundled, this.sources, this.store);
       this.campaigns = new CampaignRepository(this.store, this.logger);
+      this.music = new MusicRepository(this.store, this.logger);
       this.error = null;
       this.logger.info(`Library opened: ${this.store.root}`);
     } catch (err) {
@@ -57,6 +60,7 @@ export class LibrarySession {
       this.sources = null;
       this.catalog = null;
       this.campaigns = null;
+      this.music = null;
       this.error = errorMessage(err);
       this.logger.error(`Library failed to open at ${path}: ${this.error}`);
     }
@@ -108,6 +112,7 @@ export class LibrarySession {
     this.index = null;
     this.catalog = null;
     this.campaigns = null;
+    this.music = null;
     this.sources = null;
     this.store = null;
   }

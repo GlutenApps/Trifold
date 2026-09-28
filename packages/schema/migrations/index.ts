@@ -14,7 +14,9 @@ export type FileKind =
   | 'adventure'
   | 'note'
   | 'npc'
-  | 'scene';
+  | 'scene'
+  | 'musicLibrary'
+  | 'playlist';
 
 export type JsonObject = Record<string, unknown>;
 
@@ -39,6 +41,8 @@ export const CURRENT_SCHEMA_VERSION: VersionTable = {
   note: 1,
   npc: 1,
   scene: 1,
+  musicLibrary: 1,
+  playlist: 1,
 };
 
 /** Registered migrations, oldest first. Add an entry whenever a schema version is bumped. */
@@ -54,6 +58,8 @@ export const MIGRATIONS: MigrationRegistry = {
   note: [],
   npc: [],
   scene: [],
+  musicLibrary: [],
+  playlist: [],
 };
 
 export class MigrationError extends Error {

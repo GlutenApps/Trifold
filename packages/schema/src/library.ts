@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MusicSettings } from './music';
 
 /** `Library/library.json` — settings for one Library folder. DESIGN.md §4.2. */
 export const LIBRARY_SCHEMA_VERSION = 1;
@@ -26,6 +27,7 @@ export const LibrarySettings = z.object({
       keepDays: z.number().int().min(1).max(365).default(14),
     })
     .prefault({}),
+  music: MusicSettings.prefault({}),
 });
 export type LibrarySettings = z.infer<typeof LibrarySettings>;
 

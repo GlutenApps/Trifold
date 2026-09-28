@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { installHotkeys, registerHotkey } from '../../hotkeys';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { useMusicStore } from '../../stores/musicStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { SECTIONS, useUiStore, type SectionId } from '../../stores/uiStore';
 import { useCombatStore } from '../../stores/combatStore';
@@ -9,10 +10,10 @@ import { CampaignPage } from '../campaign/CampaignPage';
 import { CompendiumPage } from '../compendium/CompendiumPage';
 import { DicePage } from '../dice/DicePage';
 import { EncountersPage } from '../encounters/EncountersPage';
+import { MusicPage } from '../music/MusicPage';
 import { summarizeCombat } from '../presenter/combatSummary';
 import { ScenesPage } from '../presenter/ScenesPage';
 import { SettingsPage } from '../settings/SettingsPage';
-import { Placeholder } from './Placeholder';
 
 function Page({ section }: { section: SectionId }) {
   switch (section) {
@@ -25,12 +26,7 @@ function Page({ section }: { section: SectionId }) {
     case 'presenter':
       return <ScenesPage />;
     case 'music':
-      return (
-        <Placeholder
-          title="Music"
-          text="Folder scan, playlists and the crossfading player arrive in M1."
-        />
-      );
+      return <MusicPage />;
     case 'dice':
       return <DicePage />;
     case 'settings':
@@ -55,6 +51,20 @@ export function ConsoleShell() {
     void load();
     return window.trifold.on('playerWindowChanged', ({ open }) => setPlayerOpen(open));
   }, [load, setPlayerOpen]);
+
+  // Music volumes, crossfade and output device live in the Library settings.
+  const musicSettings = useAppStore((s) => s.library?.settings?.music ?? null);
+  useEffect(() => {
+    if (musicSettings) useMusicStore.getState().applySettings(musicSettings);
+  }, [musicSettings]);
+  useEffect(() => {
+    void useMusicStore.getState().load();
+  }, []);
+  const nowPlayingId = useMusicStore((s) => s.order[s.index] ?? null);
+  const nowPlaying = useMusicStore((s) =>
+    s.playing ? (s.library?.tracks.find((t) => t.id === nowPlayingId)?.title ?? null) : null,
+  );
+  const muted = useMusicStore((s) => s.muted);
 
   // The player camera is framed for the target display; the token treatment is a campaign setting.
   const displays = useAppStore((s) => s.displays);
@@ -144,6 +154,30 @@ export function ConsoleShell() {
         },
       }),
       registerHotkey({
+        id: 'music.playPause',
+        combo: 'Ctrl+Alt+P',
+        description: 'Play or pause music',
+        run: () => void useMusicStore.getState().togglePlay(),
+      }),
+      registerHotkey({
+        id: 'music.next',
+        combo: 'Ctrl+Alt+ArrowRight',
+        description: 'Next track',
+        run: () => void useMusicStore.getState().next(),
+      }),
+      registerHotkey({
+        id: 'music.previous',
+        combo: 'Ctrl+Alt+ArrowLeft',
+        description: 'Previous track',
+        run: () => void useMusicStore.getState().previous(),
+      }),
+      registerHotkey({
+        id: 'music.panic',
+        combo: 'Ctrl+Alt+M',
+        description: 'Panic mute all audio',
+        run: () => useMusicStore.getState().toggleMuted(),
+      }),
+      registerHotkey({
         id: 'nav.dice',
         combo: 'Ctrl+D',
         description: 'Open the dice roller',
@@ -206,7 +240,7 @@ export function ConsoleShell() {
               : `round ${combat.round}`
             : 'none'}
         </span>
-        <span>Now playing: nothing</span>
+        <span>Now playing: {muted ? 'muted' : (nowPlaying ?? 'nothing')}</span>
         <span className="spacer" />
         <span>
           <kbd className="kbd">Ctrl+K</kbd> search · <kbd className="kbd">Ctrl+Shift+B</kbd>{' '}

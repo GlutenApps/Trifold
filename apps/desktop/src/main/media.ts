@@ -19,9 +19,21 @@ export function registerMediaScheme(): void {
         supportFetchAPI: true,
         stream: true,
         bypassCSP: false,
+        // The renderer runs from file:// in production; fetch() and Web Audio need CORS to read
+        // scene images, glyphs and tracks (a media element without it is muted by Web Audio).
+        corsEnabled: true,
       },
     },
   ]);
+}
+
+/** Serves a local file with the CORS header every origin in this app may read it with. */
+async function serveFile(path: string, request: Request): Promise<Response> {
+  const upstream = await net.fetch(pathToFileURL(path).toString(), { headers: request.headers });
+  const headers = new Headers(upstream.headers);
+  headers.set('Access-Control-Allow-Origin', '*');
+  headers.set('Accept-Ranges', 'bytes');
+  return new Response(upstream.body, { status: upstream.status, headers });
 }
 
 export function installMediaHandler(session: LibrarySession, icons: IconResources): void {
@@ -29,9 +41,11 @@ export function installMediaHandler(session: LibrarySession, icons: IconResource
     const url = new URL(request.url);
     if (url.host === 'icons') {
       const file = icons.svgPath(decodeURIComponent(url.pathname.replace(/^\//, '')));
-      return file
-        ? net.fetch(pathToFileURL(file).toString())
-        : new Response('not found', { status: 404 });
+      return file ? serveFile(file, request) : new Response('not found', { status: 404 });
+    }
+    if (url.host === 'track') {
+      const file = session.music?.trackPath(decodeURIComponent(url.pathname.replace(/^\//, '')));
+      return file ? serveFile(file, request) : new Response('not found', { status: 404 });
     }
     if (url.host !== 'library') return new Response('not found', { status: 404 });
     const store = session.store;
@@ -47,6 +61,6 @@ export function installMediaHandler(session: LibrarySession, icons: IconResource
     } catch {
       return new Response('forbidden', { status: 403 });
     }
-    return net.fetch(pathToFileURL(absolute).toString());
+    return serveFile(absolute, request);
   });
 }

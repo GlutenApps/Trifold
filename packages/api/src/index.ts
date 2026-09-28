@@ -10,10 +10,12 @@ import type {
   Note,
   NPC,
   PCCard,
+  Playlist,
   RecordKind,
   Scene,
   SceneImage,
   Source,
+  Track,
 } from '@trifold/schema';
 
 /**
@@ -193,6 +195,33 @@ export const initialPresenterState: PresenterState = {
   combat: null,
   updatedAt: 0,
 };
+
+// ---------- music (DESIGN.md §6.6) ----------
+
+export interface TrackView extends Track {
+  /** False when the file is missing; the track stays listed (DATA-FORMATS.md §5.5). */
+  available: boolean;
+}
+
+export interface MusicLibraryView {
+  folders: string[];
+  tracks: TrackView[];
+  lastScanAt: string | null;
+}
+
+export interface MusicScanProgress {
+  phase: 'listing' | 'reading' | 'done';
+  /** Files read so far and files found in the folders. */
+  read: number;
+  found: number;
+  added: number;
+  current?: string;
+}
+
+/** A music file, streamed by main from wherever the track lives. */
+export function trackUrl(trackId: string): string {
+  return `${MEDIA_SCHEME}://track/${encodeURIComponent(trackId)}`;
+}
 
 /** Media inside the Library is served to the renderer over this scheme (main registers it). */
 export const MEDIA_SCHEME = 'trifold-media';
@@ -429,6 +458,20 @@ export interface TrifoldApi {
     /** Native picker; copies the image into the campaign and makes a display-size copy. */
     importImage(): Promise<SceneImage | null>;
   };
+  music: {
+    library(): Promise<MusicLibraryView>;
+    /** Native folder picker; null when cancelled. */
+    chooseFolder(): Promise<string | null>;
+    /** Adds a folder and scans it; progress arrives as `musicScan` events. */
+    addFolder(path: string): Promise<MusicLibraryView>;
+    /** Forgets a folder and its tracks (files are never touched). */
+    removeFolder(path: string): Promise<MusicLibraryView>;
+    rescan(): Promise<MusicLibraryView>;
+    updateTrack(trackId: string, patch: Partial<Track>): Promise<TrackView | null>;
+    listPlaylists(): Promise<Playlist[]>;
+    savePlaylist(playlist: Playlist): Promise<Playlist>;
+    removePlaylist(playlistId: string): Promise<void>;
+  };
   icons: {
     /** The mapping tables from resources/icons/mapping.json. */
     tables(): Promise<IconTables>;
@@ -473,6 +516,17 @@ export const API_METHODS = {
   scenes: ['save', 'remove', 'importImage'],
   pcs: ['save', 'remove', 'quickAdd'],
   encounters: ['save', 'remove', 'saveState', 'finish'],
+  music: [
+    'library',
+    'chooseFolder',
+    'addFolder',
+    'removeFolder',
+    'rescan',
+    'updateTrack',
+    'listPlaylists',
+    'savePlaylist',
+    'removePlaylist',
+  ],
   icons: ['tables', 'available', 'credits', 'reportMiss'],
   compendium: ['search', 'get', 'findByKey', 'facets'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };
@@ -493,12 +547,14 @@ export interface TrifoldEvents {
   presenterState: PresenterState;
   playerWindowChanged: { open: boolean };
   importProgress: ImportProgress;
+  musicScan: MusicScanProgress;
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   presenterState: 'trifold:event:presenter-state',
   playerWindowChanged: 'trifold:event:player-window-changed',
   importProgress: 'trifold:event:import-progress',
+  musicScan: 'trifold:event:music-scan',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */
