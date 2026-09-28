@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Combatant, ConditionDuration } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
-import { useCombatStore } from '../../stores/combatStore';
+import { useCombatStore, type PendingDamage } from '../../stores/combatStore';
 import { StatBlock } from '../compendium/StatBlock';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -434,6 +434,79 @@ function Inspector({ c }: { c: Combatant }) {
   );
 }
 
+function PendingDamagePanel() {
+  const pending = useCombatStore((s) => s.pendingDamage);
+  const combatants = useCombatStore((s) => s.state?.combatants ?? []);
+  const selectedId = useCombatStore((s) => s.selectedId);
+  const apply = useCombatStore((s) => s.applyPendingDamage);
+  const dismiss = useCombatStore((s) => s.dismissPendingDamage);
+  const [targets, setTargets] = useState<Record<string, string>>({});
+  if (pending.length === 0) return null;
+  const candidates = (sourceId: string) =>
+    combatants.filter((c) => c.id !== sourceId && !c.isLair && !c.dead);
+  const targetFor = (p: PendingDamage): string => {
+    const list = candidates(p.sourceId);
+    const chosen = targets[p.id];
+    if (chosen && list.some((c) => c.id === chosen)) return chosen;
+    const selected = list.find((c) => c.id === selectedId);
+    return selected?.id ?? list.find((c) => c.ref.kind === 'pc')?.id ?? list[0]?.id ?? '';
+  };
+  return (
+    <div className="card pending-damage" data-testid="pending-damage">
+      <h2>Rolled damage</h2>
+      {pending.map((p) => {
+        const target = targetFor(p);
+        const list = candidates(p.sourceId);
+        return (
+          <div key={p.id} className="row" data-testid="pending-row">
+            <span>
+              <strong>{p.sourceName}</strong> — {p.featureName}
+              {p.hit ? (
+                <span className={p.hit.crit ? 'crit' : p.hit.fumble ? 'fumble' : ''}>
+                  {' '}
+                  · to hit {p.hit.total}
+                  {p.hit.crit ? ' (crit)' : p.hit.fumble ? ' (natural 1)' : ''}
+                </span>
+              ) : null}{' '}
+              · {p.parts.map((x) => `${x.amount}${x.type ? ` ${x.type}` : ''}`).join(' + ')}
+            </span>
+            <select
+              aria-label={`Target for ${p.featureName}`}
+              value={target}
+              onChange={(e) => setTargets({ ...targets, [p.id]: e.target.value })}
+            >
+              {list.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.hp.current}/{c.hp.max})
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn primary"
+              disabled={!target}
+              onClick={() => apply(p.id, target, false)}
+            >
+              Apply
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={!target}
+              onClick={() => apply(p.id, target, true)}
+            >
+              Half
+            </button>
+            <button type="button" className="btn" onClick={() => dismiss(p.id)}>
+              Dismiss
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function SaveCallPanel() {
   const call = useCombatStore((s) => s.saveCall);
   const applySaveDamage = useCombatStore((s) => s.applySaveDamage);
@@ -664,6 +737,7 @@ export function CombatView() {
           ))}
         </div>
         <div className="combat-inspector">
+          <PendingDamagePanel />
           <SaveCallPanel />
           {selected && <Inspector c={selected} />}
           {selected && record?.kind === 'monster' && (

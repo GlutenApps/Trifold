@@ -46,6 +46,18 @@ export interface SaveCallView {
   pcs: Array<{ id: string; name: string; bonus: number }>;
 }
 
+/** Damage rolled from a stat block, waiting for the DM to pick a target (or dismiss it). */
+export interface PendingDamage {
+  id: string;
+  sourceId: string;
+  sourceName: string;
+  featureName: string;
+  label: string;
+  /** To-hit summary, absent for damage-only attacks. */
+  hit?: { total: number; natural: number; crit: boolean; fumble: boolean };
+  parts: Array<{ amount: number; type?: string }>;
+}
+
 interface CombatStoreState {
   encounterId: string | null;
   state: CombatState | null;
@@ -56,6 +68,7 @@ interface CombatStoreState {
   savePrompts: SavePrompt[];
   saveCall: SaveCallView | null;
   concentrationPrompt: { combatantId: string; name: string; dc: number } | null;
+  pendingDamage: PendingDamage[];
   /** XP total of enemy templates, for the encounter result. */
   enemyXp: number;
   error: string | null;
@@ -93,6 +106,8 @@ interface CombatStoreState {
   useCounter(id: string, counterId: string, delta: number): void;
   spendRecharge(id: string, rechargeId: string): void;
   rollAttackFor(id: string, feature: Feature, attack: Attack): void;
+  applyPendingDamage(pendingId: string, targetId: string, half: boolean): void;
+  dismissPendingDamage(pendingId: string): void;
   rollFeature(id: string, feature: Feature, button: RollButton): void;
   rollMultiattack(id: string, feature: Feature): void;
   callSave(id: string, feature: Feature, save: SaveCall): void;
@@ -200,6 +215,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     savePrompts: [],
     saveCall: null,
     concentrationPrompt: null,
+    pendingDamage: [],
     enemyXp: 0,
     error: null,
 
@@ -274,6 +290,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         savePrompts: [],
         saveCall: null,
         concentrationPrompt: null,
+        pendingDamage: [],
       });
     },
 
@@ -572,6 +589,43 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         parts.push(`+${x.total} ${x.damageType ?? ''} (${facesText(x)})`);
       const text = `${c.name} — ${feature.displayName} [${attack.label}]: ${parts.join('; ')}`;
       log('attack', text, id);
+      const damageParts: PendingDamage['parts'] = [];
+      if (result.damage) {
+        damageParts.push({
+          amount: result.damage.total,
+          ...(attack.damageType ? { type: attack.damageType } : {}),
+        });
+      }
+      for (const x of result.extraDamage) {
+        damageParts.push({ amount: x.total, ...(x.damageType ? { type: x.damageType } : {}) });
+      }
+      if (damageParts.length > 0) {
+        const hitInfo =
+          attack.toHit !== undefined
+            ? {
+                hit: {
+                  total: hit.total,
+                  natural: hit.natural,
+                  crit: result.crit,
+                  fumble: result.fumble,
+                },
+              }
+            : {};
+        set({
+          pendingDamage: [
+            ...get().pendingDamage,
+            {
+              id: ulid(),
+              sourceId: id,
+              sourceName: c.name,
+              featureName: feature.displayName,
+              label: attack.label,
+              ...hitInfo,
+              parts: damageParts,
+            },
+          ],
+        });
+      }
       useRollLogStore.getState().add({
         kind: 'attack',
         label: `${feature.displayName} (${c.name})`,
@@ -580,6 +634,26 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         faces: parts.join('; '),
         actor: c.name,
       });
+    },
+
+    applyPendingDamage(pendingId, targetId, half) {
+      const pending = get().pendingDamage.find((p) => p.id === pendingId);
+      const target = find(targetId);
+      if (!pending || !target) return;
+      for (const part of pending.parts) {
+        const amount = half ? Math.floor(part.amount / 2) : part.amount;
+        if (amount > 0) get().damage(targetId, amount, part.type);
+      }
+      log(
+        'note',
+        `${pending.sourceName}'s ${pending.featureName} applied to ${target.name}${half ? ' (halved)' : ''}`,
+        targetId,
+      );
+      set({ pendingDamage: get().pendingDamage.filter((p) => p.id !== pendingId) });
+    },
+
+    dismissPendingDamage(pendingId) {
+      set({ pendingDamage: get().pendingDamage.filter((p) => p.id !== pendingId) });
     },
 
     rollFeature(id, feature, button) {
