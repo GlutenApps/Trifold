@@ -853,3 +853,36 @@ input[type='range'].wide {
   background: var(--warn);
   color: #1a1508;
 }
+
+/* Spell slot tracker (DESIGN.md §6.4) */
+.slot-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 8px;
+}
+
+.slot-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+
+.slot-pip {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.slot-pip.spent {
+  background: transparent;
+  opacity: 0.6;
+}
+
+.slot-pip:hover {
+  transform: scale(1.15);
+}

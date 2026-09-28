@@ -179,4 +179,24 @@ describe('buildCombatants', () => {
       ['Enslave', 3, 'day', 'uses'],
     ]);
   });
+
+  it('builds one slot counter per spell level, skipping cantrips and empty levels', () => {
+    const caster = records.find(
+      (r): r is MonsterRecord => r.kind === 'monster' && Boolean(r.data.spellcasting?.slots),
+    );
+    expect(caster?.data.spellcasting?.slots).toEqual([0, 4, 3, 3, 3, 1]);
+    const { counters } = countersFromMonster(caster!);
+    expect(
+      counters
+        .filter((c) => c.kind === 'spellSlot')
+        .map((c) => [c.level, c.max, c.current, c.resets]),
+    ).toEqual([
+      [1, 4, 4, 'longRest'],
+      [2, 3, 3, 'longRest'],
+      [3, 3, 3, 'longRest'],
+      [4, 3, 3, 'longRest'],
+      [5, 1, 1, 'longRest'],
+    ]);
+    expect(countersFromMonster(monster('Goblin Warrior [5.5e]')).counters).toEqual([]);
+  });
 });

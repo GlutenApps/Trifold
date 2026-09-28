@@ -128,8 +128,12 @@ export const Counter = z.object({
   max: int.min(0),
   current: int.min(0),
   resets: z.enum(['turn', 'shortRest', 'longRest', 'day', 'never']).default('never'),
-  kind: z.enum(['legendary', 'legendaryResistance', 'uses', 'custom']).default('custom'),
+  kind: z
+    .enum(['legendary', 'legendaryResistance', 'uses', 'spellSlot', 'custom'])
+    .default('custom'),
   featureName: z.string().optional(),
+  /** Spell level for `spellSlot` counters (DESIGN.md §6.4 slot tracker). */
+  level: int.min(1).max(9).optional(),
 });
 export type Counter = z.infer<typeof Counter>;
 

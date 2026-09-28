@@ -80,6 +80,21 @@ export function countersFromMonster(record: MonsterRecord): {
       recharges.push({ id: ulid(), featureName: f.name, min: f.recharge.min, available: true });
     }
   }
+  // Slot tracker (DESIGN.md §6.4): `<slots>` starts with cantrips, then one entry per level.
+  const slots = d.spellcasting?.slots ?? [];
+  slots.slice(1).forEach((count, i) => {
+    if (count > 0) {
+      counters.push({
+        id: ulid(),
+        name: `Level ${i + 1} slots`,
+        max: count,
+        current: count,
+        resets: 'longRest',
+        kind: 'spellSlot',
+        level: i + 1,
+      });
+    }
+  });
   return { counters, recharges };
 }
 

@@ -393,27 +393,59 @@ function Inspector({ c }: { c: Combatant }) {
         )}
       </div>
 
-      {(c.counters.length > 0 || c.recharges.length > 0) && (
+      {c.counters.some((k) => k.kind === 'spellSlot') && (
+        <div className="row counters slot-tracker" data-testid="slot-tracker">
+          <span className="muted small">Slots</span>
+          {c.counters
+            .filter((k) => k.kind === 'spellSlot')
+            .map((k) => (
+              <span
+                key={k.id}
+                className="slot-level"
+                title={`${k.name}: ${k.current} of ${k.max} left`}
+              >
+                <span className="slot-label">{ordinal(k.level ?? 0)}</span>
+                {Array.from({ length: k.max }, (_, i) => {
+                  const available = i < k.current;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`slot-pip${available ? ' available' : ' spent'}`}
+                      aria-label={`${available ? 'Spend' : 'Restore'} level ${k.level} slot`}
+                      aria-pressed={!available}
+                      onClick={() => store.useCounter(c.id, k.id, available ? -1 : 1)}
+                    />
+                  );
+                })}
+              </span>
+            ))}
+        </div>
+      )}
+
+      {(c.counters.some((k) => k.kind !== 'spellSlot') || c.recharges.length > 0) && (
         <div className="row counters">
-          {c.counters.map((k) => (
-            <span key={k.id} className="counter">
-              {k.name} {k.current}/{k.max}
-              <button
-                type="button"
-                className="btn tiny"
-                onClick={() => store.useCounter(c.id, k.id, -1)}
-              >
-                −
-              </button>
-              <button
-                type="button"
-                className="btn tiny"
-                onClick={() => store.useCounter(c.id, k.id, 1)}
-              >
-                +
-              </button>
-            </span>
-          ))}
+          {c.counters
+            .filter((k) => k.kind !== 'spellSlot')
+            .map((k) => (
+              <span key={k.id} className="counter">
+                {k.name} {k.current}/{k.max}
+                <button
+                  type="button"
+                  className="btn tiny"
+                  onClick={() => store.useCounter(c.id, k.id, -1)}
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  className="btn tiny"
+                  onClick={() => store.useCounter(c.id, k.id, 1)}
+                >
+                  +
+                </button>
+              </span>
+            ))}
           {c.recharges.map((r) => (
             <span key={r.id} className={`counter${r.available ? '' : ' spent'}`}>
               {r.featureName}: {r.available ? 'ready' : `recharges on ${r.min}+`}
@@ -779,4 +811,9 @@ export function CombatView() {
       </div>
     </section>
   );
+}
+
+function ordinal(n: number): string {
+  const suffix = n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';
+  return `${n}${suffix}`;
 }

@@ -146,10 +146,27 @@ test('console, Library, import, search, stat block and player window all work en
       .locator('input[type="number"]')
       .fill('3');
     await expect(console_.getByTestId('difficulty')).toContainText('Enemy XP 150');
+    await console_.getByLabel('Add creature').fill('mage');
+    // The fixture's 2014 Mage carries <slots>; the bundled 2024 one describes spells in text.
+    await console_
+      .getByRole('option', { name: /^Mage/ })
+      .filter({ hasText: 'compendium-sample' })
+      .first()
+      .click();
+    await expect(console_.getByTestId('template-row')).toHaveCount(4);
     await console_.getByRole('button', { name: 'Start combat' }).click();
     await expect(console_.getByRole('heading', { name: /Set initiative/ })).toBeVisible();
-    await expect(console_.getByTestId('combatant-row')).toHaveCount(5);
+    await expect(console_.getByTestId('combatant-row')).toHaveCount(6);
     await console_.getByRole('button', { name: /Roll remaining/ }).click();
+
+    // The Mage's slot tracker: one pip per slot, click to spend.
+    await console_.getByTestId('combatant-row').filter({ hasText: 'Mage' }).click();
+    const tracker = console_.getByTestId('slot-tracker');
+    await expect(tracker).toBeVisible();
+    await expect(tracker.getByRole('button', { name: 'Spend level 1 slot' })).toHaveCount(4);
+    await tracker.getByRole('button', { name: 'Spend level 1 slot' }).first().click();
+    await expect(tracker.getByRole('button', { name: 'Spend level 1 slot' })).toHaveCount(3);
+    await expect(tracker.getByRole('button', { name: 'Restore level 1 slot' })).toHaveCount(1);
     await console_.getByRole('button', { name: 'Begin' }).click();
     await expect(console_.getByRole('heading', { name: /Round 1/ })).toBeVisible();
 

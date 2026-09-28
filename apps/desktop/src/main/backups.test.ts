@@ -69,7 +69,9 @@ describe('BackupService', () => {
     const result = await service.restore(backup!.name);
     expect(result.restored).toBe(3);
     expect(result.safety).toMatch(/-pre-restore\.zip$/);
-    expect(await readFile(join(root, 'campaigns', 'one', 'campaign.json'), 'utf8')).toBe('{"name":"one"}');
+    expect(await readFile(join(root, 'campaigns', 'one', 'campaign.json'), 'utf8')).toBe(
+      '{"name":"one"}',
+    );
     const kinds = (await service.list()).map((b) => b.kind).sort();
     expect(kinds).toEqual(['manual', 'preRestore']);
     await expect(service.restore('../evil.zip')).rejects.toThrow('Not a backup file');

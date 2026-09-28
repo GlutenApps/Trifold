@@ -88,7 +88,9 @@ export function BackupsCard() {
             disabled={!hasLibrary}
             checked={settings?.enabled ?? true}
             onChange={(e) =>
-              void updateSettings({ backups: { ...(settings ?? { keepDays: 14 }), enabled: e.target.checked } })
+              void updateSettings({
+                backups: { ...(settings ?? { keepDays: 14 }), enabled: e.target.checked },
+              })
             }
           />
           Daily backup
@@ -114,10 +116,20 @@ export function BackupsCard() {
           days
         </label>
         <span className="spacer" />
-        <button type="button" className="btn primary" disabled={!hasLibrary || busy !== null} onClick={() => void backUpNow()}>
+        <button
+          type="button"
+          className="btn primary"
+          disabled={!hasLibrary || busy !== null}
+          onClick={() => void backUpNow()}
+        >
           {busy === 'create' ? 'Backing up…' : 'Back up now'}
         </button>
-        <button type="button" className="btn" disabled={!hasLibrary} onClick={() => void window.trifold.backups.openFolder()}>
+        <button
+          type="button"
+          className="btn"
+          disabled={!hasLibrary}
+          onClick={() => void window.trifold.backups.openFolder()}
+        >
           Open backups folder
         </button>
       </div>
@@ -142,7 +154,11 @@ export function BackupsCard() {
                   {confirm === b.name ? (
                     <span className="row">
                       <span className="small">Overwrite the Library with this backup?</span>
-                      <button type="button" className="btn tiny danger" onClick={() => void restore(b.name)}>
+                      <button
+                        type="button"
+                        className="btn tiny danger"
+                        onClick={() => void restore(b.name)}
+                      >
                         Restore
                       </button>
                       <button type="button" className="btn tiny" onClick={() => setConfirm(null)}>
@@ -150,7 +166,12 @@ export function BackupsCard() {
                       </button>
                     </span>
                   ) : (
-                    <button type="button" className="btn tiny" disabled={busy !== null} onClick={() => setConfirm(b.name)}>
+                    <button
+                      type="button"
+                      className="btn tiny"
+                      disabled={busy !== null}
+                      onClick={() => setConfirm(b.name)}
+                    >
                       Restore…
                     </button>
                   )}

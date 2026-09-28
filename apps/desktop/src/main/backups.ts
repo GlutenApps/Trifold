@@ -9,7 +9,14 @@ import type { LibraryStore } from './library/LibraryStore';
 import type { Logger } from './log';
 
 /** Top-level Library entries that never go into a backup (DESIGN.md §4.2). */
-const SKIP_TOP_LEVEL = new Set(['backups', 'logs', 'index.sqlite', 'index.sqlite-wal', 'index.sqlite-shm', 'index.sqlite-journal']);
+const SKIP_TOP_LEVEL = new Set([
+  'backups',
+  'logs',
+  'index.sqlite',
+  'index.sqlite-wal',
+  'index.sqlite-shm',
+  'index.sqlite-journal',
+]);
 const ZIP_NAME = /^(\d{4}-\d{2}-\d{2})(-\d{6})?(-pre-restore)?\.zip$/;
 
 function today(): string {
@@ -55,7 +62,11 @@ export class BackupService {
         name,
         sizeBytes: info.size,
         createdAt: info.mtime.toISOString(),
-        kind: name.includes('-pre-restore') ? 'preRestore' : ZIP_NAME.exec(name)?.[2] ? 'manual' : 'daily',
+        kind: name.includes('-pre-restore')
+          ? 'preRestore'
+          : ZIP_NAME.exec(name)?.[2]
+            ? 'manual'
+            : 'daily',
       });
     }
     return out.sort((a, b) => b.name.localeCompare(a.name));
@@ -82,7 +93,11 @@ export class BackupService {
   private async createNow(kind: 'daily' | 'manual' | 'preRestore'): Promise<BackupInfo | null> {
     await mkdir(this.dir, { recursive: true });
     const name =
-      kind === 'daily' ? `${today()}.zip` : kind === 'manual' ? `${stamp()}.zip` : `${stamp()}-pre-restore.zip`;
+      kind === 'daily'
+        ? `${today()}.zip`
+        : kind === 'manual'
+          ? `${stamp()}.zip`
+          : `${stamp()}-pre-restore.zip`;
     const target = join(this.dir, name);
     const partial = `${target}.partial`;
     const zip = new yazl.ZipFile();
