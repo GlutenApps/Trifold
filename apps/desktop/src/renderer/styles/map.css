@@ -1,0 +1,302 @@
+/* Map scenes: shared between the console editor and the player window */
+
+.map-surface {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.map-image {
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.map-blank {
+  display: block;
+}
+
+.grid-lines {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+.token-slot {
+  position: absolute;
+  touch-action: none;
+}
+
+/* Token discs (DESIGN.md §6.8 treatments) */
+.token-disc {
+  position: relative;
+  border-radius: 50%;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.token-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-style: solid;
+  border-width: 6%;
+  box-sizing: border-box;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.token-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.style-engraved .token-face {
+  background: #e8dcc0;
+  color: #2b2114;
+  border-color: #6b4a2b;
+  box-shadow: inset 0 0 0.35em rgba(0, 0, 0, 0.35);
+}
+
+.style-flat .token-face {
+  background: #5a6b85;
+  color: #fff;
+  border-color: #14161a;
+}
+
+.style-twoTone .token-face {
+  background: #1d2028;
+  color: #c8a45c;
+  border-color: #c8a45c;
+}
+
+.style-plain .token-face {
+  background: #d9d5cb;
+  color: #1f1d18;
+  border-color: #6b6b6b;
+}
+
+.token-disc.role-ally .token-face {
+  border-color: #4c9a6a;
+}
+
+.token-disc.role-enemy .token-face {
+  border-color: #b23a35;
+}
+
+.token-disc.role-neutral .token-face {
+  border-color: #8a8f99;
+}
+
+.token-disc.kind-marker .token-face {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.35);
+  color: #1f1d18;
+}
+
+.token-disc.active::before {
+  content: '';
+  position: absolute;
+  inset: -8%;
+  border-radius: 50%;
+  border: 0.18em solid #c8a45c;
+  box-shadow: 0 0 0.6em #c8a45c;
+  pointer-events: none;
+}
+
+.token-disc.selected::after {
+  content: '';
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  border: 0.12em dashed #fff;
+  pointer-events: none;
+}
+
+.token-disc.dead .token-face {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.token-dead-mark {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(45deg, transparent 46%, #d9534f 46%, #d9534f 54%, transparent 54%),
+    linear-gradient(-45deg, transparent 46%, #d9534f 46%, #d9534f 54%, transparent 54%);
+  border-radius: 50%;
+}
+
+.token-disc.hidden-token {
+  opacity: 0.45;
+}
+
+.token-disc.hidden-token .token-face {
+  border-style: dotted;
+}
+
+.token-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 2%;
+  padding: 0.1em 0.5em;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  white-space: nowrap;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Player window */
+.map-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.map-viewport .map-surface {
+  transition: transform 400ms ease;
+}
+
+.map-viewport .token-slot {
+  transition:
+    left 80ms linear,
+    top 80ms linear;
+}
+
+/* Console editor */
+.map-editor {
+  display: grid;
+  grid-template-rows: auto minmax(320px, 55vh) auto;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.map-canvas {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #0b0b0d;
+  outline: none;
+  touch-action: none;
+}
+
+.map-canvas:focus-visible {
+  border-color: var(--accent);
+}
+
+.player-viewport {
+  position: absolute;
+  border: 3px dashed #c8a45c;
+  box-sizing: border-box;
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
+}
+
+.align-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #000;
+  pointer-events: none;
+}
+
+.entry-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 0.3em 0.6em;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  background: rgba(200, 164, 92, 0.9);
+  color: #1a1508;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.entry-marker:hover {
+  background: #fff;
+}
+
+.context-menu {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  padding: 4px;
+}
+
+.context-menu button {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.context-menu button:hover {
+  background: var(--bg-hover);
+}
+
+.map-side {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.map-group {
+  flex: 1 1 280px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  background: var(--bg-panel);
+}
+
+.map-group h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.picker-list {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.picker-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scenes-split.with-map {
+  grid-template-columns: minmax(260px, 0.6fr) minmax(520px, 2fr);
+}

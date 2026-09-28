@@ -56,6 +56,19 @@ export function ConsoleShell() {
     return window.trifold.on('playerWindowChanged', ({ open }) => setPlayerOpen(open));
   }, [load, setPlayerOpen]);
 
+  // The player camera is framed for the target display; the token treatment is a campaign setting.
+  const displays = useAppStore((s) => s.displays);
+  const playerDisplayId = useAppStore((s) => s.library?.settings?.playerDisplayId ?? null);
+  const tokenStyle = useCampaignStore((s) => s.current?.campaign.settings.tokenStyle ?? 'engraved');
+  useEffect(() => {
+    const target =
+      displays.find((d) => d.id === playerDisplayId) ??
+      displays.find((d) => !d.isPrimary) ??
+      displays[0];
+    const aspect = target ? target.bounds.width / target.bounds.height : 16 / 9;
+    usePresenterStore.getState().setLiveOptions({ aspect, tokenStyle });
+  }, [displays, playerDisplayId, tokenStyle]);
+
   // Mirror the tracker to the TV: masked names, active turn, round, optional PC bars.
   useEffect(() => {
     const sync = () => {

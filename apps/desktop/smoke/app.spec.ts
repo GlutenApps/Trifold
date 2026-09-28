@@ -193,6 +193,22 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('button', { name: 'Blackout' }).click();
     await expect(player.getByTestId('player-blackout')).toBeVisible();
 
+    // A blank grid goes live, the party lands where the DM clicks, and the TV mirrors it.
+    await console_.getByRole('button', { name: 'New blank grid' }).click();
+    await console_
+      .getByTestId('scene-row')
+      .filter({ hasText: 'Blank grid' })
+      .locator('.scene-title')
+      .click();
+    await expect(player.getByTestId('map-layer')).toBeVisible();
+    await console_.getByRole('button', { name: 'Place party' }).click();
+    const canvas = console_.getByTestId('map-canvas');
+    const box = (await canvas.boundingBox())!;
+    await canvas.click({ position: { x: box.width / 2, y: box.height / 2 } });
+    await expect(console_.getByTestId('console-token')).toHaveCount(2);
+    await expect(player.getByTestId('player-token')).toHaveCount(2);
+    await expect(player.getByTestId('map-layer')).toContainText('Thora');
+
     expect(rendererErrors).toEqual([]);
   } finally {
     await app.close();

@@ -26,6 +26,7 @@ export function summarizeCombat(
           role: c.role,
           isPc,
           dead: c.dead,
+          ...(c.tokenId ? { tokenId: c.tokenId } : {}),
           ...(isPc && options.pcHealthBars ? { hpFraction: fraction } : {}),
           bloodied:
             !isPc &&

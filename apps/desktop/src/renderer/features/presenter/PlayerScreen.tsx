@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { initialPresenterState, type PresenterState } from '@trifold/api';
+import { MapLayer } from './MapLayer';
 
 function Countdown({ endsAt }: { endsAt: number }) {
   const [now, setNow] = useState(Date.now());
@@ -62,6 +63,9 @@ export function PlayerScreen() {
               width={scene.width}
               height={scene.height}
             />
+          )}
+          {(scene.kind === 'map' || scene.kind === 'blankGrid') && (
+            <MapLayer scene={scene} combat={combat} />
           )}
         </div>
       )}

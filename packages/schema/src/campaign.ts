@@ -313,10 +313,15 @@ export const Token = z.object({
   x: z.number(),
   y: z.number(),
   footprint: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).default(1),
+  role: CombatRole.default('enemy'),
   hidden: z.boolean().default(false),
   nameMasked: z.boolean().default(true),
+  /** What the TV shows while masked (creature type), cached at placement. */
+  maskedLabel: z.string().optional(),
+  /** Campaign-relative image path for custom art; absent = generated disc. */
   art: z.string().optional(),
   color: z.string().optional(),
+  dead: z.boolean().default(false),
 });
 export type Token = z.infer<typeof Token>;
 
@@ -350,6 +355,10 @@ export const Scene = z.object({
   image: SceneImage.optional(),
   backdrop: z.enum(['parchment', 'stone', 'dark']).optional(),
   grid: GridSpec.optional(),
+  /** Blank-grid scenes: size in cells. */
+  blank: z
+    .object({ cols: int.min(1).max(200).default(30), rows: int.min(1).max(200).default(20) })
+    .optional(),
   tokens: z.array(Token).default([]),
   entryMarkers: z.array(EntryMarker).default([]),
   audio: z

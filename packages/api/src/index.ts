@@ -81,7 +81,58 @@ export interface ImageScene {
   height: number;
 }
 
-export type LiveScene = TitleCardScene | ImageScene;
+/** A rectangle in map pixels: what the TV should show (letterboxed to its own aspect). */
+export interface CameraRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface LiveGrid {
+  cellPx: number;
+  offsetX: number;
+  offsetY: number;
+  color: string;
+  opacity: number;
+  /** False hides the lines on the TV; tokens still snap on the console. */
+  visible: boolean;
+}
+
+/** A token as the TV sees it: hidden tokens are omitted, masked names already applied. */
+export interface LiveToken {
+  id: string;
+  kind: 'pc' | 'creature' | 'marker';
+  /** Grid units, top-left cell of the footprint. */
+  x: number;
+  y: number;
+  footprint: 1 | 2 | 3 | 4;
+  label: string;
+  role: 'ally' | 'enemy' | 'neutral';
+  artUrl?: string;
+  color?: string;
+  dead: boolean;
+}
+
+export type TokenStyle = 'engraved' | 'flat' | 'twoTone' | 'plain';
+
+export interface MapScene {
+  kind: 'map' | 'blankGrid';
+  id: string;
+  title: string;
+  /** Absent for blank grids, which draw the backdrop instead. */
+  imageUrl?: string;
+  /** Map size in map pixels. */
+  width: number;
+  height: number;
+  backdrop: 'parchment' | 'stone' | 'dark';
+  grid: LiveGrid;
+  tokens: LiveToken[];
+  tokenStyle: TokenStyle;
+  camera: CameraRect;
+}
+
+export type LiveScene = TitleCardScene | ImageScene | MapScene;
 
 export type Handout =
   { kind: 'text'; title: string; body: string } | { kind: 'image'; url: string; title?: string };
@@ -100,6 +151,8 @@ export interface CombatSummaryEntry {
   role: 'ally' | 'enemy' | 'neutral';
   isPc: boolean;
   dead: boolean;
+  /** The map token this combatant is linked to, if any. */
+  tokenId?: string;
   /** 0–1, PCs only, and only when the health-bar overlay is on. */
   hpFraction?: number;
   bloodied: boolean;

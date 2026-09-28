@@ -5,6 +5,8 @@ import { registerHotkey } from '../../hotkeys';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { usePresenterStore } from '../../stores/presenterStore';
+import { MapEditor } from './MapEditor';
+import { DEFAULT_BLANK, DEFAULT_GRID } from './mapMath';
 import {
   firstChildOf,
   flattenTree,
@@ -197,6 +199,12 @@ export function ScenesPage() {
     setDraft(selected);
   }, [selected]);
 
+  // Edits to the live scene (token drags, camera, grid) reach the TV as they happen.
+  useEffect(() => {
+    if (draft && draft.id === liveId && draft !== selected) presenter.syncLiveScene(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
+
   // Autosave edits.
   useEffect(() => {
     if (!draft || !selected || draft === selected) return;
@@ -218,15 +226,28 @@ export function ScenesPage() {
 
   const create = async (kind: Scene['kind']) => {
     const parentId = parentForNew();
-    const title =
-      newTitle.trim() ||
-      (kind === 'folder' ? 'New folder' : kind === 'title' ? 'New title card' : 'New scene');
-    const base = blankScene(kind, title, parentId, nextOrder(scenes, parentId));
-    if (kind === 'image') {
+    const defaults: Record<Scene['kind'], string> = {
+      folder: 'New folder',
+      title: 'New title card',
+      image: 'New image scene',
+      map: 'New map',
+      blankGrid: 'Blank grid',
+    };
+    const base = blankScene(
+      kind,
+      newTitle.trim() || defaults[kind],
+      parentId,
+      nextOrder(scenes, parentId),
+    );
+    if (kind === 'image' || kind === 'map') {
       const image = await importSceneImage();
       if (!image) return;
       base.image = image;
-      if (!newTitle.trim()) base.title = 'New image scene';
+    }
+    if (kind === 'map' || kind === 'blankGrid') base.grid = { ...DEFAULT_GRID };
+    if (kind === 'blankGrid') {
+      base.blank = { ...DEFAULT_BLANK };
+      base.backdrop = 'parchment';
     }
     const saved = await saveScene(base);
     if (saved) setSelectedId(saved.id);
@@ -295,10 +316,11 @@ export function ScenesPage() {
   }
 
   const live = presenter.state;
+  const isMapDraft = Boolean(draft && (draft.kind === 'map' || draft.kind === 'blankGrid'));
   return (
     <section className="scenes">
       <h1>Presenter</h1>
-      <div className="scenes-split">
+      <div className={`scenes-split${isMapDraft ? ' with-map' : ''}`}>
         <div className="scene-tree-pane">
           <div className="row">
             <input
@@ -334,7 +356,13 @@ export function ScenesPage() {
                   onClick={() => goLive(scene)}
                   title={scene.kind === 'folder' ? 'Select folder' : 'Send to TV'}
                 >
-                  {scene.kind === 'folder' ? '▸ ' : scene.kind === 'image' ? '🖼 ' : '▣ '}
+                  {scene.kind === 'folder'
+                    ? '▸ '
+                    : scene.kind === 'image'
+                      ? '🖼 '
+                      : scene.kind === 'map' || scene.kind === 'blankGrid'
+                        ? '▦ '
+                        : '▣ '}
                   {scene.title}
                 </button>
                 {scene.id === liveId && <span className="badge roll">live</span>}
@@ -391,6 +419,12 @@ export function ScenesPage() {
             </button>
             <button type="button" className="btn" onClick={() => void create('image')}>
               New image scene…
+            </button>
+            <button type="button" className="btn" onClick={() => void create('map')}>
+              New map…
+            </button>
+            <button type="button" className="btn" onClick={() => void create('blankGrid')}>
+              New blank grid
             </button>
             <button type="button" className="btn" onClick={() => void create('folder')}>
               New folder
@@ -556,18 +590,23 @@ export function ScenesPage() {
             </div>
           </div>
 
-          {previewScene && (
+          {draft && selected && isMapDraft && (
+            <MapEditor scene={draft} slug={slug} onChange={setDraft} />
+          )}
+
+          {previewScene && !(isMapDraft && previewScene.id === draft?.id) && (
             <div className="card preview-card" data-testid="scene-preview">
               <h2>
                 {previewScene === selected ? 'Selected' : 'Preview'}: {previewScene.title}
               </h2>
-              {previewScene.kind === 'image' && previewScene.image && (
-                <img
-                  className="preview-image"
-                  src={mediaUrl(slug, previewScene.image.displayPath)}
-                  alt=""
-                />
-              )}
+              {(previewScene.kind === 'image' || previewScene.kind === 'map') &&
+                previewScene.image && (
+                  <img
+                    className="preview-image"
+                    src={mediaUrl(slug, previewScene.image.displayPath)}
+                    alt=""
+                  />
+                )}
               {previewScene.kind === 'title' && (
                 <div className={`preview-title backdrop-${previewScene.backdrop ?? 'dark'}`}>
                   <strong>{previewScene.title}</strong>
