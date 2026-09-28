@@ -81,6 +81,17 @@ export const initialPresenterState: PresenterState = {
 /** A source on disk plus whether its records predate the current importer. */
 export interface SourceSummary extends Source {
   stale: boolean;
+  /** Ships with the app (SRD); cannot be removed or re-parsed, only switched off. */
+  bundled: boolean;
+}
+
+/** One attribution block for the About page (DESIGN.md §6.1). */
+export interface AttributionEntry {
+  sourceId: string;
+  name: string;
+  statement: string;
+  licenses: Array<{ key: string; name: string; text: string }>;
+  permalink: string;
 }
 
 export interface ImportProgress {
@@ -193,6 +204,8 @@ export interface TrifoldApi {
     setEnabled(sourceId: string, enabled: boolean): Promise<Source>;
     remove(sourceId: string): Promise<void>;
     rebuildIndex(): Promise<IndexStats>;
+    /** License statements for bundled content, always shown in About. */
+    attribution(): Promise<AttributionEntry[]>;
   };
   compendium: {
     search(query: CompendiumQuery): Promise<CompendiumSearchResult>;
@@ -212,7 +225,16 @@ export const API_METHODS = {
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],
   presenter: ['push', 'get'],
-  sources: ['list', 'chooseFile', 'importFile', 'reimport', 'setEnabled', 'remove', 'rebuildIndex'],
+  sources: [
+    'list',
+    'chooseFile',
+    'importFile',
+    'reimport',
+    'setEnabled',
+    'remove',
+    'rebuildIndex',
+    'attribution',
+  ],
   compendium: ['search', 'get', 'findByKey', 'facets'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };
 

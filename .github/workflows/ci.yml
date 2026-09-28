@@ -19,6 +19,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm fetch:content
+        continue-on-error: true
       - run: pnpm smoke
       - uses: actions/upload-artifact@v4
         if: failure()

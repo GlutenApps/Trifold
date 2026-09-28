@@ -9,6 +9,8 @@ interface Props {
   onBack(): void;
   onSwitchEdition(record: CompendiumRecord): void;
   onOpenSpell(key: string): void;
+  /** Source names by id, used to tell apart editions that come from different sources. */
+  sourceNames?: Record<string, string>;
 }
 
 const SCHOOLS: Record<string, string> = {
@@ -238,6 +240,7 @@ export function RecordDetail({
   onBack,
   onSwitchEdition,
   onOpenSpell,
+  sourceNames = {},
 }: Props) {
   const [tab, setTab] = useState<'block' | 'source'>('block');
   const extra = Object.keys(record.data.extra);
@@ -261,6 +264,9 @@ export function RecordDetail({
                 onClick={() => onSwitchEdition(e)}
               >
                 {e.edition === '2014' ? 'Legacy' : e.edition}
+                {editions.filter((o) => o.edition === e.edition).length > 1
+                  ? ` · ${sourceNames[e.sourceId] ?? e.sourceBook ?? e.sourceId}`
+                  : ''}
               </button>
             ))}
           </span>

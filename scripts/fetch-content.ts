@@ -1,4 +1,15 @@
-// Build-time only. Fetches the Open5e SRD snapshot and the game-icons SVG set into resources/.
-// Implemented in M1; see docs/DESIGN.md §6.1 and §6.8 and docs/DATA-FORMATS.md §4.
-console.error('fetch:content is not implemented yet (M1). See docs/DESIGN.md §6.1 and §6.8.');
-process.exit(1);
+// Build-time only. Runs every content fetch step in order (DESIGN.md §6.1 and §6.8):
+//   1. Open5e SRD snapshot  → resources/srd-*.jsonl + srd-manifest.json
+//   2. game-icons SVG set   → resources/icons/ (arrives with the presenter token work)
+import { spawnSync } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const steps = [['Open5e SRD snapshot', join(here, 'fetch-open5e.ts')]];
+
+for (const [label, script] of steps) {
+  console.log(`== ${label}`);
+  const result = spawnSync(process.execPath, ['--import', 'tsx', script!], { stdio: 'inherit' });
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}

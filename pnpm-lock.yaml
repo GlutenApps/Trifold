@@ -178,6 +178,15 @@ importers:
       '@testing-library/user-event':
         specifier: 14.6.7
         version: 14.6.7(@testing-library/dom@10.4.2)
+      '@trifold/importers':
+        specifier: workspace:*
+        version: link:packages/importers
+      '@trifold/rules':
+        specifier: workspace:*
+        version: link:packages/rules
+      '@trifold/schema':
+        specifier: workspace:*
+        version: link:packages/schema
       '@types/node':
         specifier: 24.19.0
         version: 24.19.0

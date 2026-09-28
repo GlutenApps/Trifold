@@ -43,9 +43,9 @@ export interface TextAttack {
 }
 
 const ATTACK_2024 =
-  /(Melee|Ranged|Melee or Ranged) Attack Roll:\s*([+-]\d+),\s*(reach|range)\s*([^.]+?)\.\s*Hit:\s*(\d+)\s*\(([^)]+)\)\s*([A-Za-z]+) damage/gi;
+  /(Melee|Ranged|Melee or Ranged) Attack Roll:\s*([+-]\d+),\s*(reach|range)\s*([^.]+?)\.\s*Hit:\s*(\d+)\s*(?:\(([^)]+)\))?\s*([A-Za-z]+) damage/gi;
 const ATTACK_2014 =
-  /(Melee|Ranged|Melee or Ranged) (Weapon|Spell) Attack:\s*([+-]\d+) to hit,\s*(reach|range)\s*([^,]+),\s*([^.]+)\.\s*Hit:\s*(\d+)\s*\(([^)]+)\)\s*([A-Za-z]+) damage/gi;
+  /(Melee|Ranged|Melee or Ranged) (Weapon|Spell) Attack:\s*([+-]\d+) to hit,\s*(reach|range)\s*([^,]+),\s*([^.]+)\.\s*Hit:\s*(\d+)\s*(?:\(([^)]+)\))?\s*([A-Za-z]+) damage/gi;
 const EXTRA_DAMAGE = /plus\s*(\d+)\s*\(([^)]+)\)\s*([A-Za-z]+) damage/gi;
 
 function extraDamageIn(sentence: string): Array<{ damage: string; damageType: string }> {
@@ -67,13 +67,13 @@ function sentenceAfter(text: string, from: number): string {
 export function findAttacksInText(text: string): TextAttack[] {
   const out: TextAttack[] = [];
   for (const m of text.matchAll(ATTACK_2024)) {
-    if (!m[1] || !m[2] || !m[3] || !m[4] || !m[5] || !m[6] || !m[7]) continue;
+    if (!m[1] || !m[2] || !m[3] || !m[4] || !m[5] || !m[7]) continue;
     const reachOrRange = m[4].trim().replace(/\.$/, '');
     const attack: TextAttack = {
       kind: m[1].toLowerCase(),
       toHit: Number(m[2]),
       average: Number(m[5]),
-      damage: m[6].replace(/\s+/g, ''),
+      damage: (m[6] ?? m[5]).replace(/\s+/g, ''),
       damageType: m[7].toLowerCase(),
       extraDamage: extraDamageIn(sentenceAfter(text, m.index + m[0].length - 1)),
       index: m.index,
@@ -83,13 +83,13 @@ export function findAttacksInText(text: string): TextAttack[] {
     out.push(attack);
   }
   for (const m of text.matchAll(ATTACK_2014)) {
-    if (!m[1] || !m[3] || !m[4] || !m[5] || !m[7] || !m[8] || !m[9]) continue;
+    if (!m[1] || !m[3] || !m[4] || !m[5] || !m[7] || !m[9]) continue;
     const reachOrRange = m[5].trim().replace(/\.$/, '');
     const attack: TextAttack = {
       kind: m[1].toLowerCase(),
       toHit: Number(m[3]),
       average: Number(m[7]),
-      damage: m[8].replace(/\s+/g, ''),
+      damage: (m[8] ?? m[7]).replace(/\s+/g, ''),
       damageType: m[9].toLowerCase(),
       extraDamage: extraDamageIn(sentenceAfter(text, m.index + m[0].length - 1)),
       index: m.index,

@@ -18,6 +18,8 @@ export const LibrarySettings = z.object({
    * (DATA-FORMATS.md §2.10). Applied at import time; user-configured, empty by default.
    */
   edition2024Books: z.array(z.string()).default([]),
+  /** Bundled sources (srd-2024, srd-2014) the user switched off; other sources carry their own flag. */
+  disabledSourceIds: z.array(z.string()).default([]),
   backups: z
     .object({
       enabled: z.boolean().default(true),

@@ -277,6 +277,7 @@ export function CompendiumPage() {
               onBack={back}
               onSwitchEdition={switchEdition}
               onOpenSpell={(key) => void openByKey('spell', key)}
+              sourceNames={Object.fromEntries(sources.map((s) => [s.id, s.name]))}
             />
           ) : (
             <p className="muted">Select a record to see its stat block.</p>

@@ -85,6 +85,15 @@ describe('findAttacksInText', () => {
     expect(attacks[1]?.damageType).toBe('bludgeoning');
   });
 
+  it('accepts flat damage without a dice parenthetical', () => {
+    const a = findAttacksInText(
+      'Melee Weapon Attack: +0 to hit, reach 5 ft., one target. Hit: 1 piercing damage.',
+    );
+    expect(a[0]).toMatchObject({ toHit: 0, average: 1, damage: '1', damageType: 'piercing' });
+    const b = findAttacksInText('Melee Attack Roll: +2, reach 5 ft. Hit: 1 Slashing damage.');
+    expect(b[0]).toMatchObject({ toHit: 2, damage: '1', damageType: 'slashing' });
+  });
+
   it('returns nothing for non-attack text', () => {
     expect(
       findAttacksInText('The creature regains 10 hit points at the start of its turn.'),

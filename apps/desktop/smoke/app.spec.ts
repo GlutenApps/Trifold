@@ -64,8 +64,8 @@ test('console, Library, import, search, stat block and player window all work en
     ).resolves.toBeTruthy();
     await console_.getByRole('button', { name: 'Compendium' }).click();
     await console_.getByRole('button', { name: 'Settings' }).click();
-    await expect(console_.getByTestId('source-row')).toHaveCount(1);
-    await expect(console_.getByTestId('source-row')).toContainText('compendium-sample');
+    const importedRow = console_.getByTestId('source-row').filter({ hasText: 'compendium-sample' });
+    await expect(importedRow).toHaveCount(1);
 
     // A second import of the same file is a no-op by hash.
     const again = await console_.evaluate(
@@ -76,6 +76,9 @@ test('console, Library, import, search, stat block and player window all work en
 
     // Search with FTS and filters, open a stat block, follow a spell link, switch editions.
     await console_.getByRole('button', { name: 'Compendium' }).click();
+    await console_
+      .getByLabel('Source', { exact: true })
+      .selectOption({ label: 'compendium-sample' });
     await expect(console_.getByRole('listbox', { name: 'Results' })).toContainText('6 results');
     await console_.getByLabel('Search').fill('abol');
     await expect(console_.getByRole('option', { name: /Aboleth/ })).toHaveCount(2);
@@ -86,7 +89,8 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(console_.getByRole('group', { name: 'Switch edition' })).toContainText('Legacy');
     await console_
       .getByRole('group', { name: 'Switch edition' })
-      .getByRole('button', { name: 'Legacy' })
+      .getByRole('button', { name: /^Legacy/ })
+      .first()
       .click();
     await expect(console_.getByRole('heading', { name: 'Legendary actions' })).toBeVisible();
 
@@ -99,8 +103,10 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('button', { name: 'Back' }).click();
     await expect(console_.getByRole('heading', { name: 'Mage' })).toBeVisible();
 
-    const timing = await console_.evaluate(() =>
-      window.trifold.compendium.search({ kind: 'monster', text: 'dragon' }),
+    const timing = await console_.evaluate(
+      (id) =>
+        window.trifold.compendium.search({ kind: 'monster', text: 'dragon', sourceIds: [id] }),
+      report.sourceId,
     );
     expect(timing.total).toBe(1);
     expect(timing.tookMs).toBeLessThan(50);

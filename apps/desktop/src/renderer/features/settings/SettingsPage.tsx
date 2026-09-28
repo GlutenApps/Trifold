@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import type { AttributionEntry } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
 import { SourcesCard } from './SourcesCard';
 
@@ -9,6 +11,14 @@ export function SettingsPage() {
   const openLibraryFolder = useAppStore((s) => s.openLibraryFolder);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const refreshDisplays = useAppStore((s) => s.refreshDisplays);
+
+  const [attribution, setAttribution] = useState<AttributionEntry[]>([]);
+  useEffect(() => {
+    void window.trifold.sources
+      .attribution()
+      .then(setAttribution)
+      .catch(() => setAttribution([]));
+  }, [library?.path]);
 
   const settings = library?.settings ?? null;
   const hasLibrary = library?.ok === true;
@@ -99,9 +109,24 @@ export function SettingsPage() {
         </p>
         <p className="muted">
           Trifold is 5e-compatible. It ships only System Reference Document content and
-          game-icons.net icons; their attribution statements appear here once bundled content is
-          fetched (M1). Everything you import stays in your Library and is never transmitted.
+          game-icons.net icons. Everything you import stays in your Library and is never
+          transmitted.
         </p>
+        {attribution.length === 0 ? (
+          <p className="muted">No bundled content in this build.</p>
+        ) : (
+          attribution.map((entry) => (
+            <div key={entry.sourceId} className="attribution" data-testid="attribution">
+              <p>{entry.statement}</p>
+              {entry.licenses.map((l) => (
+                <details key={l.key}>
+                  <summary>{l.name}</summary>
+                  <pre className="source-text">{l.text}</pre>
+                </details>
+              ))}
+            </div>
+          ))
+        )}
       </div>
     </section>
   );

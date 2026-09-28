@@ -27,6 +27,7 @@ export function detectXmlKind(head: string): XmlDocumentKind {
 }
 
 export * from './compendium/index';
+export * from './open5e/index';
 export {
   createRecordStream,
   type RecordStream,

@@ -1,0 +1,1317 @@
+{
+  "creatures": [
+    {
+      "key": "srd-2024_adult-red-dragon",
+      "name": "Adult Red Dragon",
+      "document": {
+        "name": "System Reference Document 5.2",
+        "key": "srd-2024",
+        "type": "SOURCE",
+        "display_name": "5e 2024 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2024",
+          "key": "5e-2024"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "type": {
+        "name": "Dragon",
+        "key": "dragon"
+      },
+      "size": {
+        "name": "Huge",
+        "key": "huge"
+      },
+      "challenge_rating": 17.0,
+      "proficiency_bonus": null,
+      "speed": {
+        "walk": 40,
+        "unit": "feet",
+        "fly": 80,
+        "climb": 40
+      },
+      "speed_all": {
+        "unit": "feet",
+        "walk": 40,
+        "crawl": 20,
+        "hover": false,
+        "fly": 80,
+        "burrow": 0,
+        "climb": 40,
+        "swim": 20
+      },
+      "category": "Monsters",
+      "subcategory": null,
+      "alignment": "chaotic evil",
+      "languages": {
+        "as_string": "Common, Draconic",
+        "data": [
+          {
+            "name": "Common",
+            "key": "common",
+            "desc": "Typical speakers are Humans."
+          },
+          {
+            "name": "Draconic",
+            "key": "draconic",
+            "desc": "Typical speakers include dragons and dragonborn."
+          }
+        ]
+      },
+      "armor_class": 19,
+      "armor_detail": "natural armor",
+      "hit_points": 256,
+      "hit_dice": "19d12 + 133",
+      "experience_points": 18000,
+      "ability_scores": {
+        "strength": 27,
+        "dexterity": 10,
+        "constitution": 25,
+        "intelligence": 16,
+        "wisdom": 13,
+        "charisma": 23
+      },
+      "modifiers": {
+        "strength": 8,
+        "dexterity": 0,
+        "constitution": 7,
+        "intelligence": 3,
+        "wisdom": 1,
+        "charisma": 6
+      },
+      "initiative_bonus": 12,
+      "saving_throws": {
+        "strength": 8,
+        "dexterity": 6,
+        "constitution": 7,
+        "intelligence": 3,
+        "wisdom": 7,
+        "charisma": 6
+      },
+      "saving_throws_all": {
+        "strength": 8,
+        "dexterity": 6,
+        "constitution": 7,
+        "intelligence": 3,
+        "wisdom": 7,
+        "charisma": 6
+      },
+      "skill_bonuses": {
+        "perception": 13,
+        "stealth": 6
+      },
+      "skill_bonuses_all": {
+        "acrobatics": 0,
+        "animal_handling": 1,
+        "arcana": 3,
+        "athletics": 8,
+        "deception": 6,
+        "history": 3,
+        "insight": 1,
+        "intimidation": 6,
+        "investigation": 3,
+        "medicine": 1,
+        "nature": 3,
+        "perception": 13,
+        "performance": 6,
+        "persuasion": 6,
+        "religion": 3,
+        "sleight_of_hand": 0,
+        "stealth": 6,
+        "survival": 1
+      },
+      "passive_perception": 23,
+      "resistances_and_immunities": {
+        "damage_immunities_display": "fire",
+        "damage_immunities": [
+          {
+            "name": "Fire",
+            "key": "fire"
+          }
+        ],
+        "damage_resistances_display": "",
+        "damage_resistances": [],
+        "damage_vulnerabilities_display": "",
+        "damage_vulnerabilities": [],
+        "condition_immunities_display": "",
+        "condition_immunities": []
+      },
+      "normal_sight_range": 10560,
+      "darkvision_range": 120,
+      "blindsight_range": 60,
+      "tremorsense_range": null,
+      "truesight_range": null,
+      "actions": [
+        {
+          "name": "Commanding Presence",
+          "desc": "The dragon uses Spellcasting to cast Command (level 2 version). The dragon can't take this action again until the start of its next turn.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "LEGENDARY_ACTION",
+          "order_in_statblock": 0,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Fiery Rays",
+          "desc": "The dragon uses Spellcasting to cast Scorching Ray. The dragon can't take this action again until the start of its next turn.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "LEGENDARY_ACTION",
+          "order_in_statblock": 1,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Fire Breath",
+          "desc": "Dexterity Saving Throw: DC 21, each creature in a 60-foot Cone. Failure: 59 (17d6) Fire damage. Success: Half damage.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "ACTION",
+          "order_in_statblock": 2,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": {
+            "type": "RECHARGE_ON_ROLL",
+            "param": 5
+          }
+        },
+        {
+          "name": "Multiattack",
+          "desc": "The dragon makes three Rend attacks. It can replace one attack with a use of Spellcasting to cast Scorching Ray.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "ACTION",
+          "order_in_statblock": 0,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Pounce",
+          "desc": "The dragon moves up to half its Speed, and it makes one Rend attack.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "LEGENDARY_ACTION",
+          "order_in_statblock": 2,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Rend",
+          "desc": "Melee Attack Roll: +14, reach 10 ft. 13 (1d10 + 8) Slashing damage plus 5 (2d4) Fire damage.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [
+            {
+              "name": "Rend attack",
+              "attack_type": "WEAPON",
+              "to_hit_mod": 14,
+              "reach": 10,
+              "range": null,
+              "long_range": null,
+              "target_creature_only": false,
+              "damage_die_count": 1,
+              "damage_die_type": "D10",
+              "damage_bonus": 8,
+              "damage_type": {
+                "name": "Slashing",
+                "key": "slashing"
+              },
+              "extra_damage_die_count": 2,
+              "extra_damage_die_type": "D4",
+              "extra_damage_bonus": 0,
+              "extra_damage_type": {
+                "name": "Fire",
+                "key": "fire"
+              },
+              "distance_unit": "feet"
+            }
+          ],
+          "action_type": "ACTION",
+          "order_in_statblock": 1,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Spellcasting",
+          "desc": "The dragon casts one of the following spells, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 20, +12 to hit with spell attacks):\n\n- **At Will:** Command, Detect Magic, Scorching Ray\n- **1/Day Each:** Fireball",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "ACTION",
+          "order_in_statblock": 3,
+          "legendary_action_cost": null,
+          "limited_to_form": null,
+          "usage_limits": null
+        }
+      ],
+      "traits": [
+        {
+          "name": "Legendary Resistance (3/Day, or 4/Day in Lair)",
+          "desc": "If the dragon fails a saving throw, it can choose to succeed instead."
+        }
+      ],
+      "creaturesets": [],
+      "environments": [],
+      "illustration": null
+    },
+    {
+      "key": "srd_adult-red-dragon",
+      "name": "Adult Red Dragon",
+      "document": {
+        "name": "System Reference Document 5.1",
+        "key": "srd-2014",
+        "type": "SOURCE",
+        "display_name": "5e 2014 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2014",
+          "key": "5e-2014"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "type": {
+        "name": "Dragon",
+        "key": "dragon"
+      },
+      "size": {
+        "name": "Huge",
+        "key": "huge"
+      },
+      "challenge_rating": 17.0,
+      "proficiency_bonus": null,
+      "speed": {
+        "walk": 40,
+        "unit": "feet",
+        "fly": 80,
+        "climb": 40
+      },
+      "speed_all": {
+        "unit": "feet",
+        "walk": 40,
+        "crawl": 20,
+        "hover": false,
+        "fly": 80,
+        "burrow": 0,
+        "climb": 40,
+        "swim": 20
+      },
+      "category": "Monsters",
+      "subcategory": "Dragons, Chromatic",
+      "alignment": "chaotic evil",
+      "languages": {
+        "as_string": "Common, Draconic",
+        "data": [
+          {
+            "name": "Common",
+            "key": "common",
+            "desc": "Typical speakers are Humans."
+          },
+          {
+            "name": "Draconic",
+            "key": "draconic",
+            "desc": "Typical speakers include dragons and dragonborn."
+          }
+        ]
+      },
+      "armor_class": 19,
+      "armor_detail": "natural armor",
+      "hit_points": 256,
+      "hit_dice": "19d12+133",
+      "experience_points": 18000,
+      "ability_scores": {
+        "strength": 27,
+        "dexterity": 10,
+        "constitution": 25,
+        "intelligence": 16,
+        "wisdom": 13,
+        "charisma": 21
+      },
+      "modifiers": {
+        "strength": 8,
+        "dexterity": 0,
+        "constitution": 7,
+        "intelligence": 3,
+        "wisdom": 1,
+        "charisma": 5
+      },
+      "initiative_bonus": 0,
+      "saving_throws": {
+        "dexterity": 6,
+        "constitution": 13,
+        "wisdom": 7,
+        "charisma": 11
+      },
+      "saving_throws_all": {
+        "strength": 8,
+        "dexterity": 6,
+        "constitution": 13,
+        "intelligence": 3,
+        "wisdom": 7,
+        "charisma": 11
+      },
+      "skill_bonuses": {
+        "perception": 13,
+        "stealth": 6
+      },
+      "skill_bonuses_all": {
+        "acrobatics": 0,
+        "animal_handling": 1,
+        "arcana": 3,
+        "athletics": 8,
+        "deception": 5,
+        "history": 3,
+        "insight": 1,
+        "intimidation": 5,
+        "investigation": 3,
+        "medicine": 1,
+        "nature": 3,
+        "perception": 13,
+        "performance": 5,
+        "persuasion": 5,
+        "religion": 3,
+        "sleight_of_hand": 0,
+        "stealth": 6,
+        "survival": 1
+      },
+      "passive_perception": 23,
+      "resistances_and_immunities": {
+        "damage_immunities_display": "fire",
+        "damage_immunities": [
+          {
+            "name": "Fire",
+            "key": "fire"
+          }
+        ],
+        "damage_resistances_display": "",
+        "damage_resistances": [],
+        "damage_vulnerabilities_display": "",
+        "damage_vulnerabilities": [],
+        "condition_immunities_display": "",
+        "condition_immunities": []
+      },
+      "normal_sight_range": 10560,
+      "darkvision_range": 120,
+      "blindsight_range": 60,
+      "tremorsense_range": null,
+      "truesight_range": null,
+      "actions": [
+        {
+          "name": "Bite",
+          "desc": "Melee Weapon Attack: +14 to hit, reach 10 ft., one target. Hit: 19 (2d10 + 8) piercing damage plus 7 (2d6) fire damage.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [
+            {
+              "name": "Bite attack",
+              "attack_type": "WEAPON",
+              "to_hit_mod": 14,
+              "reach": 10,
+              "range": null,
+              "long_range": null,
+              "target_creature_only": false,
+              "damage_die_count": 2,
+              "damage_die_type": "D10",
+              "damage_bonus": null,
+              "damage_type": {
+                "name": "Thunder",
+                "key": "thunder"
+              },
+              "extra_damage_die_count": null,
+              "extra_damage_die_type": null,
+              "extra_damage_bonus": null,
+              "extra_damage_type": {
+                "name": "Thunder",
+                "key": "thunder"
+              },
+              "distance_unit": "feet"
+            }
+          ],
+          "action_type": "ACTION",
+          "order_in_statblock": 1,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Claw",
+          "desc": "Melee Weapon Attack: +14 to hit, reach 5 ft., one target. Hit: 15 (2d6 + 8) slashing damage.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [
+            {
+              "name": "Claw attack",
+              "attack_type": "WEAPON",
+              "to_hit_mod": 14,
+              "reach": 5,
+              "range": null,
+              "long_range": null,
+              "target_creature_only": false,
+              "damage_die_count": 2,
+              "damage_die_type": "D6",
+              "damage_bonus": null,
+              "damage_type": {
+                "name": "Thunder",
+                "key": "thunder"
+              },
+              "extra_damage_die_count": null,
+              "extra_damage_die_type": null,
+              "extra_damage_bonus": null,
+              "extra_damage_type": null,
+              "distance_unit": "feet"
+            }
+          ],
+          "action_type": "ACTION",
+          "order_in_statblock": 2,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Detect",
+          "desc": "The dragon makes a Wisdom (Perception) check.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "LEGENDARY_ACTION",
+          "order_in_statblock": 0,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Fire Breath",
+          "desc": "The dragon exhales fire in a 60-foot cone. Each creature in that area must make a DC 21 Dexterity saving throw, taking 63 (18d6) fire damage on a failed save, or half as much damage on a successful one.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "ACTION",
+          "order_in_statblock": 5,
+          "legendary_action_cost": null,
+          "limited_to_form": null,
+          "usage_limits": {
+            "type": "RECHARGE_ON_ROLL",
+            "param": 5
+          }
+        },
+        {
+          "name": "Frightful Presence",
+          "desc": "Each creature of the dragon's choice that is within 120 ft. of the dragon and aware of it must succeed on a DC 19 Wisdom saving throw or become frightened for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. If a creature's saving throw is successful or the effect ends for it, the creature is immune to the dragon's Frightful Presence for the next 24 hours.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "ACTION",
+          "order_in_statblock": 4,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Multiattack",
+          "desc": "The dragon can use its Frightful Presence. It then makes three attacks: one with its bite and two with its claws.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "ACTION",
+          "order_in_statblock": 0,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Tail",
+          "desc": "Melee Weapon Attack: +14 to hit, reach 15 ft., one target. Hit: 17 (2d8 + 8) bludgeoning damage.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [
+            {
+              "name": "Tail attack",
+              "attack_type": "WEAPON",
+              "to_hit_mod": 14,
+              "reach": 15,
+              "range": null,
+              "long_range": null,
+              "target_creature_only": false,
+              "damage_die_count": 2,
+              "damage_die_type": "D8",
+              "damage_bonus": null,
+              "damage_type": {
+                "name": "Thunder",
+                "key": "thunder"
+              },
+              "extra_damage_die_count": null,
+              "extra_damage_die_type": null,
+              "extra_damage_bonus": null,
+              "extra_damage_type": null,
+              "distance_unit": "feet"
+            }
+          ],
+          "action_type": "ACTION",
+          "order_in_statblock": 3,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Tail Attack",
+          "desc": "The dragon makes a tail attack.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "LEGENDARY_ACTION",
+          "order_in_statblock": 1,
+          "legendary_action_cost": 1,
+          "limited_to_form": null,
+          "usage_limits": null
+        },
+        {
+          "name": "Wing Attack",
+          "desc": "The dragon beats its wings. Each creature within 10 ft. of the dragon must succeed on a DC 22 Dexterity saving throw or take 15 (2d6 + 8) bludgeoning damage and be knocked prone. The dragon can then fly up to half its flying speed.",
+          "crossreferences": {
+            "to": []
+          },
+          "attacks": [],
+          "action_type": "LEGENDARY_ACTION",
+          "order_in_statblock": 2,
+          "legendary_action_cost": 2,
+          "limited_to_form": null,
+          "usage_limits": null
+        }
+      ],
+      "traits": [
+        {
+          "name": "Legendary Resistance (3/Day)",
+          "desc": "If the dragon fails a saving throw, it can choose to succeed instead."
+        }
+      ],
+      "creaturesets": [],
+      "environments": [
+        {
+          "name": "Hills",
+          "key": "hills"
+        },
+        {
+          "name": "Mountain",
+          "key": "mountain"
+        }
+      ],
+      "illustration": null
+    }
+  ],
+  "spells": [
+    {
+      "key": "srd-2024_fireball",
+      "document": {
+        "name": "System Reference Document 5.2",
+        "key": "srd-2024",
+        "type": "SOURCE",
+        "display_name": "5e 2024 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2024",
+          "key": "5e-2024"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "casting_options": [
+        {
+          "type": "slot_level_4",
+          "damage_roll": "9d6",
+          "target_count": null,
+          "duration": null,
+          "range": null,
+          "concentration": null,
+          "shape_size": null,
+          "desc": null
+        },
+        {
+          "type": "slot_level_5",
+          "damage_roll": "10d6",
+          "target_count": null,
+          "duration": null,
+          "range": null,
+          "concentration": null,
+          "shape_size": null,
+          "desc": null
+        },
+        {
+          "type": "slot_level_6",
+          "damage_roll": "11d6",
+          "target_count": null,
+          "duration": null,
+          "range": null,
+          "concentration": null,
+          "shape_size": null,
+          "desc": null
+        },
+        {
+          "type": "slot_level_7",
+          "damage_roll": "12d6",
+          "target_count": null,
+          "duration": null,
+          "range": null,
+          "concentration": null,
+          "shape_size": null,
+          "desc": null
+        },
+        {
+          "type": "slot_level_8",
+          "damage_roll": "13d6",
+          "target_count": null,
+          "duration": null,
+          "range": null,
+          "concentration": null,
+          "shape_size": null,
+          "desc": null
+        },
+        {
+          "type": "slot_level_9",
+          "damage_roll": "14d6",
+          "target_count": null,
+          "duration": null,
+          "range": null,
+          "concentration": null,
+          "shape_size": null,
+          "desc": null
+        }
+      ],
+      "school": {
+        "name": "Evocation",
+        "key": "evocation"
+      },
+      "classes": [
+        {
+          "name": "Sorcerer",
+          "key": "srd-2024_sorcerer"
+        },
+        {
+          "name": "Wizard",
+          "key": "srd-2024_wizard"
+        }
+      ],
+      "range_unit": "feet",
+      "shape_size_unit": "feet",
+      "name": "Fireball",
+      "desc": "A bright streak flashes from you to a point you choose within range and then blossoms with a low roar into a fiery explosion. Each creature in a 20-foot-radius Sphere centered on that point makes a Dexterity saving throw, taking 8d6 Fire damage on a failed save or half as much damage on a successful one. Flammable objects in the area that aren't being worn or carried start burning.",
+      "level": 3,
+      "higher_level": "The damage increases by 1d6 for each spell slot level above 3.",
+      "target_type": "creature",
+      "range_text": "150 feet",
+      "range": 150,
+      "ritual": false,
+      "casting_time": "action",
+      "reaction_condition": null,
+      "verbal": true,
+      "somatic": true,
+      "material": true,
+      "material_specified": "a ball of bat guano and sulfur",
+      "material_cost": null,
+      "material_consumed": false,
+      "target_count": 1,
+      "saving_throw_ability": "dexterity",
+      "attack_roll": false,
+      "damage_roll": "8d6",
+      "damage_types": ["fire"],
+      "duration": "instantaneous",
+      "shape_type": "sphere",
+      "shape_size": 20,
+      "concentration": false,
+      "crossreferences": {
+        "to": []
+      }
+    }
+  ],
+  "items": [
+    {
+      "key": "srd-2024_longsword",
+      "name": "Longsword",
+      "desc": "A longsword.",
+      "category": {
+        "name": "Weapon",
+        "key": "weapon"
+      },
+      "weapon": {
+        "name": "Longsword",
+        "key": "srd-2024_longsword",
+        "damage_type": {
+          "name": "Slashing",
+          "key": "slashing"
+        },
+        "damage_dice": "1d8",
+        "properties": [
+          {
+            "property": {
+              "name": "Sap",
+              "type": "Mastery",
+              "desc": "If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn."
+            },
+            "detail": null
+          },
+          {
+            "property": {
+              "name": "Versatile",
+              "type": null,
+              "desc": "A Versatile weapon can be used with one or two hands. A damage value in parentheses appears with the property. The weapon deals that damage when used with two hands to make a melee attack."
+            },
+            "detail": "1d10"
+          }
+        ],
+        "is_simple": false,
+        "is_martial": true,
+        "is_improvised": false,
+        "distance_unit": "feet"
+      },
+      "armor": null,
+      "size": {
+        "name": "Tiny",
+        "key": "tiny"
+      },
+      "weight": "3.000",
+      "weight_unit": "lb",
+      "cost": "15.00",
+      "document": {
+        "name": "System Reference Document 5.2",
+        "key": "srd-2024",
+        "type": "SOURCE",
+        "display_name": "5e 2024 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2024",
+          "key": "5e-2024"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "crossreferences": {
+        "to": []
+      }
+    },
+    {
+      "key": "srd-2024_chain-mail",
+      "name": "Chain Mail",
+      "desc": "A chain mail.",
+      "category": {
+        "name": "Armor",
+        "key": "armor"
+      },
+      "weapon": null,
+      "armor": {
+        "name": "Chain Mail",
+        "key": "srd-2024_chain-mail",
+        "category": "heavy",
+        "ac_base": 16,
+        "ac_display": "16",
+        "ac_add_dexmod": false,
+        "ac_cap_dexmod": null,
+        "grants_stealth_disadvantage": true,
+        "strength_score_required": 13
+      },
+      "size": {
+        "name": "Tiny",
+        "key": "tiny"
+      },
+      "weight": "55.000",
+      "weight_unit": "lb",
+      "cost": "75.00",
+      "document": {
+        "name": "System Reference Document 5.2",
+        "key": "srd-2024",
+        "type": "SOURCE",
+        "display_name": "5e 2024 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2024",
+          "key": "5e-2024"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "crossreferences": {
+        "to": []
+      }
+    },
+    {
+      "key": "srd-2024_potion-of-healing",
+      "name": "Potion of Healing",
+      "desc": "This potion is a magic item. As a Bonus Action, you can drink it or administer it to another creature within 5 feet of yourself. The creature that drinks the magical red fluid in this vial regains 2d4 + 2 Hit Points.",
+      "category": {
+        "name": "Potion",
+        "key": "potion"
+      },
+      "weapon": null,
+      "armor": null,
+      "size": {
+        "name": "Tiny",
+        "key": "tiny"
+      },
+      "weight": "0.500",
+      "weight_unit": "lb",
+      "cost": "50.00",
+      "document": {
+        "name": "System Reference Document 5.2",
+        "key": "srd-2024",
+        "type": "SOURCE",
+        "display_name": "5e 2024 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2024",
+          "key": "5e-2024"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "crossreferences": {
+        "to": []
+      }
+    }
+  ],
+  "feats": [
+    {
+      "key": "srd-2024_ability-score-improvement",
+      "has_prerequisite": true,
+      "benefits": [
+        {
+          "desc": "Increase one ability score of your choice by 2, or increase two ability scores of your choice by 1. This feat can't increase an ability score above 20."
+        },
+        {
+          "desc": "You can take this feat more than once."
+        }
+      ],
+      "document": {
+        "name": "System Reference Document 5.2",
+        "key": "srd-2024",
+        "type": "SOURCE",
+        "display_name": "5e 2024 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2024",
+          "key": "5e-2024"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "name": "Ability Score Improvement",
+      "desc": "",
+      "prerequisite": "Level 4+",
+      "type": "General",
+      "crossreferences": {
+        "to": []
+      }
+    }
+  ],
+  "species": [
+    {
+      "key": "srd-2024_dragonborn",
+      "is_subspecies": false,
+      "document": {
+        "name": "System Reference Document 5.2",
+        "key": "srd-2024",
+        "type": "SOURCE",
+        "display_name": "5e 2024 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2024",
+          "key": "5e-2024"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "traits": [
+        {
+          "name": "Size",
+          "desc": "Medium (about 5–7 feet tall)",
+          "type": "SIZE",
+          "order": 1,
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Speed",
+          "desc": "30 feet",
+          "type": "SPEED",
+          "order": 2,
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Draconic Ancestry",
+          "desc": "Your lineage stems from a dragon progenitor. Choose the kind of dragon from the Draconic Ancestors table. Your choice affects your Breath Weapon and Damage Resistance traits as well as your appearance.\n\nTable: Draconic Ancestors\n\n| Dragon | Damage Type |\n|---|---|\n| Black | Acid |\n| Blue | Lightning |\n| Brass |Fire |\n| Bronze | Lightning |\n| Copper | Acid|\n|Gold|Fire|\n|Green|Poison|\n|Red|Fire|\n|Silver|Cold|\n|White|Cold|",
+          "type": null,
+          "order": 3,
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Breath Weapon",
+          "desc": "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of magical energy in either a 15-foot Cone or a 30-foot Line that is 5 feet wide (choose the shape each time). Each creature in that area must make a Dexterity saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). On a failed save, a creature takes 1d10 damage of the type determined by your Draconic Ancestry trait. On a successful save, a creature takes half as much damage. This damage increases by 1d10 when you reach character levels 5 (2d10), 11 (3d10), and 17 (4d10).\n\nYou can use this Breath Weapon a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+          "type": null,
+          "order": 4,
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Damage Resistance",
+          "desc": "You have Resistance to the damage type determined by your Draconic Ancestry trait.",
+          "type": null,
+          "order": 5,
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Darkvision",
+          "desc": "You have Darkvision with a range of 60 feet",
+          "type": null,
+          "order": 6,
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Draconic Flight",
+          "desc": "When you reach character level 5, you can channel draconic magic to give yourself temporary flight. As a Bonus Action, you sprout spectral wings on your back that last for 10 minutes or until you retract the wings (no action required) or have the Incapacitated condition. During that time, you have a Fly Speed equal to your Speed. Your wings appear to be made of the same energy as your Breath Weapon. Once you use this trait, you can't use it again until you finish a Long Rest.",
+          "type": null,
+          "order": 7,
+          "crossreferences": {
+            "to": []
+          }
+        }
+      ],
+      "name": "Dragonborn",
+      "desc": "",
+      "subspecies_of": null,
+      "crossreferences": {
+        "to": []
+      }
+    }
+  ],
+  "backgrounds": [
+    {
+      "key": "srd-2024_acolyte",
+      "benefits": [
+        {
+          "name": "Ability Scores",
+          "desc": "Intelligence, Wisdom, Charisma",
+          "type": "ability_score",
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Equipment",
+          "desc": "*Choose A or B:* (A) Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP",
+          "type": "equipment",
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Feat",
+          "desc": "Magic Initiate (Cleric)",
+          "type": "feat",
+          "crossreferences": {
+            "to": [
+              {
+                "anchor": "Magic Initiate",
+                "url": "https://api.open5e.com/v2/feats/srd-2024_magic-initiate/"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Skill Proficiencies",
+          "desc": "Insight and Religion",
+          "type": "skill_proficiency",
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Tool Proficiency",
+          "desc": "Calligrapher's Supplies",
+          "type": "tool_proficiency",
+          "crossreferences": {
+            "to": []
+          }
+        }
+      ],
+      "document": {
+        "name": "System Reference Document 5.2",
+        "key": "srd-2024",
+        "type": "SOURCE",
+        "display_name": "5e 2024 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2024",
+          "key": "5e-2024"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "name": "Acolyte",
+      "desc": "",
+      "crossreferences": {
+        "to": []
+      }
+    }
+  ],
+  "classes": [
+    {
+      "key": "srd-2024_wizard",
+      "features": [
+        {
+          "key": "srd-2024_wizard_ability-score-improvement",
+          "name": "Ability Score Improvement",
+          "desc": "You gain the Ability Score Improvement feat (see \"Feats\") or another feat of your choice for which you qualify. You gain this feature again at Wizard levels 8, 12, and 16.",
+          "crossreferences": {
+            "to": []
+          },
+          "feature_type": "CLASS_LEVEL_FEATURE",
+          "gained_at": [
+            {
+              "level": 12,
+              "detail": null
+            },
+            {
+              "level": 16,
+              "detail": null
+            },
+            {
+              "level": 4,
+              "detail": null
+            },
+            {
+              "level": 8,
+              "detail": null
+            }
+          ],
+          "data_for_class_table": []
+        },
+        {
+          "key": "srd-2024_wizard_arcane-recovery",
+          "name": "Arcane Recovery",
+          "desc": "You can regain some of your magical energy by studying your spellbook. When you finish a Short Rest, you can choose expended spell slots to recover. The spell slots can have a combined level equal to no more than half your Wizard level (round up), and none of the slots can be level 6 or higher. For example, if you're a level 4 Wizard, you can recover up to two levels' worth of spell slots, regaining either one level 2 spell slot or two level 1 spell slots.\n\nOnce you use this feature, you can't do so again until you finish a Long Rest.",
+          "crossreferences": {
+            "to": []
+          },
+          "feature_type": "CLASS_LEVEL_FEATURE",
+          "gained_at": [
+            {
+              "level": 1,
+              "detail": null
+            }
+          ],
+          "data_for_class_table": []
+        },
+        {
+          "key": "srd-2024_wizard_cantrips",
+          "name": "Cantrips",
+          "desc": "[Column data]",
+          "crossreferences": {
+            "to": []
+          },
+          "feature_type": "CLASS_TABLE_DATA",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 1,
+              "column_value": "3"
+            },
+            {
+              "level": 10,
+              "column_value": "5"
+            },
+            {
+              "level": 11,
+              "column_value": "5"
+            },
+            {
+              "level": 12,
+              "column_value": "5"
+            },
+            {
+              "level": 13,
+              "column_value": "5"
+            },
+            {
+              "level": 14,
+              "column_value": "5"
+            },
+            {
+              "level": 15,
+              "column_value": "5"
+            },
+            {
+              "level": 16,
+              "column_value": "5"
+            },
+            {
+              "level": 17,
+              "column_value": "5"
+            },
+            {
+              "level": 18,
+              "column_value": "5"
+            },
+            {
+              "level": 19,
+              "column_value": "5"
+            },
+            {
+              "level": 2,
+              "column_value": "3"
+            },
+            {
+              "level": 20,
+              "column_value": "5"
+            },
+            {
+              "level": 3,
+              "column_value": "3"
+            },
+            {
+              "level": 4,
+              "column_value": "4"
+            },
+            {
+              "level": 5,
+              "column_value": "4"
+            },
+            {
+              "level": 6,
+              "column_value": "4"
+            },
+            {
+              "level": 7,
+              "column_value": "4"
+            },
+            {
+              "level": 8,
+              "column_value": "4"
+            },
+            {
+              "level": 9,
+              "column_value": "4"
+            }
+          ]
+        },
+        {
+          "key": "srd-2024_wizard_core-traits",
+          "name": "Core Wizard Traits",
+          "desc": "|||\n|---|---|\n|Primary Ability|Intelligence|\n|Hit Point Die|D6 per Wizard level|\n|Saving Throw Proficiencies|Intelligence and Wisdom|\n|Skill Proficiencies|Choose 2: Arcana, History, In sight, Investigation, Medicine, Nature, or Religion|\n|Weapon Proficiencies|Simple weapons|\n|Armor Training|None|\n|Starting Equipment|Choose A or B: (A) 2 Daggers, Arcane Focus (Quarterstaff), Robe, Spellbook, Scholar's Pack, and 5 GP; or (B) 55 GP|",
+          "crossreferences": {
+            "to": []
+          },
+          "feature_type": "CORE_TRAITS_TABLE",
+          "gained_at": [],
+          "data_for_class_table": []
+        },
+        {
+          "key": "srd-2024_wizard_memorize-spell",
+          "name": "Memorize Spell",
+          "desc": "Whenever you finish a Short Rest, you can study your spellbook and replace one of the level 1+ Wizard spells you have prepared for your Spellcasting feature with another level 1+ spell from the book.",
+          "crossreferences": {
+            "to": []
+          },
+          "feature_type": "CLASS_LEVEL_FEATURE",
+          "gained_at": [
+            {
+              "level": 5,
+              "detail": null
+            }
+          ],
+          "data_for_class_table": []
+        }
+      ],
+      "hit_points": {
+        "hit_dice": "D6",
+        "hit_dice_name": "1D6 per Wizard level",
+        "hit_points_at_1st_level": "6 + your Constitution modifier",
+        "hit_points_at_higher_levels": "1D6 (or 4) + your Constitution modifier per wizard level after 1st"
+      },
+      "document": {
+        "name": "System Reference Document 5.2",
+        "key": "srd-2024",
+        "type": "SOURCE",
+        "display_name": "5e 2024 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2024",
+          "key": "5e-2024"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "saving_throws": [
+        {
+          "name": "Intelligence"
+        },
+        {
+          "name": "Wisdom"
+        }
+      ],
+      "subclass_of": null,
+      "name": "Wizard",
+      "desc": "",
+      "hit_dice": "D6",
+      "caster_type": "FULL",
+      "primary_abilities": [],
+      "crossreferences": {
+        "to": []
+      }
+    }
+  ]
+}

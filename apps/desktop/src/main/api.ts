@@ -105,9 +105,13 @@ export function createApi(ctx: ApiContext): TrifoldApi {
 
     sources: {
       async list() {
-        const sources = ctx.session.sources;
-        if (!sources) return [];
-        return (await sources.list()).map((s) => ({ ...s, stale: isStale(s) }));
+        const catalog = ctx.session.catalog;
+        if (!catalog) return [];
+        return (await catalog.list()).map((s) => ({
+          ...s,
+          stale: s.kind !== 'srd' && isStale(s),
+          bundled: s.kind === 'srd',
+        }));
       },
       async chooseFile() {
         const result = await dialog.showOpenDialog({
@@ -159,7 +163,19 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         }
       },
       async setEnabled(sourceId, enabled) {
-        const { sources, index } = ctx.session.require();
+        const { store, sources, bundled, index } = ctx.session.require();
+        if (bundled.has(sourceId)) {
+          const disabled = store.getSettings().disabledSourceIds.filter((id) => id !== sourceId);
+          await store.updateSettings({
+            disabledSourceIds: enabled ? disabled : [...disabled, sourceId],
+          });
+          index.setSourceEnabled(sourceId, enabled);
+          const updated = bundled
+            .sources(store.getSettings().disabledSourceIds)
+            .find((s) => s.id === sourceId);
+          if (!updated) throw new Error(`Bundled source ${sourceId} not found`);
+          return updated;
+        }
         const source = await sources.get(sourceId);
         if (!source) throw new Error(`Source ${sourceId} not found`);
         const next = { ...source, enabled };
@@ -168,14 +184,19 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         return next;
       },
       async remove(sourceId) {
-        const { sources, index } = ctx.session.require();
+        const { sources, bundled, index } = ctx.session.require();
+        if (bundled.has(sourceId))
+          throw new Error('Bundled SRD content can be switched off but not removed');
         await sources.remove(sourceId);
         index.removeSource(sourceId);
         ctx.logger.info(`source ${sourceId} removed`);
       },
       async rebuildIndex() {
-        const { store, sources, index } = ctx.session.require();
-        return syncIndex(index, sources, store, ctx.logger, true);
+        const { store, catalog, index } = ctx.session.require();
+        return syncIndex(index, catalog, store, ctx.logger, true);
+      },
+      async attribution() {
+        return ctx.session.bundled.attribution();
       },
     },
 

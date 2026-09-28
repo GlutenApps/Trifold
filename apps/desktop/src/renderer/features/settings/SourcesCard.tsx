@@ -28,7 +28,11 @@ function SourceRow({ source }: { source: SourceSummary }) {
           />
           <strong>{source.name}</strong>
         </label>
-        <span className="badge">{source.kind}</span>
+        {source.bundled ? (
+          <span className="badge">bundled SRD</span>
+        ) : (
+          <span className="badge">{source.kind}</span>
+        )}
         {source.license.nonSrd && <span className="badge">user content</span>}
         {source.stale && <span className="badge warn">parser updated</span>}
         <span className="muted">{counts(source)}</span>
@@ -48,7 +52,12 @@ function SourceRow({ source }: { source: SourceSummary }) {
             {source.warnings.length} warning{source.warnings.length === 1 ? '' : 's'}
           </button>
         )}
-        {confirmRemove ? (
+        {!source.bundled && !confirmRemove && (
+          <button type="button" className="btn" onClick={() => setConfirmRemove(true)}>
+            Remove…
+          </button>
+        )}
+        {!source.bundled && confirmRemove && (
           <>
             <button type="button" className="btn" onClick={() => void remove(source.id)}>
               Remove for good
@@ -57,15 +66,11 @@ function SourceRow({ source }: { source: SourceSummary }) {
               Keep
             </button>
           </>
-        ) : (
-          <button type="button" className="btn" onClick={() => setConfirmRemove(true)}>
-            Remove…
-          </button>
         )}
       </div>
       <p className="muted small">
-        Imported {new Date(source.importedAt).toLocaleString()} · default edition{' '}
-        {source.defaultEdition}
+        {source.bundled ? 'Snapshot taken' : 'Imported'}{' '}
+        {new Date(source.importedAt).toLocaleString()} · default edition {source.defaultEdition}
       </p>
       {showWarnings && <pre className="source-text warnings">{source.warnings.join('\n')}</pre>}
     </div>
@@ -86,7 +91,8 @@ export function SourcesCard() {
   const library = useAppStore((s) => s.library);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const books = library?.settings?.edition2024Books ?? [];
-  const [booksText, setBooksText] = useState(books.join('\n'));
+  const booksKey = books.join('\n');
+  const [booksText, setBooksText] = useState(booksKey);
 
   useEffect(() => {
     void load();
@@ -94,10 +100,8 @@ export function SourcesCard() {
   }, [load, setProgress]);
 
   useEffect(() => {
-    setBooksText(books.join('\n'));
-    // Only resync the textarea when the saved list changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [books.join('\n')]);
+    setBooksText(booksKey);
+  }, [booksKey]);
 
   const percent =
     progress &&
@@ -106,12 +110,28 @@ export function SourcesCard() {
       ? Math.round((progress.bytesRead / progress.totalBytes) * 100)
       : null;
 
+  const reportLine = (() => {
+    if (!lastReport) return null;
+    if (lastReport.status === 'unchanged')
+      return `${lastReport.name} is already imported and unchanged.`;
+    const verb = lastReport.status === 'updated' ? 'Updated' : 'Imported';
+    const counted = Object.entries(lastReport.counts)
+      .map(([k, n]) => `${n} ${k}`)
+      .join(', ');
+    const diff = lastReport.diff
+      ? ` (${lastReport.diff.added} added, ${lastReport.diff.changed} changed, ${lastReport.diff.removed} removed)`
+      : '';
+    const warned =
+      lastReport.warnings.length > 0 ? ` · ${lastReport.warnings.length} warnings` : '';
+    return `${verb} ${lastReport.name}: ${counted} in ${(lastReport.durationMs / 1000).toFixed(1)} s${diff}${warned}`;
+  })();
+
   return (
     <div className="card">
       <h2>Sources</h2>
       <p className="muted">
-        Compendium XML files you import stay in this Library and are never sent anywhere. Bundled
-        SRD content arrives with the content fetch step (M1).
+        Bundled SRD content ships with the app. Compendium XML files you import stay in this Library
+        and are never sent anywhere.
       </p>
       {error && (
         <div className="banner error" role="alert">
@@ -146,19 +166,9 @@ export function SourcesCard() {
           </span>
         )}
       </div>
-      {lastReport && (
+      {reportLine && (
         <p className="muted" data-testid="import-report">
-          {lastReport.status === 'unchanged'
-            ? `${lastReport.name} is already imported and unchanged.`
-            : `${lastReport.status === 'updated' ? 'Updated' : 'Imported'} ${lastReport.name}: ${Object.entries(
-                lastReport.counts,
-              )
-                .map(([k, n]) => `${n} ${k}`)
-                .join(', ')} in ${(lastReport.durationMs / 1000).toFixed(1)} s` +
-              (lastReport.diff
-                ? ` (${lastReport.diff.added} added, ${lastReport.diff.changed} changed, ${lastReport.diff.removed} removed)`
-                : '') +
-              (lastReport.warnings.length > 0 ? ` · ${lastReport.warnings.length} warnings` : '')}
+          {reportLine}
         </p>
       )}
       {sources.length === 0 ? (

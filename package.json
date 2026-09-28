@@ -17,13 +17,17 @@
     "format": "prettier --write .",
     "fetch:content": "tsx scripts/fetch-content.ts",
     "rebuild:native": "node scripts/rebuild-native.mjs",
-    "smoke": "pnpm --filter @trifold/desktop smoke"
+    "smoke": "pnpm --filter @trifold/desktop smoke",
+    "fetch:open5e": "tsx scripts/fetch-open5e.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
+    "@trifold/importers": "workspace:*",
+    "@trifold/rules": "workspace:*",
+    "@trifold/schema": "workspace:*",
     "@types/node": "24.19.0",
     "@vitejs/plugin-react": "5.2.0",
     "eslint": "9.39.5",

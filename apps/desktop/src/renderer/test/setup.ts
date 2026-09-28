@@ -74,6 +74,7 @@ export function installBridgeMock(): TrifoldBridge {
       }),
       remove: vi.fn(async () => undefined),
       rebuildIndex: vi.fn(async () => ({ records: 0, sources: 0, version: 1, tookMs: 0 })),
+      attribution: vi.fn(async () => []),
     },
     compendium: {
       search: vi.fn(async () => ({ rows: [], total: 0, tookMs: 0 })),
