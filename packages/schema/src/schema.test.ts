@@ -12,6 +12,7 @@ describe('LibrarySettings', () => {
       theme: 'dark',
       playerDisplayId: null,
       checkForUpdates: false,
+      edition2024Books: [],
       backups: { enabled: true, keepDays: 14 },
     });
   });

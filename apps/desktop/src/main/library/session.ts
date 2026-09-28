@@ -1,12 +1,15 @@
 import { join } from 'node:path';
 import type { LibraryInfo } from '@trifold/api';
 import { INDEX_VERSION, IndexDb } from '../index/IndexDb';
+import { syncIndex } from '../index/sync';
 import { errorMessage, type Logger } from '../log';
+import { SourceRepository } from '../sources/repository';
 import { LibraryStore } from './LibraryStore';
 
 /** The one open Library (DESIGN.md §4.2: several Libraries are supported, one open at a time). */
 export class LibrarySession {
   store: LibraryStore | null = null;
+  sources: SourceRepository | null = null;
   index: IndexDb | null = null;
   private path = '';
   private error: string | null = null;
@@ -24,18 +27,24 @@ export class LibrarySession {
     this.path = path;
     try {
       this.store = await LibraryStore.open(path);
+      this.sources = new SourceRepository(this.store, this.logger);
       this.error = null;
       this.logger.info(`Library opened: ${this.store.root}`);
     } catch (err) {
       this.store = null;
+      this.sources = null;
       this.error = errorMessage(err);
       this.logger.error(`Library failed to open at ${path}: ${this.error}`);
     }
 
-    if (this.store) {
+    if (this.store && this.sources) {
       try {
         this.index = IndexDb.open(join(this.store.root, 'index.sqlite'));
         this.indexError = null;
+        const stats = await syncIndex(this.index, this.sources, this.store, this.logger);
+        this.logger.info(
+          `index ready: ${stats.records} records from ${stats.sources} sources (${stats.tookMs} ms)`,
+        );
       } catch (err) {
         this.index = null;
         this.indexError = errorMessage(err);
@@ -43,6 +52,14 @@ export class LibrarySession {
       }
     }
     return this.info();
+  }
+
+  /** The open store, sources and index, or a clear error for API callers. */
+  require(): { store: LibraryStore; sources: SourceRepository; index: IndexDb } {
+    if (!this.store || !this.sources) throw new Error('No Library is open');
+    if (!this.index)
+      throw new Error(`The search index is unavailable: ${this.indexError ?? 'unknown'}`);
+    return { store: this.store, sources: this.sources, index: this.index };
   }
 
   info(): LibraryInfo {
@@ -58,6 +75,7 @@ export class LibrarySession {
   close(): void {
     this.index?.close();
     this.index = null;
+    this.sources = null;
     this.store = null;
   }
 }

@@ -1,4 +1,5 @@
 import { useAppStore } from '../../stores/appStore';
+import { SourcesCard } from './SourcesCard';
 
 export function SettingsPage() {
   const info = useAppStore((s) => s.info);
@@ -39,6 +40,8 @@ export function SettingsPage() {
           </button>
         </div>
       </div>
+
+      <SourcesCard />
 
       <div className="card">
         <h2>Displays</h2>

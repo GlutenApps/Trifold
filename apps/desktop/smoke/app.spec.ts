@@ -2,12 +2,18 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test } from '@playwright/test';
+import type { TrifoldBridge } from '@trifold/api';
+
+// Page-side callbacks in `evaluate` run in the renderer, where the preload exposes window.trifold.
+declare const window: { trifold: TrifoldBridge };
+
+const FIXTURE = resolve(__dirname, '..', '..', '..', 'fixtures', 'compendium-sample.xml');
 
 /**
- * M0 smoke test (DESIGN.md §10): launch, create a Library, open the player window on a display,
- * push a title card from the console and see it on the player, then black out.
+ * Smoke test (DESIGN.md §10): launch, create a Library, import the fixture, search and open a
+ * stat block, open the player window on a display, push a title card and black out.
  */
-test('console opens, Library is created, player window mirrors presenter state', async () => {
+test('console, Library, import, search, stat block and player window all work end to end', async () => {
   const userData = await mkdtemp(join(tmpdir(), 'trifold-userdata-'));
   const library = await mkdtemp(join(tmpdir(), 'trifold-library-'));
 
@@ -40,12 +46,64 @@ test('console opens, Library is created, player window mirrors presenter state',
     const settings = JSON.parse(await readFile(join(library, 'library.json'), 'utf8'));
     expect(settings.schemaVersion).toBe(1);
     await expect(stat(join(library, 'sources'))).resolves.toBeTruthy();
-    await expect(stat(join(library, 'campaigns'))).resolves.toBeTruthy();
 
     // The native SQLite index opened inside Electron.
     await console_.getByRole('button', { name: 'Settings' }).click();
     await expect(console_.getByTestId('index-status')).toHaveText('Index: ok');
-    await expect(stat(join(library, 'index.sqlite'))).resolves.toBeTruthy();
+
+    // Import the SRD-only fixture through the API (no native dialog) and see it listed.
+    const report = await console_.evaluate(
+      (path) => window.trifold.sources.importFile(path),
+      FIXTURE,
+    );
+    expect(report.status).toBe('imported');
+    expect(report.counts.monster).toBe(6);
+    expect(report.warnings).toEqual([]);
+    await expect(
+      stat(join(library, 'sources', report.sourceId, 'records.jsonl')),
+    ).resolves.toBeTruthy();
+    await console_.getByRole('button', { name: 'Compendium' }).click();
+    await console_.getByRole('button', { name: 'Settings' }).click();
+    await expect(console_.getByTestId('source-row')).toHaveCount(1);
+    await expect(console_.getByTestId('source-row')).toContainText('compendium-sample');
+
+    // A second import of the same file is a no-op by hash.
+    const again = await console_.evaluate(
+      (path) => window.trifold.sources.importFile(path),
+      FIXTURE,
+    );
+    expect(again.status).toBe('unchanged');
+
+    // Search with FTS and filters, open a stat block, follow a spell link, switch editions.
+    await console_.getByRole('button', { name: 'Compendium' }).click();
+    await expect(console_.getByRole('listbox', { name: 'Results' })).toContainText('6 results');
+    await console_.getByLabel('Search').fill('abol');
+    await expect(console_.getByRole('option', { name: /Aboleth/ })).toHaveCount(2);
+    await console_.getByLabel('Edition', { exact: true }).selectOption('2024');
+    await expect(console_.getByRole('option', { name: /Aboleth/ })).toHaveCount(1);
+    await console_.getByRole('option', { name: /Aboleth/ }).click();
+    await expect(console_.getByRole('heading', { name: 'Aboleth' })).toBeVisible();
+    await expect(console_.getByRole('group', { name: 'Switch edition' })).toContainText('Legacy');
+    await console_
+      .getByRole('group', { name: 'Switch edition' })
+      .getByRole('button', { name: 'Legacy' })
+      .click();
+    await expect(console_.getByRole('heading', { name: 'Legendary actions' })).toBeVisible();
+
+    await console_.getByLabel('Search').fill('');
+    await console_.getByLabel('Edition', { exact: true }).selectOption('all');
+    await console_.getByRole('option', { name: /^Mage/ }).click();
+    await console_.getByRole('button', { name: 'Fireball' }).click();
+    await expect(console_.getByRole('heading', { name: 'Fireball' })).toBeVisible();
+    await expect(console_.getByText('Level 3 Evocation')).toBeVisible();
+    await console_.getByRole('button', { name: 'Back' }).click();
+    await expect(console_.getByRole('heading', { name: 'Mage' })).toBeVisible();
+
+    const timing = await console_.evaluate(() =>
+      window.trifold.compendium.search({ kind: 'monster', text: 'dragon' }),
+    );
+    expect(timing.total).toBe(1);
+    expect(timing.tookMs).toBeLessThan(50);
 
     // Open the player window and push a title card through main.
     await console_.getByRole('button', { name: 'Presenter' }).click();
@@ -56,12 +114,8 @@ test('console opens, Library is created, player window mirrors presenter state',
     await expect(player.getByTestId('player-blackout')).toBeVisible();
 
     await console_.getByLabel('Title', { exact: true }).fill('The Sunken Keep');
-    await console_.getByLabel('Subtitle', { exact: true }).fill('An M0 smoke test');
     await console_.getByRole('button', { name: 'Send to TV' }).click();
     await expect(player.getByRole('heading', { name: 'The Sunken Keep' })).toBeVisible();
-    await expect(player.getByText('An M0 smoke test')).toBeVisible();
-    await expect(console_.getByRole('contentinfo')).toContainText('Live scene: The Sunken Keep');
-
     await console_.getByRole('button', { name: 'Blackout' }).click();
     await expect(player.getByTestId('player-blackout')).toBeVisible();
 

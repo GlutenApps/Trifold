@@ -50,6 +50,29 @@ export function installBridgeMock(): TrifoldBridge {
       push: vi.fn(async () => undefined),
       get: vi.fn(async () => initialPresenterState),
     },
+    sources: {
+      list: vi.fn(async () => []),
+      chooseFile: vi.fn(async () => null),
+      importFile: vi.fn(async (path: string) => ({
+        sourceId: 'src',
+        name: path,
+        status: 'imported' as const,
+        counts: {},
+        warnings: [],
+        durationMs: 0,
+      })),
+      setEnabled: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
+      remove: vi.fn(async () => undefined),
+      rebuildIndex: vi.fn(async () => ({ records: 0, sources: 0, version: 1, tookMs: 0 })),
+    },
+    compendium: {
+      search: vi.fn(async () => ({ rows: [], total: 0, tookMs: 0 })),
+      get: vi.fn(async () => null),
+      findByKey: vi.fn(async () => []),
+      facets: vi.fn(async () => ({ types: [], sizes: [], environments: [] })),
+    },
     on: vi.fn(() => () => undefined),
   };
   Object.assign(window, { trifold: bridge });

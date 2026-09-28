@@ -1,0 +1,254 @@
+/* Compendium page: tabs, filter bar, split list + inspector, stat block. */
+.compendium {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tabs .btn[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.filters input[type='text'] {
+  min-width: 260px;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(320px, 2fr) minmax(360px, 3fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.list {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  padding: 4px;
+}
+
+.list-status {
+  padding: 6px 8px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.list-row {
+  all: unset;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.list-row:hover {
+  background: var(--bg-hover);
+}
+
+.list-row[aria-selected='true'] {
+  background: var(--bg-active);
+}
+
+.list-name {
+  font-weight: 500;
+}
+
+.list-meta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.inspector {
+  overflow: auto;
+  min-height: 0;
+}
+
+.detail-bar {
+  margin-bottom: 8px;
+}
+
+.seg {
+  display: inline-flex;
+}
+
+.seg .btn {
+  border-radius: 0;
+}
+
+.seg .btn:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.seg .btn:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.badge.source {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge.roll {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.badge.save {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.statblock {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  max-width: 820px;
+}
+
+.statblock h2 {
+  font-size: 22px;
+  color: var(--accent);
+  margin: 0 0 2px;
+  letter-spacing: normal;
+}
+
+.statblock h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  margin: 16px 0 8px;
+  padding-bottom: 4px;
+}
+
+.statblock p {
+  margin: 4px 0;
+}
+
+.sb-core,
+.sb-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 10px 0;
+}
+
+.sb-details .dl-row {
+  display: contents;
+}
+
+.sb-core dt,
+.sb-details dt {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.sb-core dd,
+.sb-details dd {
+  margin: 0;
+}
+
+.sb-abilities {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.sb-abilities th,
+.sb-abilities td {
+  padding: 2px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.sb-abilities th:first-child {
+  text-align: left;
+  color: var(--text-muted);
+}
+
+.sb-feature {
+  margin: 8px 0;
+}
+
+.sb-feature-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.sb-uses {
+  color: var(--text-muted);
+}
+
+button.link {
+  all: unset;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.source-text {
+  white-space: pre-wrap;
+  font:
+    12px/1.5 ui-monospace,
+    Consolas,
+    monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.source-row {
+  border-top: 1px solid var(--border);
+  padding: 8px 0;
+}
+
+.small {
+  font-size: 12px;
+}
+
+.mt {
+  margin-top: 20px;
+}
+
+textarea {
+  width: 100%;
+  max-width: 720px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font: inherit;
+}

@@ -13,6 +13,11 @@ export const LibrarySettings = z.object({
   playerDisplayId: z.number().int().nullable().default(null),
   /** The only network feature, off by default (CLAUDE.md ground rule 1). */
   checkForUpdates: z.boolean().default(false),
+  /**
+   * Source book names whose records count as 2024 rules even without a `[5.5e]` suffix
+   * (DATA-FORMATS.md §2.10). Applied at import time; user-configured, empty by default.
+   */
+  edition2024Books: z.array(z.string()).default([]),
   backups: z
     .object({
       enabled: z.boolean().default(true),

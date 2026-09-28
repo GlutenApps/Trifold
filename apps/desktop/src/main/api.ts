@@ -1,9 +1,11 @@
 import { app, dialog, shell } from 'electron';
-import type { TrifoldApi } from '@trifold/api';
+import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
+import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 import type { PresenterHub } from './presenter';
+import { importXmlSource } from './sources/importXml';
 import { WindowManager } from './windows';
 
 export interface ApiContext {
@@ -23,6 +25,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     if (!store) throw new Error('No Library is open');
     return store;
   };
+  let importing = false;
 
   return {
     app: {
@@ -97,6 +100,77 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       },
       async get() {
         return ctx.presenter.get();
+      },
+    },
+
+    sources: {
+      async list() {
+        const sources = ctx.session.sources;
+        return sources ? sources.list() : [];
+      },
+      async chooseFile() {
+        const result = await dialog.showOpenDialog({
+          title: 'Import a compendium XML file',
+          properties: ['openFile'],
+          filters: [
+            { name: 'Compendium XML', extensions: ['xml'] },
+            { name: 'All files', extensions: ['*'] },
+          ],
+        });
+        return result.canceled ? null : (result.filePaths[0] ?? null);
+      },
+      async importFile(path) {
+        if (importing) throw new Error('An import is already running');
+        const { store, sources, index } = ctx.session.require();
+        importing = true;
+        try {
+          return await importXmlSource(
+            {
+              store,
+              sources,
+              index,
+              logger: ctx.logger,
+              onProgress: (p) => ctx.windows.sendToConsole(EVENT_CHANNELS.importProgress, p),
+            },
+            path,
+          );
+        } finally {
+          importing = false;
+        }
+      },
+      async setEnabled(sourceId, enabled) {
+        const { sources, index } = ctx.session.require();
+        const source = await sources.get(sourceId);
+        if (!source) throw new Error(`Source ${sourceId} not found`);
+        const next = { ...source, enabled };
+        await sources.write(next);
+        index.setSourceEnabled(sourceId, enabled);
+        return next;
+      },
+      async remove(sourceId) {
+        const { sources, index } = ctx.session.require();
+        await sources.remove(sourceId);
+        index.removeSource(sourceId);
+        ctx.logger.info(`source ${sourceId} removed`);
+      },
+      async rebuildIndex() {
+        const { store, sources, index } = ctx.session.require();
+        return syncIndex(index, sources, store, ctx.logger, true);
+      },
+    },
+
+    compendium: {
+      async search(query) {
+        return ctx.session.require().index.search(query);
+      },
+      async get(recordId) {
+        return ctx.session.require().index.get(recordId);
+      },
+      async findByKey(kind, key) {
+        return ctx.session.require().index.findByKey(kind, key);
+      },
+      async facets(kind) {
+        return ctx.session.require().index.facets(kind);
       },
     },
   };

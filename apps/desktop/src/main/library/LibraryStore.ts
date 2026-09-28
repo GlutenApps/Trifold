@@ -8,7 +8,7 @@ import {
   migrate,
   type FileKind,
 } from '@trifold/schema';
-import { writeJsonAtomic } from './atomicWrite';
+import { writeFileAtomic, writeJsonAtomic } from './atomicWrite';
 
 /** Folders created inside every Library (DESIGN.md §4.2). */
 export const LIBRARY_LAYOUT = [
@@ -35,7 +35,7 @@ async function exists(path: string): Promise<boolean> {
 
 /**
  * The only writer to a Library folder (CLAUDE.md ground rule 2). Lives in the main process.
- * Every write goes through `writeJsonAtomic`; every read goes through the schema and migrations.
+ * Every write goes through the atomic writer; every read goes through the schema and migrations.
  */
 export class LibraryStore {
   private constructor(
@@ -96,5 +96,9 @@ export class LibraryStore {
 
   async writeJson(relative: string, value: unknown): Promise<void> {
     await writeJsonAtomic(this.resolvePath(relative), value);
+  }
+
+  async writeText(relative: string, text: string): Promise<void> {
+    await writeFileAtomic(this.resolvePath(relative), text);
   }
 }

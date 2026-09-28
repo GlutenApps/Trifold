@@ -3,6 +3,7 @@ import { installHotkeys, registerHotkey } from '../../hotkeys';
 import { useAppStore } from '../../stores/appStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { SECTIONS, useUiStore, type SectionId } from '../../stores/uiStore';
+import { CompendiumPage } from '../compendium/CompendiumPage';
 import { PresenterPage } from '../presenter/PresenterPage';
 import { SettingsPage } from '../settings/SettingsPage';
 import { Placeholder } from './Placeholder';
@@ -14,12 +15,7 @@ function Page({ section }: { section: SectionId }) {
         <Placeholder title="Campaign" text="Adventures, notes, NPCs and PC cards arrive in M1." />
       );
     case 'compendium':
-      return (
-        <Placeholder
-          title="Compendium"
-          text="Bundled SRD content, XML import, browse and search arrive in M1."
-        />
-      );
+      return <CompendiumPage />;
     case 'encounters':
       return (
         <Placeholder
@@ -84,6 +80,17 @@ export function ConsoleShell() {
         },
       }),
       registerHotkey({
+        id: 'nav.compendium',
+        combo: 'Ctrl+K',
+        description: 'Jump to the compendium search',
+        run: () => {
+          useUiStore.getState().setSection('compendium');
+          window.setTimeout(() => {
+            document.querySelector<HTMLInputElement>('.compendium input[type="text"]')?.focus();
+          }, 0);
+        },
+      }),
+      registerHotkey({
         id: 'nav.settings',
         combo: 'Ctrl+,',
         description: 'Open settings',
@@ -136,7 +143,8 @@ export function ConsoleShell() {
         <span>Now playing: nothing</span>
         <span className="spacer" />
         <span>
-          <kbd className="kbd">Ctrl+Shift+B</kbd> blackout
+          <kbd className="kbd">Ctrl+K</kbd> search · <kbd className="kbd">Ctrl+Shift+B</kbd>{' '}
+          blackout
         </span>
       </footer>
     </div>
