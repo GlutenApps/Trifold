@@ -1,0 +1,41 @@
+{
+  "name": "@trifold/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Trifold desktop app: a local DM console for 5e-compatible games.",
+  "productName": "Trifold",
+  "author": "Trifold contributors",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build:bundle": "electron-vite build",
+    "build": "electron-vite build && electron-builder --config electron-builder.yml",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "postinstall": "node ../../scripts/rebuild-native.mjs",
+    "smoke": "electron-vite build && playwright test -c smoke/playwright.config.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "12.11.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@trifold/api": "workspace:*",
+    "@trifold/importers": "workspace:*",
+    "@trifold/rules": "workspace:*",
+    "@trifold/schema": "workspace:*",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "5.2.0",
+    "electron": "42.11.8",
+    "electron-builder": "26.15.3",
+    "electron-vite": "5.0.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "5.9.3",
+    "ulid": "3.0.2",
+    "vite": "7.3.6",
+    "zod": "4.6.5",
+    "zustand": "5.0.15"
+  }
+}

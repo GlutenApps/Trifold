@@ -1,0 +1,41 @@
+{
+  "name": "trifold",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local DM console for 5e-compatible games: compendium, campaign, combat tracker, second-screen presenter and music.",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @trifold/desktop dev",
+    "build": "pnpm --filter @trifold/desktop build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "fetch:content": "tsx scripts/fetch-content.ts",
+    "rebuild:native": "node scripts/rebuild-native.mjs",
+    "smoke": "pnpm --filter @trifold/desktop smoke"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "24.19.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.12.0",
+    "jsdom": "30.1.1",
+    "prettier": "3.9.9",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1",
+    "vite": "7.3.6",
+    "vitest": "5.0.2"
+  }
+}

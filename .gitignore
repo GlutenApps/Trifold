@@ -1,0 +1,19 @@
+node_modules/
+dist/
+out/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+*.log
+.DS_Store
+Thumbs.db
+
+# Local-only test content (never committed; see CLAUDE.md ground rule 3)
+*.local.xml
+fixtures/local/
+
+# Built at build time by `pnpm fetch:content`; only the manifests are committed
+resources/*.jsonl
+resources/icons/svg/
+resources/icons/credits.json

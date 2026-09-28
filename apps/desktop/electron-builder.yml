@@ -1,0 +1,29 @@
+appId: app.trifold.desktop
+productName: Trifold
+copyright: Copyright © 2026 Trifold contributors
+directories:
+  output: ../../dist
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - '**/*.node'
+extraResources:
+  - from: ../../resources
+    to: resources
+    filter:
+      - '**/*'
+      - '!README.md'
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+# Native modules are prepared by scripts/rebuild-native.mjs (ADR 0001).
+npmRebuild: false

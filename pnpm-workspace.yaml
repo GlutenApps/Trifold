@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Hoisted layout keeps electron-builder's dependency walk simple.
+nodeLinker: hoisted
+
+# Only these packages may run install scripts.
+allowBuilds:
+  better-sqlite3: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
