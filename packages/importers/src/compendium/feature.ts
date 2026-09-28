@@ -57,9 +57,13 @@ export function buildFeature(node: XmlNode, ctx: NormalizeContext): Feature {
       ctx.warn(`"${rawName}": unreadable attack "${t.text.trim()}"`);
       continue;
     }
+    // A triple is an attack when it has a to-hit or the text reads like an attack; otherwise it
+    // is a plain roll button (`Heal||1d10`, `Days||5d10`).
     const isAttack = triple.toHit !== undefined || textAttacks.length > 0;
     if (!isAttack) {
-      feature.rolls.push({ label: triple.label || parsed.displayName, dice: triple.damage });
+      if (triple.damage) {
+        feature.rolls.push({ label: triple.label || parsed.displayName, dice: triple.damage });
+      }
       continue;
     }
     const fromText = textAttacks[attackIndex];
@@ -87,10 +91,13 @@ export function buildFeature(node: XmlNode, ctx: NormalizeContext): Feature {
 const TYPE_LABEL = /^([A-Za-z]+) damage$/i;
 
 function mergeAttack(
-  triple: { label: string; toHit?: number; damage: string },
+  triple: { label: string; toHit?: number; damage?: string },
   fromText: TextAttack | undefined,
 ): Attack {
-  const attack: Attack = { label: triple.label, damage: triple.damage, extraDamage: [] };
+  const attack: Attack = { label: triple.label, extraDamage: [] };
+  if (triple.damage) attack.damage = triple.damage;
+  else if (fromText) attack.damage = fromText.damage;
+
   if (triple.toHit !== undefined) attack.toHit = triple.toHit;
   else if (fromText) attack.toHit = fromText.toHit;
 

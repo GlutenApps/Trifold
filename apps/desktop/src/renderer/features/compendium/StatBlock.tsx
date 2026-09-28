@@ -90,8 +90,9 @@ function FeatureList({
                 className="badge roll"
                 title={a.reach ? `reach ${a.reach}` : a.range ? `range ${a.range}` : undefined}
               >
-                {a.toHit !== undefined ? `${signed(a.toHit)} · ` : ''}
-                {a.damage}
+                {a.toHit !== undefined ? signed(a.toHit) : ''}
+                {a.toHit !== undefined && a.damage ? ' · ' : ''}
+                {a.damage ?? ''}
                 {a.damageType ? ` ${a.damageType}` : ''}
                 {a.extraDamage.map((x) => ` + ${x.damage} ${x.damageType ?? ''}`).join('')}
               </span>

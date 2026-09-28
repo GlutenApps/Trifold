@@ -70,6 +70,32 @@ export function createCompendiumImporter(
     else overflow += 1;
   };
 
+  // "missing <field>" is expected for vehicles, objects and companions; one line per field with
+  // a few names reads better than hundreds of identical warnings (DATA-FORMATS.md §5.1).
+  const missing = new Map<string, string[]>();
+  const MISSING = /^missing ([a-z ]+)$/i;
+  const recordWarning = (kind: string, name: string, message: string) => {
+    const m = MISSING.exec(message);
+    if (m?.[1]) {
+      const key = `${kind}|${m[1]}`;
+      const names = missing.get(key) ?? [];
+      names.push(name);
+      missing.set(key, names);
+      return;
+    }
+    pushWarning(`${kind} "${name}": ${message}`);
+  };
+  const flushMissing = () => {
+    for (const [key, names] of missing) {
+      const [kind, field] = key.split('|');
+      const shown = names.slice(0, 5).join(', ');
+      const more = names.length > 5 ? `, … ${names.length - 5} more` : '';
+      pushWarning(
+        `${names.length} ${kind}${names.length === 1 ? '' : 's'} missing ${field} (${shown}${more})`,
+      );
+    }
+  };
+
   const handleRecord = (node: XmlNode) => {
     const kind = ELEMENT_KIND[node.name];
     if (!kind) {
@@ -77,13 +103,14 @@ export function createCompendiumImporter(
       skipped += 1;
       return;
     }
-    const label = `${node.name} "${text(node, 'name') ?? '?'}"`;
+    const recordName = text(node, 'name') ?? '?';
+    const label = `${node.name} "${recordName}"`;
     const ctx: NormalizeContext = {
       sourceId: options.sourceId,
       defaultEdition: options.defaultEdition,
       edition2024Books: options.edition2024Books ?? [],
       newId: options.newId ?? ulid,
-      warn: (message) => pushWarning(`${label}: ${message}`),
+      warn: (message) => recordWarning(node.name, recordName, message),
     };
 
     let record: CompendiumRecord | null;
@@ -129,6 +156,7 @@ export function createCompendiumImporter(
     write: (chunk) => stream.write(chunk),
     end: () => {
       stream.end();
+      flushMissing();
       if (overflow > 0) warnings.push(`… and ${overflow} more warnings`);
       return { counts, skipped, warnings, rootElement };
     },

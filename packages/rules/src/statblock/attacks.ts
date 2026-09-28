@@ -5,22 +5,27 @@ import { isDiceExpression } from '../dice';
 export interface AttackTriple {
   label: string;
   toHit?: number;
-  damage: string;
+  /** Absent for to-hit-only triples such as `Spellcasting|+9|` (a spell attack bonus). */
+  damage?: string;
 }
 
-/** `label|toHit|damage`. Returns null when the damage part is not a dice expression. */
+/**
+ * `label|toHit|damage`. Returns null when neither a to-hit nor a readable dice expression is
+ * present, or when the damage part is present but not a dice expression.
+ */
 export function parseAttackTriple(raw: string): AttackTriple | null {
   const parts = raw.split('|');
   if (parts.length < 3) return null;
   const label = (parts[0] ?? '').trim();
-  const toHitText = (parts[1] ?? '').trim();
-  const damage = parts.slice(2).join('|').replace(/\s+/g, '').trim();
-  if (!damage || !isDiceExpression(damage)) return null;
-  const triple: AttackTriple = { label, damage };
-  if (toHitText) {
-    const toHit = Number.parseInt(toHitText.replace(/\s+/g, ''), 10);
-    if (Number.isFinite(toHit)) triple.toHit = toHit;
-  }
+  const toHitText = (parts[1] ?? '').trim().replace(/\s+/g, '');
+  const damage = parts.slice(2).join('|').replace(/\s+/g, '');
+  const toHit = toHitText ? Number.parseInt(toHitText, 10) : Number.NaN;
+  const hasToHit = Number.isFinite(toHit);
+  if (damage && !isDiceExpression(damage)) return null;
+  if (!damage && !hasToHit) return null;
+  const triple: AttackTriple = { label };
+  if (hasToHit) triple.toHit = toHit;
+  if (damage) triple.damage = damage;
   return triple;
 }
 

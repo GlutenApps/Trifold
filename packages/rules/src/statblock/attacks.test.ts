@@ -28,9 +28,15 @@ describe('parseAttackTriple', () => {
     expect(parseAttackTriple('Heal||1d10')).toEqual({ label: 'Heal', damage: '1d10' });
   });
 
+  it('accepts to-hit-only triples and multipliers', () => {
+    expect(parseAttackTriple('Spellcasting|+9|')).toEqual({ label: 'Spellcasting', toHit: 9 });
+    expect(parseAttackTriple('Years||1d4x10')).toEqual({ label: 'Years', damage: '1d4x10' });
+  });
+
   it('rejects malformed triples', () => {
     expect(parseAttackTriple('Bite|+5')).toBeNull();
     expect(parseAttackTriple('Bite|+5|lots')).toBeNull();
+    expect(parseAttackTriple('Bite||')).toBeNull();
   });
 });
 

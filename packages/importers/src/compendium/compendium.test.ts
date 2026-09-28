@@ -349,6 +349,37 @@ describe('streaming and leniency', () => {
     expect(beast?.kind === 'monster' && beast.data.xp).toBe(25);
   });
 
+  it('aggregates missing-field warnings and accepts to-hit-only triples', () => {
+    const xml = `<compendium version="5">
+      <monster><name>Cart</name><size>L</size><type>vehicle</type><ac>11</ac><hp>30</hp><speed>0 ft.</speed></monster>
+      <monster><name>Wagon</name><size>L</size><type>vehicle</type><ac>11</ac><hp>30</hp><speed>0 ft.</speed><cr>1</cr></monster>
+      <monster><name>Caster</name><size>M</size><type>humanoid</type><ac>12</ac><hp>20</hp><speed>30 ft.</speed>
+        <str>10</str><dex>10</dex><con>10</con><int>16</int><wis>10</wis><cha>10</cha><cr>2</cr>
+        <trait><name>Proficiency Bonus</name><text>equals your proficiency bonus</text></trait>
+        <action><name>Spellcasting</name><text>Casts spells.</text><attack>Spellcasting|+5|</attack></action>
+        <action><name>Age</name><text>Ages the target.</text><attack>Years||1d4x10</attack></action>
+        <legendary><name>Blast</name><text>One blast.</text></legendary>
+      </monster>
+    </compendium>`;
+    const result = parseCompendiumXml(xml, options);
+    expect(result.warnings).toEqual([
+      '2 monsters missing ability scores (Cart, Wagon)',
+      '1 monster missing cr (Cart)',
+    ]);
+    const caster = result.records[2];
+    expect(caster?.kind === 'monster' && caster.data.traits.map((t) => t.name)).toEqual([
+      'Proficiency Bonus',
+    ]);
+    expect(caster?.kind === 'monster' && caster.data.proficiencyBonus).toBeUndefined();
+    expect(caster?.kind === 'monster' && caster.data.actions[0]?.attacks).toEqual([
+      { label: 'Spellcasting', toHit: 5, extraDamage: [] },
+    ]);
+    expect(caster?.kind === 'monster' && caster.data.actions[1]?.rolls).toEqual([
+      { label: 'Years', dice: '1d4x10' },
+    ]);
+    expect(caster?.kind === 'monster' && caster.data.legendary.perTurn).toBe(3);
+  });
+
   it('recovers from malformed XML inside one record', () => {
     const xml = `<compendium version="5">
       <feat><name>Good Feat</name><text>Fine.</text></feat>

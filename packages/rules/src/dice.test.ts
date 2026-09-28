@@ -51,6 +51,15 @@ describe('parseDice', () => {
     expect(formatTerms(terms)).toBe('(1d8+2)+(1d6)');
   });
 
+  it('parses an integer multiplier', () => {
+    expect(parseDice('2d4x10')).toEqual([
+      { kind: 'dice', sign: 1, count: 2, sides: 4, factor: 10 },
+    ]);
+    expect(formatTerms(parseDice('(1d6+1) * 5'))).toBe('(1d6+1)x5');
+    expect(parseDice('3x10')).toEqual([{ kind: 'const', sign: 1, value: 30 }]);
+    expect(() => parseDice('2d4x')).toThrow(DiceError);
+  });
+
   it('ignores whitespace', () => {
     expect(formatTerms(parseDice(' 2d6 + 3 - 1 '))).toBe('2d6+3-1');
   });
@@ -74,6 +83,11 @@ describe('roll', () => {
     const result = roll('4d6kh3', facesRng([1, 6, 3, 5], 6));
     expect(result.dice[0]?.kept).toEqual([6, 5, 3]);
     expect(result.total).toBe(14);
+  });
+
+  it('applies multipliers to rolls and averages', () => {
+    expect(roll('2d4x10', facesRng([3, 1], 4)).total).toBe(40);
+    expect(average('1d4x10')).toBe(25);
   });
 
   it('handles negative groups', () => {

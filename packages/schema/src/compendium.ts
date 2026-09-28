@@ -22,7 +22,7 @@ export type DamagePart = z.infer<typeof DamagePart>;
 export const Attack = z.object({
   label: z.string(),
   toHit: z.number().int().optional(),
-  damage: DiceExpr,
+  damage: DiceExpr.optional(),
   damageType: z.string().optional(),
   reach: z.string().optional(),
   range: z.string().optional(),

@@ -89,11 +89,14 @@ export function normalizeMonster(node: XmlNode, ctx: NormalizeContext): MonsterR
   if (!sizeRaw) ctx.warn('missing size');
 
   const abilities = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+  const missingAbilities: string[] = [];
   for (const key of ABILITIES) {
     const value = parseIntOrUndefined(text(node, key));
-    if (value === undefined) ctx.warn(`missing ${key}`);
+    if (value === undefined) missingAbilities.push(key);
     else abilities[key] = value;
   }
+  if (missingAbilities.length === ABILITIES.length) ctx.warn('missing ability scores');
+  else for (const key of missingAbilities) ctx.warn(`missing ${key}`);
 
   const ac = parseAc(text(node, 'ac'));
   if (!ac) ctx.warn('missing or unreadable ac');
@@ -108,10 +111,14 @@ export function normalizeMonster(node: XmlNode, ctx: NormalizeContext): MonsterR
   const traits: Feature[] = [];
   for (const t of children(node, 'trait')) {
     const feature = buildFeature(t, ctx);
+    // 2024 blocks carry the bonus as a trait (`+4`). Companion blocks say "equals your
+    // proficiency bonus" instead; those stay visible as ordinary traits.
     if (/^proficiency bonus$/i.test(feature.name.trim())) {
-      proficiencyBonus = parseIntOrUndefined(feature.text);
-      if (proficiencyBonus === undefined) ctx.warn('Proficiency Bonus trait has no number');
-      continue;
+      const value = parseIntOrUndefined(feature.text);
+      if (value !== undefined && /^\s*[+-]?\d+\s*$/.test(feature.text)) {
+        proficiencyBonus = value;
+        continue;
+      }
     }
     traits.push(feature);
   }
@@ -146,10 +153,8 @@ export function normalizeMonster(node: XmlNode, ctx: NormalizeContext): MonsterR
     }
     legendary.actions.push(feature);
   }
-  if (legendary.actions.length > 0 && legendary.perTurn === undefined) {
-    legendary.perTurn = 3;
-    ctx.warn('legendary actions without a per-turn count; assuming 3');
-  }
+  // Blocks without a header (common in third-party files) get the standard pool of 3.
+  if (legendary.actions.length > 0 && legendary.perTurn === undefined) legendary.perTurn = 3;
 
   const hasAttacks = [...actions, ...bonusActions, ...reactions, ...legendary.actions].some(
     (f) => f.attacks.length > 0,

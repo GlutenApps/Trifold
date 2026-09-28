@@ -1,7 +1,8 @@
 /**
  * Dice expressions (DATA-FORMATS.md §2.4): `NdM`, integers, `+`, `-`, parentheses, whitespace,
- * and `kh`/`kl` keep-highest/lowest (`4d6kh3`). Parsing and rolling are separate so the tracker
- * can show what an expression will do before rolling it.
+ * `kh`/`kl` keep-highest/lowest (`4d6kh3`), and an integer multiplier (`2d4x10`, seen in
+ * community files for feet, days and years). Parsing and rolling are separate so the tracker can
+ * show what an expression will do before rolling it.
  */
 
 export type Rng = () => number; // uniform in [0, 1)
@@ -12,6 +13,8 @@ export interface DiceTerm {
   count: number;
   sides: number;
   keep?: { mode: 'h' | 'l'; n: number };
+  /** `2d4x10` → factor 10. */
+  factor?: number;
 }
 export interface ConstTerm {
   kind: 'const';
@@ -22,6 +25,7 @@ export interface GroupTerm {
   kind: 'group';
   sign: 1 | -1;
   terms: Term[];
+  factor?: number;
 }
 export type Term = DiceTerm | ConstTerm | GroupTerm;
 
@@ -44,8 +48,13 @@ export class DiceError extends Error {
 
 const MAX_COUNT = 1000;
 const MAX_SIDES = 1000;
-const TOKEN = /\d*d\d+(?:k[hl]\d+)?|\d+|[()+-]/gi;
+const MAX_FACTOR = 1000;
+const TOKEN = /\d*d\d+(?:k[hl]\d+)?|\d+|[()+\-x*×]/gi;
 const DICE = /^(\d*)d(\d+)(?:k([hl])(\d+))?$/i;
+
+function isMultiply(tok: string | undefined): boolean {
+  return tok === 'x' || tok === 'X' || tok === '*' || tok === '×';
+}
 
 function tokenize(expression: string): string[] {
   const compact = expression.replace(/\s+/g, '');
@@ -84,12 +93,27 @@ export function parseDice(expression: string): Term[] {
     }
   }
 
+  function parseFactor(): number | undefined {
+    if (!isMultiply(peek())) return undefined;
+    next();
+    const tok = next();
+    if (!/^\d+$/.test(tok)) throw new DiceError(`expected a number after "x" in "${expression}"`);
+    const factor = Number(tok);
+    if (factor < 1 || factor > MAX_FACTOR) {
+      throw new DiceError(`multiplier out of range in "${expression}"`);
+    }
+    return factor;
+  }
+
   function parseTerm(sign: 1 | -1): Term {
     const tok = next();
     if (tok === '(') {
       const terms = parseExpr();
       if (next() !== ')') throw new DiceError(`expected ")" in "${expression}"`);
-      return { kind: 'group', sign, terms };
+      const group: GroupTerm = { kind: 'group', sign, terms };
+      const factor = parseFactor();
+      if (factor !== undefined) group.factor = factor;
+      return group;
     }
     const dice = DICE.exec(tok);
     if (dice) {
@@ -105,9 +129,15 @@ export function parseDice(expression: string): Term[] {
         if (n < 1) throw new DiceError(`keep count must be at least 1 in "${tok}"`);
         term.keep = { mode: dice[3].toLowerCase() === 'h' ? 'h' : 'l', n: Math.min(n, count) };
       }
+      const factor = parseFactor();
+      if (factor !== undefined) term.factor = factor;
       return term;
     }
-    if (/^\d+$/.test(tok)) return { kind: 'const', sign, value: Number(tok) };
+    if (/^\d+$/.test(tok)) {
+      const value = Number(tok);
+      const factor = parseFactor();
+      return { kind: 'const', sign, value: factor === undefined ? value : value * factor };
+    }
     throw new DiceError(`unexpected "${tok}" in "${expression}"`);
   }
 
@@ -133,7 +163,7 @@ function rollTerms(terms: Term[], rng: Rng, out: DiceRoll[]): number {
         sum += term.sign * term.value;
         break;
       case 'group':
-        sum += term.sign * rollTerms(term.terms, rng, out);
+        sum += term.sign * rollTerms(term.terms, rng, out) * (term.factor ?? 1);
         break;
       case 'dice': {
         const rolls: number[] = [];
@@ -145,7 +175,7 @@ function rollTerms(terms: Term[], rng: Rng, out: DiceRoll[]): number {
           const highest = term.keep.mode === 'h';
           kept = [...rolls].sort((a, b) => (highest ? b - a : a - b)).slice(0, term.keep.n);
         }
-        const subtotal = kept.reduce((a, b) => a + b, 0);
+        const subtotal = kept.reduce((a, b) => a + b, 0) * (term.factor ?? 1);
         out.push({ term, rolls, kept, subtotal });
         sum += term.sign * subtotal;
         break;
@@ -169,12 +199,12 @@ function averageTerms(terms: Term[]): number {
         sum += term.sign * term.value;
         break;
       case 'group':
-        sum += term.sign * averageTerms(term.terms);
+        sum += term.sign * averageTerms(term.terms) * (term.factor ?? 1);
         break;
       case 'dice': {
         // Keep-highest/lowest averages are approximated by the kept count of plain dice.
         const n = term.keep ? term.keep.n : term.count;
-        sum += term.sign * n * ((term.sides + 1) / 2);
+        sum += term.sign * n * ((term.sides + 1) / 2) * (term.factor ?? 1);
         break;
       }
     }
@@ -190,8 +220,9 @@ export function average(expression: string): number {
 /** Doubles every die (not the modifiers), as a critical hit does. */
 export function doubleDice(terms: Term[]): Term[] {
   return terms.map((t): Term => {
-    if (t.kind === 'dice')
+    if (t.kind === 'dice') {
       return { ...t, count: t.count * 2, ...(t.keep ? { keep: { ...t.keep } } : {}) };
+    }
     if (t.kind === 'group') return { ...t, terms: doubleDice(t.terms) };
     return t;
   });
@@ -202,9 +233,10 @@ export function formatTerms(terms: Term[]): string {
     .map((t, i) => {
       const sign = t.sign < 0 ? '-' : i === 0 ? '' : '+';
       if (t.kind === 'const') return `${sign}${t.value}`;
-      if (t.kind === 'group') return `${sign}(${formatTerms(t.terms)})`;
+      const factor = t.factor !== undefined ? `x${t.factor}` : '';
+      if (t.kind === 'group') return `${sign}(${formatTerms(t.terms)})${factor}`;
       const keep = t.keep ? `k${t.keep.mode}${t.keep.n}` : '';
-      return `${sign}${t.count}d${t.sides}${keep}`;
+      return `${sign}${t.count}d${t.sides}${keep}${factor}`;
     })
     .join('');
 }
