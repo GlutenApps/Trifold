@@ -279,3 +279,85 @@ export const NPC = z.object({
   updatedAt: IsoDateTime,
 });
 export type NPC = z.infer<typeof NPC>;
+
+// ---------- scenes (DESIGN.md §5.2, §6.5) ----------
+
+export const SceneKind = z.enum(['folder', 'title', 'image', 'map', 'blankGrid']);
+export type SceneKind = z.infer<typeof SceneKind>;
+
+export const SceneImage = z.object({
+  /** Campaign-relative paths (`images/<id>.png`, `images/<id>.display.jpg`). */
+  path: z.string(),
+  displayPath: z.string(),
+  width: int.positive(),
+  height: int.positive(),
+});
+export type SceneImage = z.infer<typeof SceneImage>;
+
+export const GridSpec = z.object({
+  cellPx: z.number().positive().default(70),
+  offsetX: z.number().default(0),
+  offsetY: z.number().default(0),
+  color: z.string().default('#000000'),
+  opacity: z.number().min(0).max(1).default(0.3),
+  showToPlayers: z.boolean().default(true),
+});
+export type GridSpec = z.infer<typeof GridSpec>;
+
+export const Token = z.object({
+  id: z.string().min(1),
+  kind: z.enum(['pc', 'creature', 'marker']),
+  ref: EntityRef,
+  label: z.string(),
+  /** Grid units, fractional allowed. */
+  x: z.number(),
+  y: z.number(),
+  footprint: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).default(1),
+  hidden: z.boolean().default(false),
+  nameMasked: z.boolean().default(true),
+  art: z.string().optional(),
+  color: z.string().optional(),
+});
+export type Token = z.infer<typeof Token>;
+
+export const EntryMarker = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  x: z.number(),
+  y: z.number(),
+});
+export type EntryMarker = z.infer<typeof EntryMarker>;
+
+export const PlayerCamera = z.object({
+  mode: z.enum(['fitMap', 'fitTokens', 'follow', 'manual']).default('fitMap'),
+  x: z.number().default(0),
+  y: z.number().default(0),
+  zoom: z.number().positive().default(1),
+});
+export type PlayerCamera = z.infer<typeof PlayerCamera>;
+
+export const Scene = z.object({
+  schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+  id: z.string().min(1),
+  kind: SceneKind,
+  title: z.string().min(1),
+  subtitle: z.string().default(''),
+  /** Null = follow the campaign's scene-title overlay setting. */
+  showTitleOverride: z.boolean().nullable().default(null),
+  parentId: z.string().nullable().default(null),
+  order: int.default(0),
+  notes: z.string().default(''),
+  image: SceneImage.optional(),
+  backdrop: z.enum(['parchment', 'stone', 'dark']).optional(),
+  grid: GridSpec.optional(),
+  tokens: z.array(Token).default([]),
+  entryMarkers: z.array(EntryMarker).default([]),
+  audio: z
+    .object({ playlistId: z.string().optional(), ambienceIds: z.array(z.string()).default([]) })
+    .optional(),
+  encounterId: z.string().optional(),
+  playerCamera: PlayerCamera.prefault({}),
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+});
+export type Scene = z.infer<typeof Scene>;

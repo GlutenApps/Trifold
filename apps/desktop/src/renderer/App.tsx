@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PlayerView } from './features/presenter/PlayerView';
+import { PlayerScreen } from './features/presenter/PlayerScreen';
 import { ConsoleShell } from './features/shell/ConsoleShell';
 
 export type Route = 'console' | 'player';
@@ -23,5 +23,5 @@ export function App() {
     document.title = route === 'player' ? 'Trifold player' : 'Trifold';
   }, [route]);
 
-  return route === 'player' ? <PlayerView /> : <ConsoleShell />;
+  return route === 'player' ? <PlayerScreen /> : <ConsoleShell />;
 }

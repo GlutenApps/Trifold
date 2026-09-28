@@ -13,6 +13,7 @@ import {
   NPC,
   nowIso,
   PCCard,
+  Scene,
   type EncounterResult,
 } from '@trifold/schema';
 import type { LibraryStore } from '../library/LibraryStore';
@@ -66,7 +67,7 @@ export class CampaignRepository {
   private async readAll<T>(
     relative: string,
     schema: ZodType<T>,
-    kind: 'pc' | 'encounter' | 'adventure' | 'note' | 'npc',
+    kind: 'pc' | 'encounter' | 'adventure' | 'note' | 'npc' | 'scene',
   ): Promise<T[]> {
     const out: T[] = [];
     for (const file of await this.listDir(relative)) {
@@ -206,7 +207,10 @@ export class CampaignRepository {
     const npcs = (await this.readAll(this.dir(slug, 'npcs'), NPC, 'npc')).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
-    return { campaign, pcs, encounters, adventures, notes, npcs };
+    const scenes = (await this.readAll(this.dir(slug, 'scenes'), Scene, 'scene')).sort(
+      (a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt),
+    );
+    return { campaign, pcs, encounters, adventures, notes, npcs, scenes };
   }
 
   async updateCampaign(patch: Partial<Campaign>): Promise<Campaign> {
@@ -233,12 +237,12 @@ export class CampaignRepository {
   }
 
   /** Absolute path of one entity file; used by CampaignEntities for removal. */
-  entityPath(folder: 'adventures' | 'notes' | 'npcs', id: string): string {
+  entityPath(folder: 'adventures' | 'notes' | 'npcs' | 'scenes', id: string): string {
     return this.store.resolvePath(this.dir(this.requireSlug(), folder, `${id}.json`));
   }
 
   async writeEntity(
-    folder: 'adventures' | 'notes' | 'npcs',
+    folder: 'adventures' | 'notes' | 'npcs' | 'scenes',
     id: string,
     value: unknown,
   ): Promise<void> {

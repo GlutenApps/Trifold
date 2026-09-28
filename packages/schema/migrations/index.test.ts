@@ -12,6 +12,7 @@ const versions = {
   adventure: 1,
   note: 1,
   npc: 1,
+  scene: 1,
 };
 const registry: MigrationRegistry = {
   appConfig: [],
@@ -27,6 +28,7 @@ const registry: MigrationRegistry = {
   adventure: [],
   note: [],
   npc: [],
+  scene: [],
 };
 const run = createMigrator(registry, versions);
 

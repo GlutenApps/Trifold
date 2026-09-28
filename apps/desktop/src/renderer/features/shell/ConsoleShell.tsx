@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { installHotkeys, registerHotkey } from '../../hotkeys';
 import { useAppStore } from '../../stores/appStore';
+import { useCampaignStore } from '../../stores/campaignStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { SECTIONS, useUiStore, type SectionId } from '../../stores/uiStore';
 import { useCombatStore } from '../../stores/combatStore';
@@ -8,7 +9,8 @@ import { CampaignPage } from '../campaign/CampaignPage';
 import { CompendiumPage } from '../compendium/CompendiumPage';
 import { DicePage } from '../dice/DicePage';
 import { EncountersPage } from '../encounters/EncountersPage';
-import { PresenterPage } from '../presenter/PresenterPage';
+import { summarizeCombat } from '../presenter/combatSummary';
+import { ScenesPage } from '../presenter/ScenesPage';
 import { SettingsPage } from '../settings/SettingsPage';
 import { Placeholder } from './Placeholder';
 
@@ -21,7 +23,7 @@ function Page({ section }: { section: SectionId }) {
     case 'encounters':
       return <EncountersPage />;
     case 'presenter':
-      return <PresenterPage />;
+      return <ScenesPage />;
     case 'music':
       return (
         <Placeholder
@@ -53,6 +55,28 @@ export function ConsoleShell() {
     void load();
     return window.trifold.on('playerWindowChanged', ({ open }) => setPlayerOpen(open));
   }, [load, setPlayerOpen]);
+
+  // Mirror the tracker to the TV: masked names, active turn, round, optional PC bars.
+  useEffect(() => {
+    const sync = () => {
+      const combat = useCombatStore.getState().state;
+      const overlays = usePresenterStore.getState().state.overlays;
+      const mode =
+        useCampaignStore.getState().current?.campaign.settings.hpDisplayMode ?? 'bloodied';
+      usePresenterStore
+        .getState()
+        .setCombat(
+          summarizeCombat(combat, { pcHealthBars: overlays.pcHealthBars, hpDisplayMode: mode }),
+        );
+    };
+    const offs = [
+      useCombatStore.subscribe(sync),
+      usePresenterStore.subscribe((s, prev) => {
+        if (s.state.overlays !== prev.state.overlays) sync();
+      }),
+    ];
+    return () => offs.forEach((off) => off());
+  }, []);
 
   useEffect(() => {
     const cleanups = [

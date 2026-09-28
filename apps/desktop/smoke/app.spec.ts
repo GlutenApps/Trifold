@@ -178,9 +178,18 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(player).toHaveTitle('Trifold player');
     await expect(player.getByTestId('player-blackout')).toBeVisible();
 
-    await console_.getByLabel('Title', { exact: true }).fill('The Sunken Keep');
-    await console_.getByRole('button', { name: 'Send to TV' }).click();
+    await console_.getByLabel('New scene title').fill('The Sunken Keep');
+    await console_.getByRole('button', { name: 'New title card' }).click();
+    await expect(console_.getByTestId('scene-row')).toHaveCount(1);
+    await console_.getByRole('button', { name: 'The Sunken Keep' }).click();
     await expect(player.getByRole('heading', { name: 'The Sunken Keep' })).toBeVisible();
+    await expect(console_.getByRole('contentinfo')).toContainText('Live scene: The Sunken Keep');
+    await console_.getByLabel('Handout title').fill('Letter');
+    await console_.getByLabel('Handout text').fill('Come at dusk.');
+    await console_.getByRole('button', { name: 'Show text handout' }).click();
+    await expect(player.getByTestId('handout')).toContainText('Come at dusk.');
+    await console_.getByRole('button', { name: 'Dismiss handout' }).click();
+    await expect(player.getByTestId('handout')).toHaveCount(0);
     await console_.getByRole('button', { name: 'Blackout' }).click();
     await expect(player.getByTestId('player-blackout')).toBeVisible();
 

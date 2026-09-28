@@ -6,6 +6,7 @@ import { AppConfigStore } from './appConfig';
 import { registerIpc } from './ipc';
 import { LibrarySession } from './library/session';
 import { createLogger, errorMessage } from './log';
+import { installMediaHandler, registerMediaScheme } from './media';
 import { PresenterHub } from './presenter';
 import { WindowManager } from './windows';
 
@@ -14,6 +15,7 @@ const userDataOverride = process.env['TRIFOLD_USER_DATA'];
 if (userDataOverride) app.setPath('userData', userDataOverride);
 
 app.setAppUserModelId('app.trifold.desktop');
+registerMediaScheme();
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -32,6 +34,7 @@ async function main(): Promise<void> {
     : join(app.getAppPath(), '..', '..', 'resources');
   session = new LibrarySession(logger, bundledDir);
   const activeSession = session;
+  installMediaHandler(activeSession);
 
   const config = await AppConfigStore.load(join(app.getPath('userData'), 'config.json'), logger);
 

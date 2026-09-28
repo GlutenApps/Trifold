@@ -10,6 +10,8 @@ import type {
   NPC,
   PCCard,
   RecordKind,
+  Scene,
+  SceneImage,
   Source,
 } from '@trifold/schema';
 
@@ -61,22 +63,65 @@ export interface PresenterOverlays {
   roundCounter: boolean;
 }
 
-/** A title card is the only scene kind in M0; image, map and blank-grid scenes arrive in M1. */
 export interface TitleCardScene {
   kind: 'title';
   id: string;
   title: string;
   subtitle?: string;
+  backdrop?: 'parchment' | 'stone' | 'dark';
 }
 
-export type LiveScene = TitleCardScene;
+export interface ImageScene {
+  kind: 'image';
+  id: string;
+  title: string;
+  /** `trifold-media://` URL of the display-size copy. */
+  imageUrl: string;
+  width: number;
+  height: number;
+}
+
+export type LiveScene = TitleCardScene | ImageScene;
+
+export type Handout =
+  { kind: 'text'; title: string; body: string } | { kind: 'image'; url: string; title?: string };
+
+export interface BreakScreen {
+  title: string;
+  subtitle?: string;
+  /** Milliseconds since epoch when the countdown ends; absent for no countdown. */
+  endsAt?: number;
+}
+
+/** Player-facing view of the tracker (DESIGN.md §6.4): masked names, no exact creature HP. */
+export interface CombatSummaryEntry {
+  id: string;
+  name: string;
+  role: 'ally' | 'enemy' | 'neutral';
+  isPc: boolean;
+  dead: boolean;
+  /** 0–1, PCs only, and only when the health-bar overlay is on. */
+  hpFraction?: number;
+  bloodied: boolean;
+}
+
+export interface CombatSummary {
+  round: number;
+  activeId: string | null;
+  entries: CombatSummaryEntry[];
+}
 
 /** Authoritative presenter state. Owned by the console, relayed by main, rendered by the player. */
 export interface PresenterState {
   schemaVersion: 1;
   blackout: boolean;
   scene: LiveScene | null;
+  /** Whether the scene title overlay applies to the live scene (global toggle + per-scene override). */
+  showSceneTitle: boolean;
   overlays: PresenterOverlays;
+  handout: Handout | null;
+  breakScreen: BreakScreen | null;
+  combat: CombatSummary | null;
   /** Milliseconds since epoch; lets the player ignore stale updates. */
   updatedAt: number;
 }
@@ -85,9 +130,21 @@ export const initialPresenterState: PresenterState = {
   schemaVersion: 1,
   blackout: true,
   scene: null,
+  showSceneTitle: true,
   overlays: { sceneTitle: true, initiativeStrip: true, pcHealthBars: false, roundCounter: true },
+  handout: null,
+  breakScreen: null,
+  combat: null,
   updatedAt: 0,
 };
+
+/** Media inside the Library is served to the renderer over this scheme (main registers it). */
+export const MEDIA_SCHEME = 'trifold-media';
+
+export function mediaUrl(campaignSlug: string, relativePath: string): string {
+  const parts = [`campaigns`, campaignSlug, ...relativePath.split('/')].map(encodeURIComponent);
+  return `${MEDIA_SCHEME}://library/${parts.join('/')}`;
+}
 
 // ---------- sources and compendium (DESIGN.md §6.1) ----------
 
@@ -199,6 +256,7 @@ export interface CampaignBundle {
   adventures: Adventure[];
   notes: Note[];
   npcs: NPC[];
+  scenes: Scene[];
 }
 
 export interface CampaignImportReport {
@@ -296,6 +354,12 @@ export interface TrifoldApi {
     saveState(encounterId: string, state: CombatState | null): Promise<Encounter>;
     finish(encounterId: string, result: EncounterResult): Promise<Encounter>;
   };
+  scenes: {
+    save(scene: Scene): Promise<Scene>;
+    remove(sceneId: string): Promise<void>;
+    /** Native picker; copies the image into the campaign and makes a display-size copy. */
+    importImage(): Promise<SceneImage | null>;
+  };
   compendium: {
     search(query: CompendiumQuery): Promise<CompendiumSearchResult>;
     get(recordId: string): Promise<CompendiumRecord | null>;
@@ -328,6 +392,7 @@ export const API_METHODS = {
   adventures: ['save', 'remove'],
   notes: ['save', 'remove'],
   npcs: ['save', 'remove'],
+  scenes: ['save', 'remove', 'importImage'],
   pcs: ['save', 'remove', 'quickAdd'],
   encounters: ['save', 'remove', 'saveState', 'finish'],
   compendium: ['search', 'get', 'findByKey', 'facets'],

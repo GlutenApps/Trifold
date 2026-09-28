@@ -48,7 +48,8 @@ export function handleKeydown(e: KeyboardEvent): boolean {
   const hasModifier = e.ctrlKey || e.altKey || e.metaKey;
   if (isTyping(e.target) && !hasModifier) return false;
   const combo = comboFromEvent(e);
-  for (const hotkey of registry.values()) {
+  // Most recently registered wins, so a page can shadow a global combo while it is mounted.
+  for (const hotkey of [...registry.values()].reverse()) {
     if (hotkey.combo === combo) {
       e.preventDefault();
       hotkey.run();

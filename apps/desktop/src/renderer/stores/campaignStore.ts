@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { CampaignBundle, CampaignImportReport, CampaignSummary } from '@trifold/api';
-import type { Campaign, Encounter, PCCard } from '@trifold/schema';
+import type { Campaign, Encounter, PCCard, Scene, SceneImage } from '@trifold/schema';
 
 interface CampaignState {
   campaigns: CampaignSummary[];
@@ -15,6 +15,10 @@ interface CampaignState {
   removeNote(noteId: string): Promise<void>;
   removeNpc(npcId: string): Promise<void>;
   removeAdventure(adventureId: string): Promise<void>;
+  saveScene(scene: Scene): Promise<Scene | null>;
+  saveScenes(scenes: Scene[]): Promise<void>;
+  removeScene(sceneId: string): Promise<void>;
+  importSceneImage(): Promise<SceneImage | null>;
   create(name: string): Promise<void>;
   open(campaignId: string): Promise<void>;
   close(): Promise<void>;
@@ -65,6 +69,41 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
         set({ lastImport: report, campaigns, current });
       });
       set({ importing: false });
+    },
+
+    async saveScene(scene) {
+      const saved = await guard(() => window.trifold.scenes.save(scene));
+      const current = get().current;
+      if (saved && current) {
+        const others = current.scenes.filter((x) => x.id !== saved.id);
+        set({ current: { ...current, scenes: [...others, saved] } });
+      }
+      return saved;
+    },
+
+    async saveScenes(scenes) {
+      for (const scene of scenes) await get().saveScene(scene);
+    },
+
+    async removeScene(sceneId) {
+      await guard(async () => {
+        await window.trifold.scenes.remove(sceneId);
+        const current = get().current;
+        if (current) {
+          set({
+            current: {
+              ...current,
+              scenes: current.scenes
+                .filter((x) => x.id !== sceneId)
+                .map((x) => (x.parentId === sceneId ? { ...x, parentId: null } : x)),
+            },
+          });
+        }
+      });
+    },
+
+    async importSceneImage() {
+      return guard(() => window.trifold.scenes.importImage());
     },
 
     async removeNote(noteId) {

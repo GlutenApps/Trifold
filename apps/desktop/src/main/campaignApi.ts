@@ -1,6 +1,7 @@
 import { dialog } from 'electron';
 import type { TrifoldApi } from '@trifold/api';
 import { CampaignEntities } from './campaign/entities';
+import { importSceneImage } from './campaign/images';
 import { importCampaignXml } from './campaign/importCampaign';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
@@ -9,7 +10,10 @@ import type { Logger } from './log';
 export function createCampaignApi(
   session: LibrarySession,
   logger: Logger,
-): Pick<TrifoldApi, 'campaigns' | 'pcs' | 'encounters' | 'adventures' | 'notes' | 'npcs'> {
+): Pick<
+  TrifoldApi,
+  'campaigns' | 'pcs' | 'encounters' | 'adventures' | 'notes' | 'npcs' | 'scenes'
+> {
   const repo = () => {
     const campaigns = session.campaigns;
     if (!campaigns) throw new Error('No Library is open');
@@ -101,6 +105,27 @@ export function createCampaignApi(
       },
       async remove(id) {
         await entities().removeNpc(id);
+      },
+    },
+    scenes: {
+      async save(scene) {
+        return entities().saveScene(scene);
+      },
+      async remove(id) {
+        await entities().removeScene(id);
+      },
+      async importImage() {
+        const slug = repo().current;
+        if (!slug) throw new Error('Open a campaign first');
+        const result = await dialog.showOpenDialog({
+          title: 'Choose a scene image',
+          properties: ['openFile'],
+          filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }],
+        });
+        const path = result.canceled ? null : (result.filePaths[0] ?? null);
+        if (!path) return null;
+        const { store } = session.require();
+        return importSceneImage(store, slug, path);
       },
     },
   };

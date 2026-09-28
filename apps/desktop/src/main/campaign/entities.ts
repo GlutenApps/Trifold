@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises';
 import { ulid } from 'ulid';
-import { Adventure, CAMPAIGN_SCHEMA_VERSION, Note, NPC, nowIso } from '@trifold/schema';
+import { Adventure, CAMPAIGN_SCHEMA_VERSION, Note, NPC, nowIso, Scene } from '@trifold/schema';
 import type { CampaignRepository } from './repository';
 
 /**
@@ -59,6 +59,23 @@ export class CampaignEntities {
 
   async removeNpc(id: string): Promise<void> {
     await rm(this.repo.entityPath('npcs', id), { force: true });
+    await this.repo.touch();
+  }
+
+  async saveScene(input: Scene): Promise<Scene> {
+    const scene = Scene.parse({
+      ...input,
+      schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+      id: input.id || ulid(),
+      createdAt: input.createdAt || nowIso(),
+      updatedAt: nowIso(),
+    });
+    await this.repo.writeEntity('scenes', scene.id, scene);
+    return scene;
+  }
+
+  async removeScene(id: string): Promise<void> {
+    await rm(this.repo.entityPath('scenes', id), { force: true });
     await this.repo.touch();
   }
 }
