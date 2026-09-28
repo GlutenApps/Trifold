@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
-import type { Source } from '@trifold/schema';
+import type { SourceSummary } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 
-function counts(source: Source): string {
+function counts(source: SourceSummary): string {
   const entries = Object.entries(source.recordCounts).filter(([, n]) => (n ?? 0) > 0);
   if (entries.length === 0) return 'no records';
   return entries.map(([k, n]) => `${n} ${k}${n === 1 ? '' : 's'}`).join(', ');
 }
 
-function SourceRow({ source }: { source: Source }) {
+function SourceRow({ source }: { source: SourceSummary }) {
   const setEnabled = useSourcesStore((s) => s.setEnabled);
   const remove = useSourcesStore((s) => s.remove);
+  const reimport = useSourcesStore((s) => s.reimport);
+  const importing = useSourcesStore((s) => s.importing);
   const [showWarnings, setShowWarnings] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
 
@@ -28,8 +30,19 @@ function SourceRow({ source }: { source: Source }) {
         </label>
         <span className="badge">{source.kind}</span>
         {source.license.nonSrd && <span className="badge">user content</span>}
+        {source.stale && <span className="badge warn">parser updated</span>}
         <span className="muted">{counts(source)}</span>
         <span className="spacer" />
+        {source.stale && (
+          <button
+            type="button"
+            className="btn"
+            disabled={importing}
+            onClick={() => void reimport(source.id)}
+          >
+            Re-parse
+          </button>
+        )}
         {source.warnings.length > 0 && (
           <button type="button" className="btn" onClick={() => setShowWarnings((v) => !v)}>
             {source.warnings.length} warning{source.warnings.length === 1 ? '' : 's'}

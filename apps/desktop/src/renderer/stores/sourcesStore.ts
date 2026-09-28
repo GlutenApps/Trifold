@@ -1,9 +1,8 @@
 import { create } from 'zustand';
-import type { ImportProgress, ImportReport } from '@trifold/api';
-import type { Source } from '@trifold/schema';
+import type { ImportProgress, ImportReport, SourceSummary } from '@trifold/api';
 
 interface SourcesState {
-  sources: Source[];
+  sources: SourceSummary[];
   loading: boolean;
   importing: boolean;
   progress: ImportProgress | null;
@@ -13,6 +12,7 @@ interface SourcesState {
   load(): Promise<void>;
   importFromDialog(): Promise<void>;
   importPath(path: string): Promise<ImportReport | null>;
+  reimport(sourceId: string): Promise<void>;
   setEnabled(sourceId: string, enabled: boolean): Promise<void>;
   remove(sourceId: string): Promise<void>;
   rebuildIndex(): Promise<void>;
@@ -64,10 +64,23 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
     }
   },
 
+  async reimport(sourceId) {
+    set({ importing: true, progress: null, lastReport: null, error: null });
+    try {
+      const report = await window.trifold.sources.reimport(sourceId);
+      set({ lastReport: report, importing: false, progress: null });
+      await get().load();
+    } catch (err) {
+      set({ error: messageOf(err), importing: false, progress: null });
+    }
+  },
+
   async setEnabled(sourceId, enabled) {
     try {
       const updated = await window.trifold.sources.setEnabled(sourceId, enabled);
-      set({ sources: get().sources.map((s) => (s.id === sourceId ? updated : s)) });
+      set({
+        sources: get().sources.map((s) => (s.id === sourceId ? { ...s, ...updated } : s)),
+      });
     } catch (err) {
       set({ error: messageOf(err) });
     }

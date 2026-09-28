@@ -5,7 +5,7 @@ import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 import type { PresenterHub } from './presenter';
-import { importXmlSource } from './sources/importXml';
+import { importXmlSource, isStale, reimportSource } from './sources/importXml';
 import { WindowManager } from './windows';
 
 export interface ApiContext {
@@ -106,7 +106,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     sources: {
       async list() {
         const sources = ctx.session.sources;
-        return sources ? sources.list() : [];
+        if (!sources) return [];
+        return (await sources.list()).map((s) => ({ ...s, stale: isStale(s) }));
       },
       async chooseFile() {
         const result = await dialog.showOpenDialog({
@@ -133,6 +134,25 @@ export function createApi(ctx: ApiContext): TrifoldApi {
               onProgress: (p) => ctx.windows.sendToConsole(EVENT_CHANNELS.importProgress, p),
             },
             path,
+          );
+        } finally {
+          importing = false;
+        }
+      },
+      async reimport(sourceId) {
+        if (importing) throw new Error('An import is already running');
+        const { store, sources, index } = ctx.session.require();
+        importing = true;
+        try {
+          return await reimportSource(
+            {
+              store,
+              sources,
+              index,
+              logger: ctx.logger,
+              onProgress: (p) => ctx.windows.sendToConsole(EVENT_CHANNELS.importProgress, p),
+            },
+            sourceId,
           );
         } finally {
           importing = false;

@@ -78,6 +78,11 @@ export const initialPresenterState: PresenterState = {
 
 // ---------- sources and compendium (DESIGN.md §6.1) ----------
 
+/** A source on disk plus whether its records predate the current importer. */
+export interface SourceSummary extends Source {
+  stale: boolean;
+}
+
 export interface ImportProgress {
   phase: 'hashing' | 'copying' | 'parsing' | 'writing' | 'indexing' | 'done';
   records: number;
@@ -178,11 +183,13 @@ export interface TrifoldApi {
     get(): Promise<PresenterState>;
   };
   sources: {
-    list(): Promise<Source[]>;
+    list(): Promise<SourceSummary[]>;
     /** Native file picker for XML files. Resolves to null when cancelled. */
     chooseFile(): Promise<string | null>;
     /** Imports (or re-imports) a Lion's Den compendium XML file. Progress arrives as events. */
     importFile(path: string): Promise<ImportReport>;
+    /** Re-parses a source from its stored original.xml with the current importer. */
+    reimport(sourceId: string): Promise<ImportReport>;
     setEnabled(sourceId: string, enabled: boolean): Promise<Source>;
     remove(sourceId: string): Promise<void>;
     rebuildIndex(): Promise<IndexStats>;
@@ -205,7 +212,7 @@ export const API_METHODS = {
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],
   presenter: ['push', 'get'],
-  sources: ['list', 'chooseFile', 'importFile', 'setEnabled', 'remove', 'rebuildIndex'],
+  sources: ['list', 'chooseFile', 'importFile', 'reimport', 'setEnabled', 'remove', 'rebuildIndex'],
   compendium: ['search', 'get', 'findByKey', 'facets'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };
 

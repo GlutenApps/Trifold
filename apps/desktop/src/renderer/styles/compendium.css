@@ -112,6 +112,11 @@
   text-overflow: ellipsis;
 }
 
+.badge.warn {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
 .badge.roll {
   border-color: var(--accent);
   color: var(--accent);

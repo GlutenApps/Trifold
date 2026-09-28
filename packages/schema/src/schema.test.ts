@@ -56,6 +56,7 @@ describe('Source', () => {
       recordCounts: { monster: 3, spell: 1 },
       warnings: ['1 monster missing cr'],
     });
+    expect(parsed.importerVersion).toBe(0);
     expect(parsed.recordCounts.monster).toBe(3);
     expect(parsed.recordCounts.item).toBeUndefined();
   });

@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { copyFile, mkdir, open, rename, stat, unlink } from 'node:fs/promises';
-import { basename, extname, join } from 'node:path';
+import { basename, extname, join, resolve } from 'node:path';
 import { ulid } from 'ulid';
 import type { ImportProgress, ImportReport } from '@trifold/api';
-import { createCompendiumImporter, detectXmlKind } from '@trifold/importers';
+import { createCompendiumImporter, detectXmlKind, IMPORTER_VERSION } from '@trifold/importers';
 import { nowIso, type CompendiumRecord, type Source } from '@trifold/schema';
 import type { IndexDb } from '../index/IndexDb';
 import type { LibraryStore } from '../library/LibraryStore';
@@ -14,6 +14,7 @@ import type { SourceRepository } from './repository';
 export interface ImportContext {
   store: LibraryStore;
   sources: SourceRepository;
+  /** Null when the index is unavailable; the files are still written. */
   index: IndexDb | null;
   logger: Logger;
   onProgress?: (progress: ImportProgress) => void;
@@ -43,17 +44,39 @@ async function readHead(path: string, bytes: number): Promise<string> {
   }
 }
 
+function matchKey(record: CompendiumRecord): string {
+  return `${record.kind}:${record.key}:${record.edition}`;
+}
+
 function recordSignature(record: CompendiumRecord): string {
   const { id: _id, ...rest } = record;
   return JSON.stringify(rest);
 }
 
+/** True when a source's records were produced by an older importer. */
+export function isStale(source: Source): boolean {
+  return source.importerVersion < IMPORTER_VERSION;
+}
+
+/** Re-parses an existing source from its stored original.xml. */
+export async function reimportSource(ctx: ImportContext, sourceId: string): Promise<ImportReport> {
+  const existing = await ctx.sources.get(sourceId);
+  if (!existing) throw new ImportError(`Source ${sourceId} not found`);
+  const original = join(ctx.sources.dirFor(sourceId), existing.filePath ?? 'original.xml');
+  return importXmlSource(ctx, original, existing);
+}
+
 /**
  * Imports a Lion's Den compendium XML file into `sources/<id>/` (DESIGN.md §6.1):
- * hash → skip if unchanged; copy the original; stream-parse; write records.jsonl and source.json;
- * index. Re-importing a changed file keeps record ids stable by key and reports a diff.
+ * hash → skip if unchanged and parsed by the current importer; copy the original; stream-parse;
+ * write records.jsonl and source.json; index. Re-importing a changed file keeps record ids stable
+ * by key and reports a diff.
  */
-export async function importXmlSource(ctx: ImportContext, filePath: string): Promise<ImportReport> {
+export async function importXmlSource(
+  ctx: ImportContext,
+  filePath: string,
+  target?: Source,
+): Promise<ImportReport> {
   const started = performance.now();
   const info = await stat(filePath);
   const totalBytes = info.size;
@@ -77,9 +100,10 @@ export async function importXmlSource(ctx: ImportContext, filePath: string): Pro
     bytesRead += n;
   });
 
-  const name = basename(filePath, extname(filePath));
-  const existing = (await ctx.sources.list()).find((s) => s.kind === 'xml' && s.name === name);
-  if (existing && existing.fileHash === fileHash) {
+  const name = target?.name ?? basename(filePath, extname(filePath));
+  const existing =
+    target ?? (await ctx.sources.list()).find((s) => s.kind === 'xml' && s.name === name);
+  if (existing && existing.fileHash === fileHash && !isStale(existing)) {
     ctx.logger.info(`source "${name}" unchanged (hash match); nothing to do`);
     progress('done');
     return {
@@ -97,28 +121,34 @@ export async function importXmlSource(ctx: ImportContext, filePath: string): Pro
   await mkdir(dir, { recursive: true });
 
   // Keep ids stable across re-imports so campaign references survive (DESIGN.md §5.4).
-  const previous = new Map<string, { id: string; signature: string }>();
+  // Records are matched by kind, key and edition, then by occurrence order for duplicates.
+  const previous = new Map<string, Array<{ id: string; signature: string }>>();
   if (existing) {
     for await (const r of ctx.sources.readRecords(sourceId)) {
-      previous.set(`${r.kind}:${r.key}`, { id: r.id, signature: recordSignature(r) });
+      const list = previous.get(matchKey(r)) ?? [];
+      list.push({ id: r.id, signature: recordSignature(r) });
+      previous.set(matchKey(r), list);
     }
   }
 
-  progress('copying');
-  const tmpCopy = join(dir, `original.xml.${process.pid}.tmp`);
-  try {
-    await copyFile(filePath, tmpCopy);
-    await rename(tmpCopy, join(dir, 'original.xml'));
-  } catch (err) {
-    await unlink(tmpCopy).catch(() => undefined);
-    throw err;
+  const originalPath = join(dir, 'original.xml');
+  if (resolve(filePath) !== resolve(originalPath)) {
+    progress('copying');
+    const tmpCopy = join(dir, `original.xml.${process.pid}.tmp`);
+    try {
+      await copyFile(filePath, tmpCopy);
+      await rename(tmpCopy, originalPath);
+    } catch (err) {
+      await unlink(tmpCopy).catch(() => undefined);
+      throw err;
+    }
   }
 
   progress('parsing');
   bytesRead = 0;
   const settings = ctx.store.getSettings();
   const records: CompendiumRecord[] = [];
-  const seenKeys = new Set<string>();
+  const occurrences = new Map<string, number>();
   const importer = createCompendiumImporter(
     {
       sourceId,
@@ -126,19 +156,18 @@ export async function importXmlSource(ctx: ImportContext, filePath: string): Pro
       edition2024Books: existing?.edition2024Books ?? settings.edition2024Books,
     },
     (record) => {
-      const keyed = `${record.kind}:${record.key}`;
-      const old = previous.get(keyed);
-      if (old && !seenKeys.has(keyed)) record.id = old.id;
-      seenKeys.add(keyed);
+      const keyed = matchKey(record);
+      const n = occurrences.get(keyed) ?? 0;
+      occurrences.set(keyed, n + 1);
+      const old = previous.get(keyed)?.[n];
+      if (old) record.id = old.id;
       records.push(record);
       recordCount += 1;
       if (recordCount % 500 === 0) progress('parsing');
     },
   );
-  for await (const chunk of createReadStream(filePath, {
-    encoding: 'utf8',
-    highWaterMark: 1 << 20,
-  })) {
+  const reader = createReadStream(filePath, { encoding: 'utf8', highWaterMark: 1 << 20 });
+  for await (const chunk of reader) {
     bytesRead += Buffer.byteLength(chunk as string, 'utf8');
     importer.write(chunk as string);
   }
@@ -148,15 +177,19 @@ export async function importXmlSource(ctx: ImportContext, filePath: string): Pro
   if (existing) {
     let added = 0;
     let changed = 0;
-    const current = new Set<string>();
+    const counted = new Map<string, number>();
     for (const r of records) {
-      const keyed = `${r.kind}:${r.key}`;
-      current.add(keyed);
-      const old = previous.get(keyed);
+      const keyed = matchKey(r);
+      const n = counted.get(keyed) ?? 0;
+      counted.set(keyed, n + 1);
+      const old = previous.get(keyed)?.[n];
       if (!old) added += 1;
       else if (old.signature !== recordSignature(r)) changed += 1;
     }
-    const removed = [...previous.keys()].filter((k) => !current.has(k)).length;
+    let removed = 0;
+    for (const [keyed, list] of previous) {
+      removed += Math.max(0, list.length - (counted.get(keyed) ?? 0));
+    }
     diff = { added, changed, removed };
   }
 
@@ -173,6 +206,7 @@ export async function importXmlSource(ctx: ImportContext, filePath: string): Pro
     edition2024Books: existing?.edition2024Books ?? settings.edition2024Books,
     license: existing?.license ?? { nonSrd: true, attribution: null },
     importedAt: nowIso(),
+    importerVersion: IMPORTER_VERSION,
     recordCounts: stats.counts,
     warnings: stats.warnings,
   };

@@ -27,6 +27,8 @@ export const Source = z.object({
   edition2024Books: z.array(z.string()).default([]),
   license: SourceLicense,
   importedAt: IsoDateTime,
+  /** Version of the importer that produced records.jsonl; older sources are re-parsed on demand. */
+  importerVersion: z.number().int().nonnegative().default(0),
   recordCounts: z.partialRecord(RecordKind, z.number().int().nonnegative()).default({}),
   warnings: z.array(z.string()).default([]),
 });

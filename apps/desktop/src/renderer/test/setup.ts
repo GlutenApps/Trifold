@@ -53,6 +53,14 @@ export function installBridgeMock(): TrifoldBridge {
     sources: {
       list: vi.fn(async () => []),
       chooseFile: vi.fn(async () => null),
+      reimport: vi.fn(async () => ({
+        sourceId: 'src',
+        name: 'src',
+        status: 'updated' as const,
+        counts: {},
+        warnings: [],
+        durationMs: 0,
+      })),
       importFile: vi.fn(async (path: string) => ({
         sourceId: 'src',
         name: path,
