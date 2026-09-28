@@ -6,3 +6,4 @@ export * from './record';
 export * from './compendium';
 export * from './campaign';
 export * from '../migrations/index';
+export * from './icons';

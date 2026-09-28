@@ -2,6 +2,7 @@ import { app, dialog, shell } from 'electron';
 import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
 import { createCampaignApi } from './campaignApi';
+import type { IconResources } from './icons';
 import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
@@ -15,6 +16,7 @@ export interface ApiContext {
   windows: WindowManager;
   presenter: PresenterHub;
   logger: Logger;
+  icons: IconResources;
 }
 
 const RECENT_LIBRARIES = 10;
@@ -202,6 +204,21 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     },
 
     ...createCampaignApi(ctx.session, ctx.logger),
+
+    icons: {
+      async tables() {
+        return ctx.icons.tables();
+      },
+      async available() {
+        return [...ctx.icons.available()];
+      },
+      async credits() {
+        return ctx.icons.credits();
+      },
+      async reportMiss(kind, name) {
+        await ctx.icons.reportMiss(kind, name);
+      },
+    },
 
     compendium: {
       async search(query) {

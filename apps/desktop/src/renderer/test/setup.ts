@@ -50,6 +50,19 @@ export function installBridgeMock(): TrifoldBridge {
       push: vi.fn(async () => undefined),
       get: vi.fn(async () => initialPresenterState),
     },
+    icons: {
+      tables: vi.fn(async () => ({
+        creatureType: {},
+        ancestry: {},
+        nameKeywords: {},
+        synonyms: {},
+        itemType: {},
+        spellSchool: {},
+      })),
+      available: vi.fn(async () => []),
+      credits: vi.fn(async () => null),
+      reportMiss: vi.fn(async () => undefined),
+    },
     sources: {
       list: vi.fn(async () => []),
       chooseFile: vi.fn(async () => null),

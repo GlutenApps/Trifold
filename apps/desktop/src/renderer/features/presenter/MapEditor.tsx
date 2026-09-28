@@ -11,6 +11,7 @@ import type { CombatantTemplate, Encounter, EntryMarker, Scene, Token } from '@t
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
+import { useIconStore } from '../../stores/iconStore';
 import { useUiStore } from '../../stores/uiStore';
 import { GridLines } from './MapLayer';
 import { TokenDisc } from './TokenDisc';
@@ -73,6 +74,8 @@ export function MapEditor({
   const begin = useCombatStore((s) => s.begin);
   const resume = useCombatStore((s) => s.resume);
   const setSection = useUiStore((s) => s.setSection);
+  const glyphFor = useIconStore((s) => s.glyphForCreature);
+  const loadIcons = useIconStore((s) => s.load);
   const aspect = usePresenterStore((s) => s.liveOptions.aspect);
   const tokenStyle = usePresenterStore((s) => s.liveOptions.tokenStyle);
 
@@ -127,6 +130,10 @@ export function MapEditor({
     observer.observe(el);
     return () => observer.disconnect();
   }, [scene.id, size.width, size.height]);
+
+  useEffect(() => {
+    void loadIcons();
+  }, [loadIcons]);
 
   // Creature search for placing tokens.
   useEffect(() => {
@@ -183,6 +190,10 @@ export function MapEditor({
   const placePending = (at: Point) => {
     if (!pending) return;
     const cell = snap(pixelToGrid(at.x, at.y, grid));
+    const markerGlyph = glyphFor({ name: 'marker' }, 'marker');
+    const creatureGlyph = pending.row
+      ? glyphFor({ name: pending.row.displayName, type: pending.row.type }, 'creature')
+      : null;
     const token: Token =
       pending.kind === 'marker' || !pending.row
         ? {
@@ -197,6 +208,7 @@ export function MapEditor({
             hidden: false,
             nameMasked: false,
             dead: false,
+            ...(markerGlyph ? { glyph: markerGlyph } : {}),
           }
         : {
             id: ulid(),
@@ -220,6 +232,7 @@ export function MapEditor({
             hidden: false,
             nameMasked: true,
             dead: false,
+            ...(creatureGlyph ? { glyph: creatureGlyph } : {}),
           };
     patch({ tokens: [...scene.tokens, token] });
     setSelectedTokenId(token.id);

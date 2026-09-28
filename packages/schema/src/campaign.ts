@@ -320,6 +320,8 @@ export const Token = z.object({
   maskedLabel: z.string().optional(),
   /** Campaign-relative image path for custom art; absent = generated disc. */
   art: z.string().optional(),
+  /** game-icons glyph name chosen at placement (DESIGN.md §6.8); absent = initials. */
+  glyph: z.string().optional(),
   color: z.string().optional(),
   dead: z.boolean().default(false),
 });

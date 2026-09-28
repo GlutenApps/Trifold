@@ -1,6 +1,7 @@
 import { net, protocol } from 'electron';
 import { pathToFileURL } from 'node:url';
 import { MEDIA_SCHEME } from '@trifold/api';
+import type { IconResources } from './icons';
 import type { LibrarySession } from './library/session';
 
 /**
@@ -23,9 +24,15 @@ export function registerMediaScheme(): void {
   ]);
 }
 
-export function installMediaHandler(session: LibrarySession): void {
+export function installMediaHandler(session: LibrarySession, icons: IconResources): void {
   protocol.handle(MEDIA_SCHEME, (request) => {
     const url = new URL(request.url);
+    if (url.host === 'icons') {
+      const file = icons.svgPath(decodeURIComponent(url.pathname.replace(/^\//, '')));
+      return file
+        ? net.fetch(pathToFileURL(file).toString())
+        : new Response('not found', { status: 404 });
+    }
     if (url.host !== 'library') return new Response('not found', { status: 404 });
     const store = session.store;
     if (!store) return new Response('no library', { status: 503 });

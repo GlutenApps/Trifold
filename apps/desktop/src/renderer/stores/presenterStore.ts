@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import {
+  iconUrl,
   initialPresenterState,
   mediaUrl,
   type BreakScreen,
@@ -67,6 +68,7 @@ export function liveSceneFrom(
             label: t.kind === 'creature' && t.nameMasked ? (t.maskedLabel ?? 'Creature') : t.label,
             role: t.role,
             ...(t.art ? { artUrl: mediaUrl(campaignSlug, t.art) } : {}),
+            ...(t.glyph ? { glyphUrl: iconUrl(t.glyph) } : {}),
             ...(t.color ? { color: t.color } : {}),
             dead: t.dead,
           })),

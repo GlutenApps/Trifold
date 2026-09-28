@@ -300,3 +300,30 @@
 .scenes-split.with-map {
   grid-template-columns: minmax(260px, 0.6fr) minmax(520px, 2fr);
 }
+
+/* Glyphs are masked so the treatment colours them (DESIGN.md §6.8) */
+.token-glyph {
+  display: block;
+  width: 78%;
+  height: 78%;
+  background: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+.style-engraved .token-glyph {
+  color: #3a2a16;
+  filter: drop-shadow(0 0.04em 0 rgba(255, 255, 255, 0.45));
+}
+
+.style-flat .token-glyph {
+  color: #fff;
+}
+
+.style-twoTone .token-glyph {
+  color: #c8a45c;
+}

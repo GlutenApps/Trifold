@@ -25,10 +25,10 @@ pnpm typecheck    # tsc across every package
 pnpm lint         # ESLint + Prettier check
 pnpm smoke        # build, then a Playwright smoke test that drives the real app
 pnpm build        # electron-builder → dist/ (NSIS installer + portable exe)
-pnpm fetch:content # download the SRD snapshot (and later game-icons) into resources/; needs network
+pnpm fetch:content # download the SRD snapshot and the game-icons set into resources/; needs network
 ```
 
-Run `pnpm fetch:content` once after cloning. It writes `resources/srd-2024.jsonl` and `srd-2014.jsonl` (git-ignored) from the Open5e API and refreshes the committed `resources/srd-manifest.json`. Without them the app still runs; it just has no bundled SRD until you import your own files.
+Run `pnpm fetch:content` once after cloning. It writes `resources/srd-2024.jsonl` and `srd-2014.jsonl` (git-ignored) from the Open5e API and refreshes the committed `resources/srd-manifest.json`. It also clones game-icons.net's icon set into `resources/icons/svg/` (git-ignored, needs `git` on PATH), writes `resources/icons/credits.json` for the About page, and checks every name in the committed `resources/icons/mapping.json` against the set (`pnpm verify:mapping`). Without them the app still runs; it has no bundled SRD until you import your own files, and tokens show initials instead of glyphs.
 
 Local-only test content such as a full community compendium file must stay out of the repo: name it `*.local.xml` or put it under `fixtures/local/`, both of which are git-ignored.
 

@@ -18,7 +18,9 @@
     "fetch:content": "tsx scripts/fetch-content.ts",
     "rebuild:native": "node scripts/rebuild-native.mjs",
     "smoke": "pnpm --filter @trifold/desktop smoke",
-    "fetch:open5e": "tsx scripts/fetch-open5e.ts"
+    "fetch:open5e": "tsx scripts/fetch-open5e.ts",
+    "fetch:icons": "tsx scripts/fetch-game-icons.ts",
+    "verify:mapping": "tsx scripts/verify-mapping.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

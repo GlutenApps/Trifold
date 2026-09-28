@@ -8,3 +8,4 @@ export * from './statblock/sourceLine';
 export * from './statblock/attacks';
 export * from './statblock/modifier';
 export * from './combat/index';
+export * from './art/glyph';

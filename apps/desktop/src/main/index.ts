@@ -6,6 +6,7 @@ import { AppConfigStore } from './appConfig';
 import { registerIpc } from './ipc';
 import { LibrarySession } from './library/session';
 import { createLogger, errorMessage } from './log';
+import { IconResources } from './icons';
 import { installMediaHandler, registerMediaScheme } from './media';
 import { PresenterHub } from './presenter';
 import { WindowManager } from './windows';
@@ -34,7 +35,8 @@ async function main(): Promise<void> {
     : join(app.getAppPath(), '..', '..', 'resources');
   session = new LibrarySession(logger, bundledDir);
   const activeSession = session;
-  installMediaHandler(activeSession);
+  const icons = new IconResources(join(bundledDir, 'icons'), logger, () => session?.logDir ?? null);
+  installMediaHandler(activeSession, icons);
 
   const config = await AppConfigStore.load(join(app.getPath('userData'), 'config.json'), logger);
 
@@ -58,7 +60,10 @@ async function main(): Promise<void> {
     await config.update({ libraryPath: info.path });
   }
 
-  registerIpc(createApi({ config, session: activeSession, windows, presenter, logger }), logger);
+  registerIpc(
+    createApi({ config, session: activeSession, windows, presenter, logger, icons }),
+    logger,
+  );
   windows.openConsole(config.get().consoleWindow);
 
   app.on('second-instance', () => windows.focusConsole());

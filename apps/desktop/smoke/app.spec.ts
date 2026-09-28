@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -208,6 +209,23 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(console_.getByTestId('console-token')).toHaveCount(2);
     await expect(player.getByTestId('player-token')).toHaveCount(2);
     await expect(player.getByTestId('map-layer')).toContainText('Thora');
+
+    // Bundled glyphs are served to the player over the media scheme (only when fetched).
+    if (existsSync(join(__dirname, '..', '..', '..', 'resources', 'icons', 'svg'))) {
+      const loads = (url: string) =>
+        player.evaluate(
+          (src) =>
+            new Promise<boolean>((resolve) => {
+              const img = new Image();
+              img.onload = () => resolve(img.naturalWidth > 0);
+              img.onerror = () => resolve(false);
+              img.src = src;
+            }),
+          url,
+        );
+      expect(await loads('trifold-media://icons/position-marker.svg')).toBe(true);
+      expect(await loads('trifold-media://icons/no-such-glyph.svg')).toBe(false);
+    }
 
     expect(rendererErrors).toEqual([]);
   } finally {

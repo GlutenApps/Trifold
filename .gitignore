@@ -17,3 +17,4 @@ fixtures/local/
 resources/*.jsonl
 resources/icons/svg/
 resources/icons/credits.json
+resources/icons/license.txt

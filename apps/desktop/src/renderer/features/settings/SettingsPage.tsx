@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { AttributionEntry } from '@trifold/api';
+import type { AttributionEntry, IconCreditsInfo } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
 import { SourcesCard } from './SourcesCard';
 
@@ -19,6 +19,14 @@ export function SettingsPage() {
       .then(setAttribution)
       .catch(() => setAttribution([]));
   }, [library?.path]);
+
+  const [iconCredits, setIconCredits] = useState<IconCreditsInfo | null>(null);
+  useEffect(() => {
+    void window.trifold.icons
+      .credits()
+      .then(setIconCredits)
+      .catch(() => setIconCredits(null));
+  }, []);
 
   const settings = library?.settings ?? null;
   const hasLibrary = library?.ok === true;
@@ -127,6 +135,24 @@ export function SettingsPage() {
             </div>
           ))
         )}
+        <div className="attribution" data-testid="icon-credits">
+          {iconCredits ? (
+            <>
+              <p>
+                Token glyphs: {iconCredits.icons} icons from game-icons.net ({iconCredits.source}),
+                licensed {iconCredits.license.name} ({iconCredits.license.url}).
+              </p>
+              <details>
+                <summary>Icon authors</summary>
+                <p className="muted small">
+                  {iconCredits.authors.map((a) => `${a.name} (${a.icons})`).join(' · ')}
+                </p>
+              </details>
+            </>
+          ) : (
+            <p className="muted">No bundled icon set in this build; tokens show initials.</p>
+          )}
+        </div>
       </div>
     </section>
   );

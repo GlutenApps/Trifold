@@ -3,7 +3,7 @@ import { initials } from './mapMath';
 
 export interface TokenDiscProps {
   token: Pick<LiveToken, 'label' | 'role' | 'kind' | 'dead'> &
-    Partial<Pick<LiveToken, 'artUrl' | 'color'>>;
+    Partial<Pick<LiveToken, 'artUrl' | 'glyphUrl' | 'color'>>;
   style: TokenStyle;
   /** Diameter in CSS pixels (before any parent transform). */
   size: number;
@@ -14,9 +14,9 @@ export interface TokenDiscProps {
 }
 
 /**
- * A token as a disc (DESIGN.md §6.8): custom art when set, otherwise a treated disc with the
- * label's initials. Glyph art from the icon tables arrives in a later slice; the treatments and
- * ring colours are already the final ones so scenes built now keep their look.
+ * A token as a disc (DESIGN.md §6.8): custom art when set, else the game-icons glyph masked into
+ * a treated disc (engraved, flat, two-tone), else the label's initials. The glyph is a CSS mask
+ * so the treatment colours it; Chromium rasterises and caches it per size.
  */
 export function TokenDisc({
   token,
@@ -49,6 +49,15 @@ export function TokenDisc({
       <div className="token-face" style={glyphStyle}>
         {token.artUrl ? (
           <img src={token.artUrl} alt="" draggable={false} />
+        ) : token.glyphUrl && style !== 'plain' ? (
+          <span
+            className="token-glyph"
+            data-testid="token-glyph"
+            style={{
+              maskImage: `url("${token.glyphUrl}")`,
+              WebkitMaskImage: `url("${token.glyphUrl}")`,
+            }}
+          />
         ) : (
           <span className="token-initials">{initials(token.label)}</span>
         )}

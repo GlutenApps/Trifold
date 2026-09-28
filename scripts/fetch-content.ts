@@ -1,12 +1,15 @@
 // Build-time only. Runs every content fetch step in order (DESIGN.md §6.1 and §6.8):
 //   1. Open5e SRD snapshot  → resources/srd-*.jsonl + srd-manifest.json
-//   2. game-icons SVG set   → resources/icons/ (arrives with the presenter token work)
+//   2. game-icons SVG set   → resources/icons/svg + credits.json + manifest.json
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const steps = [['Open5e SRD snapshot', join(here, 'fetch-open5e.ts')]];
+const steps = [
+  ['Open5e SRD snapshot', join(here, 'fetch-open5e.ts')],
+  ['game-icons SVG set', join(here, 'fetch-game-icons.ts')],
+];
 
 for (const [label, script] of steps) {
   console.log(`== ${label}`);

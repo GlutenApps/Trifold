@@ -5,6 +5,7 @@ import type {
   CompendiumRecord,
   Encounter,
   EncounterResult,
+  IconTables,
   LibrarySettings,
   Note,
   NPC,
@@ -110,6 +111,8 @@ export interface LiveToken {
   label: string;
   role: 'ally' | 'enemy' | 'neutral';
   artUrl?: string;
+  /** `trifold-media://icons/<name>.svg`, masked into the disc; custom art wins over it. */
+  glyphUrl?: string;
   color?: string;
   dead: boolean;
 }
@@ -193,6 +196,19 @@ export const initialPresenterState: PresenterState = {
 
 /** Media inside the Library is served to the renderer over this scheme (main registers it). */
 export const MEDIA_SCHEME = 'trifold-media';
+
+/** A bundled game-icons glyph, served by main from resources/icons/svg. */
+export function iconUrl(name: string): string {
+  return `${MEDIA_SCHEME}://icons/${encodeURIComponent(name)}.svg`;
+}
+
+/** What the About page shows for the icon set (DESIGN.md §6.8). */
+export interface IconCreditsInfo {
+  license: { name: string; url: string };
+  source: string;
+  authors: Array<{ name: string; icons: number }>;
+  icons: number;
+}
 
 export function mediaUrl(campaignSlug: string, relativePath: string): string {
   const parts = [`campaigns`, campaignSlug, ...relativePath.split('/')].map(encodeURIComponent);
@@ -413,6 +429,15 @@ export interface TrifoldApi {
     /** Native picker; copies the image into the campaign and makes a display-size copy. */
     importImage(): Promise<SceneImage | null>;
   };
+  icons: {
+    /** The mapping tables from resources/icons/mapping.json. */
+    tables(): Promise<IconTables>;
+    /** Names of every bundled glyph; empty when the icon set was not fetched. */
+    available(): Promise<string[]>;
+    credits(): Promise<IconCreditsInfo | null>;
+    /** Records a creature the tables could not match, in Library/logs/icon-misses.txt. */
+    reportMiss(kind: string, name: string): Promise<void>;
+  };
   compendium: {
     search(query: CompendiumQuery): Promise<CompendiumSearchResult>;
     get(recordId: string): Promise<CompendiumRecord | null>;
@@ -448,6 +473,7 @@ export const API_METHODS = {
   scenes: ['save', 'remove', 'importImage'],
   pcs: ['save', 'remove', 'quickAdd'],
   encounters: ['save', 'remove', 'saveState', 'finish'],
+  icons: ['tables', 'available', 'credits', 'reportMiss'],
   compendium: ['search', 'get', 'findByKey', 'facets'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };
 
