@@ -13,6 +13,11 @@
   },
   "dependencies": {
     "@trifold/rules": "workspace:*",
-    "@trifold/schema": "workspace:*"
+    "@trifold/schema": "workspace:*",
+    "sax": "1.6.1",
+    "ulid": "3.0.2"
+  },
+  "devDependencies": {
+    "@types/sax": "1.2.7"
   }
 }

@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Trifold test fixture. Hand-written to exercise every convention in docs/DATA-FORMATS.md §2.
+  Creature and spell names are from the System Reference Document; all descriptive text is our own
+  and deliberately abbreviated. Numbers are illustrative, not authoritative.
+-->
+<compendium version="5" auto_indent="NO">
+  <monster>
+    <name>Aboleth</name>
+    <size>L</size>
+    <type>aberration</type>
+    <alignment>lawful evil</alignment>
+    <ac>17 (natural armor)</ac>
+    <hp>135 (18d10+36)</hp>
+    <speed>walk 10 ft., swim 40 ft.</speed>
+    <str>21</str>
+    <dex>9</dex>
+    <con>15</con>
+    <int>18</int>
+    <wis>15</wis>
+    <cha>18</cha>
+    <save>Con +6, Int +8, Wis +6</save>
+    <skill>History +12, Perception +10</skill>
+    <resist></resist>
+    <immune></immune>
+    <conditionImmune></conditionImmune>
+    <senses>darkvision 120 ft.</senses>
+    <passive>20</passive>
+    <languages>Deep Speech, telepathy 120 ft.</languages>
+    <cr>10</cr>
+    <environment>underdark</environment>
+    <trait>
+      <name>Amphibious</name>
+      <text>The aboleth can breathe air and water.</text>
+    </trait>
+    <trait>
+      <name>Mucous Cloud</name>
+      <text>While underwater, the aboleth is surrounded by transformative mucus. A creature that touches the aboleth must succeed on a DC 14 Constitution saving throw or be diseased.</text>
+    </trait>
+    <action>
+      <name>Multiattack</name>
+      <text>The aboleth makes three tentacle attacks.</text>
+    </action>
+    <action>
+      <name>Tentacle</name>
+      <text>Melee Weapon Attack: +9 to hit, reach 10 ft., one target. Hit: 12 (2d6 + 5) bludgeoning damage. If the target is a creature, it must succeed on a DC 14 Constitution saving throw or become diseased.</text>
+      <attack>Tentacle|+9|2d6+5</attack>
+    </action>
+    <action>
+      <name>Tail</name>
+      <text>Melee Weapon Attack: +9 to hit, reach 10 ft., one target. Hit: 15 (3d6 + 5) bludgeoning damage.</text>
+      <attack>Tail|+9|3d6+5</attack>
+    </action>
+    <action>
+      <name>Enslave (3/Day)</name>
+      <text>The aboleth targets one creature it can see within 30 feet of it. The target must succeed on a DC 14 Wisdom saving throw or be magically charmed by the aboleth until the aboleth dies.</text>
+    </action>
+    <legendary>
+      <name>Legendary Actions (3/Turn)</name>
+      <text>The aboleth can take 3 legendary actions, choosing from the options below. Only one legendary action can be used at a time and only at the end of another creature's turn.</text>
+      <recharge>3/TURN</recharge>
+    </legendary>
+    <legendary>
+      <name>Detect</name>
+      <text>The aboleth makes a Wisdom (Perception) check.</text>
+    </legendary>
+    <legendary>
+      <name>Tail Swipe</name>
+      <text>The aboleth makes one tail attack.</text>
+    </legendary>
+    <legendary>
+      <name>Psychic Drain (Costs 2 Actions)</name>
+      <text>One creature charmed by the aboleth takes 10 (3d6) psychic damage, and the aboleth regains hit points equal to the damage the creature takes.</text>
+      <attack>Psychic Damage||3d6</attack>
+    </legendary>
+    <legendary category="lair">
+      <name>Aboleth Lairs</name>
+      <text>On initiative count 20 (losing initiative ties), the aboleth can take a lair action to cause one of the following effects.</text>
+    </legendary>
+    <legendary category="lair">
+      <name>Phantasmal Image</name>
+      <text>The aboleth creates an illusory duplicate of itself until initiative count 20 on the next round.</text>
+    </legendary>
+    <description>Aboleths are ancient amphibious tyrants that lurk in deep water and dominate weaker minds.
+
+Source: System Reference Document 5.1 p. 261</description>
+    <homebrewNote>Kept as-is: unknown element for the extra test.</homebrewNote>
+  </monster>
+
+  <monster>
+    <name>Aboleth [5.5e]</name>
+    <size>Large</size>
+    <type>aberration</type>
+    <alignment>Lawful Evil</alignment>
+    <ac>17</ac>
+    <hp>150 (20d10+40)</hp>
+    <speed>10 ft., swim 40 ft.</speed>
+    <init>+7</init>
+    <str>21</str>
+    <dex>9</dex>
+    <con>15</con>
+    <int>18</int>
+    <wis>15</wis>
+    <cha>18</cha>
+    <save>Con +6, Int +8, Wis +6</save>
+    <skill>History +12, Perception +10</skill>
+    <senses>darkvision 120 ft.; Passive Perception 20</senses>
+    <passive>20</passive>
+    <languages>Deep Speech; telepathy 120 ft.</languages>
+    <cr>10</cr>
+    <environment>underdark, urban</environment>
+    <trait>
+      <name>Proficiency Bonus</name>
+      <text>+4</text>
+    </trait>
+    <trait>
+      <name>Amphibious</name>
+      <text>The aboleth can breathe air and water.</text>
+    </trait>
+    <trait>
+      <name>Treasure</name>
+      <text>Arcana, Relics.</text>
+    </trait>
+    <action>
+      <name>Multiattack</name>
+      <text>The aboleth makes two Tentacle attacks and uses either Consume Memories or Dominate Mind if available.</text>
+    </action>
+    <action>
+      <name>Tentacle</name>
+      <text>Melee Attack Roll: +9, reach 15 ft. Hit: 12 (2d6 + 5) Bludgeoning damage plus 7 (2d6) Acid damage. If the target is a creature, it must succeed on a DC 14 Constitution saving throw or be diseased.</text>
+      <attack>Bludgeoning Damage|+9|2d6+5</attack>
+      <attack>Acid Damage||2d6</attack>
+    </action>
+    <action>
+      <name>Consume Memories</name>
+      <text>Intelligence Saving Throw: DC 16, one creature within 30 feet that is Charmed or Grappled by the aboleth. Failure: 10 (3d6) Psychic damage, and the aboleth gains the target's memories. Success: Half damage.</text>
+      <attack>Psychic Damage||3d6</attack>
+    </action>
+    <action>
+      <name>Dominate Mind (2/Day)</name>
+      <text>Wisdom Saving Throw: DC 16, one creature the aboleth can see within 30 feet. Failure: The target has the Charmed condition until the aboleth dies or is on a different plane of existence.</text>
+    </action>
+    <legendary>
+      <name>Legendary Actions (3/Turn)</name>
+      <text>Legendary Action Uses: 3. Immediately after another creature's turn, the aboleth can expend a use to take one of the following actions. The aboleth regains all expended uses at the start of each of its turns.</text>
+      <recharge>3/TURN</recharge>
+    </legendary>
+    <legendary>
+      <name>Lash</name>
+      <text>The aboleth makes one Tentacle attack.</text>
+    </legendary>
+    <legendary>
+      <name>Psychic Drain (Costs 2 Actions)</name>
+      <text>If the aboleth has at least one creature Charmed by it, the aboleth uses Consume Memories and regains hit points equal to the damage dealt.</text>
+    </legendary>
+    <legendary category="lair">
+      <name>Aboleth Lairs</name>
+      <text>The aboleth's lair grants it Regional Effects while it is alive.</text>
+    </legendary>
+    <description>An aboleth is an amphibious tyrant. Its lair is a place of dread.
+
+Source: System Reference Document 5.2.1, p. 340</description>
+  </monster>
+
+  <monster>
+    <name>Goblin Warrior [5.5e]</name>
+    <size>S</size>
+    <type>fey (goblinoid)</type>
+    <alignment>Chaotic Neutral</alignment>
+    <ac>15</ac>
+    <hp>10 (3d6)</hp>
+    <speed>30 ft.</speed>
+    <init>+2</init>
+    <str>8</str>
+    <dex>15</dex>
+    <con>10</con>
+    <int>10</int>
+    <wis>8</wis>
+    <cha>8</cha>
+    <skill>Stealth +6</skill>
+    <senses>darkvision 60 ft.</senses>
+    <passive>9</passive>
+    <languages>Common, Goblin</languages>
+    <cr>1/4</cr>
+    <environment>forest, grassland, underdark</environment>
+    <trait>
+      <name>Proficiency Bonus</name>
+      <text>+2</text>
+    </trait>
+    <action>
+      <name>Scimitar</name>
+      <text>Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Slashing damage, plus 2 (1d4) Slashing damage if the attack roll had Advantage.</text>
+      <attack>Slashing Damage|+4|1d6+2</attack>
+    </action>
+    <action>
+      <name>Shortbow</name>
+      <text>Ranged Attack Roll: +4, range 80/320 ft. Hit: 5 (1d6 + 2) Piercing damage.</text>
+      <attack>Piercing Damage|+4|1d6+2</attack>
+    </action>
+    <action>
+      <name>Nimble Escape (Bonus Action)</name>
+      <text>The goblin takes the Disengage or Hide action.</text>
+    </action>
+    <description>Goblin warriors scout and raid in bands.
+
+Source: System Reference Document 5.2.1 p. 380</description>
+  </monster>
+
+  <monster>
+    <name>Young Red Dragon</name>
+    <size>L</size>
+    <type>dragon</type>
+    <alignment>chaotic evil</alignment>
+    <ac>18 (natural armor)</ac>
+    <hp>178 (17d10+85)</hp>
+    <speed>40 ft., climb 40 ft., fly 80 ft.</speed>
+    <str>23</str>
+    <dex>10</dex>
+    <con>21</con>
+    <int>14</int>
+    <wis>11</wis>
+    <cha>19</cha>
+    <save>Dex +4, Con +9, Wis +4, Cha +8</save>
+    <skill>Perception +8, Stealth +4</skill>
+    <immune>fire</immune>
+    <senses>blindsight 30 ft., darkvision 120 ft.</senses>
+    <passive>18</passive>
+    <languages>Common, Draconic</languages>
+    <cr>10</cr>
+    <ancestry>Dragon</ancestry>
+    <sortname>Dragon, Red, Young</sortname>
+    <environment>mountain</environment>
+    <action>
+      <name>Multiattack</name>
+      <text>The dragon makes three attacks: one with its bite and two with its claws.</text>
+    </action>
+    <action>
+      <name>Bite</name>
+      <text>Melee Weapon Attack: +10 to hit, reach 10 ft., one target. Hit: 17 (2d10 + 6) piercing damage plus 3 (1d6) fire damage.</text>
+      <attack>Bite|+10|(2d10+6)+(1d6)</attack>
+    </action>
+    <action>
+      <name>Claw</name>
+      <text>Melee Weapon Attack: +10 to hit, reach 5 ft., one target. Hit: 13 (2d6 + 6) slashing damage.</text>
+      <attack>Claw|+10|2d6+6</attack>
+    </action>
+    <action>
+      <name>Fire Breath (Recharge 5–6)</name>
+      <text>The dragon exhales fire in a 30-foot cone. Each creature in that area must make a DC 17 Dexterity saving throw, taking 56 (16d6) fire damage on a failed save, or half as much damage on a successful one.</text>
+      <attack>Fire Breath||16d6</attack>
+      <recharge>D5</recharge>
+    </action>
+    <description>Young red dragons are vain, greedy and quick to anger.
+
+Source: System Reference Document 5.1 p. 274</description>
+  </monster>
+
+  <monster>
+    <name>Mage</name>
+    <size>M</size>
+    <type>humanoid (any race)</type>
+    <alignment>any alignment</alignment>
+    <ac>12 (15 with mage armor)</ac>
+    <hp>40 (9d8)</hp>
+    <speed>30 ft.</speed>
+    <str>9</str>
+    <dex>14</dex>
+    <con>11</con>
+    <int>17</int>
+    <wis>12</wis>
+    <cha>11</cha>
+    <save>Int +6, Wis +4</save>
+    <skill>Arcana +6, History +6</skill>
+    <senses></senses>
+    <passive>11</passive>
+    <languages>any four languages</languages>
+    <cr>6</cr>
+    <spells>Fire Bolt, Light, Mage Hand, Prestidigitation, Detect Magic, Mage Armor, Magic Missile, Shield, Misty Step, Suggestion, Counterspell, Fireball, Fly, Greater Invisibility, Ice Storm, Cone of Cold</spells>
+    <slots>0,4,3,3,3,1</slots>
+    <trait>
+      <name>Spellcasting</name>
+      <text>The mage is a 9th-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 14, +6 to hit with spell attacks).</text>
+    </trait>
+    <action>
+      <name>Dagger</name>
+      <text>Melee or Ranged Weapon Attack: +5 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d4 + 2) piercing damage.</text>
+      <attack>Dagger|+5|1d4+2</attack>
+    </action>
+    <reaction>
+      <name>Shield Spell</name>
+      <text>When the mage is hit by an attack, it can cast shield as a reaction, gaining +5 AC until the start of its next turn.</text>
+    </reaction>
+    <description>Mages spend their lives in the study of arcane lore.
+
+Source: System Reference Document 5.1 p. 402</description>
+  </monster>
+
+  <monster>
+    <name>Awakened Shrub</name>
+    <size>S</size>
+    <type>plant</type>
+    <alignment>unaligned</alignment>
+    <ac>9</ac>
+    <hp>10 (3d6)</hp>
+    <speed>20 ft.</speed>
+    <str>3</str>
+    <dex>8</dex>
+    <con>11</con>
+    <int>10</int>
+    <wis>10</wis>
+    <cha>6</cha>
+    <vulnerable>fire</vulnerable>
+    <resist>piercing</resist>
+    <senses></senses>
+    <passive>10</passive>
+    <languages>one language known by its creator</languages>
+    <cr>0</cr>
+    <trait>
+      <name>False Appearance</name>
+      <text>While the shrub remains motionless, it is indistinguishable from a normal shrub.</text>
+    </trait>
+    <action>
+      <name>Rake</name>
+      <text>Melee Weapon Attack: +1 to hit, reach 5 ft., one target. Hit: 1 (1d4 - 1) slashing damage.</text>
+      <attack>Rake|+1|1d4-1</attack>
+    </action>
+    <description>Source: System Reference Document 5.1 p. 317</description>
+  </monster>
+
+  <spell>
+    <name>Fireball</name>
+    <level>3</level>
+    <school>EV</school>
+    <time>1 action</time>
+    <range>150 feet</range>
+    <components>V, S, M (a tiny ball of bat guano and sulfur)</components>
+    <duration>Instantaneous</duration>
+    <classes>Sorcerer, Wizard</classes>
+    <text>A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame. Each creature in a 20-foot-radius sphere must make a Dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one.</text>
+    <text>At Higher Levels. When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd.</text>
+    <text>Source: System Reference Document 5.1 p. 144</text>
+    <roll description="Fire Damage" level="3">8d6</roll>
+    <roll description="Fire Damage" level="4">9d6</roll>
+  </spell>
+
+  <spell>
+    <name>Fireball [5.5e]</name>
+    <level>3</level>
+    <school>EV</school>
+    <time>Action</time>
+    <range>150 feet</range>
+    <components>V, S, M (a ball of bat guano and sulfur)</components>
+    <duration>Instantaneous</duration>
+    <classes>Sorcerer [5.5e], Wizard [5.5e]</classes>
+    <text>A bright streak flashes from you to a point you choose within range and then blossoms with a low roar into a fiery explosion. Each creature in a 20-foot-radius Sphere centered on that point makes a Dexterity saving throw, taking 8d6 Fire damage on a failed save or half as much damage on a successful one.</text>
+    <text>Source: System Reference Document 5.2.1 p. 270</text>
+    <roll description="Fire Damage" level="3">8d6</roll>
+  </spell>
+
+  <item>
+    <name>Longsword</name>
+    <type>M</type>
+    <magic>NO</magic>
+    <weight>3</weight>
+    <value>15</value>
+    <dmg1>1d8</dmg1>
+    <dmg2>1d10</dmg2>
+    <dmgType>S</dmgType>
+    <property>V, M</property>
+    <text>A martial melee weapon.</text>
+    <text>Source: System Reference Document 5.1 p. 66</text>
+  </item>
+
+  <item>
+    <name>Potion of Healing</name>
+    <type>P</type>
+    <magic>YES</magic>
+    <detail>common</detail>
+    <weight>0.5</weight>
+    <value>50</value>
+    <text>You regain 2d4 + 2 hit points when you drink this potion.</text>
+    <roll description="Heal">2d4+2</roll>
+  </item>
+
+  <item>
+    <name>Ring of Protection</name>
+    <type>RG</type>
+    <magic>YES</magic>
+    <detail>rare (requires attunement)</detail>
+    <text>You gain a +1 bonus to AC and saving throws while wearing this ring.</text>
+    <modifier category="bonus">ac +1</modifier>
+    <modifier category="bonus">saving throws +1</modifier>
+  </item>
+
+  <item>
+    <name>Chain Mail</name>
+    <type>HA</type>
+    <magic>NO</magic>
+    <ac>16</ac>
+    <strength>13</strength>
+    <stealth>YES</stealth>
+    <weight>55</weight>
+    <value>75</value>
+    <text>Heavy armor made of interlocking metal rings.</text>
+  </item>
+
+  <container>
+    <name>Explorer's Pack</name>
+    <item>
+      <name>Backpack</name>
+      <quantity>1</quantity>
+    </item>
+    <item>
+      <name>Torch</name>
+      <quantity>10</quantity>
+    </item>
+  </container>
+
+  <feat>
+    <name>Alert</name>
+    <prerequisite></prerequisite>
+    <text>Always on the lookout for danger, you gain a +5 bonus to initiative and cannot be surprised while conscious.</text>
+    <modifier category="bonus">initiative +5</modifier>
+  </feat>
+
+  <race>
+    <name>Dwarf</name>
+    <size>M</size>
+    <speed>25</speed>
+    <ability>Con +2</ability>
+    <languages>Common, Dwarvish</languages>
+    <trait category="description">
+      <name>Description</name>
+      <text>Bold and hardy, dwarves are known as skilled warriors, miners, and workers of stone and metal.</text>
+    </trait>
+    <trait category="species">
+      <name>Darkvision</name>
+      <text>You can see in dim light within 60 feet of you as if it were bright light.</text>
+    </trait>
+    <trait category="species">
+      <name>Dwarven Resilience</name>
+      <text>You have advantage on saving throws against poison, and you have resistance against poison damage.</text>
+    </trait>
+  </race>
+
+  <background>
+    <name>Acolyte</name>
+    <proficiency>Insight, Religion</proficiency>
+    <trait>
+      <name>Description</name>
+      <text>You have spent your life in the service of a temple.</text>
+    </trait>
+    <trait>
+      <name>Shelter of the Faithful</name>
+      <text>You and your companions can receive free healing and care at a temple of your faith.</text>
+    </trait>
+  </background>
+
+  <class>
+    <name>Wizard</name>
+    <hd>6</hd>
+    <proficiency>Intelligence, Wisdom, Arcana, History, Insight, Investigation, Medicine, Religion</proficiency>
+    <numSkills>2</numSkills>
+    <weapons>Daggers, darts, slings, quarterstaffs, light crossbows</weapons>
+    <spellAbility>Intelligence</spellAbility>
+    <slotsReset>L</slotsReset>
+    <autolevel level="1">
+      <feature>
+        <name>Spellcasting</name>
+        <text>As a student of arcane magic, you have a spellbook containing spells.</text>
+      </feature>
+      <feature>
+        <name>Arcane Recovery</name>
+        <text>Once per day when you finish a short rest, you can recover expended spell slots.</text>
+      </feature>
+      <slots>3,2</slots>
+      <counter>
+        <name>Arcane Recovery</name>
+        <value>1</value>
+        <reset>L</reset>
+      </counter>
+    </autolevel>
+    <autolevel level="2">
+      <feature optional="YES">
+        <name>School of Evocation: Evocation Savant</name>
+        <text>The gold and time you must spend to copy an evocation spell into your spellbook is halved.</text>
+      </feature>
+      <slots>3,3</slots>
+    </autolevel>
+    <autolevel level="4" scoreImprovement="YES">
+      <slots>4,4,3</slots>
+    </autolevel>
+  </class>
+</compendium>

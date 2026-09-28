@@ -25,3 +25,11 @@ export function detectXmlKind(head: string): XmlDocumentKind {
   if (root === 'campaign') return 'campaign';
   return 'unknown';
 }
+
+export * from './compendium/index';
+export {
+  createRecordStream,
+  type RecordStream,
+  type RecordStreamHandlers,
+} from './xml/recordStream';
+export type { XmlNode } from './xml/tree';
