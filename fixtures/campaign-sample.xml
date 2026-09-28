@@ -1,12 +1,209 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Trifold test fixture for campaign XML import (docs/DATA-FORMATS.md §3). Hand-written; the exact
-  element names of a Game Master export are marked (verify) in the design, so this file uses the
-  plausible shapes the parser tolerates. Creature names are SRD; every other word is our own.
+  Trifold test fixture for campaign XML import (docs/DATA-FORMATS.md §3). Mirrors the structure of
+  a real Game Master 5e export (data > campaign; uid-referenced and inline combatants; native PC
+  and NPC stat shapes) plus the older guessed shapes the parser still accepts (adventure groups,
+  named combatant entries). Creature and spell names are SRD; every other word is our own.
 -->
-<campaign version="5">
+<data version="5">
+<campaign>
+  <imageData><uniqueID>1</uniqueID></imageData>
   <name>Sample One-Shot</name>
-  <text>A one-shot in a drowned keep.</text>
+  <pc>
+    <uid>101</uid>
+    <label>Thora</label>
+    <name>Dwarf, Hill Fighter 5</name>
+    <ac>18</ac>
+    <armor>Chain Mail</armor>
+    <abilities>16,12,14,10,12,8</abilities>
+    <hpMax>44</hpMax>
+    <hpCurrent>40</hpCurrent>
+    <hd>5d10</hd>
+    <speed>25 ft.</speed>
+    <init>1</init>
+    <savingThrow><modifier>6</modifier></savingThrow>
+    <savingThrow><ability>2</ability><modifier>5</modifier></savingThrow>
+    <skill><id>3</id><modifier>6</modifier></skill>
+    <skill><id>11</id><modifier>4</modifier></skill>
+    <passive>14</passive>
+    <action>
+      <name>Warhammer</name>
+      <text>Melee Weapon Attack: +6 to hit, reach 5 ft., one target. Hit: 1d8 + 3 bludgeoning damage.</text>
+      <attack><atk>6</atk><dmg>1d8+3</dmg></attack>
+    </action>
+  </pc>
+  <pc>
+    <uid>102</uid>
+    <label>Zed</label>
+    <name>Elf, High Wizard 5</name>
+    <size>2</size>
+    <ac>12</ac>
+    <abilities>8,14,14,18,12,10</abilities>
+    <hpMax>28</hpMax>
+    <hpCurrent>28</hpCurrent>
+    <hd>5d6</hd>
+    <speed>30 ft.</speed>
+    <init>2</init>
+    <savingThrow><ability>3</ability><modifier>7</modifier></savingThrow>
+    <savingThrow><ability>4</ability><modifier>4</modifier></savingThrow>
+    <skill><id>2</id><modifier>7</modifier></skill>
+    <passive>11</passive>
+  </pc>
+  <npc>
+    <uid>201</uid>
+    <enemy>1</enemy>
+    <label>Keep Warden</label>
+    <name>Keep Warden</name>
+    <type>humanoid (human)</type>
+    <alignment>neutral evil</alignment>
+    <ac>15</ac>
+    <armor>chain shirt</armor>
+    <abilities>14,12,12,16,11,10</abilities>
+    <hpMax>27</hpMax>
+    <hpCurrent>27</hpCurrent>
+    <hd>5d8+5</hd>
+    <speed>30 ft.</speed>
+    <savingThrow><ability>3</ability><modifier>5</modifier></savingThrow>
+    <skill><id>2</id><modifier>5</modifier></skill>
+    <passive>10</passive>
+    <languages>Common</languages>
+    <cr>1</cr>
+    <environment>1024</environment>
+    <trait><name>Source</name><text>Sample One-Shot, p. 3</text></trait>
+    <trait>
+      <name>Spellcasting</name>
+      <text>The warden is a 3rd-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 13). It has the following wizard spells prepared:
+
+Cantrips (at will): fire bolt
+
+1st level (4 slots): shield</text>
+    </trait>
+    <action>
+      <name>Spear</name>
+      <text>Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage.</text>
+      <attack><name>Spear</name><atk>4</atk><dmg>1d6+2</dmg></attack>
+    </action>
+    <spell>
+      <name>Fire Bolt</name>
+      <school>5</school>
+      <time>1 action</time>
+      <range>120 feet</range>
+      <v>1</v><s>1</s>
+      <duration>Instantaneous</duration>
+      <text>You hurl a mote of fire at a creature or object within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage.</text>
+      <roll>1d10</roll>
+      <sclass>Sorcerer</sclass>
+      <sclass>Wizard</sclass>
+    </spell>
+    <spell>
+      <name>Shield</name>
+      <school>1</school>
+      <level>1</level>
+      <time>1 reaction</time>
+      <range>Self</range>
+      <v>1</v><s>1</s>
+      <duration>1 round</duration>
+      <text>An invisible barrier of magical force appears and protects you. Until the start of your next turn, you have a +5 bonus to AC.</text>
+      <sclass>Sorcerer</sclass>
+      <sclass>Wizard</sclass>
+    </spell>
+    <slots>4,0,0,0,0,0,0,0,0,0,</slots>
+    <slotsCurrent>4,0,0,0,0,0,0,0,0,0,</slotsCurrent>
+  </npc>
+  <npc>
+    <uid>202</uid>
+    <label>Old Marla</label>
+    <name>Old Marla</name>
+    <text>Knows the way into the keep and wants her brother's ring back.</text>
+  </npc>
+  <encounter>
+    <name>E1 - Gate</name>
+    <state>0</state>
+    <current>0</current>
+    <round>0</round>
+    <combatant><monster><uid>101</uid></monster></combatant>
+    <combatant><monster><uid>102</uid></monster></combatant>
+    <combatant><monster><uid>201</uid></monster></combatant>
+    <combatant>
+      <monster>
+        <enemy>1</enemy>
+        <label>Wolf 1</label>
+        <name>Wolf</name>
+        <type>beast</type>
+        <alignment>unaligned</alignment>
+        <ac>13</ac>
+        <armor>natural armor</armor>
+        <abilities>12,15,12,3,12,6</abilities>
+        <hpMax>11</hpMax>
+        <hpCurrent>11</hpCurrent>
+        <hd>2d8+2</hd>
+        <speed>40 ft.</speed>
+        <skill><id>11</id><modifier>3</modifier></skill>
+        <skill><id>16</id><modifier>4</modifier></skill>
+        <passive>13</passive>
+        <cr>-1</cr>
+        <environment>56</environment>
+        <trait><name>Source</name><text>System Reference Document 5.1, p. 341
+Second line ignored</text></trait>
+        <trait><name>Pack Tactics</name><text>The wolf has advantage on an attack roll against a creature if at least one of the wolf's allies is within 5 feet of the creature.</text></trait>
+        <action>
+          <name>Bite</name>
+          <text>Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 7 (2d4 + 2) piercing damage. If the target is a creature, it must succeed on a DC 11 Strength saving throw or be knocked prone.</text>
+          <attack><name>Bite</name><atk>4</atk><dmg>2d4+2</dmg></attack>
+        </action>
+      </monster>
+    </combatant>
+    <combatant>
+      <monster>
+        <enemy>1</enemy>
+        <label>Wolf 2</label>
+        <name>Wolf</name>
+        <type>beast</type>
+        <ac>13</ac>
+        <abilities>12,15,12,3,12,6</abilities>
+        <hpMax>11</hpMax>
+        <hpCurrent>11</hpCurrent>
+        <hd>2d8+2</hd>
+        <speed>40 ft.</speed>
+        <cr>-1</cr>
+        <action>
+          <name>Bite</name>
+          <text>Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 7 (2d4 + 2) piercing damage.</text>
+          <attack><name>Bite</name><atk>4</atk><dmg>2d4+2</dmg></attack>
+        </action>
+      </monster>
+    </combatant>
+    <combatant>
+      <monster>
+        <enemy>1</enemy>
+        <label>Bear</label>
+        <name>Brown Bear</name>
+        <size>3</size>
+        <type>beast</type>
+        <alignment>unaligned</alignment>
+        <ac>11</ac>
+        <armor>natural armor</armor>
+        <abilities>19,10,16,2,13,7</abilities>
+        <hpMax>34</hpMax>
+        <hpCurrent>34</hpCurrent>
+        <hd>4d10+12</hd>
+        <speed>40 ft., climb 30 ft.</speed>
+        <passive>13</passive>
+        <action><name>Multiattack</name><text>The bear makes two attacks: one with its bite and one with its claws.</text></action>
+        <action>
+          <name>Bite</name>
+          <text>Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 8 (1d8 + 4) piercing damage.</text>
+          <attack><name>Bite</name><atk>5</atk><dmg>1d8+4</dmg></attack>
+        </action>
+        <action>
+          <name>Claws</name>
+          <text>Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 11 (2d6 + 4) slashing damage.</text>
+          <attack><name>Claws</name><atk>5</atk><dmg>2d6+4</dmg></attack>
+        </action>
+      </monster>
+    </combatant>
+    <note><name>Phased fight</name><text>The bear arrives on round 3.</text></note>
+  </encounter>
   <adventure>
     <name>The Sunken Keep</name>
     <text>The party arrives at the ruined keep at dusk.</text>
@@ -15,101 +212,31 @@
       <text>Moss-covered stones lean against a rusted portcullis.</text>
     </note>
     <encounter>
-      <name>Gate guards</name>
-      <text>Two goblins watch the gate.</text>
-      <monster>
-        <name>Goblin Warrior [5.5e]</name>
-        <count>2</count>
-      </monster>
-      <pc>
-        <name>Thora</name>
-      </pc>
+      <name>Warden's chamber</name>
+      <text>The warden waits with archers.</text>
+      <combatant><name>Keep Warden</name><role>enemy</role></combatant>
+      <combatant><name>Goblin Warrior [5.5e]</name><quantity>3</quantity><label>Archers</label><hidden>YES</hidden></combatant>
+      <combatant><name>Old Marla</name><role>ally</role></combatant>
+      <surprise>NO</surprise>
     </encounter>
   </adventure>
-  <pc>
-    <name>Thora</name>
-    <player>Sam</player>
-    <class>Fighter 5</class>
-    <size>M</size>
-    <type>humanoid</type>
-    <ac>18</ac>
-    <hp>44</hp>
-    <speed>30 ft.</speed>
-    <str>16</str>
-    <dex>12</dex>
-    <con>14</con>
-    <int>10</int>
-    <wis>12</wis>
-    <cha>8</cha>
-    <save>Str +6, Con +5</save>
-    <passive>12</passive>
-    <init>+1</init>
-    <text>Shield-bearer of the northern clans.</text>
-  </pc>
-  <pc>
-    <name>Zed</name>
-    <player>Kim</player>
-    <class>Wizard</class>
-    <level>5</level>
-    <ac>12</ac>
-    <hp>28</hp>
-    <dex>14</dex>
-    <spellDc>14</spellDc>
-  </pc>
-  <npc>
-    <name>Old Marla</name>
-    <role>innkeeper</role>
-    <location>The Drowned Rat</location>
-    <text>Knows the way into the keep and wants her brother's ring back.</text>
-  </npc>
-  <npc>
-    <name>Keep Warden</name>
-    <size>M</size>
-    <type>humanoid</type>
-    <alignment>neutral evil</alignment>
-    <ac>15</ac>
-    <hp>27 (5d8+5)</hp>
-    <speed>30 ft.</speed>
-    <str>14</str>
-    <dex>12</dex>
-    <con>12</con>
-    <int>10</int>
-    <wis>11</wis>
-    <cha>10</cha>
-    <cr>1</cr>
-    <action>
-      <name>Spear</name>
-      <text>Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) piercing damage.</text>
-      <attack>Spear|+4|1d6+2</attack>
-    </action>
-    <description>The warden was once a knight of the keep.</description>
-  </npc>
+  <item>
+    <name>Potion of Healing</name>
+    <text>Rarity: Common
+
+You regain 2d4 + 2 hit points when you drink this potion.</text>
+    <type>7</type>
+    <weight>0.5</weight>
+    <magic>1</magic>
+    <roll>2d4+2</roll>
+  </item>
   <note>
     <name>Rumours</name>
     <text>Three rumours circulate in the village.
 
 The third one is true.</text>
+    <expanded>0</expanded>
   </note>
-  <encounter>
-    <name>Warden's chamber</name>
-    <combatant>
-      <name>Keep Warden</name>
-      <role>enemy</role>
-    </combatant>
-    <combatant>
-      <name>Goblin Warrior [5.5e]</name>
-      <quantity>3</quantity>
-      <label>Archers</label>
-      <hidden>YES</hidden>
-    </combatant>
-    <combatant>
-      <name>Old Marla</name>
-      <role>ally</role>
-    </combatant>
-    <surprise>NO</surprise>
-  </encounter>
-  <item>
-    <name>Potion of Healing</name>
-    <quantity>2</quantity>
-  </item>
+  <note><expanded>0</expanded></note>
 </campaign>
+</data>

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { gmCrToString } from './gmNative';
 import { parseCampaignXml } from './index';
 
 const FIXTURE = join(__dirname, '..', '..', '..', '..', 'fixtures', 'campaign-sample.xml');
@@ -11,77 +12,109 @@ const options = {
   newId: () => `id-${(n += 1)}`,
 };
 
-describe('parseCampaignXml', () => {
+describe('parseCampaignXml (Game Master export shape)', () => {
   const result = parseCampaignXml(readFileSync(FIXTURE, 'utf8'), options);
 
-  it('reads the campaign name and top-level description', () => {
-    expect(result.rootElement).toBe('campaign');
+  it('descends data > campaign and reads name and notes, skipping empty ones', () => {
+    expect(result.rootElement).toBe('data');
     expect(result.name).toBe('Sample One-Shot');
-    expect(result.notes.map((x) => x.title)).toEqual(['Campaign description', 'Rumours']);
-    expect(result.notes[1]?.body).toBe(
+    expect(result.notes.map((x) => x.title)).toEqual(['Rumours']);
+    expect(result.notes[0]?.body).toBe(
       'Three rumours circulate in the village.\n\nThe third one is true.',
     );
   });
 
-  it('maps PC stat blocks onto card fields', () => {
+  it('maps native PC blocks: label as name, class and level from name, csv abilities, numbered saves', () => {
     expect(result.pcs).toHaveLength(2);
     expect(result.pcs[0]).toMatchObject({
+      uid: '101',
       name: 'Thora',
-      playerName: 'Sam',
-      classText: 'Fighter',
+      classText: 'Dwarf, Hill Fighter',
       level: 5,
       maxHp: 44,
       ac: 18,
       initiativeBonus: 1,
-      speed: 30,
-      passivePerception: 12,
+      speed: 25,
+      passivePerception: 14,
       saves: { str: 6, con: 5 },
-      notes: 'Shield-bearer of the northern clans.',
     });
     expect(result.pcs[1]).toMatchObject({
+      uid: '102',
       name: 'Zed',
+      classText: 'Elf, High Wizard',
       level: 5,
       initiativeBonus: 2,
-      spellSaveDc: 14,
+      saves: { int: 7, wis: 4 },
     });
   });
 
-  it('separates plain NPCs from NPCs with inline stat blocks', () => {
-    expect(result.npcs[0]).toEqual({
-      name: 'Old Marla',
-      role: 'innkeeper',
-      location: 'The Drowned Rat',
-      notes: "Knows the way into the keep and wants her brother's ring back.",
-      isAlive: true,
+  it('converts NPC stat blocks with nested spells and a Source trait', () => {
+    expect(result.npcs.map((x) => [x.name, x.uid, x.isEnemy, x.statBlockKey])).toEqual([
+      ['Keep Warden', '201', true, 'keep warden'],
+      ['Old Marla', '202', false, undefined],
+    ]);
+    const warden = result.statBlocks.find((r) => r.kind === 'monster' && r.key === 'keep warden');
+    if (!warden || warden.kind !== 'monster') throw new Error('warden');
+    expect(warden.sourceBook).toBe('Sample One-Shot');
+    expect(warden.sourcePage).toBe(3);
+    expect(warden.data).toMatchObject({
+      ac: { value: 15, note: 'chain shirt' },
+      hp: { average: 27, formula: '5d8+5' },
+      abilities: { str: 14, dex: 12, con: 12, int: 16, wis: 11, cha: 10 },
+      saves: { int: 5 },
+      skills: { Arcana: 5 },
+      cr: '1',
+      xp: 200,
+      spellcasting: { spells: ['Fire Bolt', 'Shield'], slots: [4, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
     });
-    expect(result.npcs[1]).toMatchObject({ name: 'Keep Warden', statBlockKey: 'keep warden' });
-    expect(result.statBlocks).toHaveLength(1);
-    const warden = result.statBlocks[0]!;
-    expect(warden.kind).toBe('monster');
-    expect(warden.sourceId).toBe('src-camp');
-    expect(warden.kind === 'monster' && warden.data.actions[0]?.attacks[0]).toMatchObject({
+    expect(warden.data.traits.map((t) => t.name)).toEqual(['Spellcasting']);
+    expect(warden.data.actions[0]?.attacks[0]).toMatchObject({
+      label: 'Spear',
       toHit: 4,
       damage: '1d6+2',
+      damageType: 'piercing',
     });
+
+    const spells = result.statBlocks.filter((r) => r.kind === 'spell');
+    expect(spells.map((s) => s.name)).toEqual(['Fire Bolt', 'Shield']);
+    expect(spells[0]?.kind === 'spell' && spells[0].data).toMatchObject({
+      level: 0,
+      school: 'EV',
+      components: 'V, S',
+      classes: ['Sorcerer', 'Wizard'],
+      rolls: [{ dice: '1d10' }],
+    });
+    expect(spells[1]?.kind === 'spell' && spells[1].data).toMatchObject({ level: 1, school: 'A' });
   });
 
-  it('nests notes and encounters under adventures and reads both encounter shapes', () => {
-    expect(result.adventures).toHaveLength(1);
+  it('reads uid-referenced and inline encounter combatants, deduplicating identical inline blocks', () => {
+    const gate = result.encounters[0]!;
+    expect(gate.name).toBe('E1 - Gate');
+    expect(gate.notes).toBe('Phased fight: The bear arrives on round 3.');
+    expect(gate.combatants.map((c) => [c.name, c.uid, c.label, c.role, c.statBlockKey])).toEqual([
+      ['#101', '101', undefined, 'enemy', undefined],
+      ['#102', '102', undefined, 'enemy', undefined],
+      ['#201', '201', undefined, 'enemy', undefined],
+      ['Wolf', undefined, 'Wolf 1', 'enemy', 'wolf'],
+      ['Wolf', undefined, 'Wolf 2', 'enemy', 'wolf'],
+      ['Brown Bear', undefined, 'Bear', 'enemy', 'brown bear'],
+    ]);
+    const wolves = result.statBlocks.filter((r) => r.kind === 'monster' && r.key === 'wolf');
+    expect(wolves).toHaveLength(1);
+    if (wolves[0]?.kind !== 'monster') throw new Error('wolf');
+    expect(wolves[0].data.cr).toBe('1/4');
+    expect(wolves[0].data.size).toBe('M');
+    expect(wolves[0].sourceBook).toBe('System Reference Document 5.1');
+    expect(wolves[0].data.skills).toEqual({ Perception: 3, Stealth: 4 });
+    const bear = result.statBlocks.find((r) => r.kind === 'monster' && r.key === 'brown bear');
+    expect(bear?.kind === 'monster' && bear.data.size).toBe('L');
+  });
+
+  it('still reads the older guessed shapes: adventures with named combatant entries', () => {
     const adv = result.adventures[0]!;
     expect(adv.name).toBe('The Sunken Keep');
-    expect(adv.summary).toBe('The party arrives at the ruined keep at dusk.');
     expect(adv.notes.map((x) => x.title)).toEqual(['Read-aloud: the gate']);
-    expect(adv.encounters[0]).toMatchObject({
-      name: 'Gate guards',
-      notes: 'Two goblins watch the gate.',
-    });
     expect(adv.encounters[0]?.combatants).toEqual([
-      { name: 'Goblin Warrior [5.5e]', quantity: 2, role: 'enemy', hidden: false, isPc: false },
-      { name: 'Thora', quantity: 1, role: 'ally', hidden: false, isPc: true },
-    ]);
-
-    const chamber = result.encounters[0]!;
-    expect(chamber.combatants).toEqual([
       { name: 'Keep Warden', quantity: 1, role: 'enemy', hidden: false, isPc: false },
       {
         name: 'Goblin Warrior [5.5e]',
@@ -95,14 +128,16 @@ describe('parseCampaignXml', () => {
     ]);
   });
 
-  it('collects items and reports unknown elements instead of failing', () => {
-    expect(result.items).toEqual([{ name: 'Potion of Healing', quantity: 2, text: '' }]);
+  it('collects items and reports only truly unknown elements', () => {
+    expect(result.items).toEqual([
+      { name: 'Potion of Healing', quantity: 1, text: expect.stringContaining('Rarity: Common') },
+    ]);
     expect(result.warnings).toEqual([
       'encounter "Warden\'s chamber": unknown element <surprise> ignored',
     ]);
   });
 
-  it('treats a Fight Club GM export as a campaign with one PC', () => {
+  it('treats a Fight Club GM export as a campaign with one PC (either root)', () => {
     const gm = parseCampaignXml(
       '<campaign version="5"><pc><name>Bryn</name><ac>16</ac><hp>31</hp><dex>16</dex><str>10</str><con>12</con></pc></campaign>',
       options,
@@ -111,5 +146,17 @@ describe('parseCampaignXml', () => {
     expect(gm.pcs).toEqual([
       { name: 'Bryn', maxHp: 31, ac: 16, initiativeBonus: 3, saves: {}, notes: '' },
     ]);
+  });
+
+  it('decodes Game Master CR codes', () => {
+    expect(['-3', '-2', '-1', '0', '1', '6'].map(gmCrToString)).toEqual([
+      '0',
+      '1/8',
+      '1/4',
+      '1/2',
+      '1',
+      '6',
+    ]);
+    expect(gmCrToString(undefined)).toBeUndefined();
   });
 });

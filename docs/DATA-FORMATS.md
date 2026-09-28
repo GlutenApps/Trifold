@@ -166,17 +166,23 @@ Trifold writes the same schema: `<compendium version="5" auto_indent="NO">`, one
 
 ## 3. Lion's Den campaign XML
 
-### 3.1 Structure (from the Game Master 5e in-app tutorial)
+### 3.1 Structure (verified against a Game Master 5e v1.30 export, 2026-09-27)
 
-`<campaign version="5">` containing `<name>`, `<adventure>` elements (each with `<name>`, descriptive `<text>`, and its own encounters/notes), `<pc>` and `<npc>` stat blocks, `<note>` (`<name>`, `<text>`), `<encounter>` (a name plus combatant entries that reference a PC by name or a monster by name, with an optional label, a role such as ally/enemy, and current/max HP), and `<item>` treasure entries. **(verify)** the exact child element names of `<encounter>` and `<adventure>` against the tutorial page (Game Master → Help → Importing campaigns) and a real export before implementing; the tutorial text was read during design but element names were not copied verbatim into this document.
+`<data version="5">` wraps a single `<campaign>` containing `<imageData>`, `<name>`, `<pc>`, `<npc>`, `<encounter>`, `<item>` and `<note>` children, in that order. No `<adventure>` element appeared in the export; the importer still accepts one (with nested `<note>` and `<encounter>`) in case other versions write it.
 
-### 3.2 `<pc>` / `<npc>`
+- `<note>`: `<name>`, `<text>`, `<expanded>0|1</expanded>`. Empty notes (`<expanded>` only) occur and are skipped.
+- `<item>`: `<name>`, `<text>` (rarity and attunement as text lines), numeric `<type>`, `<weight>`, `<magic>1</magic>`, `<roll>`. Imported as a note listing.
+- `<encounter>`: `<name>`, `<state>`, `<current>`, `<round>`, then `<combatant>` entries and optional `<note>` children. Each `<combatant>` wraps one `<monster>` that is either a reference `<monster><uid>818</uid></monster>` to a PC or NPC, or a full inline stat block (§3.2) with `<enemy>1</enemy>` and a table `<label>` such as `Wolf 1`. Identical inline blocks repeat per combatant; Trifold deduplicates them by key.
 
-Stat-block shaped (same fields as `<monster>` §2.2) plus `<level>`, `<init>`, `<spells>`, `<slots>` and portrait references **(verify)**. Trifold maps a `<pc>` to a PC card (name, AC, HP, initiative, saves, skills, passives, spells) and an `<npc>` to an NPC with an inline stat block.
+### 3.2 `<pc>` / `<npc>` / inline `<monster>` (Game Master native shape)
+
+Not the compendium shape. Fields **(observed)**: `<uid>`, `<label>` (the character's or NPC's display name), `<name>` (for PCs the race/class/level string such as `Dwarf, Hill Cleric 5`; for NPCs the monster name), `<enemy>1</enemy>` on hostile NPCs, `<type>`, `<alignment>`, `<size>` numeric (0–5 = T S M L H G, absent = M), `<ac>` with `<armor>` as the note, `<abilities>14,8,15,12,18,10</abilities>` (Str Dex Con Int Wis Cha), `<hpMax>`, `<hpCurrent>`, `<hd>`, `<speed>`, `<init>`, `<savingThrow><ability>N</ability><modifier>M</modifier></savingThrow>` (ability 0–5 = Str…Cha, absent = 0), `<skill><id>N</id><modifier>M</modifier></skill>` (0-based alphabetical skill list: 0 Acrobatics … 11 Perception … 16 Stealth, 17 Survival), `<passive>`, `<languages>`, `<vulnerable>`, `<conditionImmune>`, `<senses>`, `<cr>` numeric (`-1` = 1/4, `0` = 1/2, `n` = n; omitted at the default of 1; `-2` observed on a CR 0 or 1/8 creature **(verify)**), `<environment>` bitmask (ignored), `<trait>`/`<action>` as in §2.2 except that a trait named `Source` holds the citation (`Monster Manual, p. 341`, possibly multi-line) and `<attack>` is structured: `<attack><name>Bite</name><atk>6</atk><dmg>2d10+4</dmg></attack>` (`<atk>` absent for save effects). NPC spellcasters embed `<spell>` records (numeric `<school>` 1–8 alphabetical, `<v>1</v><s>1</s><m>1</m><materials>`, repeated `<sclass>`, `<roll>`) plus `<slots>4,3,3,1,0,0,0,0,0,0,</slots>` and `<slotsCurrent>`.
+
+Trifold rewrites these into the compendium shape (`packages/importers/src/campaign/gmNative.ts`) and reuses the monster and spell normalizers. PCs become PC cards (name from `<label>`, class and level split from `<name>`); NPCs with stat blocks get a record in a per-import source named `<campaign> (campaign file)`.
 
 ### 3.3 Fight Club "GM export"
 
-Fight Club writes a file named `<Character Name> GM.xml` **(observed from the app binary)**: a campaign XML containing one `<pc>` stat block. It is lossy by design (no equipment, no prepared-spell state). Import it through the PC card importer. **(verify)** with a real export from a player.
+Fight Club writes a file named `<Character Name> GM.xml` **(observed from the app binary)**: a campaign XML containing one `<pc>` stat block. It is lossy by design (no equipment, no prepared-spell state). Import it through the same campaign importer in merge mode; the PC merges by name. **(verify)** with a real export from a player.
 
 ### 3.4 Backups
 

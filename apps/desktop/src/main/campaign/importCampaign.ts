@@ -16,6 +16,8 @@ import {
   type CombatantTemplate,
   type CompendiumRecord,
   type Encounter,
+  type MonsterRecord,
+  type NPC,
   type PCCard,
   type Source,
 } from '@trifold/schema';
@@ -64,6 +66,39 @@ function pcFromImport(q: ImportedPc, existing?: PCCard): PCCard {
   };
 }
 
+function recordTemplate(
+  record: MonsterRecord,
+  c: Pick<ImportedCombatant, 'quantity' | 'role' | 'hidden' | 'label' | 'maxHp'>,
+): CombatantTemplate {
+  return {
+    id: ulid(),
+    ref: {
+      kind: 'record',
+      ref: {
+        recordId: record.id,
+        sourceId: record.sourceId,
+        key: record.key,
+        edition: record.edition,
+      },
+      name: record.displayName,
+    },
+    quantity: c.quantity,
+    role: c.role,
+    hidden: c.hidden,
+    ...(c.label ? { label: c.label } : {}),
+    ...(c.maxHp !== undefined && c.maxHp !== (record.data.hp?.average ?? c.maxHp)
+      ? { hpOverride: c.maxHp }
+      : {}),
+    cache: {
+      xp: record.data.xp,
+      cr: record.data.cr,
+      type: record.data.type,
+      hp: record.data.hp?.average ?? 0,
+      ac: record.data.ac?.value ?? 10,
+    },
+  };
+}
+
 /**
  * Imports a Game Master campaign XML (or a Fight Club GM export) into a new campaign, or merges
  * its PCs, NPCs, notes and encounters into the open one. Inline stat blocks become a source of
@@ -82,33 +117,36 @@ export async function importCampaignXml(
     defaultEdition: '2014',
     edition2024Books: ctx.store.getSettings().edition2024Books,
   });
-  if (parsed.rootElement && parsed.rootElement.toLowerCase() !== 'campaign') {
+  const root = (parsed.rootElement ?? '').toLowerCase();
+  if (parsed.rootElement && root !== 'campaign' && root !== 'data') {
     throw new Error(`This file is not a campaign XML (root element <${parsed.rootElement}>).`);
   }
   const warnings = [...parsed.warnings];
   const name = parsed.name ?? fileName;
 
   if (mode === 'new') await ctx.campaigns.create(name);
-  else if (!ctx.campaigns.current)
+  else if (!ctx.campaigns.current) {
     throw new Error('Open a campaign first, or import as a new campaign');
+  }
   const bundle = await ctx.campaigns.bundle();
   const entities = new CampaignEntities(ctx.campaigns);
 
-  // Inline stat blocks → their own source, indexed immediately.
+  // Inline stat blocks and nested spells → their own source, indexed immediately.
   if (parsed.statBlocks.length > 0) {
+    const counts: Partial<Record<CompendiumRecord['kind'], number>> = {};
+    for (const r of parsed.statBlocks) counts[r.kind] = (counts[r.kind] ?? 0) + 1;
     const source: Source = {
       schemaVersion: 1,
       id: statBlockSourceId,
       name: `${name} (campaign file)`,
       kind: 'xml',
-      fileHash: undefined,
       enabled: true,
       defaultEdition: '2014',
       edition2024Books: [],
       license: { nonSrd: true, attribution: null },
       importedAt: nowIso(),
       importerVersion: IMPORTER_VERSION,
-      recordCounts: { monster: parsed.statBlocks.length },
+      recordCounts: counts,
       warnings: [],
     };
     await ctx.sources.writeRecords(statBlockSourceId, parsed.statBlocks);
@@ -116,30 +154,31 @@ export async function importCampaignXml(
     ctx.index.replaceSource(source, parsed.statBlocks);
   }
 
-  // PCs: merge by name.
+  const findRecord = async (nameOrKey: string): Promise<MonsterRecord | null> => {
+    const matches = ctx.index.findByKey('monster', normalizeKey(nameOrKey));
+    const preferred = bundle.campaign.preferredEdition;
+    const pick =
+      matches.find((m) => m.sourceId === statBlockSourceId) ??
+      matches.find((m) => m.edition === preferred) ??
+      matches[0];
+    return pick && pick.kind === 'monster' ? pick : null;
+  };
+
+  // PCs: merge by name; remember uids for encounter references.
   const pcsByKey = new Map(bundle.pcs.map((p) => [normalizeKey(p.name), p]));
+  const pcsByUid = new Map<string, PCCard>();
   for (const q of parsed.pcs) {
     const saved = await ctx.campaigns.savePc(pcFromImport(q, pcsByKey.get(normalizeKey(q.name))));
     pcsByKey.set(normalizeKey(saved.name), saved);
+    if (q.uid) pcsByUid.set(q.uid, saved);
   }
 
   // NPCs, with stat block links.
-  const findRecord = async (nameOrKey: string): Promise<CompendiumRecord | null> => {
-    const key = normalizeKey(nameOrKey);
-    const matches = ctx.index.findByKey('monster', key);
-    if (matches.length === 0) return null;
-    const preferred = bundle.campaign.preferredEdition;
-    return (
-      matches.find((m) => m.sourceId === statBlockSourceId) ??
-      matches.find((m) => m.edition === preferred) ??
-      matches[0] ??
-      null
-    );
-  };
   const npcsByKey = new Map(bundle.npcs.map((n) => [normalizeKey(n.name), n]));
+  const npcsByUid = new Map<string, { npc: NPC; isEnemy: boolean }>();
   for (const n of parsed.npcs) {
     const record = n.statBlockKey ? await findRecord(n.statBlockKey) : await findRecord(n.name);
-    const savedNpc = await entities.saveNpc({
+    const saved = await entities.saveNpc({
       schemaVersion: CAMPAIGN_SCHEMA_VERSION,
       id: '',
       name: n.name,
@@ -160,11 +199,52 @@ export async function importCampaignXml(
       createdAt: '',
       updatedAt: '',
     });
-    npcsByKey.set(normalizeKey(savedNpc.name), savedNpc);
+    npcsByKey.set(normalizeKey(saved.name), saved);
+    if (n.uid) npcsByUid.set(n.uid, { npc: saved, isEnemy: n.isEnemy });
   }
 
   const unresolved: string[] = [];
   const templateFor = async (c: ImportedCombatant): Promise<CombatantTemplate> => {
+    const base = {
+      quantity: c.quantity,
+      role: c.role,
+      hidden: c.hidden,
+      label: c.label,
+      maxHp: c.maxHp,
+    };
+    // Game Master uid references to PCs and NPCs.
+    if (c.uid) {
+      const pc = pcsByUid.get(c.uid);
+      if (pc) {
+        return {
+          id: ulid(),
+          ref: { kind: 'pc', pcId: pc.id, name: pc.name },
+          quantity: 1,
+          role: 'ally',
+          hidden: c.hidden,
+        };
+      }
+      const hit = npcsByUid.get(c.uid);
+      if (hit) {
+        const role = hit.isEnemy ? 'enemy' : 'ally';
+        if (hit.npc.recordRef) {
+          const record = await findRecord(hit.npc.recordRef.key);
+          if (record) {
+            const label = hit.npc.name !== record.displayName ? hit.npc.name : c.label;
+            return recordTemplate(record, { ...base, role, ...(label ? { label } : {}) });
+          }
+        }
+        return {
+          id: ulid(),
+          ref: { kind: 'npc', npcId: hit.npc.id, name: hit.npc.name },
+          quantity: 1,
+          role,
+          hidden: c.hidden,
+        };
+      }
+      unresolved.push(c.name);
+    }
+    // Named entries: PC card, NPC, then any monster record.
     const pc = pcsByKey.get(normalizeKey(c.name));
     if (c.isPc || pc) {
       if (pc) {
@@ -192,34 +272,8 @@ export async function importCampaignXml(
       };
     }
     const record = await findRecord(c.statBlockKey ?? npc?.recordRef?.key ?? c.name);
-    if (record && record.kind === 'monster') {
-      return {
-        id: ulid(),
-        ref: {
-          kind: 'record',
-          ref: {
-            recordId: record.id,
-            sourceId: record.sourceId,
-            key: record.key,
-            edition: record.edition,
-          },
-          name: record.displayName,
-        },
-        quantity: c.quantity,
-        role: c.role,
-        hidden: c.hidden,
-        ...(c.label ? { label: c.label } : {}),
-        ...(c.maxHp !== undefined ? { hpOverride: c.maxHp } : {}),
-        cache: {
-          xp: record.data.xp,
-          cr: record.data.cr,
-          type: record.data.type,
-          hp: record.data.hp?.average ?? 0,
-          ac: record.data.ac?.value ?? 10,
-        },
-      };
-    }
-    if (!c.isPc) unresolved.push(c.name);
+    if (record) return recordTemplate(record, base);
+    if (!c.isPc && !c.uid) unresolved.push(c.name);
     return {
       id: ulid(),
       ref: { kind: 'custom', name: c.name },
@@ -301,7 +355,7 @@ export async function importCampaignXml(
       parsed.items
         .map(
           (i) =>
-            `- ${i.quantity > 1 ? `${i.quantity} × ` : ''}${i.name}${i.text ? `: ${i.text}` : ''}`,
+            `- ${i.quantity > 1 ? `${i.quantity} × ` : ''}${i.name}${i.text ? `\n  ${i.text.replace(/\n/g, '\n  ')}` : ''}`,
         )
         .join('\n'),
     );
@@ -309,10 +363,11 @@ export async function importCampaignXml(
   }
 
   const unique = [...new Set(unresolved)];
-  if (unique.length > 0)
+  if (unique.length > 0) {
     warnings.push(`Combatants without a matching record or PC card: ${unique.join(', ')}`);
+  }
   ctx.logger.info(
-    `campaign "${name}" ${mode === 'new' ? 'imported' : 'merged'}: ${parsed.pcs.length} PCs, ${parsed.npcs.length} NPCs, ${noteCount} notes, ${parsed.adventures.length} adventures, ${encounterCount} encounters`,
+    `campaign "${name}" ${mode === 'new' ? 'imported' : 'merged'}: ${parsed.pcs.length} PCs, ${parsed.npcs.length} NPCs, ${noteCount} notes, ${parsed.adventures.length} adventures, ${encounterCount} encounters, ${parsed.statBlocks.length} inline records`,
   );
   return {
     campaignId: bundle.campaign.id,

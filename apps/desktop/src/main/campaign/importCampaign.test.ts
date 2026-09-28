@@ -60,7 +60,7 @@ describe('importCampaignXml', () => {
     expect(report).toMatchObject({
       name: 'Sample One-Shot',
       mode: 'new',
-      counts: { pcs: 2, npcs: 2, notes: 4, adventures: 1, encounters: 2, statBlocks: 1 },
+      counts: { pcs: 2, npcs: 2, notes: 3, adventures: 1, encounters: 2, statBlocks: 5 },
     });
     // Goblins are not in this Library's index, so they become custom combatants.
     expect(report.unresolved).toEqual(['Goblin Warrior [5.5e]']);
@@ -75,7 +75,6 @@ describe('importCampaignXml', () => {
     expect(bundle.npcs[0]?.recordRef?.key).toBe('keep warden');
     expect(bundle.npcs[1]?.recordRef).toBeUndefined();
     expect(bundle.notes.map((n) => n.title).sort()).toEqual([
-      'Campaign description',
       'Items from import',
       'Read-aloud: the gate',
       'Rumours',
@@ -94,13 +93,29 @@ describe('importCampaignXml', () => {
       'npc:Old Marlax1',
     ]);
     expect(chamber.combatants[0]?.cache).toMatchObject({ cr: '1', xp: 200, hp: 27, ac: 15 });
-    const gate = bundle.encounters.find((e) => e.name === 'Gate guards')!;
-    expect(gate.combatants.map((t) => t.ref.kind)).toEqual(['custom', 'pc']);
+    const gate = bundle.encounters.find((e) => e.name === 'E1 - Gate')!;
+    expect(gate.combatants.map((t) => t.ref.kind)).toEqual([
+      'pc',
+      'pc',
+      'record',
+      'record',
+      'record',
+      'record',
+    ]);
+    expect(gate.combatants.map((t) => t.label ?? '')).toEqual([
+      '',
+      '',
+      '',
+      'Wolf 1',
+      'Wolf 2',
+      'Bear',
+    ]);
+    expect(gate.notes).toBe('Phased fight: The bear arrives on round 3.');
 
     const sourceList = await sources.list();
     expect(sourceList).toHaveLength(1);
     expect(sourceList[0]?.name).toBe('Sample One-Shot (campaign file)');
-    expect(sourceList[0]?.recordCounts.monster).toBe(1);
+    expect(sourceList[0]?.recordCounts).toEqual({ monster: 3, spell: 2 });
   });
 
   it('merges PCs by name into the open campaign', async () => {
