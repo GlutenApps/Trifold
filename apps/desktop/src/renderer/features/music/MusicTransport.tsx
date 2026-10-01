@@ -1,6 +1,13 @@
 import { useEffect } from 'react';
 import { useMusicStore } from '../../stores/musicStore';
-import { formatTime } from './queue';
+import { Icon } from '../shell/icons';
+import { formatTime, loopMode, type LoopMode } from './queue';
+
+const LOOP_LABELS: Record<LoopMode, string> = {
+  off: 'Loop off',
+  playlist: 'Looping playlist',
+  track: 'Looping track',
+};
 
 /** Now playing, transport, seek, volumes and output device. Used by the Music panel and the tray. */
 export function MusicTransport() {
@@ -9,6 +16,7 @@ export function MusicTransport() {
   const track = music.library?.tracks.find((t) => t.id === current) ?? null;
   const playlist = music.playlists.find((p) => p.id === music.playlistId) ?? null;
   const { settings } = music;
+  const loop = loopMode(music.loopTrack, playlist?.loop ?? null);
 
   useEffect(() => {
     void music.refreshDevices();
@@ -28,47 +36,70 @@ export function MusicTransport() {
           <span className="muted">Nothing playing</span>
         )}
       </p>
-      <div className="row">
+      <div className="transport-bar">
+        <div className="icon-toolbar">
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label="Previous"
+            onClick={() => void music.previous()}
+            disabled={!track}
+            title="Previous (Ctrl+Alt+Left)"
+          >
+            <Icon name="prev" />
+          </button>
+          <button
+            type="button"
+            className="chrome-btn primary"
+            aria-label={music.playing ? 'Pause' : 'Play'}
+            onClick={() => void music.togglePlay()}
+            disabled={!track && music.order.length === 0}
+            title={`${music.playing ? 'Pause' : 'Play'} (Ctrl+Alt+P)`}
+          >
+            <Icon name={music.playing ? 'pause' : 'play'} />
+          </button>
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label="Next"
+            onClick={() => void music.next()}
+            disabled={!track}
+            title="Next (Ctrl+Alt+Right)"
+          >
+            <Icon name="next" />
+          </button>
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label="Stop"
+            onClick={music.stop}
+            disabled={!track}
+            title="Stop with a fade"
+          >
+            <Icon name="stop" />
+          </button>
+          <button
+            type="button"
+            className={`chrome-btn loop-btn${loop === 'off' ? '' : ' on'}`}
+            aria-label={LOOP_LABELS[loop]}
+            onClick={() => void music.cycleLoop()}
+            title={`${LOOP_LABELS[loop]} (Ctrl+Alt+L)`}
+          >
+            <Icon name="loop" />
+            {loop === 'track' && <span className="loop-badge">1</span>}
+          </button>
+        </div>
         <button
           type="button"
-          className="btn"
-          onClick={() => void music.previous()}
-          disabled={!track}
-          title="Ctrl+Alt+Left"
-        >
-          ⏮
-        </button>
-        <button
-          type="button"
-          className="btn primary"
-          onClick={() => void music.togglePlay()}
-          disabled={!track && music.order.length === 0}
-          title="Ctrl+Alt+P"
-        >
-          {music.playing ? 'Pause' : 'Play'}
-        </button>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => void music.next()}
-          disabled={!track}
-          title="Ctrl+Alt+Right"
-        >
-          ⏭
-        </button>
-        <button type="button" className="btn" onClick={music.stop} disabled={!track}>
-          Stop
-        </button>
-        <button
-          type="button"
-          className={`btn${music.muted ? ' danger' : ''}`}
+          className={`btn small${music.muted ? ' danger' : ''}`}
           aria-pressed={music.muted}
           onClick={music.toggleMuted}
           title="Ctrl+Alt+M"
         >
           {music.muted ? 'Unmute' : 'Panic mute'}
         </button>
-        <span className="muted small">
+        <span className="spacer" />
+        <span className="muted small transport-time">
           {formatTime(music.position.current)} / {formatTime(music.position.duration)}
         </span>
       </div>
@@ -82,7 +113,7 @@ export function MusicTransport() {
         disabled={!track}
         className="wide"
       />
-      <div className="row">
+      <div className="music-levels">
         <label className="field inline">
           Master
           <input
@@ -122,7 +153,7 @@ export function MusicTransport() {
           />
           s
         </label>
-        <label className="field inline">
+        <label className="field inline music-output">
           Output
           <select
             value={settings.outputDeviceId ?? ''}

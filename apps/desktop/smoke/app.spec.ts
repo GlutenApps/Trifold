@@ -298,7 +298,9 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(console_.getByTestId('track-row')).toContainText('Tavern Night');
     await console_.getByTestId('track-row').getByRole('button', { name: 'Play now' }).click();
     await expect(console_.getByRole('contentinfo')).toContainText('Tavern Night');
-    await expect(console_.getByTestId('music-player')).toContainText('Pause');
+    await expect(
+      console_.getByTestId('music-player').getByRole('button', { name: 'Pause', exact: true }),
+    ).toBeVisible();
 
     // Bundled glyphs are served to the player over the media scheme (only when fetched).
     if (existsSync(join(__dirname, '..', '..', '..', 'resources', 'icons', 'svg'))) {

@@ -40,6 +40,21 @@ export function nextIndex(state: QueueState, step: 1 | -1 = 1): number | null {
   return (i + state.order.length) % state.order.length;
 }
 
+/** What repeats: nothing, the whole playlist, or the current track. */
+export type LoopMode = 'off' | 'playlist' | 'track';
+
+export function loopMode(loopTrack: boolean, playlistLoop: boolean | null): LoopMode {
+  if (loopTrack) return 'track';
+  return playlistLoop ? 'playlist' : 'off';
+}
+
+/** The loop button's next mode: off → playlist → track → off; a lone track skips "playlist". */
+export function nextLoopMode(mode: LoopMode, hasPlaylist: boolean): LoopMode {
+  if (mode === 'track') return 'off';
+  if (mode === 'playlist' || !hasPlaylist) return 'track';
+  return 'playlist';
+}
+
 export function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const m = Math.floor(seconds / 60);

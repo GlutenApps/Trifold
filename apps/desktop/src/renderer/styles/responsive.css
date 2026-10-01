@@ -212,3 +212,57 @@ textarea {
 .row-actions.pinned {
   visibility: visible;
 }
+
+/* A narrow Music panel stacks each track: play, title and length, then tags, then playlists
+   and gain, so the table never runs off the side. */
+@container panel (max-width: 720px) {
+  .track-table thead {
+    display: none;
+  }
+
+  .track-table tr {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      'play title title len'
+      '. tags tags tags'
+      '. lists lists gain';
+    align-items: center;
+    column-gap: 6px;
+    border-bottom: 1px solid var(--border);
+    padding: 4px 0;
+  }
+
+  .track-table td {
+    border-bottom: 0;
+    padding: 2px 0;
+    min-width: 0;
+  }
+
+  .track-table td:empty {
+    display: none;
+  }
+
+  .track-table .tt-play {
+    grid-area: play;
+  }
+  .track-table .tt-title {
+    grid-area: title;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .track-table .tt-len {
+    grid-area: len;
+  }
+  .track-table .tt-tags {
+    grid-area: tags;
+    min-width: 0;
+  }
+  .track-table .tt-gain {
+    grid-area: gain;
+  }
+  .track-table .tt-lists {
+    grid-area: lists;
+  }
+}

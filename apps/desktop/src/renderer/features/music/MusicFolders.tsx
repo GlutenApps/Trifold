@@ -1,9 +1,31 @@
 import { useMusicStore } from '../../stores/musicStore';
 
+/** Scan progress, then what the last scan changed. Shared by Library › Music and the Music panel. */
+export function ScanStatus() {
+  const scan = useMusicStore((s) => s.scan);
+  if (!scan) return null;
+  let text: string;
+  if (scan.phase === 'listing') text = `Found ${scan.found} files…`;
+  else if (scan.phase === 'reading')
+    text = `Reading ${scan.read}/${scan.found}: ${scan.current ?? ''}`;
+  else {
+    const changes = [
+      scan.added ? `${scan.added} new` : '',
+      scan.renamed ? `${scan.renamed} renamed` : '',
+      scan.removed ? `${scan.removed} removed` : '',
+    ].filter(Boolean);
+    text = changes.length ? `Rescanned: ${changes.join(', ')}` : 'Up to date';
+  }
+  return (
+    <span className="muted small scan-status" role="status" title={text}>
+      {text}
+    </span>
+  );
+}
+
 /** Music folders (Library › Music folders): files stay where they are; Trifold only remembers them. */
 export function MusicFolders() {
   const library = useMusicStore((s) => s.library);
-  const scan = useMusicStore((s) => s.scan);
   const addFolder = useMusicStore((s) => s.addFolder);
   const removeFolder = useMusicStore((s) => s.removeFolder);
   const rescan = useMusicStore((s) => s.rescan);
@@ -38,13 +60,7 @@ export function MusicFolders() {
         >
           Rescan
         </button>
-        {scan && scan.phase !== 'done' && (
-          <span className="muted small">
-            {scan.phase === 'listing'
-              ? `Found ${scan.found} files…`
-              : `Reading ${scan.read}/${scan.found}: ${scan.current ?? ''}`}
-          </span>
-        )}
+        <ScanStatus />
       </div>
     </div>
   );

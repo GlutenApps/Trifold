@@ -127,11 +127,17 @@ export class AudioEngine {
     return el;
   }
 
-  /** Crossfades from whatever is playing to this track. */
-  async play(trackId: string, url: string, gainDb: number, fadeSec: number): Promise<void> {
+  /** Crossfades from whatever is playing to this track. `loop` repeats it without a gap. */
+  async play(
+    trackId: string,
+    url: string,
+    gainDb: number,
+    fadeSec: number,
+    loop = false,
+  ): Promise<void> {
     const { ctx, layers } = this.ensure();
     const el = this.takeElement(url);
-    el.loop = false;
+    el.loop = loop;
     const source = ctx.createMediaElementSource(el);
     const gain = ctx.createGain();
     gain.gain.value = 0;
@@ -200,6 +206,11 @@ export class AudioEngine {
     if (voice && voice.trackId === trackId && !voice.el.paused) {
       this.ramp(voice.gain.gain, dbToGain(gainDb), 0.5);
     }
+  }
+
+  /** Repeats the current track in place; a looping element never fires `ended`. */
+  setLoop(loop: boolean): void {
+    if (this.current) this.current.el.loop = loop;
   }
 
   seek(seconds: number): void {

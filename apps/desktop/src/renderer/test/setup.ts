@@ -146,6 +146,7 @@ export function installBridgeMock(): TrifoldBridge {
     notes: {
       save: vi.fn(async (n) => n),
       remove: vi.fn(async () => undefined),
+      reorder: vi.fn(async () => []),
     },
     npcs: {
       save: vi.fn(async (n) => n),

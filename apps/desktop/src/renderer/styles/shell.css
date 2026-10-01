@@ -1099,10 +1099,6 @@ body.resizing {
   margin: 2px 0 6px;
 }
 
-.music-stack > * {
-  margin-bottom: 8px;
-}
-
 .combat-empty p {
   margin: 4px 0 10px;
 }

@@ -192,6 +192,12 @@ export function AppShell() {
         run: () => void useMusicStore.getState().previous(),
       }),
       registerHotkey({
+        id: 'music.loop',
+        combo: 'Ctrl+Alt+L',
+        description: 'Cycle music loop: off, playlist, track',
+        run: () => void useMusicStore.getState().cycleLoop(),
+      }),
+      registerHotkey({
         id: 'music.panic',
         combo: 'Ctrl+Alt+M',
         description: 'Panic mute all audio',

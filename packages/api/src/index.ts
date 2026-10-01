@@ -226,6 +226,9 @@ export interface MusicScanProgress {
   found: number;
   added: number;
   current?: string;
+  /** On `done`: tracks relinked to a renamed or moved file, and tracks whose file is gone. */
+  renamed?: number;
+  removed?: number;
 }
 
 /** A music file, streamed by main from wherever the track lives. */

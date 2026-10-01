@@ -11,6 +11,8 @@ export const Track = z.object({
   id: z.string().min(1),
   /** Absolute path; files are referenced in place, never copied or moved. */
   path: z.string().min(1),
+  /** File size when last scanned; with the length, recognises a renamed or moved file. */
+  sizeBytes: z.number().int().min(0).optional(),
   title: z.string().min(1),
   artist: z.string().optional(),
   album: z.string().optional(),

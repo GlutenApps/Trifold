@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOrder, formatTime, nextIndex, shuffled } from './queue';
+import { buildOrder, formatTime, loopMode, nextIndex, nextLoopMode, shuffled } from './queue';
 
 describe('playlist queue', () => {
   it('shuffles deterministically and keeps the current track first', () => {
@@ -24,5 +24,16 @@ describe('playlist queue', () => {
     expect(formatTime(0)).toBe('0:00');
     expect(formatTime(75.9)).toBe('1:15');
     expect(formatTime(NaN)).toBe('0:00');
+  });
+
+  it('cycles loop modes, skipping the playlist mode for a lone track', () => {
+    expect(loopMode(false, true)).toBe('playlist');
+    expect(loopMode(true, false)).toBe('track');
+    expect(loopMode(false, null)).toBe('off');
+    expect(nextLoopMode('off', true)).toBe('playlist');
+    expect(nextLoopMode('playlist', true)).toBe('track');
+    expect(nextLoopMode('track', true)).toBe('off');
+    expect(nextLoopMode('off', false)).toBe('track');
+    expect(nextLoopMode('track', false)).toBe('off');
   });
 });

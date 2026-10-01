@@ -226,7 +226,7 @@ A single `Record` with `sourceId = "homebrew"` and `basedOn` when duplicated.
 Scene token coordinates are in grid units (floats) relative to the grid origin (`offsetX/Y` in image pixels). Pixel position = `offset + coord × cellPx`. Footprint is in cells.
 
 ### 5.5 Music
-`music/library.json`: `{ folders: [path], tracks: Track[] }`; `music/playlists/<id>.json`: Playlist. Paths are absolute; a missing file marks the track unavailable rather than removing it.
+`music/library.json`: `{ folders: [path], tracks: Track[] }`; `music/playlists/<id>.json`: Playlist. Paths are absolute. A rescan relinks a renamed or moved file to its track (same `sizeBytes` and length; tracks without a stored size match on length within the same folder; ambiguous matches are left alone), so tags, gain and playlist membership follow the file. A track whose file is gone from a readable folder is removed, along with its playlist entries. When a folder cannot be read at all (an unplugged drive), its tracks stay listed as unavailable. Kind (`music`/`ambience`/`sfx`) is edited as a tag: the first kind word among the tags (`ambience`/`ambiance`/`ambient`, `effect`/`effects`/`sfx`, `music`) sets `kind`, and a track with none is music.
 
 ### 5.6 Index (`index.sqlite`)
 Derived. Tables: `records(id, kind, key, name, display_name, source_id, edition, cr, type, size, environment, is_npc, json)`, `records_fts(name, text)` (FTS5), `sources`, plus lightweight tables for campaign entity lookup. Rebuilt when any source's `fileHash` or a homebrew file's mtime changes, or when `library.json.indexVersion` is behind the app's.

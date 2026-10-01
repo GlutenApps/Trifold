@@ -1,132 +1,177 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { TrackView } from '@trifold/api';
-import type { Playlist, TrackKind } from '@trifold/schema';
+import type { Playlist } from '@trifold/schema';
 import { newPlaylist, useMusicStore } from '../../stores/musicStore';
 import { formatTime } from './queue';
 import { MusicTransport } from './MusicTransport';
+import { ScanStatus } from './MusicFolders';
+import { SUGGESTED_TAGS, displayTags, withTags, withoutTag } from './tags';
+import { Icon } from '../shell/icons';
 
-const KINDS: Array<{ value: TrackKind; label: string }> = [
-  { value: 'music', label: 'Music' },
-  { value: 'ambience', label: 'Ambience' },
-  { value: 'sfx', label: 'Effect' },
-];
+const TAG_LIST_ID = 'music-tag-suggestions';
+
+/** Tags as removable chips plus one input; Enter or a comma adds, Backspace on empty removes. */
+function TagEditor({ track }: { track: TrackView }) {
+  const updateTrack = useMusicStore((s) => s.updateTrack);
+  const [draft, setDraft] = useState('');
+  const tags = displayTags(track);
+  const add = (text: string) => {
+    const parts = text.split(',');
+    setDraft('');
+    if (parts.some((p) => p.trim())) void updateTrack(track.id, withTags(tags, parts));
+  };
+  const remove = (tag: string) => void updateTrack(track.id, withoutTag(tags, tag));
+  return (
+    <div className="tag-editor">
+      {tags.map((tag) => (
+        <span key={tag} className="tag-chip">
+          {tag}
+          <button
+            type="button"
+            className="tag-chip-x"
+            onClick={() => remove(tag)}
+            title={`Remove tag ${tag}`}
+            aria-label={`Remove tag ${tag}`}
+          >
+            <Icon name="close" size={11} />
+          </button>
+        </span>
+      ))}
+      <input
+        type="text"
+        aria-label="Add tag"
+        placeholder={tags.length ? '' : 'music, ambience, effect, or any tag'}
+        list={TAG_LIST_ID}
+        value={draft}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (value.includes(',')) add(value);
+          else setDraft(value);
+        }}
+        onBlur={() => draft.trim() && add(draft)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            add(draft);
+          } else if (e.key === 'Backspace' && !draft && tags.length) {
+            remove(tags[tags.length - 1]!);
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+/** The playlists a track is in, each removable, and a picker for the ones it is not in. */
+function TrackPlaylists({ track, playlists }: { track: TrackView; playlists: Playlist[] }) {
+  const addToPlaylist = useMusicStore((s) => s.addToPlaylist);
+  const removeFromPlaylist = useMusicStore((s) => s.removeFromPlaylist);
+  const member = playlists.filter((p) => p.trackIds.includes(track.id));
+  const others = playlists.filter((p) => !p.trackIds.includes(track.id));
+  return (
+    <div className="tag-editor">
+      {member.map((p) => (
+        <span key={p.id} className="tag-chip playlist-chip">
+          {p.name}
+          <button
+            type="button"
+            className="tag-chip-x"
+            onClick={() => void removeFromPlaylist(p.id, track.id)}
+            title={`Remove from ${p.name}`}
+            aria-label={`Remove from ${p.name}`}
+          >
+            <Icon name="close" size={11} />
+          </button>
+        </span>
+      ))}
+      {others.length > 0 && (
+        <select
+          aria-label="Add to playlist"
+          className="add-to-playlist"
+          value=""
+          onChange={(e) => e.target.value && void addToPlaylist(e.target.value, track.id)}
+        >
+          <option value="">{member.length ? '+ playlist' : 'Add to playlist…'}</option>
+          {others.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+}
 
 function TrackRow({
   track,
   playlists,
   onPlay,
-  onAdd,
 }: {
   track: TrackView;
   playlists: Playlist[];
   onPlay(): void;
-  onAdd(playlistId: string): void;
 }) {
-  const updateTrack = useMusicStore((s) => s.updateTrack);
-  const [tags, setTags] = useState(track.tags.join(', '));
-  useEffect(() => setTags(track.tags.join(', ')), [track.tags]);
-  const commitTags = () => {
-    const next = tags
-      .split(',')
-      .map((t) => t.trim().toLowerCase())
-      .filter(Boolean);
-    if (next.join(',') !== track.tags.join(',')) void updateTrack(track.id, { tags: next });
-  };
   return (
     <tr data-testid="track-row" className={track.available ? '' : 'unavailable'}>
-      <td>
+      <td className="tt-play">
         <button
           type="button"
-          className="btn tiny"
+          className="chrome-btn xs"
           onClick={onPlay}
           disabled={!track.available}
           title="Play now"
           aria-label="Play now"
         >
-          ▶
+          <Icon name="play" size={14} />
         </button>
       </td>
-      <td>
+      <td className="tt-title">
         <strong>{track.title}</strong>
         {track.artist && <span className="muted small"> · {track.artist}</span>}
         {!track.available && <span className="badge warn"> missing</span>}
       </td>
-      <td className="muted small">{formatTime(track.durationSec)}</td>
-      <td>
-        <select
-          aria-label="Track kind"
-          value={track.kind}
-          onChange={(e) => void updateTrack(track.id, { kind: e.target.value as TrackKind })}
-        >
-          {KINDS.map((k) => (
-            <option key={k.value} value={k.value}>
-              {k.label}
-            </option>
-          ))}
-        </select>
+      <td className="tt-len muted small">{formatTime(track.durationSec)}</td>
+      <td className="tt-tags">
+        <TagEditor track={track} />
       </td>
-      <td>
-        <input
-          type="text"
-          aria-label="Tags"
-          placeholder="tags, comma separated"
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          onBlur={commitTags}
-          onKeyDown={(e) => e.key === 'Enter' && commitTags()}
-        />
+      <td className="tt-lists">
+        {playlists.length > 0 && <TrackPlaylists track={track} playlists={playlists} />}
       </td>
-      <td className="muted small">
+      <td className="tt-gain muted small">
         {track.gainDb === null
           ? '…'
           : `${track.gainDb > 0 ? '+' : ''}${track.gainDb.toFixed(1)} dB`}
-      </td>
-      <td>
-        {playlists.length > 0 && (
-          <select
-            aria-label="Add to playlist"
-            value=""
-            onChange={(e) => e.target.value && onAdd(e.target.value)}
-          >
-            <option value="">Add to…</option>
-            {playlists.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        )}
       </td>
     </tr>
   );
 }
 
-function Playlists({
-  selectedId,
-  onSelect,
+/** One playlist: a header that expands to its settings and tracks. */
+function PlaylistItem({
+  playlist,
+  open,
+  onToggle,
 }: {
-  selectedId: string | null;
-  onSelect(id: string | null): void;
+  playlist: Playlist;
+  open: boolean;
+  onToggle(): void;
 }) {
-  const playlists = useMusicStore((s) => s.playlists);
   const library = useMusicStore((s) => s.library);
   const savePlaylist = useMusicStore((s) => s.savePlaylist);
   const removePlaylist = useMusicStore((s) => s.removePlaylist);
   const playPlaylist = useMusicStore((s) => s.playPlaylist);
   const playTrack = useMusicStore((s) => s.playTrack);
-  const playingId = useMusicStore((s) => s.playlistId);
-  const [name, setName] = useState('');
-  const selected = playlists.find((p) => p.id === selectedId) ?? null;
-  const tracks = selected
-    ? selected.trackIds
-        .map((id) => library?.tracks.find((t) => t.id === id))
-        .filter((t): t is TrackView => Boolean(t))
-    : [];
+  const live = useMusicStore((s) => s.playlistId === playlist.id && s.playing);
+  const defaultFade = useMusicStore((s) => s.settings.crossfadeSec);
+  const tracks = playlist.trackIds
+    .map((id) => library?.tracks.find((t) => t.id === id))
+    .filter((t): t is TrackView => Boolean(t));
+  const totalSec = tracks.reduce((sum, t) => sum + t.durationSec, 0);
 
-  const patch = (p: Partial<Playlist>) => selected && void savePlaylist({ ...selected, ...p });
+  const patch = (p: Partial<Playlist>) => void savePlaylist({ ...playlist, ...p });
   const move = (i: number, step: -1 | 1) => {
-    if (!selected) return;
-    const ids = [...selected.trackIds];
+    const ids = [...playlist.trackIds];
     const j = i + step;
     if (j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j]!, ids[i]!];
@@ -134,14 +179,171 @@ function Playlists({
   };
 
   return (
-    <div className="card">
-      <h2>Playlists</h2>
+    <li className={`playlist-item${open ? ' open' : ''}`} data-testid="playlist-item">
+      <div className="playlist-head">
+        <button type="button" className="playlist-toggle" aria-expanded={open} onClick={onToggle}>
+          <Icon name={open ? 'down' : 'right'} size={14} />
+          <strong>{playlist.name}</strong>
+          <span className="muted small">
+            {tracks.length} track{tracks.length === 1 ? '' : 's'} · {formatTime(totalSec)}
+          </span>
+          {live && <span className="badge">playing</span>}
+        </button>
+        <button
+          type="button"
+          className="chrome-btn"
+          onClick={() => void playPlaylist(playlist.id)}
+          disabled={tracks.length === 0}
+          title={`Play ${playlist.name}`}
+          aria-label={`Play ${playlist.name}`}
+        >
+          <Icon name="play" />
+        </button>
+      </div>
+      {open && (
+        <div className="playlist-detail" data-testid="playlist-detail">
+          <div className="row playlist-name-row">
+            <input
+              type="text"
+              className="playlist-name"
+              aria-label="Playlist name"
+              value={playlist.name}
+              onChange={(e) => patch({ name: e.target.value })}
+            />
+            <button
+              type="button"
+              className="chrome-btn danger"
+              onClick={() => void removePlaylist(playlist.id)}
+              title="Delete playlist"
+              aria-label={`Delete playlist ${playlist.name}`}
+            >
+              <Icon name="trash" />
+            </button>
+          </div>
+          <div className="row">
+            <label className="field inline">
+              <input
+                type="checkbox"
+                checked={playlist.shuffle}
+                onChange={(e) => patch({ shuffle: e.target.checked })}
+              />
+              Shuffle
+            </label>
+            <label className="field inline">
+              <input
+                type="checkbox"
+                checked={playlist.loop}
+                onChange={(e) => patch({ loop: e.target.checked })}
+              />
+              Loop
+            </label>
+            <label className="field inline">
+              Crossfade
+              <input
+                type="number"
+                className="narrow"
+                min={0}
+                max={30}
+                step={0.5}
+                placeholder={String(defaultFade)}
+                value={playlist.crossfadeSec ?? ''}
+                onChange={(e) =>
+                  patch({
+                    crossfadeSec: e.target.value === '' ? undefined : Number(e.target.value),
+                  })
+                }
+              />
+              s
+            </label>
+          </div>
+          {tracks.length === 0 ? (
+            <p className="muted">Empty. Use "Add to playlist…" on the Tracks tab.</p>
+          ) : (
+            <ol className="playlist-tracks">
+              {tracks.map((t, i) => (
+                <li key={`${t.id}-${i}`}>
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => void playTrack(t.id, playlist.id)}
+                  >
+                    {t.title}
+                  </button>
+                  {t.artist && <span className="muted small"> · {t.artist}</span>}
+                  <span className="spacer" />
+                  <span className="muted small">{formatTime(t.durationSec)}</span>
+                  <span className="row-actions">
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      onClick={() => move(i, -1)}
+                      disabled={i === 0}
+                      title="Move up"
+                      aria-label="Move up"
+                    >
+                      <Icon name="up" size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      onClick={() => move(i, 1)}
+                      disabled={i === tracks.length - 1}
+                      title="Move down"
+                      aria-label="Move down"
+                    >
+                      <Icon name="down" size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      onClick={() =>
+                        patch({ trackIds: playlist.trackIds.filter((_, j) => j !== i) })
+                      }
+                      title="Remove from playlist"
+                      aria-label="Remove from playlist"
+                    >
+                      <Icon name="close" size={14} />
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+/** Playlists tab: create one, then expand any number to edit them side by side. */
+function PlaylistsTab({
+  open,
+  setOpen,
+}: {
+  /** Expanded playlists; owned by the Music panel so switching tabs keeps them open. */
+  open: ReadonlySet<string>;
+  setOpen(update: (prev: ReadonlySet<string>) => ReadonlySet<string>): void;
+}) {
+  const playlists = useMusicStore((s) => s.playlists);
+  const savePlaylist = useMusicStore((s) => s.savePlaylist);
+  const [name, setName] = useState('');
+  const toggle = (id: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
+  return (
+    <div className="card wide-card">
       <form
         className="row"
         onSubmit={(e) => {
           e.preventDefault();
           if (!name.trim()) return;
-          void savePlaylist(newPlaylist(name.trim())).then((saved) => saved && onSelect(saved.id));
+          void savePlaylist(newPlaylist(name.trim())).then(
+            (saved) => saved && setOpen((prev) => new Set(prev).add(saved.id)),
+          );
           setName('');
         }}
       >
@@ -156,124 +358,19 @@ function Playlists({
           Create playlist
         </button>
       </form>
-      {playlists.length > 0 && (
-        <div className="row wrap">
+      {playlists.length === 0 ? (
+        <p className="muted">No playlists yet.</p>
+      ) : (
+        <ul className="playlist-list">
           {playlists.map((p) => (
-            <button
+            <PlaylistItem
               key={p.id}
-              type="button"
-              className={`btn tiny${p.id === playingId ? ' primary' : ''}`}
-              aria-pressed={p.id === selectedId}
-              onClick={() => onSelect(p.id === selectedId ? null : p.id)}
-            >
-              {p.name} ({p.trackIds.length})
-            </button>
-          ))}
-        </div>
-      )}
-      {selected && (
-        <div className="playlist-detail" data-testid="playlist-detail">
-          <div className="row">
-            <input
-              type="text"
-              aria-label="Playlist name"
-              value={selected.name}
-              onChange={(e) => patch({ name: e.target.value })}
+              playlist={p}
+              open={open.has(p.id)}
+              onToggle={() => toggle(p.id)}
             />
-            <label className="field inline">
-              <input
-                type="checkbox"
-                checked={selected.shuffle}
-                onChange={(e) => patch({ shuffle: e.target.checked })}
-              />
-              Shuffle
-            </label>
-            <label className="field inline">
-              <input
-                type="checkbox"
-                checked={selected.loop}
-                onChange={(e) => patch({ loop: e.target.checked })}
-              />
-              Loop
-            </label>
-            <label className="field inline">
-              Crossfade
-              <input
-                type="number"
-                className="narrow"
-                min={0}
-                max={30}
-                step={0.5}
-                placeholder="default"
-                value={selected.crossfadeSec ?? ''}
-                onChange={(e) =>
-                  patch({
-                    crossfadeSec: e.target.value === '' ? undefined : Number(e.target.value),
-                  })
-                }
-              />
-            </label>
-            <span className="spacer" />
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => void playPlaylist(selected.id)}
-              disabled={selected.trackIds.length === 0}
-            >
-              Play playlist
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => void removePlaylist(selected.id).then(() => onSelect(null))}
-            >
-              Delete
-            </button>
-          </div>
-          {tracks.length === 0 ? (
-            <p className="muted">Empty. Use "Add to…" on a track.</p>
-          ) : (
-            <ol className="playlist-tracks">
-              {tracks.map((t, i) => (
-                <li key={`${t.id}-${i}`}>
-                  <button
-                    type="button"
-                    className="link"
-                    onClick={() => void playTrack(t.id, selected.id)}
-                  >
-                    {t.title}
-                  </button>
-                  <span className="muted small"> {formatTime(t.durationSec)}</span>
-                  <span className="spacer" />
-                  <button
-                    type="button"
-                    className="btn tiny"
-                    onClick={() => move(i, -1)}
-                    title="Move up"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    type="button"
-                    className="btn tiny"
-                    onClick={() => move(i, 1)}
-                    title="Move down"
-                  >
-                    ▼
-                  </button>
-                  <button
-                    type="button"
-                    className="btn tiny"
-                    onClick={() => patch({ trackIds: selected.trackIds.filter((_, j) => j !== i) })}
-                    title="Remove from playlist"
-                  >
-                    ✕
-                  </button>
-                </li>
-              ))}
-            </ol>
-          )}
-        </div>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -285,36 +382,47 @@ export function MusicTool() {
   const playlists = useMusicStore((s) => s.playlists);
   const load = useMusicStore((s) => s.load);
   const playTrack = useMusicStore((s) => s.playTrack);
-  const savePlaylist = useMusicStore((s) => s.savePlaylist);
+  const rescan = useMusicStore((s) => s.rescan);
+  const scanning = useMusicStore((s) => s.scan !== null && s.scan.phase !== 'done');
   const error = useMusicStore((s) => s.error);
   const clearError = useMusicStore((s) => s.clearError);
   const [query, setQuery] = useState('');
-  const [kind, setKind] = useState<TrackKind | 'all'>('all');
-  const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
+  /** 'all', 'unsorted' (in no playlist), or a tag. */
+  const [filter, setFilter] = useState('all');
+  const [tab, setTab] = useState<'tracks' | 'playlists'>('tracks');
+  const [openPlaylists, setOpenPlaylists] = useState<ReadonlySet<string>>(new Set());
 
   // Always refresh on open: folders can change while the page is away (scans, other sections).
   useEffect(() => {
     void load();
   }, [load]);
 
+  const tagsInUse = useMemo(() => {
+    const all = new Set<string>();
+    for (const t of library?.tracks ?? []) for (const tag of displayTags(t)) all.add(tag);
+    return [...all].sort();
+  }, [library]);
+
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const sorted = new Set(playlists.flatMap((p) => p.trackIds));
     return (library?.tracks ?? [])
-      .filter((t) => kind === 'all' || t.kind === kind)
+      .filter((t) =>
+        filter === 'all'
+          ? true
+          : filter === 'unsorted'
+            ? !sorted.has(t.id)
+            : displayTags(t).includes(filter),
+      )
       .filter(
         (t) =>
           !q ||
           t.title.toLowerCase().includes(q) ||
           (t.artist ?? '').toLowerCase().includes(q) ||
-          t.tags.some((tag) => tag.includes(q)),
+          displayTags(t).some((tag) => tag.includes(q)),
       )
       .sort((a, b) => a.title.localeCompare(b.title));
-  }, [library, query, kind]);
-
-  const addToPlaylist = (playlistId: string, trackId: string) => {
-    const playlist = playlists.find((p) => p.id === playlistId);
-    if (playlist) void savePlaylist({ ...playlist, trackIds: [...playlist.trackIds, trackId] });
-  };
+  }, [library, playlists, query, filter]);
 
   return (
     <div className="music">
@@ -327,10 +435,49 @@ export function MusicTool() {
         </div>
       )}
       <MusicTransport />
-      <div className="music-stack">
-        <Playlists selectedId={selectedPlaylist} onSelect={setSelectedPlaylist} />
-        <div className="card wide-card">
-          <h2>Tracks</h2>
+      <div className="music-tabbar">
+        <div className="music-tablist" role="tablist" aria-label="Music view">
+          {(
+            [
+              ['tracks', `Tracks (${library?.tracks.length ?? 0})`],
+              ['playlists', `Playlists (${playlists.length})`],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              className={`music-tab${tab === id ? ' active' : ''}`}
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="spacer" />
+        {tab === 'tracks' && (
+          <>
+            <ScanStatus />
+            <button
+              type="button"
+              className="chrome-btn"
+              onClick={() => void rescan()}
+              disabled={!library?.folders.length || scanning}
+              title="Rescan music folders: picks up new, renamed and deleted files"
+              aria-label="Rescan music folders"
+            >
+              <Icon name="refresh" />
+            </button>
+          </>
+        )}
+      </div>
+      {tab === 'playlists' ? (
+        <div role="tabpanel" aria-label="Playlists" className="music-tabpanel">
+          <PlaylistsTab open={openPlaylists} setOpen={setOpenPlaylists} />
+        </div>
+      ) : (
+        <div role="tabpanel" aria-label="Tracks" className="music-tabpanel card wide-card">
           <div className="row">
             <input
               type="text"
@@ -340,14 +487,15 @@ export function MusicTool() {
               onChange={(e) => setQuery(e.target.value)}
             />
             <select
-              aria-label="Kind filter"
-              value={kind}
-              onChange={(e) => setKind(e.target.value as TrackKind | 'all')}
+              aria-label="Show tracks"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
             >
-              <option value="all">All kinds</option>
-              {KINDS.map((k) => (
-                <option key={k.value} value={k.value}>
-                  {k.label}
+              <option value="all">All tracks</option>
+              <option value="unsorted">Not in a playlist</option>
+              {tagsInUse.map((tag) => (
+                <option key={tag} value={tag}>
+                  Tagged {tag}
                 </option>
               ))}
             </select>
@@ -355,36 +503,45 @@ export function MusicTool() {
               {rows.length} of {library?.tracks.length ?? 0}
             </span>
           </div>
+          <datalist id={TAG_LIST_ID}>
+            {[...new Set([...tagsInUse, ...SUGGESTED_TAGS])].map((tag) => (
+              <option key={tag} value={tag} />
+            ))}
+          </datalist>
           {rows.length === 0 ? (
-            <p className="muted">No tracks. Add a folder of MP3, OGG, FLAC, WAV or M4A files.</p>
+            <p className="muted">
+              {library?.tracks.length
+                ? 'No tracks match.'
+                : 'No tracks. Add a folder of MP3, OGG, FLAC, WAV or M4A files.'}
+            </p>
           ) : (
-            <table className="track-table">
-              <thead>
-                <tr>
-                  <th />
-                  <th>Title</th>
-                  <th>Length</th>
-                  <th>Kind</th>
-                  <th>Tags</th>
-                  <th>Gain</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((t) => (
-                  <TrackRow
-                    key={t.id}
-                    track={t}
-                    playlists={playlists}
-                    onPlay={() => void playTrack(t.id)}
-                    onAdd={(pid) => addToPlaylist(pid, t.id)}
-                  />
-                ))}
-              </tbody>
-            </table>
+            <div className="track-table-wrap">
+              <table className="track-table">
+                <thead>
+                  <tr>
+                    <th />
+                    <th>Title</th>
+                    <th>Length</th>
+                    <th>Tags</th>
+                    <th>Playlists</th>
+                    <th>Gain</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((t) => (
+                    <TrackRow
+                      key={t.id}
+                      track={t}
+                      playlists={playlists}
+                      onPlay={() => void playTrack(t.id)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

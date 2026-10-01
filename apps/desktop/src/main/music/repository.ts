@@ -1,5 +1,5 @@
 import { readdir, stat, unlink } from 'node:fs/promises';
-import { basename, extname, join } from 'node:path';
+import { basename, dirname, extname, join } from 'node:path';
 import { parseFile } from 'music-metadata';
 import { ulid } from 'ulid';
 import type { MusicLibraryView, MusicScanProgress, TrackView } from '@trifold/api';
@@ -87,39 +87,97 @@ export class MusicRepository {
     return this.scanning;
   }
 
+  /**
+   * Relinks renamed or moved files to their tracks (same size and length), drops tracks whose
+   * files are gone from a readable folder (and from playlists), and adds new files. Tracks in a
+   * folder that cannot be read at all (an unplugged drive) stay listed as unavailable.
+   */
   private async scanNow(onProgress?: (p: MusicScanProgress) => void): Promise<MusicLibraryView> {
     const lib = await this.load();
-    const known = new Map(lib.tracks.map((t) => [t.path.toLowerCase(), t]));
     const files: string[] = [];
+    const reachable: string[] = [];
     for (const folder of lib.folders) {
-      await walk(folder, files, this.logger);
+      if (await walk(folder, files, this.logger)) reachable.push(folder);
       onProgress?.({ phase: 'listing', read: 0, found: files.length, added: 0 });
     }
+    const onDisk = new Set(files.map((f) => f.toLowerCase()));
+    const known = new Set(lib.tracks.map((t) => t.path.toLowerCase()));
+
+    // Backfill sizes so a later rename can be recognised.
+    for (const track of lib.tracks) {
+      if (track.sizeBytes === undefined && onDisk.has(track.path.toLowerCase())) {
+        const size = await sizeOf(track.path);
+        if (size !== null) track.sizeBytes = size;
+      }
+    }
+
     let read = 0;
-    let added = 0;
+    const fresh: Track[] = [];
     for (const file of files) {
       read += 1;
       if (known.has(file.toLowerCase())) continue;
-      onProgress?.({ phase: 'reading', read, found: files.length, added, current: basename(file) });
-      const track = await this.readTrack(file);
-      lib.tracks.push(track);
-      known.set(file.toLowerCase(), track);
-      added += 1;
+      onProgress?.({
+        phase: 'reading',
+        read,
+        found: files.length,
+        added: fresh.length,
+        current: basename(file),
+      });
+      fresh.push(await this.readTrack(file));
     }
+
+    const gone = lib.tracks.filter(
+      (t) => !onDisk.has(t.path.toLowerCase()) && insideAny(t.path, reachable),
+    );
+    const links = matchRenames(gone, fresh);
+    const linked = new Set(links.values());
+    const goneIds = new Set(gone.map((t) => t.id));
+    lib.tracks = lib.tracks.flatMap((t) => {
+      if (!goneIds.has(t.id)) return [t];
+      const moved = links.get(t);
+      return moved ? [relink(t, moved)] : [];
+    });
+    const added = fresh.filter((t) => !linked.has(t));
+    lib.tracks.push(...added);
+    const removed = gone.length - links.size;
+    if (removed > 0) await this.prunePlaylists(new Set(lib.tracks.map((t) => t.id)));
+
     lib.lastScanAt = nowIso();
     await this.save();
-    onProgress?.({ phase: 'done', read, found: files.length, added });
-    this.logger.info(`music scan: ${files.length} files, ${added} new`);
+    onProgress?.({
+      phase: 'done',
+      read,
+      found: files.length,
+      added: added.length,
+      renamed: links.size,
+      removed,
+    });
+    this.logger.info(
+      `music scan: ${files.length} files, ${added.length} new, ${links.size} renamed, ${removed} removed`,
+    );
     return this.view();
+  }
+
+  /** Drops ids of tracks that no longer exist from every playlist that holds them. */
+  private async prunePlaylists(live: Set<string>): Promise<void> {
+    for (const playlist of await this.listPlaylists()) {
+      const trackIds = playlist.trackIds.filter((id) => live.has(id));
+      if (trackIds.length !== playlist.trackIds.length) {
+        await this.savePlaylist({ ...playlist, trackIds });
+      }
+    }
   }
 
   private async readTrack(file: string): Promise<Track> {
     const fallbackTitle = basename(file, extname(file));
+    const size = await sizeOf(file);
+    const sized = size !== null ? { sizeBytes: size } : {};
     try {
       const meta = await parseFile(file, { duration: true, skipCovers: true });
       return Track.parse({
         id: ulid(),
         path: file,
+        ...sized,
         title: meta.common.title?.trim() || fallbackTitle,
         ...(meta.common.artist ? { artist: meta.common.artist } : {}),
         ...(meta.common.album ? { album: meta.common.album } : {}),
@@ -128,7 +186,13 @@ export class MusicRepository {
       });
     } catch (err) {
       this.logger.warn(`could not read tags from ${file}: ${String(err)}`);
-      return Track.parse({ id: ulid(), path: file, title: fallbackTitle, addedAt: nowIso() });
+      return Track.parse({
+        id: ulid(),
+        path: file,
+        ...sized,
+        title: fallbackTitle,
+        addedAt: nowIso(),
+      });
     }
   }
 
@@ -196,13 +260,65 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-async function walk(dir: string, out: string[], logger: Logger): Promise<void> {
+async function sizeOf(path: string): Promise<number | null> {
+  try {
+    return (await stat(path)).size;
+  } catch {
+    return null;
+  }
+}
+
+function insideAny(path: string, folders: readonly string[]): boolean {
+  const p = path.toLowerCase();
+  return folders.some((f) => {
+    const prefix = f.replace(/[\\/]+$/, '').toLowerCase();
+    return p.startsWith(`${prefix}\\`) || p.startsWith(`${prefix}/`);
+  });
+}
+
+/**
+ * Pairs each vanished track with the one new file that is the same audio: equal size and
+ * length, or, for tracks scanned before sizes were stored, equal length in the same folder.
+ * Anything ambiguous stays unpaired.
+ */
+export function matchRenames(gone: readonly Track[], fresh: readonly Track[]): Map<Track, Track> {
+  const same = (old: Track, next: Track) => {
+    if (Math.abs(old.durationSec - next.durationSec) > 0.1) return false;
+    if (old.sizeBytes !== undefined) return old.sizeBytes === next.sizeBytes;
+    return (
+      old.durationSec > 0 && dirname(old.path).toLowerCase() === dirname(next.path).toLowerCase()
+    );
+  };
+  const links = new Map<Track, Track>();
+  for (const old of gone) {
+    const candidates = fresh.filter((next) => same(old, next));
+    if (candidates.length !== 1) continue;
+    const next = candidates[0]!;
+    if (gone.filter((g) => same(g, next)).length === 1) links.set(old, next);
+  }
+  return links;
+}
+
+/** The old track at its new path: keeps id, tags, gain and trims; a filename title follows the file. */
+function relink(old: Track, next: Track): Track {
+  const titleFromFile = old.title === basename(old.path, extname(old.path));
+  return {
+    ...old,
+    path: next.path,
+    ...(next.sizeBytes !== undefined ? { sizeBytes: next.sizeBytes } : {}),
+    durationSec: next.durationSec || old.durationSec,
+    title: titleFromFile ? next.title : old.title,
+  };
+}
+
+/** Collects audio files under `dir`; false when `dir` itself cannot be read. */
+async function walk(dir: string, out: string[], logger: Logger): Promise<boolean> {
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch (err) {
     logger.warn(`music folder unreadable: ${dir} (${String(err)})`);
-    return;
+    return false;
   }
   for (const entry of entries) {
     const full = join(dir, entry.name);
@@ -210,4 +326,5 @@ async function walk(dir: string, out: string[], logger: Logger): Promise<void> {
     else if (entry.isFile() && AUDIO_EXTENSIONS.has(extname(entry.name).toLowerCase()))
       out.push(full);
   }
+  return true;
 }

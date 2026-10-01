@@ -8,7 +8,13 @@ import {
 import type { MusicSettings, Playlist, Track } from '@trifold/schema';
 import { AudioEngine } from '../features/music/engine';
 import { gainToTarget, integratedLoudness } from '../features/music/loudness';
-import { buildOrder, nextIndex } from '../features/music/queue';
+import {
+  buildOrder,
+  loopMode,
+  nextIndex,
+  nextLoopMode,
+  type LoopMode,
+} from '../features/music/queue';
 
 export interface OutputDevice {
   deviceId: string;
@@ -29,6 +35,8 @@ interface MusicState {
   index: number;
   playing: boolean;
   muted: boolean;
+  /** Repeat the current track (session only); the playlist's own `loop` is saved with it. */
+  loopTrack: boolean;
   position: { current: number; duration: number };
   /** Loudness pass: track being measured now, and how many remain. */
   measuring: { trackId: string; remaining: number } | null;
@@ -43,6 +51,8 @@ interface MusicState {
   updateTrack(trackId: string, patch: Partial<Track>): Promise<void>;
   savePlaylist(playlist: Playlist): Promise<Playlist | null>;
   removePlaylist(playlistId: string): Promise<void>;
+  addToPlaylist(playlistId: string, trackId: string): Promise<void>;
+  removeFromPlaylist(playlistId: string, trackId: string): Promise<void>;
 
   /** Starts a playlist (crossfading from whatever plays). `ifDifferent` skips a restart of the same one. */
   playPlaylist(playlistId: string, options?: { ifDifferent?: boolean }): Promise<void>;
@@ -54,6 +64,8 @@ interface MusicState {
   seek(seconds: number): void;
   setMuted(muted: boolean): void;
   toggleMuted(): void;
+  /** Off → loop playlist → loop track → off; a track played on its own skips "playlist". */
+  cycleLoop(): Promise<void>;
   measureLoudness(): Promise<void>;
   clearError(): void;
 }
@@ -111,7 +123,13 @@ export const useMusicStore = create<MusicState>((set, get) => {
     }
     set({ index, playing: true });
     try {
-      await engine.play(track.id, trackUrl(track.id), track.gainDb ?? 0, fadeFor(playlistId));
+      await engine.play(
+        track.id,
+        trackUrl(track.id),
+        track.gainDb ?? 0,
+        fadeFor(playlistId),
+        get().loopTrack,
+      );
       startTicker();
       const upcoming = nextIndex({ order, index, loop: true });
       const upcomingId = upcoming !== null ? order[upcoming] : undefined;
@@ -135,6 +153,14 @@ export const useMusicStore = create<MusicState>((set, get) => {
 
   let measuringRun: Promise<void> | null = null;
 
+  // Scan progress from main; the last `done` stays as the summary until the next scan.
+  let listening = false;
+  const listenForScans = () => {
+    if (listening || typeof window.trifold?.on !== 'function') return;
+    listening = true;
+    window.trifold.on('musicScan', (scan) => set({ scan }));
+  };
+
   return {
     library: null,
     playlists: [],
@@ -154,10 +180,12 @@ export const useMusicStore = create<MusicState>((set, get) => {
     index: -1,
     playing: false,
     muted: false,
+    loopTrack: false,
     position: { current: 0, duration: 0 },
     measuring: null,
 
     async load() {
+      listenForScans();
       try {
         const [library, playlists] = await Promise.all([
           window.trifold.music.library(),
@@ -217,7 +245,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
         const path = await window.trifold.music.chooseFolder();
         if (!path) return;
         const library = await window.trifold.music.addFolder(path);
-        set({ library, scan: null });
+        set({ library });
         void get().measureLoudness();
       } catch (err) {
         fail(err);
@@ -234,10 +262,15 @@ export const useMusicStore = create<MusicState>((set, get) => {
 
     async rescan() {
       try {
+        listenForScans();
+        set({ scan: { phase: 'listing', read: 0, found: 0, added: 0 } });
+        // A rescan can drop deleted tracks from playlists, so both lists come back fresh.
         const library = await window.trifold.music.rescan();
-        set({ library, scan: null });
+        const playlists = await window.trifold.music.listPlaylists();
+        set({ library, playlists });
         void get().measureLoudness();
       } catch (err) {
+        set({ scan: null });
         fail(err);
       }
     },
@@ -262,18 +295,36 @@ export const useMusicStore = create<MusicState>((set, get) => {
     },
 
     async savePlaylist(playlist) {
+      const sortIn = (list: Playlist[], p: Playlist) =>
+        [...list.filter((x) => x.id !== p.id), p].sort((a, b) => a.name.localeCompare(b.name));
+      // Shown at once, so a second edit made before this save returns starts from this one.
+      if (playlist.id) set({ playlists: sortIn(get().playlists, playlist) });
       try {
         const saved = await window.trifold.music.savePlaylist(playlist);
-        set({
-          playlists: [...get().playlists.filter((p) => p.id !== saved.id), saved].sort((a, b) =>
-            a.name.localeCompare(b.name),
-          ),
-        });
+        const current = get().playlists.find((p) => p.id === saved.id);
+        // A newer edit may already be showing; its own save will land after this one.
+        if (!playlist.id || current === playlist)
+          set({ playlists: sortIn(get().playlists, saved) });
         return saved;
       } catch (err) {
         fail(err);
         return null;
       }
+    },
+
+    async addToPlaylist(playlistId, trackId) {
+      const playlist = get().playlists.find((p) => p.id === playlistId);
+      if (playlist && !playlist.trackIds.includes(trackId))
+        await get().savePlaylist({ ...playlist, trackIds: [...playlist.trackIds, trackId] });
+    },
+
+    async removeFromPlaylist(playlistId, trackId) {
+      const playlist = get().playlists.find((p) => p.id === playlistId);
+      if (playlist?.trackIds.includes(trackId))
+        await get().savePlaylist({
+          ...playlist,
+          trackIds: playlist.trackIds.filter((id) => id !== trackId),
+        });
     },
 
     async removePlaylist(playlistId) {
@@ -291,7 +342,9 @@ export const useMusicStore = create<MusicState>((set, get) => {
       if (!playlist || playlist.trackIds.length === 0) return;
       if (options?.ifDifferent && get().playlistId === playlistId && get().playing) return;
       const order = buildOrder(playlist.trackIds, playlist.shuffle, null);
-      set({ playlistId, order });
+      // A new playlist (often a scene or combat change) plays through rather than sticking on
+      // its first track.
+      set({ playlistId, order, loopTrack: false });
       await startAt(0);
     },
 
@@ -352,6 +405,20 @@ export const useMusicStore = create<MusicState>((set, get) => {
 
     toggleMuted() {
       get().setMuted(!get().muted);
+    },
+
+    async cycleLoop() {
+      const { loopTrack, playlistId, playlists } = get();
+      const playlist = playlists.find((p) => p.id === playlistId) ?? null;
+      const next: LoopMode = nextLoopMode(
+        loopMode(loopTrack, playlist?.loop ?? null),
+        playlist !== null,
+      );
+      set({ loopTrack: next === 'track' });
+      engine.setLoop(next === 'track');
+      if (playlist && playlist.loop !== (next !== 'off')) {
+        await get().savePlaylist({ ...playlist, loop: next !== 'off' });
+      }
     },
 
     /** Measures one unmeasured track at a time in the background (DESIGN.md §6.6). */
