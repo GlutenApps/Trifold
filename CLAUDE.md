@@ -37,7 +37,7 @@ Rules of thumb: all parsing and rules math lives in `packages/*` as pure, tested
 
 ## Commands
 
-`pnpm i` · `pnpm dev` (console + player windows, hot reload) · `pnpm test` (Vitest) · `pnpm typecheck` · `pnpm lint` · `pnpm fetch:content` (Open5e snapshot + game-icons; requires network; commits nothing but `resources/*-manifest.json`) · `pnpm build` (electron-builder → `dist/`) · `pnpm smoke` (Playwright: launch, create Library, import fixture, open player window, run a 3-round mock combat).
+`pnpm i` · `pnpm dev` (console + player windows, hot reload) · `pnpm test` (Vitest) · `pnpm typecheck` · `pnpm lint` · `pnpm fetch:content` (Open5e snapshot + game-icons; requires network; commits nothing but `resources/*-manifest.json`) · `pnpm build` (electron-builder → `dist/`) · `pnpm smoke` (Playwright: launch, create Library, import fixture, open player window, run a 3-round mock combat). Set `TRIFOLD_SMOKE_EXE=<path to dist/win-unpacked/Trifold.exe>` and run `playwright test -c smoke/playwright.config.ts` in `apps/desktop` to run the same smoke test against a packaged build.
 
 A pre-commit hook (simple-git-hooks + lint-staged, installed by the root `prepare` script on `pnpm i`) runs `eslint --fix` and `prettier --write` on staged files and blocks the commit on any lint error. It covers formatting and lint only; run `pnpm typecheck` and `pnpm test` yourself before pushing. `SKIP_SIMPLE_GIT_HOOKS=1 git commit` bypasses it when you must.
 

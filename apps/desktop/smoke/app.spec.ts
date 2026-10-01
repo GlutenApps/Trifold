@@ -22,8 +22,11 @@ test('console, Library, import, search, stat block and player window all work en
   // as plain Node and reject Chromium switches. Never pass it through to the app under test.
   const { ELECTRON_RUN_AS_NODE: _dropped, ...env } = process.env;
 
+  // TRIFOLD_SMOKE_EXE points at a packaged build (dist/win-unpacked/Trifold.exe) to run this same
+  // test against the installer's app instead of out/.
+  const exe = process.env['TRIFOLD_SMOKE_EXE'];
   const app = await electron.launch({
-    args: [resolve(__dirname, '..')],
+    ...(exe ? { executablePath: exe, args: [] } : { args: [resolve(__dirname, '..')] }),
     env: {
       ...env,
       TRIFOLD_USER_DATA: userData,
