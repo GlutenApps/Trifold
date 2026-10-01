@@ -1,6 +1,6 @@
 {
   "name": "trifold",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "A local DM console for 5e-compatible games: compendium, campaign, combat tracker, second-screen presenter and music.",
   "packageManager": "pnpm@12.6.0",
