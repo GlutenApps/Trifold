@@ -166,7 +166,7 @@
   overflow: hidden;
 }
 
-.map-viewport .map-surface {
+.map-viewport .map-surface.settled {
   transition: transform 400ms ease;
 }
 

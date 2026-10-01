@@ -105,6 +105,22 @@ export function MapLayer({ scene, combat }: { scene: MapScene; combat: CombatSum
     return () => observer.disconnect();
   }, []);
 
+  // Camera moves glide, but a new scene must land in place: enable the transition only after the
+  // first measured transform has painted, or it animates in from the top-left corner.
+  const [settled, setSettled] = useState(false);
+  const measured = viewport.width > 0 && viewport.height > 0;
+  useEffect(() => {
+    if (!measured || settled) return;
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setSettled(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [measured, settled]);
+
   const { scale, tx, ty } = viewTransform(scene.camera, viewport.width, viewport.height);
   const activeTokenId = combat?.entries.find((e) => e.id === combat.activeId)?.tokenId ?? null;
   const deadTokens = new Set(combat?.entries.filter((e) => e.dead).map((e) => e.tokenId) ?? []);
@@ -115,7 +131,7 @@ export function MapLayer({ scene, combat }: { scene: MapScene; combat: CombatSum
   return (
     <div ref={ref} className={`map-viewport backdrop-${scene.backdrop}`} data-testid="map-layer">
       <div
-        className="map-surface"
+        className={`map-surface${settled ? ' settled' : ''}`}
         style={{
           width: scene.width,
           height: scene.height,
