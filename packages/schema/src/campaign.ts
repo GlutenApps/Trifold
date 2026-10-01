@@ -267,6 +267,8 @@ export const Note = z.object({
   body: z.string().default(''),
   tags: z.array(z.string()).default([]),
   links: z.array(EntityLink).default([]),
+  /** Place in the campaign's note list. Notes written before reordering existed share 0. */
+  order: int.default(0),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });

@@ -58,6 +58,7 @@ describe('CampaignEntities notes', () => {
     body: '',
     tags: [],
     links: [],
+    order: 0,
     createdAt,
     updatedAt: createdAt,
   });
@@ -90,5 +91,54 @@ describe('CampaignEntities notes', () => {
       'Night falls',
       'Market day',
     ]);
+  });
+
+  it('adds a new note at the end, even after older notes that share order 0', async () => {
+    const bundle = await repo.create('Chronicle');
+    const entities = new CampaignEntities(repo);
+    await entities.saveNote(note('n1', 'Zombies at the gate', '2026-09-01T10:00:00.000Z'));
+    await entities.saveNote(note('n2', 'Arrival in town', '2026-09-01T10:00:01.000Z'));
+    const added = await entities.saveNote(note('', 'Aftermath', ''));
+    expect(added.order).toBe(1);
+
+    const reopened = await repo.open(bundle.campaign.id);
+    expect(reopened.notes.map((n) => n.title)).toEqual([
+      'Zombies at the gate',
+      'Arrival in town',
+      'Aftermath',
+    ]);
+  });
+
+  it('keeps its order when an existing note is edited', async () => {
+    const bundle = await repo.create('Chronicle');
+    const entities = new CampaignEntities(repo);
+    const first = await entities.saveNote(note('', 'First', ''));
+    await entities.saveNote(note('', 'Second', ''));
+    await entities.saveNote({ ...first, title: 'First, revised', body: 'More detail.' });
+
+    const reopened = await repo.open(bundle.campaign.id);
+    expect(reopened.notes.map((n) => [n.title, n.body])).toEqual([
+      ['First, revised', 'More detail.'],
+      ['Second', ''],
+    ]);
+  });
+
+  it('reorders notes, renumbering ones that shared an order, and keeps it on reopen', async () => {
+    const bundle = await repo.create('Chronicle');
+    const entities = new CampaignEntities(repo);
+    await entities.saveNote(note('n1', 'One', '2026-09-01T10:00:00.000Z'));
+    await entities.saveNote(note('n2', 'Two', '2026-09-01T10:00:01.000Z'));
+    await entities.saveNote(note('n3', 'Three', '2026-09-01T10:00:02.000Z'));
+
+    const listed = await entities.reorderNotes(['n3', 'n1']);
+    expect(listed.map((n) => [n.id, n.order])).toEqual([
+      ['n3', 0],
+      ['n1', 1],
+      // Not named, so it keeps its place after the named ones.
+      ['n2', 2],
+    ]);
+
+    const reopened = await repo.open(bundle.campaign.id);
+    expect(reopened.notes.map((n) => n.id)).toEqual(['n3', 'n1', 'n2']);
   });
 });

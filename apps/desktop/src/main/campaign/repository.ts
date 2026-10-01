@@ -211,16 +211,7 @@ export class CampaignRepository {
     const adventures = (
       await this.readAll(this.dir(slug, 'adventures'), Adventure, 'adventure')
     ).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
-    // Notes read in the order they were written (for imports, the file's order). Notes saved in
-    // the same millisecond fall back to their place in an adventure, then to the ULID.
-    const adventureRank = new Map(adventures.flatMap((a) => a.noteIds).map((id, i) => [id, i]));
-    const rank = (id: string) => adventureRank.get(id) ?? Number.MAX_SAFE_INTEGER;
-    const notes = (await this.readAll(this.dir(slug, 'notes'), Note, 'note')).sort(
-      (a, b) =>
-        a.createdAt.localeCompare(b.createdAt) ||
-        rank(a.id) - rank(b.id) ||
-        a.id.localeCompare(b.id),
-    );
+    const notes = await this.readNotes(slug, adventures);
     const npcs = (await this.readAll(this.dir(slug, 'npcs'), NPC, 'npc')).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
@@ -228,6 +219,30 @@ export class CampaignRepository {
       (a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt),
     );
     return { campaign, pcs, encounters, adventures, notes, npcs, scenes };
+  }
+
+  /** The open campaign's notes in list order. */
+  async notes(): Promise<Note[]> {
+    const slug = this.requireSlug();
+    return this.readNotes(
+      slug,
+      await this.readAll(this.dir(slug, 'adventures'), Adventure, 'adventure'),
+    );
+  }
+
+  private async readNotes(slug: string, adventures: readonly Adventure[]): Promise<Note[]> {
+    // Notes read by their `order`, then in the order they were written (for imports, the file's
+    // order). Notes saved in the same millisecond fall back to their place in an adventure, then
+    // to the ULID.
+    const adventureRank = new Map(adventures.flatMap((a) => a.noteIds).map((id, i) => [id, i]));
+    const rank = (id: string) => adventureRank.get(id) ?? Number.MAX_SAFE_INTEGER;
+    return (await this.readAll(this.dir(slug, 'notes'), Note, 'note')).sort(
+      (a, b) =>
+        a.order - b.order ||
+        a.createdAt.localeCompare(b.createdAt) ||
+        rank(a.id) - rank(b.id) ||
+        a.id.localeCompare(b.id),
+    );
   }
 
   async updateCampaign(patch: Partial<Campaign>): Promise<Campaign> {
@@ -264,6 +279,18 @@ export class CampaignRepository {
     value: unknown,
   ): Promise<void> {
     await this.store.writeJson(this.dir(this.requireSlug(), folder, `${id}.json`), value);
+    await this.touch();
+  }
+
+  /** Several entity files, touching campaign.json once at the end. */
+  async writeEntities(
+    folder: 'adventures' | 'notes' | 'npcs' | 'scenes',
+    values: readonly { id: string }[],
+  ): Promise<void> {
+    const slug = this.requireSlug();
+    for (const value of values) {
+      await this.store.writeJson(this.dir(slug, folder, `${value.id}.json`), value);
+    }
     await this.touch();
   }
 

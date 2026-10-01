@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { CampaignBundle, CampaignImportReport, CampaignSummary } from '@trifold/api';
-import type { Campaign, Encounter, PCCard, Scene, SceneImage } from '@trifold/schema';
+import type { Campaign, Encounter, Note, PCCard, Scene, SceneImage } from '@trifold/schema';
 
 interface CampaignState {
   campaigns: CampaignSummary[];
@@ -12,7 +12,11 @@ interface CampaignState {
 
   load(): Promise<void>;
   importXml(mode: 'new' | 'merge'): Promise<void>;
+  /** Saves a note; a new one (no id) lands at the end of the list. */
+  saveNote(note: Note): Promise<Note | null>;
   removeNote(noteId: string): Promise<void>;
+  /** Moves a note one place up (-1) or down (1) in the campaign's list. */
+  moveNote(noteId: string, step: 1 | -1): Promise<void>;
   removeNpc(npcId: string): Promise<void>;
   removeAdventure(adventureId: string): Promise<void>;
   saveScene(scene: Scene): Promise<Scene | null>;
@@ -106,6 +110,37 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
 
     async importSceneImage() {
       return guard(() => window.trifold.scenes.importImage());
+    },
+
+    async saveNote(note) {
+      const saved = await guard(() => window.trifold.notes.save(note));
+      const current = get().current;
+      if (saved && current) {
+        const i = current.notes.findIndex((n) => n.id === saved.id);
+        const notes =
+          i === -1
+            ? [...current.notes, saved]
+            : current.notes.map((n) => (n.id === saved.id ? saved : n));
+        set({ current: { ...current, notes } });
+      }
+      return saved;
+    },
+
+    async moveNote(noteId, step) {
+      const current = get().current;
+      if (!current) return;
+      const ids = current.notes.map((n) => n.id);
+      const i = ids.indexOf(noteId);
+      const j = i + step;
+      if (i === -1 || j < 0 || j >= ids.length) return;
+      [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+      // Show the move at once; the saved list replaces it when main answers.
+      const byId = new Map(current.notes.map((n) => [n.id, n]));
+      set({ current: { ...current, notes: ids.map((id) => byId.get(id)!) } });
+      const notes = await guard(() => window.trifold.notes.reorder(ids));
+      const latest = get().current;
+      if (latest?.campaign.id !== current.campaign.id) return;
+      set({ current: { ...latest, notes: notes ?? current.notes } });
     },
 
     async removeNote(noteId) {

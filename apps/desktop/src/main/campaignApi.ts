@@ -101,6 +101,9 @@ export function createCampaignApi(
       async remove(id) {
         await entities().removeNote(id);
       },
+      async reorder(noteIds) {
+        return entities().reorderNotes(noteIds);
+      },
     },
     npcs: {
       async save(npc) {

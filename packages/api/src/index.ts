@@ -450,8 +450,11 @@ export interface TrifoldApi {
     remove(adventureId: string): Promise<void>;
   };
   notes: {
+    /** A note without an id is new and goes to the end of the list. */
     save(note: Note): Promise<Note>;
     remove(noteId: string): Promise<void>;
+    /** Puts the campaign's notes in this order; resolves to the whole list, renumbered. */
+    reorder(noteIds: string[]): Promise<Note[]>;
   };
   npcs: {
     save(npc: NPC): Promise<NPC>;
@@ -554,7 +557,7 @@ export const API_METHODS = {
     'importXml',
   ],
   adventures: ['save', 'remove'],
-  notes: ['save', 'remove'],
+  notes: ['save', 'remove', 'reorder'],
   npcs: ['save', 'remove'],
   scenes: ['save', 'remove', 'importImage'],
   pcs: ['save', 'remove', 'quickAdd'],

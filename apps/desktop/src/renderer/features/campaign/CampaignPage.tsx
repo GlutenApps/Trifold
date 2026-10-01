@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { PCCard } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { Icon } from '../shell/icons';
+import { CampaignNotes } from './CampaignNotes';
 
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
@@ -153,7 +154,7 @@ function blankPc(): PCCard {
   };
 }
 
-/** Campaign list, creation and PC cards (DESIGN.md §6.3). Adventures, notes and NPCs follow. */
+/** Campaign list, creation, PC cards and notes (DESIGN.md §6.3). Adventures and NPCs follow. */
 export function CampaignPage() {
   const current = useCampaignStore((s) => s.current);
   const error = useCampaignStore((s) => s.error);
@@ -165,7 +166,6 @@ export function CampaignPage() {
   const importXml = useCampaignStore((s) => s.importXml);
   const importing = useCampaignStore((s) => s.importing);
   const lastImport = useCampaignStore((s) => s.lastImport);
-  const removeNote = useCampaignStore((s) => s.removeNote);
   const removeNpc = useCampaignStore((s) => s.removeNpc);
   const removeAdventure = useCampaignStore((s) => s.removeAdventure);
 
@@ -350,21 +350,7 @@ export function CampaignPage() {
             ))}
           </div>
 
-          <div className="card">
-            <h2>Notes</h2>
-            {current.notes.length === 0 && <p className="muted">No notes yet.</p>}
-            {current.notes.map((n) => (
-              <details key={n.id} className="entity-row" data-testid="note-row">
-                <summary>
-                  <strong>{n.title}</strong>
-                </summary>
-                <pre className="source-text">{n.body}</pre>
-                <button type="button" className="btn tiny" onClick={() => void removeNote(n.id)}>
-                  Remove
-                </button>
-              </details>
-            ))}
-          </div>
+          <CampaignNotes notes={current.notes} />
         </>
       )}
     </section>

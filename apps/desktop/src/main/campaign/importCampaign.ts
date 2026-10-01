@@ -310,6 +310,7 @@ export async function importCampaignXml(
       body,
       tags: [],
       links: [],
+      order: 0,
       createdAt: '',
       updatedAt: '',
     });

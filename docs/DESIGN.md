@@ -164,7 +164,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Adventure** — `{ id, name, summary, sceneIds: string[], encounterIds: string[], noteIds: string[], order }`
 
-**Note** — `{ id, title, body (markdown), tags, links: EntityRef[] }`
+**Note** — `{ id, title, body (markdown), tags, links: EntityRef[], order }` (list order within the campaign; new notes go last)
 
 **NPC** — `{ id, name, recordRef?: RecordRef (stat block), portrait?, role, location?, notes, isAlive }`
 
