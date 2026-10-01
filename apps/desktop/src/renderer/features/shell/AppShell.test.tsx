@@ -149,9 +149,11 @@ describe('AppShell', () => {
     await userEvent.click(group(1).getByRole('button', { name: 'Close Compendium tab' }));
     await userEvent.click(add(2));
     const items = screen.getByRole('menu', { name: 'Majors' });
-    expect(within(items).getAllByRole('menuitem').map((b) => b.textContent)).toEqual([
-      'Compendium',
-    ]);
+    expect(
+      within(items)
+        .getAllByRole('menuitem')
+        .map((b) => b.textContent),
+    ).toEqual(['Compendium']);
   });
 
   it('spreads a lone group across the stage when the other side empties', async () => {

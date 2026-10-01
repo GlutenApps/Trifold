@@ -39,6 +39,8 @@ Rules of thumb: all parsing and rules math lives in `packages/*` as pure, tested
 
 `pnpm i` · `pnpm dev` (console + player windows, hot reload) · `pnpm test` (Vitest) · `pnpm typecheck` · `pnpm lint` · `pnpm fetch:content` (Open5e snapshot + game-icons; requires network; commits nothing but `resources/*-manifest.json`) · `pnpm build` (electron-builder → `dist/`) · `pnpm smoke` (Playwright: launch, create Library, import fixture, open player window, run a 3-round mock combat).
 
+A pre-commit hook (simple-git-hooks + lint-staged, installed by the root `prepare` script on `pnpm i`) runs `eslint --fix` and `prettier --write` on staged files and blocks the commit on any lint error. It covers formatting and lint only; run `pnpm typecheck` and `pnpm test` yourself before pushing. `SKIP_SIMPLE_GIT_HOOKS=1 git commit` bypasses it when you must.
+
 ## Conventions
 
 - **IDs:** ULIDs. **Keys:** `normalizeKey(name)` = lowercase, strip `[…]`/`(…)` edition tags, strip punctuation, collapse spaces. One implementation in `packages/rules`.

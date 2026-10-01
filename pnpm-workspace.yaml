@@ -11,3 +11,4 @@ allowBuilds:
   electron: true
   electron-winstaller: true
   esbuild: true
+  simple-git-hooks: false # hooks are installed by the root "prepare" script instead

@@ -20,7 +20,8 @@
     "smoke": "pnpm --filter @trifold/desktop smoke",
     "fetch:open5e": "tsx scripts/fetch-open5e.ts",
     "fetch:icons": "tsx scripts/fetch-game-icons.ts",
-    "verify:mapping": "tsx scripts/verify-mapping.ts"
+    "verify:mapping": "tsx scripts/verify-mapping.ts",
+    "prepare": "simple-git-hooks"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
@@ -37,11 +38,23 @@
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.12.0",
     "jsdom": "30.1.1",
+    "lint-staged": "17.6.0",
     "prettier": "3.9.9",
+    "simple-git-hooks": "2.14.0",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
     "typescript-eslint": "8.70.1",
     "vite": "7.3.6",
     "vitest": "5.0.2"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm exec lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mts,cts,js,mjs,cjs}": [
+      "eslint --fix --max-warnings=0 --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.{json,css,html,yml,yaml}": "prettier --write"
   }
 }

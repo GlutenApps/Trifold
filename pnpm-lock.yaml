@@ -171,7 +171,7 @@ importers:
         version: 9.39.5
       '@testing-library/jest-dom':
         specifier: 7.0.1
-        version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.2(@types/node@24.19.0)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)))
+        version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.2(@types/node@24.19.0)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
       '@testing-library/react':
         specifier: 16.3.3
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -192,7 +192,7 @@ importers:
         version: 24.19.0
       '@vitejs/plugin-react':
         specifier: 5.2.0
-        version: 5.2.0(supports-color@7.2.0)(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15))
+        version: 5.2.0(supports-color@7.2.0)(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       eslint:
         specifier: 9.39.5
         version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
@@ -208,9 +208,15 @@ importers:
       jsdom:
         specifier: 30.1.1
         version: 30.1.1(@noble/hashes@2.4.0)
+      lint-staged:
+        specifier: 17.6.0
+        version: 17.6.0
       prettier:
         specifier: 3.9.9
         version: 3.9.9
+      simple-git-hooks:
+        specifier: 2.14.0
+        version: 2.14.0
       tsx:
         specifier: 4.23.15
         version: 4.23.15
@@ -222,10 +228,10 @@ importers:
         version: 8.70.1(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
       vite:
         specifier: 7.3.6
-        version: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)
+        version: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
       vitest:
         specifier: 5.0.2
-        version: 5.0.2(@types/node@24.19.0)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15))
+        version: 5.0.2(@types/node@24.19.0)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   apps/desktop:
     dependencies:
@@ -271,7 +277,7 @@ importers:
         version: 3.3.1
       '@vitejs/plugin-react':
         specifier: 5.2.0
-        version: 5.2.0(supports-color@7.2.0)(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15))
+        version: 5.2.0(supports-color@7.2.0)(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       electron:
         specifier: 42.11.8
         version: 42.11.8(supports-color@7.2.0)
@@ -280,7 +286,7 @@ importers:
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)(supports-color@7.2.0)
       electron-vite:
         specifier: 5.0.0
-        version: 5.0.0(supports-color@7.2.0)(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15))
+        version: 5.0.0(supports-color@7.2.0)(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       music-metadata:
         specifier: 11.16.1
         version: 11.16.1(supports-color@7.2.0)
@@ -298,7 +304,7 @@ importers:
         version: 3.0.2
       vite:
         specifier: 7.3.6
-        version: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)
+        version: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
       zod:
         specifier: 4.6.5
         version: 4.6.5
@@ -2165,6 +2171,11 @@ packages:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
 
+  lint-staged@17.6.0:
+    resolution: {integrity: sha512-nOhBfYkZEwkFtNzD5pK9s9LkcWoxJ+whLzEnhqi9nl7zTB5n7tg8+9iYgMGx2Wm3VlLu8cbNj0RACzY+nWi5iQ==}
+    engines: {node: '>=22.22.1'}
+    hasBin: true
+
   locate-path@6.0.0:
     resolution: {integrity: sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw==}
     engines: {node: '>=10'}
@@ -2606,6 +2617,10 @@ packages:
   simple-get@4.0.1:
     resolution: {integrity: sha512-brv7p5WgH0jmQJr1ZDDfKDOSeWWg+OVypG99A/5vYGPqJ6pxiaHLy8nxtFjBA7oMa01ebA9gfh1uMCFqOuXxvA==}
 
+  simple-git-hooks@2.14.0:
+    resolution: {integrity: sha512-kkTORPAuxQz2g1QUuN0J8yGWT28tjGBfPOdJ4xT7Vbeu30veKUZQIoID2qGgCDAakaQn59UeZJJ4cFGB8PVP2A==}
+    hasBin: true
+
   simple-update-notifier@2.0.0:
     resolution: {integrity: sha512-a2B9Y0KlNXl9u/vsW6sTIu9vGEpfKu2wRV6l1H3XEas/0gUIzGzBoP/IouTcUQbm9JWZLH3COxyn03TYlFax6w==}
     engines: {node: '>=10'}
@@ -2630,6 +2645,10 @@ packages:
 
   std-env@4.2.0:
     resolution: {integrity: sha512-oCUKSupKTHX53EyjDtuZQ64pjLJ6yYCtpmEw0goYxtjG9KpbRe8KAsl2tBUGU9DyMcJ0RwJ8GqJAFzMXcXW1Rw==}
+
+  string-argv@0.3.2:
+    resolution: {integrity: sha512-aqD2Q0144Z+/RqG52NeHEkZauTAUWJO8c6yTftGJKO3Tja5tUgIfmIl6kExvhtxSDP7fXB6DvzkfMpCd/F3G+Q==}
+    engines: {node: '>=0.6.19'}
 
   string-width@4.2.3:
     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
@@ -2979,6 +2998,11 @@ packages:
   yallist@5.0.0:
     resolution: {integrity: sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw==}
     engines: {node: '>=18'}
+
+  yaml@2.9.1:
+    resolution: {integrity: sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
 
   yargs-parser@21.1.1:
     resolution: {integrity: sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==}
@@ -3673,7 +3697,7 @@ snapshots:
       picocolors: 1.1.1
       pretty-format: 27.5.1
 
-  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.2(@types/node@24.19.0)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)))':
+  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.2(@types/node@24.19.0)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))':
     dependencies:
       '@adobe/css-tools': 4.5.0
       '@testing-library/dom': 10.4.2
@@ -3683,7 +3707,7 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
     optionalDependencies:
-      vitest: 5.0.2(@types/node@24.19.0)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15))
+      vitest: 5.0.2(@types/node@24.19.0)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   '@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
@@ -3891,7 +3915,7 @@ snapshots:
       '@typescript-eslint/types': 8.70.1
       eslint-visitor-keys: 5.0.1
 
-  '@vitejs/plugin-react@5.2.0(supports-color@7.2.0)(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15))':
+  '@vitejs/plugin-react@5.2.0(supports-color@7.2.0)(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@babel/core': 7.29.7(supports-color@7.2.0)
       '@babel/plugin-transform-react-jsx-self': 7.29.7(@babel/core@7.29.7(supports-color@7.2.0))
@@ -3899,18 +3923,18 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-rc.3
       '@types/babel__core': 7.20.5
       react-refresh: 0.18.0
-      vite: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)
+      vite: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/mocker@5.0.2(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15))':
+  '@vitest/mocker@5.0.2(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.0.2
       estree-walker: 3.0.3
       magic-string: 1.4.2
     optionalDependencies:
-      vite: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)
+      vite: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   '@vitest/spy@5.0.2': {}
 
@@ -4333,7 +4357,7 @@ snapshots:
 
   electron-to-chromium@1.5.439: {}
 
-  electron-vite@5.0.0(supports-color@7.2.0)(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)):
+  electron-vite@5.0.0(supports-color@7.2.0)(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
     dependencies:
       '@babel/core': 7.29.7(supports-color@7.2.0)
       '@babel/plugin-transform-arrow-functions': 7.29.7(@babel/core@7.29.7(supports-color@7.2.0))
@@ -4341,7 +4365,7 @@ snapshots:
       esbuild: 0.25.12
       magic-string: 0.30.21
       picocolors: 1.1.1
-      vite: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)
+      vite: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -4907,6 +4931,14 @@ snapshots:
       prelude-ls: 1.2.1
       type-check: 0.4.0
 
+  lint-staged@17.6.0:
+    dependencies:
+      picomatch: 4.0.7
+      string-argv: 0.3.2
+      tinyexec: 1.3.1
+    optionalDependencies:
+      yaml: 2.9.1
+
   locate-path@6.0.0:
     dependencies:
       p-locate: 5.0.0
@@ -5355,6 +5387,8 @@ snapshots:
       once: 1.4.0
       simple-concat: 1.0.1
 
+  simple-git-hooks@2.14.0: {}
+
   simple-update-notifier@2.0.0:
     dependencies:
       semver: 7.8.5
@@ -5374,6 +5408,8 @@ snapshots:
   stat-mode@1.0.0: {}
 
   std-env@4.2.0: {}
+
+  string-argv@0.3.2: {}
 
   string-width@4.2.3:
     dependencies:
@@ -5566,7 +5602,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15):
+  vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1):
     dependencies:
       esbuild: 0.28.2
       fdir: 6.5.0(picomatch@4.0.7)
@@ -5579,11 +5615,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
       tsx: 4.23.15
+      yaml: 2.9.1
 
-  vitest@5.0.2(@types/node@24.19.0)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)):
+  vitest@5.0.2(@types/node@24.19.0)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.2(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15))
+      '@vitest/mocker': 5.0.2(vite@7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       chai: 6.2.2
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
@@ -5594,7 +5631,7 @@ snapshots:
       tinybench: 6.2.0
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
-      vite: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)
+      vite: 7.3.6(@types/node@24.19.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
       why-is-node-running: 3.2.2
     optionalDependencies:
       '@types/node': 24.19.0
@@ -5673,6 +5710,9 @@ snapshots:
   yallist@4.0.0: {}
 
   yallist@5.0.0: {}
+
+  yaml@2.9.1:
+    optional: true
 
   yargs-parser@21.1.1: {}
 
