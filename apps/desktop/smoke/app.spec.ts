@@ -274,13 +274,14 @@ test('console, Library, import, search, stat block and player window all work en
     await tab('Encounters').click();
     await expect(console_.getByTestId('encounter-row')).toContainText('fought 1×');
 
-    // The strip rolls the shared pool; the Dice pop-up from its button shows the one log.
-    await strip.getByRole('button', { name: 'Add d6 (tray)' }).click();
-    await strip.getByRole('button', { name: 'Add d6 (tray)' }).click();
-    await strip.getByRole('button', { name: 'Roll the pool (tray)' }).click();
-    await expect(strip.getByLabel('Last roll')).not.toHaveText('–');
+    // The strip's Dice button opens the shared pool at every window width. (Below 1180 px the
+    // strip hides its own dice chips, and CI screens are narrower than that, so roll here.)
     await strip.getByRole('button', { name: 'Dice', exact: true }).click();
-    await expect(console_.getByRole('list', { name: 'Roll log' })).toContainText('2d6');
+    const dice = console_.getByRole('dialog', { name: 'Dice' });
+    await dice.getByRole('button', { name: 'Add d6', exact: true }).click();
+    await dice.getByRole('button', { name: 'Add d6', exact: true }).click();
+    await dice.getByRole('button', { name: 'Roll the pool', exact: true }).click();
+    await expect(dice.getByRole('list', { name: 'Roll log' })).toContainText('2d6');
     await console_.keyboard.press('Escape');
     await expect(console_.getByRole('dialog', { name: 'Dice' })).toHaveCount(0);
 

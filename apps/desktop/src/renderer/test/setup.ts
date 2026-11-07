@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { discardPendingSaves } from '../stores/pendingSaves';
 import { initialPresenterState, type PhoneAudioStatus, type TrifoldBridge } from '@trifold/api';
@@ -235,6 +235,10 @@ export function installBridgeMock(): TrifoldBridge {
   Object.assign(window, { trifold: bridge });
   return bridge;
 }
+
+// waitFor/findBy give up after 1 s by default; slower CI runners (macOS especially) can take
+// just over that to type into the note editor.
+configure({ asyncUtilTimeout: 3000 });
 
 beforeEach(() => {
   installBridgeMock();

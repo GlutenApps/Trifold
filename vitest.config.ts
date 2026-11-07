@@ -8,6 +8,9 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
+          // Main-process tests write real files (temp → fsync → rename); hosted CI runners can
+          // take several seconds for that, past the 5 s default.
+          testTimeout: 15_000,
           include: [
             'packages/**/*.test.ts',
             'apps/desktop/src/main/**/*.test.ts',
