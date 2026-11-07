@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NoteTemplate } from '@trifold/schema';
 import { blankTemplate, useNoteTemplateStore } from '../../stores/noteTemplateStore';
+import { cancelSave, scheduleSave } from '../../stores/pendingSaves';
 import { Icon } from '../shell/icons';
 import { AUTOSAVE_MS } from './autosave';
 import { InlineConfirm } from '../shell/InlineConfirm';
@@ -16,28 +17,33 @@ function TemplateEditor({ template }: { template: NoteTemplate }) {
   const latest = useRef(template);
   latest.current = template;
   const pending = useRef<Partial<Pick<NoteTemplate, 'name' | 'body'>> | null>(null);
-  const timer = useRef<number | undefined>(undefined);
+  /** This editor's slot in the pending-save registry. */
+  const timer = useRef({});
   const nameRef = useRef<HTMLInputElement>(null);
 
   const flush = useCallback(() => {
-    window.clearTimeout(timer.current);
+    cancelSave(timer);
     const patch = pending.current;
     if (!patch) return;
     pending.current = null;
     setDirty(false);
-    void save({
+    return save({
       ...latest.current,
       ...patch,
       name: (patch.name ?? latest.current.name).trim() || latest.current.name,
     });
   }, [save]);
-  useEffect(() => flush, [flush]);
+  useEffect(
+    () => () => {
+      void flush();
+    },
+    [flush],
+  );
 
   const update = (patch: Partial<Pick<NoteTemplate, 'name' | 'body'>>) => {
     pending.current = { ...pending.current, ...patch };
     setDirty(true);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(flush, AUTOSAVE_MS);
+    scheduleSave(timer, flush, AUTOSAVE_MS);
   };
 
   // A template made a moment ago has a placeholder name: select it so typing replaces it.

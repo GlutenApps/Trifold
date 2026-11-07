@@ -38,6 +38,9 @@ async function exists(path: string): Promise<boolean> {
  * Every write goes through the atomic writer; every read goes through the schema and migrations.
  */
 export class LibraryStore {
+  /** When this session last wrote to the Library (ms); null until the first write. */
+  lastWriteAt: number | null = null;
+
   private constructor(
     readonly root: string,
     private settings: LibrarySettings,
@@ -96,9 +99,11 @@ export class LibraryStore {
 
   async writeJson(relative: string, value: unknown): Promise<void> {
     await writeJsonAtomic(this.resolvePath(relative), value);
+    this.lastWriteAt = Date.now();
   }
 
   async writeText(relative: string, text: string): Promise<void> {
     await writeFileAtomic(this.resolvePath(relative), text);
+    this.lastWriteAt = Date.now();
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultAppConfig } from './appConfig';
+import { AppConfig, defaultAppConfig } from './appConfig';
 import {
   defaultLibrarySettings,
   isMajorKind,
@@ -59,6 +59,16 @@ describe('AppConfig', () => {
       consoleWindow: null,
       audioSource: 'computer',
       phoneAudioDevices: [],
+      backupCopy: { folder: null, lastCopyAt: null, lastError: null },
+    });
+  });
+
+  it('reads a config.json written before the backup copy folder existed', () => {
+    const old = { schemaVersion: 1, libraryPath: 'D:\\Library' };
+    expect(AppConfig.parse(old).backupCopy).toEqual({
+      folder: null,
+      lastCopyAt: null,
+      lastError: null,
     });
   });
 });

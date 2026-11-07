@@ -13,7 +13,8 @@ import {
 export type Route = 'console' | 'player';
 
 export interface WindowHooks {
-  onConsoleClosing(bounds: WindowBounds): void;
+  /** Called on every close attempt; `preventDefault()` on the event keeps the window open. */
+  onConsoleClosing(bounds: WindowBounds, event: { preventDefault(): void }): void;
   onPlayerChanged(open: boolean): void;
   onPlayerReady(): void;
 }
@@ -156,7 +157,7 @@ export class WindowManager {
       if (bounds?.maximized) win.maximize();
       win.show();
     });
-    win.on('close', () => this.hooks.onConsoleClosing(boundsOf(win)));
+    win.on('close', (event) => this.hooks.onConsoleClosing(boundsOf(win), event));
     win.on('closed', () => {
       this.consoleWin = null;
       this.closePlayer();
@@ -224,6 +225,21 @@ export class WindowManager {
   sendToConsole(channel: string, payload: unknown): void {
     const win = this.consoleWin;
     if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+  }
+
+  /** Hides the console while the last backup is written at close. */
+  hideConsole(): void {
+    const win = this.consoleWin;
+    if (win && !win.isDestroyed()) win.hide();
+  }
+
+  isConsoleOpen(): boolean {
+    return this.consoleWin !== null && !this.consoleWin.isDestroyed();
+  }
+
+  closeConsole(): void {
+    const win = this.consoleWin;
+    if (win && !win.isDestroyed()) win.close();
   }
 
   focusConsole(): void {

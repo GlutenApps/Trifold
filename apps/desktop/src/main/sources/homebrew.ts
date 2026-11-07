@@ -152,7 +152,8 @@ export class HomebrewRepository {
   }
 }
 
-function fileName(recordId: string): string {
+/** `homebrew/<this>`: a record's file name (ids hold colons, which Windows refuses). */
+export function fileName(recordId: string): string {
   return `${recordId.replace(/:/g, '_')}.json`;
 }
 

@@ -410,3 +410,18 @@ export const Scene = z.object({
   updatedAt: IsoDateTime,
 });
 export type Scene = z.infer<typeof Scene>;
+
+// ---------- campaign export (ADR 0015) ----------
+
+/** What a `.trifold-campaign` file was made with; recorded in its manifest. */
+export const CampaignExportOptions = z.object({
+  /** `asIs` copies the campaign unchanged; `fresh` resets what play changed. */
+  state: z.enum(['asIs', 'fresh']).default('asIs'),
+  /** Include the PC cards. */
+  party: z.boolean().default(true),
+  /** Include homebrew records the campaign refers to. */
+  homebrew: z.boolean().default(true),
+  /** Include this campaign's console layout. */
+  layout: z.boolean().default(false),
+});
+export type CampaignExportOptions = z.infer<typeof CampaignExportOptions>;

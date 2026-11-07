@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ulid } from 'ulid';
 import type { CompendiumRow } from '@trifold/api';
 import { difficultyBand, partyBudget } from '@trifold/rules';
 import type { CombatantTemplate, Encounter, NPC, PCCard } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
+import { cancelSave, encounterSlot, scheduleSave } from '../../stores/pendingSaves';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
 import { AddPanel } from './AddPanel';
@@ -369,6 +370,18 @@ function Builder({
 }
 
 /**
+ * The builder's autosave. It may land after the builder moved on, so it writes only while the
+ * encounter is still in the open campaign and not in a fight: never into another campaign, never
+ * bringing back a deleted encounter, never overwriting a running fight's state.
+ */
+function saveBuilderDraft(draft: Encounter) {
+  const campaign = useCampaignStore.getState();
+  const saved = campaign.current?.encounters.find((e) => e.id === draft.id);
+  if (!saved || saved.state) return;
+  return campaign.saveEncounter(draft);
+}
+
+/**
  * Encounter list and builder (DESIGN.md §6.4). While a fight runs the tab is the combat tracker
  * instead, with the list a click away (ADR 0005); when it ends, the result shows once.
  */
@@ -388,7 +401,6 @@ export function EncountersPage() {
   const [draft, setDraft] = useState<Encounter | null>(null);
   /** The saved encounter whose delete is waiting on the inline confirm. */
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const saveTimer = useRef<number | null>(null);
 
   useEffect(() => {
     if (!current) void load();
@@ -397,12 +409,10 @@ export function EncountersPage() {
   // Autosave the builder draft.
   useEffect(() => {
     if (!draft || !draft.id) return;
-    if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => void saveEncounter(draft), 400);
-    return () => {
-      if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    };
-  }, [draft, saveEncounter]);
+    // Each encounter has its own slot, so switching encounters, Back or closing the panel lets
+    // the last edit land rather than dropping it (ADR 0015).
+    scheduleSave(encounterSlot(draft.id), () => saveBuilderDraft(draft), 400);
+  }, [draft]);
 
   if (!current) {
     return (
@@ -421,6 +431,7 @@ export function EncountersPage() {
 
   const startCombat = async () => {
     if (!draft) return;
+    cancelSave(encounterSlot(draft.id));
     const saved = await saveEncounter(draft);
     if (!saved) return;
     await begin(saved, current.pcs, current.campaign.settings.initiativeMode);

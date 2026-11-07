@@ -20,7 +20,7 @@ import type { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 
 /** Sub-folders of every campaign (DATA-FORMATS.md §5.4). */
-const CAMPAIGN_LAYOUT = [
+export const CAMPAIGN_LAYOUT = [
   'adventures',
   'notes',
   'npcs',
@@ -31,7 +31,7 @@ const CAMPAIGN_LAYOUT = [
   'tokens',
 ];
 
-function slugify(name: string): string {
+export function slugify(name: string): string {
   const base = normalizeKey(name).replace(/\s+/g, '-');
   return base || 'campaign';
 }
@@ -117,6 +117,14 @@ export class CampaignRepository {
     return summaries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
 
+  /** A folder name for a new campaign called `name` that no campaign uses yet. */
+  async freeSlug(name: string): Promise<string> {
+    const existing = new Set(await this.listDir('campaigns'));
+    let slug = slugify(name);
+    for (let n = 2; existing.has(slug); n += 1) slug = `${slugify(name)}-${n}`;
+    return slug;
+  }
+
   async create(name: string): Promise<CampaignBundle> {
     const trimmed = name.trim();
     if (!trimmed) throw new Error('A campaign needs a name');
@@ -143,7 +151,8 @@ export class CampaignRepository {
     return this.open(campaign.id);
   }
 
-  private async slugFor(campaignId: string): Promise<string> {
+  /** The folder of a campaign, by id (or by slug). */
+  async slugFor(campaignId: string): Promise<string> {
     for (const slug of await this.listDir('campaigns')) {
       try {
         const c = await this.store.readJson(this.dir(slug, 'campaign.json'), Campaign, 'campaign');
@@ -196,7 +205,11 @@ export class CampaignRepository {
   }
 
   async bundle(): Promise<CampaignBundle> {
-    const slug = this.requireSlug();
+    return this.bundleOf(this.requireSlug());
+  }
+
+  /** Any campaign, open or not: what export reads. */
+  async bundleOf(slug: string): Promise<CampaignBundle> {
     const campaign = await this.store.readJson(
       this.dir(slug, 'campaign.json'),
       Campaign,

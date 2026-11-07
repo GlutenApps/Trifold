@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Scene, Token } from '@trifold/schema';
+import { scheduleSave } from './pendingSaves';
 import { useCampaignStore } from './campaignStore';
 import { useMusicStore } from './musicStore';
 import { usePresenterStore } from './presenterStore';
@@ -32,8 +33,6 @@ interface SceneState {
   reset(): void;
 }
 
-let saveTimer: number | null = null;
-
 export function isMapScene(scene: Scene | null): boolean {
   return !!scene && (scene.kind === 'map' || scene.kind === 'blankGrid');
 }
@@ -58,11 +57,7 @@ export const useSceneStore = create<SceneState>((set, get) => ({
     set({ draft: scene });
     const liveId = usePresenterStore.getState().state.scene?.id ?? null;
     if (scene.id === liveId) usePresenterStore.getState().syncLiveScene(scene);
-    if (saveTimer) window.clearTimeout(saveTimer);
-    saveTimer = window.setTimeout(() => {
-      saveTimer = null;
-      void useCampaignStore.getState().saveScene(scene);
-    }, 350);
+    scheduleSave('scene', () => useCampaignStore.getState().saveScene(scene), 350);
   },
 
   send(scene) {

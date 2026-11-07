@@ -1,6 +1,7 @@
 import type {
   Adventure,
   Campaign,
+  CampaignExportOptions,
   CombatState,
   CompendiumRecord,
   Encounter,
@@ -207,7 +208,41 @@ export interface BackupInfo {
   name: string;
   sizeBytes: number;
   createdAt: string;
-  kind: 'daily' | 'manual' | 'preRestore';
+  kind: 'daily' | 'manual' | 'quit' | 'preRestore';
+}
+
+/** `manifest.json` at the root of every backup zip and campaign export (ADR 0015). */
+export interface BackupManifest {
+  kind: 'library' | 'campaign';
+  appVersion: string;
+  librarySchemaVersion: number;
+  campaignSchemaVersion: number;
+  createdAt: string;
+  counts: { campaigns: number; homebrew: number; sources: number };
+  /** Campaign exports: which campaign, and how it was exported. */
+  campaign?: { id: string; name: string; pcs: number; options: CampaignExportOptions };
+}
+
+/** A zip picked with Restore from file, read before anything is changed. */
+export interface BackupFileInfo {
+  path: string;
+  name: string;
+  sizeBytes: number;
+  /** Null for a zip made before manifests (it restores as before). */
+  manifest: BackupManifest | null;
+  /** Why it cannot be restored (made by a newer Trifold, not a Library backup); null when it can. */
+  problem: string | null;
+}
+
+/** The second backup location (ADR 0015). */
+export interface BackupCopyStatus {
+  /** The folder the DM chose; null when copying is off. */
+  folder: string | null;
+  /** Where this Library's zips land inside it. */
+  target: string | null;
+  lastCopyAt: string | null;
+  /** The last copy's failure, cleared by the next success. */
+  lastError: string | null;
 }
 
 // ---------- music (DESIGN.md §6.6) ----------
@@ -417,6 +452,41 @@ export interface CampaignBundle {
 /** What `notes.remove` does with a folder's contents: move it up a level, or remove it too. */
 export type NoteFolderContents = 'lift' | 'delete';
 
+/** What an export with these options would carry and leave out (ADR 0015). */
+export interface CampaignExportPreview {
+  pcs: number;
+  homebrew: number;
+  /** Records from sources the DM imported: referenced, never bundled. */
+  importedRecords: number;
+}
+
+/** A `.trifold-campaign` file picked for import, read before anything is written. */
+export interface CampaignPackageInfo {
+  path: string;
+  name: string;
+  sizeBytes: number;
+  manifest: BackupManifest | null;
+  /** The campaign in this Library with the same id; the DM picks Replace or Import as a copy. */
+  existing: CampaignSummary | null;
+  /** Why it cannot be imported; null when it can. */
+  problem: string | null;
+}
+
+/** `new` when the Library has no such campaign; otherwise `replace` it or import a `copy`. */
+export type CampaignPackageMode = 'new' | 'replace' | 'copy';
+
+export interface CampaignPackageResult {
+  campaign: CampaignSummary;
+  mode: CampaignPackageMode;
+  homebrewAdded: number;
+  /** Homebrew already in this Library with different content; the Library's version was kept. */
+  homebrewKept: number;
+  /** Records the campaign refers to that this Library does not have. */
+  unresolved: number;
+  /** The backup written before a Replace. */
+  safety: string | null;
+}
+
 export interface CampaignImportReport {
   campaignId: string;
   name: string;
@@ -441,6 +511,8 @@ export interface TrifoldApi {
     openSystemPage(page: SystemPage): Promise<boolean>;
     /** Opens an http(s) URL in the system browser (ADR 0011); false for any other scheme. */
     openExternal(url: string): Promise<boolean>;
+    /** The console's answer to a `flushSaves` event: every pending save has been written. */
+    savesFlushed(): Promise<void>;
   };
   library: {
     getInfo(): Promise<LibraryInfo>;
@@ -492,6 +564,15 @@ export interface TrifoldApi {
     chooseXmlFile(): Promise<string | null>;
     /** Imports a Game Master campaign XML or a Fight Club GM export (DATA-FORMATS.md §3). */
     importXml(path: string, mode: 'new' | 'merge'): Promise<CampaignImportReport>;
+    exportPreview(
+      campaignId: string,
+      options: CampaignExportOptions,
+    ): Promise<CampaignExportPreview>;
+    /** Native save dialog, then writes `<name>.trifold-campaign`; null when cancelled. */
+    exportTo(campaignId: string, options: CampaignExportOptions): Promise<string | null>;
+    /** Native picker for a `.trifold-campaign`; read but not imported. Null when cancelled. */
+    choosePackage(): Promise<CampaignPackageInfo | null>;
+    importPackage(path: string, mode: CampaignPackageMode): Promise<CampaignPackageResult>;
   };
   adventures: {
     save(adventure: Adventure): Promise<Adventure>;
@@ -546,9 +627,17 @@ export interface TrifoldApi {
     list(): Promise<BackupInfo[]>;
     /** Writes a zip now, regardless of the daily schedule. */
     create(): Promise<BackupInfo | null>;
-    /** Extracts a backup over the Library (after a safety zip) and reopens it. */
+    /** Replaces the Library with a backup (after a safety zip) and reopens it. */
     restore(name: string): Promise<LibraryInfo>;
     openFolder(): Promise<void>;
+    /** Native picker for a backup zip anywhere; read but not restored. Null when cancelled. */
+    chooseFile(): Promise<BackupFileInfo | null>;
+    /** Like `restore`, from a zip anywhere on disk. */
+    restoreFile(path: string): Promise<LibraryInfo>;
+    copyStatus(): Promise<BackupCopyStatus>;
+    /** Native folder picker; every later backup is also copied there. Unchanged when cancelled. */
+    chooseCopyFolder(): Promise<BackupCopyStatus>;
+    stopCopying(): Promise<BackupCopyStatus>;
   };
   music: {
     library(): Promise<MusicLibraryView>;
@@ -603,7 +692,7 @@ export type ApiNamespace = keyof TrifoldApi;
 
 /** Every method, by namespace. The preload and the IPC registry iterate this table. */
 export const API_METHODS = {
-  app: ['getInfo', 'openSystemPage', 'openExternal'],
+  app: ['getInfo', 'openSystemPage', 'openExternal', 'savesFlushed'],
   library: ['getInfo', 'chooseFolder', 'open', 'openInExplorer', 'getSettings', 'updateSettings'],
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],
@@ -628,6 +717,10 @@ export const API_METHODS = {
     'remove',
     'chooseXmlFile',
     'importXml',
+    'exportPreview',
+    'exportTo',
+    'choosePackage',
+    'importPackage',
   ],
   adventures: ['save', 'remove'],
   notes: ['save', 'remove', 'move'],
@@ -636,7 +729,17 @@ export const API_METHODS = {
   scenes: ['save', 'remove', 'importImage'],
   pcs: ['save', 'remove', 'quickAdd'],
   encounters: ['save', 'remove', 'saveState', 'finish'],
-  backups: ['list', 'create', 'restore', 'openFolder'],
+  backups: [
+    'list',
+    'create',
+    'restore',
+    'openFolder',
+    'chooseFile',
+    'restoreFile',
+    'copyStatus',
+    'chooseCopyFolder',
+    'stopCopying',
+  ],
   music: [
     'library',
     'chooseFolder',
@@ -685,6 +788,10 @@ export interface TrifoldEvents {
   musicScan: MusicScanProgress;
   phoneAudioStatus: PhoneAudioStatus;
   webTabInput: WebTabInput;
+  /** The console is closing: write every save still waiting on a timer, then call `app.savesFlushed`. */
+  flushSaves: Record<string, never>;
+  /** A copy to the second backup location finished or failed. */
+  backupCopy: BackupCopyStatus;
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -694,6 +801,8 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   musicScan: 'trifold:event:music-scan',
   phoneAudioStatus: 'trifold:event:phone-audio-status',
   webTabInput: 'trifold:event:web-tab-input',
+  flushSaves: 'trifold:event:flush-saves',
+  backupCopy: 'trifold:event:backup-copy',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */

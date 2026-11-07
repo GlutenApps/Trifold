@@ -755,6 +755,11 @@ body.resizing {
   grid-column: 1 / -1;
 }
 
+/* A long copy-folder path wraps instead of widening the card (ADR 0014). */
+.backup-copy-target {
+  overflow-wrap: anywhere;
+}
+
 /* Two campaigns per row: wide enough that the open one's three buttons sit on one line. */
 .campaign-grid {
   display: grid;
@@ -776,6 +781,13 @@ body.resizing {
 
 .campaign-card.live {
   border-color: var(--accent);
+}
+
+/* Export and import panels (ADR 0015): inline under their card or header, never a dialog. */
+.campaign-panel {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
 .campaign-delete {

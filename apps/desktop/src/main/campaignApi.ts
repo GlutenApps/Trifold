@@ -1,8 +1,10 @@
-import { dialog } from 'electron';
+import { app, dialog } from 'electron';
 import type { TrifoldApi } from '@trifold/api';
+import { CampaignPackager } from './campaign/campaignPackage';
 import { CampaignEntities } from './campaign/entities';
 import { importSceneImage } from './campaign/images';
 import { importCampaignXml } from './campaign/importCampaign';
+import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 
@@ -20,6 +22,20 @@ export function createCampaignApi(
     return campaigns;
   };
   const entities = () => new CampaignEntities(repo());
+  const packager = () => {
+    const { store, index } = session.require();
+    const homebrew = session.homebrew;
+    if (!homebrew) throw new Error('No Library is open');
+    return new CampaignPackager({
+      store,
+      campaigns: repo(),
+      homebrew,
+      backups: session.backups,
+      logger,
+      appVersion: app.getVersion(),
+      hasRecord: (ref) => index.get(ref.recordId) !== null,
+    });
+  };
   return {
     campaigns: {
       async list() {
@@ -59,6 +75,39 @@ export function createCampaignApi(
       async importXml(path, mode) {
         const { store, sources, index } = session.require();
         return importCampaignXml({ store, sources, index, campaigns: repo(), logger }, path, mode);
+      },
+      async exportPreview(campaignId, options) {
+        return packager().preview(campaignId, options);
+      },
+      async exportTo(campaignId, options) {
+        const slug = await repo().slugFor(campaignId);
+        const { campaign } = await repo().bundleOf(slug);
+        const result = await dialog.showSaveDialog({
+          title: 'Export campaign',
+          // Characters Windows refuses in a file name.
+          defaultPath: `${campaign.name.replace(/[\\/:*?"<>|]/g, '')}.trifold-campaign`,
+          filters: [{ name: 'Trifold campaign', extensions: ['trifold-campaign'] }],
+        });
+        if (result.canceled || !result.filePath) return null;
+        await packager().exportTo(campaignId, options, result.filePath);
+        return result.filePath;
+      },
+      async choosePackage() {
+        const result = await dialog.showOpenDialog({
+          title: 'Import a campaign',
+          properties: ['openFile'],
+          filters: [{ name: 'Trifold campaign', extensions: ['trifold-campaign'] }],
+        });
+        const path = result.canceled ? null : (result.filePaths[0] ?? null);
+        return path ? packager().inspect(path) : null;
+      },
+      async importPackage(path, mode) {
+        const imported = await packager().importFrom(path, mode);
+        if (imported.homebrewAdded > 0) {
+          const { store, catalog, index } = session.require();
+          await syncIndex(index, catalog, store, logger);
+        }
+        return imported;
       },
     },
     pcs: {

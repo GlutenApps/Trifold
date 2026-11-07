@@ -7,6 +7,7 @@ import type {
 } from '@trifold/api';
 import type { Campaign, Encounter, Note, NPC, PCCard, Scene, SceneImage } from '@trifold/schema';
 import { childrenOf, descendantsOf, nextOrder, placeItem } from '@trifold/rules';
+import { cancelSave, encounterSlot } from './pendingSaves';
 
 interface CampaignState {
   campaigns: CampaignSummary[];
@@ -311,6 +312,8 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
     },
 
     async removeEncounter(encounterId) {
+      // A builder edit still waiting would write the encounter back.
+      cancelSave(encounterSlot(encounterId));
       await guard(async () => {
         await window.trifold.encounters.remove(encounterId);
         const current = get().current;

@@ -29,6 +29,17 @@ export const AppConfig = z.object({
       }),
     )
     .default([]),
+  /**
+   * The second backup location (ADR 0015). Kept here, not in the Library: a drive letter or a
+   * sync folder only means something on this computer.
+   */
+  backupCopy: z
+    .object({
+      folder: z.string().nullable().default(null),
+      lastCopyAt: z.string().nullable().default(null),
+      lastError: z.string().nullable().default(null),
+    })
+    .prefault({}),
 });
 export type AppConfig = z.infer<typeof AppConfig>;
 

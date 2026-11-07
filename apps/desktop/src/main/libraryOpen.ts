@@ -32,3 +32,16 @@ export async function runDailyBackup(ctx: Pick<ApiContext, 'session' | 'logger'>
     ctx.logger.error(`daily backup failed: ${String(err)}`);
   }
 }
+
+/** The on-close backup (ADR 0015): only when this session changed the Library. Never throws. */
+export async function runQuitBackup(ctx: Pick<ApiContext, 'session' | 'logger'>): Promise<void> {
+  const { backups, store } = ctx.session;
+  if (!backups || !store) return;
+  const settings = store.getSettings().backups;
+  if (!settings.enabled) return;
+  try {
+    await backups.runOnQuitIfChanged(settings.keepDays);
+  } catch (err) {
+    ctx.logger.error(`on-close backup failed: ${String(err)}`);
+  }
+}
