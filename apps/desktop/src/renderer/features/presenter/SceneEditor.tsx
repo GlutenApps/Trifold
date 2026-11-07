@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import type { Playlist, Scene } from '@trifold/schema';
+import { InlineConfirm } from '../shell/InlineConfirm';
+import { Icon } from '../shell/icons';
 
 /** The edit-scene form (title, subtitle, TV title rule, music on go-live, backdrop, notes). Folders are set by dragging in the tree. */
 export function SceneEditor({
@@ -12,6 +15,7 @@ export function SceneEditor({
   onChange(s: Scene): void;
   onRemove(): void;
 }) {
+  const [confirming, setConfirming] = useState(false);
   return (
     <div className="card">
       <h2>Edit scene</h2>
@@ -108,9 +112,21 @@ export function SceneEditor({
         />
       </label>
       <div className="row">
-        <button type="button" className="btn" onClick={onRemove}>
-          Remove scene
-        </button>
+        {confirming ? (
+          <InlineConfirm
+            name={scene.title || 'this scene'}
+            onConfirm={() => {
+              setConfirming(false);
+              onRemove();
+            }}
+            onKeep={() => setConfirming(false)}
+          />
+        ) : (
+          <button type="button" className="btn danger" onClick={() => setConfirming(true)}>
+            <Icon name="trash" />
+            Delete scene
+          </button>
+        )}
       </div>
     </div>
   );

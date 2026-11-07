@@ -32,7 +32,7 @@ export function CompendiumLibraryPage() {
             <button
               key={id}
               type="button"
-              className="btn small"
+              className="btn"
               aria-pressed={segment === id}
               onClick={() => pick(id)}
             >

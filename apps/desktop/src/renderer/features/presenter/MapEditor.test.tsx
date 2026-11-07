@@ -245,7 +245,7 @@ describe('MapEditor: backgrounds', () => {
     await userEvent.click(within(pop).getByRole('button', { name: 'Show Night' }));
     expect(latest.image).toEqual(night);
     expect(latest.tokens).toEqual(mill.tokens);
-    expect(within(pop).getByRole('button', { name: 'Remove Night' })).toBeEnabled();
+    expect(within(pop).getByRole('button', { name: 'Delete Night' })).toBeEnabled();
   });
 
   it('has no Backgrounds tool on a blank grid', () => {

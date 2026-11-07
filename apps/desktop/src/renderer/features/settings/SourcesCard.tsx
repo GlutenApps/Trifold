@@ -1,7 +1,9 @@
+import { InlineConfirm } from '../shell/InlineConfirm';
 import { useEffect, useState } from 'react';
 import type { SourceSummary } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
+import { Icon } from '../shell/icons';
 
 function counts(source: SourceSummary): string {
   const entries = Object.entries(source.recordCounts).filter(([, n]) => (n ?? 0) > 0);
@@ -35,37 +37,57 @@ function SourceRow({ source }: { source: SourceSummary }) {
         )}
         {source.license.nonSrd && <span className="badge">user content</span>}
         {source.stale && <span className="badge warn">parser updated</span>}
-        <span className="muted">{counts(source)}</span>
+        <span className="muted">
+          {counts(source)}
+          {source.warnings.length > 0 &&
+            ` · ${source.warnings.length} warning${source.warnings.length === 1 ? '' : 's'}`}
+        </span>
         <span className="spacer" />
-        {source.stale && (
-          <button
-            type="button"
-            className="btn"
-            disabled={importing}
-            onClick={() => void reimport(source.id)}
-          >
-            Re-parse
-          </button>
-        )}
-        {source.warnings.length > 0 && (
-          <button type="button" className="btn" onClick={() => setShowWarnings((v) => !v)}>
-            {source.warnings.length} warning{source.warnings.length === 1 ? '' : 's'}
-          </button>
-        )}
-        {!source.bundled && !confirmRemove && (
-          <button type="button" className="btn" onClick={() => setConfirmRemove(true)}>
-            Remove…
-          </button>
-        )}
-        {!source.bundled && confirmRemove && (
-          <>
-            <button type="button" className="btn" onClick={() => void remove(source.id)}>
-              Remove for good
-            </button>
-            <button type="button" className="btn" onClick={() => setConfirmRemove(false)}>
-              Keep
-            </button>
-          </>
+        {confirmRemove ? (
+          <InlineConfirm
+            name={source.name}
+            verb="Remove"
+            onConfirm={() => void remove(source.id)}
+            onKeep={() => setConfirmRemove(false)}
+          />
+        ) : (
+          <span className="row-actions">
+            {source.stale && (
+              <button
+                type="button"
+                className="chrome-btn xs"
+                title="Re-parse with the updated parser"
+                aria-label={`Re-parse ${source.name}`}
+                disabled={importing}
+                onClick={() => void reimport(source.id)}
+              >
+                <Icon name="refresh" />
+              </button>
+            )}
+            {source.warnings.length > 0 && (
+              <button
+                type="button"
+                className={`chrome-btn xs${showWarnings ? ' on' : ''}`}
+                title={showWarnings ? 'Hide warnings' : 'Show warnings'}
+                aria-label={`Warnings for ${source.name}`}
+                aria-pressed={showWarnings}
+                onClick={() => setShowWarnings((v) => !v)}
+              >
+                <Icon name="eye" />
+              </button>
+            )}
+            {!source.bundled && (
+              <button
+                type="button"
+                className="chrome-btn xs danger"
+                title="Remove this source"
+                aria-label={`Remove ${source.name}`}
+                onClick={() => setConfirmRemove(true)}
+              >
+                <Icon name="trash" />
+              </button>
+            )}
+          </span>
         )}
       </div>
       <p className="muted small">
@@ -136,7 +158,7 @@ export function SourcesCard() {
       {error && (
         <div className="banner error" role="alert">
           <span>{error}</span>
-          <button type="button" className="btn" onClick={clearError}>
+          <button type="button" className="btn small" onClick={clearError}>
             Dismiss
           </button>
         </div>

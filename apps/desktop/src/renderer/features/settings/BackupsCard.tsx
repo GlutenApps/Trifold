@@ -1,7 +1,9 @@
+import { InlineConfirm } from '../shell/InlineConfirm';
 import { useCallback, useEffect, useState } from 'react';
 import type { BackupInfo } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { Icon } from '../shell/icons';
 
 function size(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -146,34 +148,32 @@ export function BackupsCard() {
           </thead>
           <tbody>
             {backups.map((b) => (
-              <tr key={b.name} data-testid="backup-row">
+              <tr key={b.name} className="backup-row" data-testid="backup-row">
                 <td>{b.name}</td>
                 <td className="muted small">{KIND_LABEL[b.kind]}</td>
                 <td className="muted small">{size(b.sizeBytes)}</td>
                 <td>
                   {confirm === b.name ? (
-                    <span className="row">
-                      <span className="small">Overwrite the Library with this backup?</span>
+                    <InlineConfirm
+                      name={b.name}
+                      verb="Restore"
+                      question="Overwrite the Library with this backup?"
+                      onConfirm={() => void restore(b.name)}
+                      onKeep={() => setConfirm(null)}
+                    />
+                  ) : (
+                    <span className="row-actions">
                       <button
                         type="button"
-                        className="btn tiny danger"
-                        onClick={() => void restore(b.name)}
+                        className="chrome-btn xs"
+                        title="Restore this backup"
+                        aria-label={`Restore ${b.name}`}
+                        disabled={busy !== null}
+                        onClick={() => setConfirm(b.name)}
                       >
-                        Restore
-                      </button>
-                      <button type="button" className="btn tiny" onClick={() => setConfirm(null)}>
-                        Cancel
+                        <Icon name="undo" />
                       </button>
                     </span>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn tiny"
-                      disabled={busy !== null}
-                      onClick={() => setConfirm(b.name)}
-                    >
-                      Restore…
-                    </button>
                   )}
                 </td>
               </tr>

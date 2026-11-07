@@ -94,7 +94,7 @@ export function AddToFight({ onClose }: { onClose(): void }) {
           title="Close"
           onClick={onClose}
         >
-          <Icon name="close" size={13} />
+          <Icon name="close" />
         </button>
       </div>
       {(waitingPcs.length > 0 || waitingNpcs.length > 0) && (
@@ -104,6 +104,7 @@ export function AddToFight({ onClose }: { onClose(): void }) {
               key={p.id}
               type="button"
               className="btn"
+              aria-label={`Add ${p.name}`}
               onClick={() =>
                 void addToFight({
                   id: ulid(),
@@ -114,7 +115,8 @@ export function AddToFight({ onClose }: { onClose(): void }) {
                 })
               }
             >
-              + {p.name}
+              <Icon name="plus" />
+              {p.name}
             </button>
           ))}
           {waitingNpcs.map((n) => (
@@ -122,6 +124,7 @@ export function AddToFight({ onClose }: { onClose(): void }) {
               key={n.id}
               type="button"
               className="btn"
+              aria-label={`Add ${n.name}`}
               title={n.hp ? `HP ${n.hp.current}/${n.hp.max} from the last fight` : 'Named NPC'}
               onClick={() =>
                 void addToFight({
@@ -133,7 +136,8 @@ export function AddToFight({ onClose }: { onClose(): void }) {
                 })
               }
             >
-              + {n.name}
+              <Icon name="plus" />
+              {n.name}
             </button>
           ))}
         </div>

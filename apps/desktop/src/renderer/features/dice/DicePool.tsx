@@ -6,6 +6,7 @@ import {
   useDicePoolStore,
 } from '../../stores/dicePoolStore';
 import { useRollLogStore } from '../../stores/rollLogStore';
+import { Icon } from '../shell/icons';
 import { RollReveal, useRollReveal } from './RollReveal';
 
 interface DicePoolProps {
@@ -73,13 +74,13 @@ export function DicePool({ compact = false }: DicePoolProps) {
           disabled={empty}
           aria-hidden={empty}
           onClick={clear}
-          title="Clear"
+          title="Clear the pool"
         >
-          ×
+          <Icon name="close" />
         </button>
         <button
           type="button"
-          className="btn small primary"
+          className="btn primary"
           aria-label="Roll the pool (tray)"
           disabled={empty}
           title={label || 'Add dice first'}
@@ -100,9 +101,10 @@ export function DicePool({ compact = false }: DicePoolProps) {
             type="button"
             className="chrome-btn"
             aria-label="Modifier down"
+            title="Modifier down"
             onClick={() => bumpModifier(-1)}
           >
-            −
+            <Icon name="minus" />
           </button>
           <input
             type="number"
@@ -115,9 +117,10 @@ export function DicePool({ compact = false }: DicePoolProps) {
             type="button"
             className="chrome-btn"
             aria-label="Modifier up"
+            title="Modifier up"
             onClick={() => bumpModifier(1)}
           >
-            +
+            <Icon name="plus" />
           </button>
         </span>
         <span className="seg" role="group" aria-label="Roll mode">
@@ -125,7 +128,7 @@ export function DicePool({ compact = false }: DicePoolProps) {
             <button
               key={m}
               type="button"
-              className="btn small"
+              className="btn"
               aria-pressed={mode === m}
               disabled={m !== 'normal' && !poolIsSingleD20(pool)}
               title={m === 'normal' ? undefined : 'Applies to a single d20'}

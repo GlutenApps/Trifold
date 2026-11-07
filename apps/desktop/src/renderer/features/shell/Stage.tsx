@@ -368,7 +368,7 @@ function TabStrip({
                   closeTab(kind);
                 }}
               >
-                <Icon name="close" size={11} />
+                <Icon name="close" />
               </button>
             </div>
             {i === shown.length - 1 && dropIndex !== null && dropIndex >= data.tabs.length && (
@@ -386,7 +386,7 @@ function TabStrip({
             aria-haspopup="menu"
             onClick={() => setMenu(menu === 'more' ? null : 'more')}
           >
-            <Icon name="menu" size={14} />
+            <Icon name="menu" />
             <span className="count">{folded.length}</span>
           </button>
           {menu === 'more' && (
@@ -420,7 +420,7 @@ function TabStrip({
             aria-expanded={menu === 'add' || menu === 'addweb'}
             onClick={() => setMenu(menu === 'add' || menu === 'addweb' ? null : 'add')}
           >
-            <Icon name="plus" size={15} />
+            <Icon name="plus" />
           </button>
           {menu === 'add' && (
             <div className="menu" role="menu" aria-label="Tabs">
@@ -478,7 +478,7 @@ function TabStrip({
                   disabled={!normalizeWebUrl(newTab.url)}
                   onClick={submitNewTab}
                 >
-                  <Icon name="plus" size={14} />
+                  <Icon name="plus" />
                 </button>
               </div>
             </div>
@@ -492,7 +492,7 @@ function TabStrip({
           title={`${maximized ? 'Restore' : 'Maximize'} (${hk('Ctrl+Shift+M')})`}
           onClick={() => toggleMaximize(group)}
         >
-          <Icon name={maximized ? 'restore' : 'maximize'} size={14} />
+          <Icon name={maximized ? 'restore' : 'maximize'} />
         </button>
       </div>
     </div>

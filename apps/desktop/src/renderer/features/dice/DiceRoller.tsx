@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { rollAndLog } from '../../stores/dicePoolStore';
 import { useRollLogStore } from '../../stores/rollLogStore';
+import { Icon } from '../shell/icons';
 import { DicePool } from './DicePool';
 
 export { rollAndLog };
@@ -39,7 +40,7 @@ export function DiceRoller({ showLog = true, inputLabel = 'Dice expression' }: D
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
-        <button type="submit" className="btn small" disabled={!input.trim()}>
+        <button type="submit" className="btn" disabled={!input.trim()}>
           Roll typed
         </button>
         {error && <span className="muted small">{error}</span>}
@@ -50,8 +51,15 @@ export function DiceRoller({ showLog = true, inputLabel = 'Dice expression' }: D
             <h2 className="mt">Roll log</h2>
             <span className="muted small">one log: pool, tracker, compendium and save rolls</span>
             <span className="spacer" />
-            <button type="button" className="btn" disabled={entries.length === 0} onClick={clear}>
-              Clear
+            <button
+              type="button"
+              className="chrome-btn"
+              aria-label="Clear roll log"
+              title="Clear roll log"
+              disabled={entries.length === 0}
+              onClick={clear}
+            >
+              <Icon name="trash" />
             </button>
           </div>
           <ol className="roll-log" aria-label="Roll log">

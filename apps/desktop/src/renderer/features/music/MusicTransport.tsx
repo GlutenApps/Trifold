@@ -92,7 +92,7 @@ export function MusicTransport() {
         </div>
         <button
           type="button"
-          className={`btn small${music.muted ? ' danger' : ''}`}
+          className={`btn${music.muted ? ' danger' : ''}`}
           aria-pressed={music.muted}
           onClick={music.toggleMuted}
           title={hk('Ctrl+Alt+M')}

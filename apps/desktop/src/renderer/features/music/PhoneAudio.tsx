@@ -5,12 +5,21 @@ import { mergePhones, usePhoneAudioStore, type PhoneRow } from '../../stores/pho
 import { Icon } from '../shell/icons';
 
 /** Opens an OS settings page; says so when this OS has no such page. */
-function SystemButton({ page, children }: { page: SystemPage; children: string }) {
+function SystemButton({
+  page,
+  children,
+  inline = false,
+}: {
+  page: SystemPage;
+  children: string;
+  /** Inside a sentence the button is compact; in a header row it takes the regular tier. */
+  inline?: boolean;
+}) {
   const [missing, setMissing] = useState(false);
   return (
     <button
       type="button"
-      className="btn small"
+      className={inline ? 'btn small' : 'btn'}
       disabled={missing}
       title={missing ? 'Not available on this system' : undefined}
       onClick={() => {
@@ -41,7 +50,7 @@ function PhoneRowView({ row, status }: { row: PhoneRow; status: PhoneAudioStatus
   const busy = active && (status.state === 'connecting' || status.state === 'reconnecting');
   return (
     <li className={`phone-row${active ? ' active' : ''}`} data-testid="phone-row">
-      <Icon name="music" size={15} />
+      <Icon name="music" size={14} />
       <span className="phone-name">
         <strong>{row.name}</strong>
         {active ? (
@@ -78,7 +87,7 @@ function PhoneRowView({ row, status }: { row: PhoneRow; status: PhoneAudioStatus
           title="Forget this phone"
           aria-label={`Forget ${row.name}`}
         >
-          <Icon name="close" size={13} />
+          <Icon name="close" />
         </button>
       )}
     </li>
@@ -145,7 +154,9 @@ function MacGuide() {
         <li>
           Turn on <strong>AirPlay Receiver</strong> in AirDrop &amp; Handoff. Allow it for everyone
           on the same network if the phone uses a different Apple account.{' '}
-          <SystemButton page="airplay">Open AirPlay settings</SystemButton>
+          <SystemButton page="airplay" inline>
+            Open AirPlay settings
+          </SystemButton>
         </li>
         <li>
           On the phone: Control Center, press and hold the audio card, tap the AirPlay icon and
@@ -183,7 +194,10 @@ export function PhoneAudio() {
         <li>
           Phone audio uses the system's default output, not the device chosen in Trifold's Output
           menu, and Trifold's panic mute does not reach it. Set the system output to the table
-          speakers. <SystemButton page="sound">Open sound settings</SystemButton>
+          speakers.{' '}
+          <SystemButton page="sound" inline>
+            Open sound settings
+          </SystemButton>
         </li>
       </ul>
     </div>

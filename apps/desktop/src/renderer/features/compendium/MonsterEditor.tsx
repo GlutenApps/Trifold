@@ -8,6 +8,7 @@ import {
   CR_ORDER,
 } from '@trifold/rules';
 import type { Feature, MonsterRecord } from '@trifold/schema';
+import { Icon } from '../shell/icons';
 
 type Data = MonsterRecord['data'];
 type FeatureList = 'traits' | 'actions' | 'bonusActions' | 'reactions' | 'lair';
@@ -75,6 +76,8 @@ function FeatureListEditor({
     [next[i], next[j]] = [next[j]!, next[i]!];
     onChange(next);
   };
+  const singular = label.toLowerCase().replace(/s$/, '');
+  const nameOf = (f: Feature, i: number) => f.name.trim() || `${singular} ${i + 1}`;
   return (
     <fieldset className="feature-list">
       <legend>{label}</legend>
@@ -88,20 +91,37 @@ function FeatureListEditor({
               value={f.name}
               onChange={(e) => update(i, { name: e.target.value, displayName: e.target.value })}
             />
-            <button type="button" className="btn tiny" title="Move up" onClick={() => move(i, -1)}>
-              ▲
-            </button>
-            <button type="button" className="btn tiny" title="Move down" onClick={() => move(i, 1)}>
-              ▼
-            </button>
-            <button
-              type="button"
-              className="btn tiny"
-              title="Remove"
-              onClick={() => onChange(features.filter((_, j) => j !== i))}
-            >
-              ✕
-            </button>
+            <span className="row-actions">
+              <button
+                type="button"
+                className="chrome-btn xs"
+                aria-label={`Move ${nameOf(f, i)} up`}
+                title="Move up"
+                disabled={i === 0}
+                onClick={() => move(i, -1)}
+              >
+                <Icon name="up" />
+              </button>
+              <button
+                type="button"
+                className="chrome-btn xs"
+                aria-label={`Move ${nameOf(f, i)} down`}
+                title="Move down"
+                disabled={i === features.length - 1}
+                onClick={() => move(i, 1)}
+              >
+                <Icon name="down" />
+              </button>
+              <button
+                type="button"
+                className="chrome-btn xs"
+                aria-label={`Remove ${nameOf(f, i)}`}
+                title="Remove"
+                onClick={() => onChange(features.filter((_, j) => j !== i))}
+              >
+                <Icon name="close" />
+              </button>
+            </span>
           </div>
           <textarea
             aria-label={`${label} text`}
@@ -112,12 +132,9 @@ function FeatureListEditor({
           />
         </div>
       ))}
-      <button
-        type="button"
-        className="btn tiny"
-        onClick={() => onChange([...features, blankFeature()])}
-      >
-        Add {label.toLowerCase().replace(/s$/, '')}
+      <button type="button" className="btn" onClick={() => onChange([...features, blankFeature()])}>
+        <Icon name="plus" />
+        Add {singular}
       </button>
     </fieldset>
   );
@@ -323,7 +340,7 @@ export function MonsterEditor({
             />
             <button
               type="button"
-              className="btn tiny"
+              className="btn"
               disabled={!d.hp?.formula || !isDiceExpression(d.hp.formula)}
               title="Set the average from the formula"
               onClick={() =>
@@ -331,7 +348,7 @@ export function MonsterEditor({
                 patch({ hp: { ...d.hp, average: Math.floor(average(d.hp.formula)) } })
               }
             >
-              average
+              Average
             </button>
           </span>
         </label>

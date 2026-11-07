@@ -195,7 +195,7 @@ describe('CampaignNotes', () => {
 
     expect(window.trifold.notes.move).toHaveBeenCalledWith('rumours', 'later', 0);
     expect(titles()).toEqual(['Act one', 'Gate', 'Hall', 'Later', 'Rumours']);
-    expect(row('Rumours')).toHaveStyle({ paddingLeft: '20px' });
+    expect(row('Rumours')).toHaveStyle({ paddingLeft: '22px' });
   });
 
   it('drags a note onto the empty space to put it last at the root', () => {
@@ -326,7 +326,7 @@ describe('CampaignNotes', () => {
         .getAllByRole('tab')
         .map((t) => t.textContent),
     ).toEqual(['Session prep', 'Gate']);
-    await userEvent.click(within(pane).getByRole('button', { name: 'Done' }));
+    await userEvent.click(within(pane).getByRole('button', { name: 'Back to notes' }));
     expect(screen.queryByTestId('templates-pane')).not.toBeInTheDocument();
   });
 
@@ -346,7 +346,8 @@ describe('CampaignNotes', () => {
     await userEvent.click(
       within(pane).getByRole('button', { name: 'Delete template New template' }),
     );
-    await userEvent.click(within(pane).getByRole('button', { name: 'Delete New template' }));
+    const confirm = within(pane).getByRole('group', { name: 'Delete New template?' });
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
     expect(window.trifold.noteTemplates.remove).toHaveBeenCalledWith('tfresh');
     expect(
       within(pane)

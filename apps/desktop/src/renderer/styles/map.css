@@ -346,12 +346,6 @@
   resize: vertical;
 }
 
-.map-pop-choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
 /* Under the map: fixed actions, then options for whatever is selected */
 .map-actions {
   display: flex;

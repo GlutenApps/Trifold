@@ -7,6 +7,7 @@ import { blankTemplate, useNoteTemplateStore } from '../../stores/noteTemplateSt
 import { useTreeDnd } from '../../treeDnd';
 import { Icon } from '../shell/icons';
 import { AUTOSAVE_MS } from './autosave';
+import { InlineConfirm } from '../shell/InlineConfirm';
 import { NoteEditor, type Highlight } from './NoteEditor';
 import { TemplatesPane } from './TemplatesPane';
 
@@ -101,12 +102,12 @@ function BackButton({ onBack }: { onBack(): void }) {
   return (
     <button
       type="button"
-      className="chrome-btn xs notes-back"
+      className="chrome-btn notes-back"
       aria-label="Back to notes"
-      title="Back to the notes list"
+      title="Back to notes"
       onClick={onBack}
     >
-      <Icon name="left" size={14} />
+      <Icon name="left" />
     </button>
   );
 }
@@ -122,6 +123,7 @@ function NotePane({
 }) {
   const removeNote = useCampaignStore((s) => s.removeNote);
   const { draft, update, dirty, flush } = useDraft(note);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [tagText, setTagText] = useState(draft.tags.join(', '));
   const titleRef = useRef<HTMLInputElement>(null);
   const fresh = Date.now() - Date.parse(note.createdAt) < 5000;
@@ -146,15 +148,23 @@ function NotePane({
         <span className="muted small note-status" aria-live="polite">
           {dirty ? 'Unsaved' : 'Saved'}
         </span>
-        <button
-          type="button"
-          className="chrome-btn xs danger"
-          aria-label={`Remove ${note.title}`}
-          title="Remove note"
-          onClick={() => void removeNote(note.id)}
-        >
-          <Icon name="trash" size={13} />
-        </button>
+        {confirmDelete ? (
+          <InlineConfirm
+            name={note.title}
+            onConfirm={() => void removeNote(note.id)}
+            onKeep={() => setConfirmDelete(false)}
+          />
+        ) : (
+          <button
+            type="button"
+            className="chrome-btn danger"
+            aria-label={`Delete ${note.title}`}
+            title="Delete note"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Icon name="trash" />
+          </button>
+        )}
       </div>
       <div className="row note-meta">
         <label className="field inline grow">
@@ -206,7 +216,7 @@ function FolderPane({
     <div className="notes-pane" data-testid="folder-pane">
       <div className="row note-head">
         <BackButton onBack={onBack} />
-        <Icon name="folder" size={16} />
+        <Icon name="folder" />
         <input
           className="note-title"
           aria-label="Folder name"
@@ -324,7 +334,7 @@ function TemplateMenu({
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <Icon name="template" size={16} />
+        <Icon name="template" />
       </button>
       {open && (
         <div className="menu" role="menu" aria-label="Templates">
@@ -539,7 +549,7 @@ export function CampaignNotes({ notes }: { notes: readonly Note[] }) {
                 disabled={!landings.length}
                 onClick={() => step(-1)}
               >
-                <Icon name="up" size={16} />
+                <Icon name="up" />
               </button>
               <button
                 type="button"
@@ -549,7 +559,7 @@ export function CampaignNotes({ notes }: { notes: readonly Note[] }) {
                 disabled={!landings.length}
                 onClick={() => step(1)}
               >
-                <Icon name="down" size={16} />
+                <Icon name="down" />
               </button>
             </span>
           ) : (
@@ -561,7 +571,7 @@ export function CampaignNotes({ notes }: { notes: readonly Note[] }) {
                 title="New note"
                 onClick={() => void create('note')}
               >
-                <Icon name="plus" size={16} />
+                <Icon name="plus" />
               </button>
               <button
                 type="button"
@@ -570,7 +580,7 @@ export function CampaignNotes({ notes }: { notes: readonly Note[] }) {
                 title="New folder"
                 onClick={() => void create('folder')}
               >
-                <Icon name="folder" size={16} />
+                <Icon name="folder" />
               </button>
               <TemplateMenu
                 templates={templates}
@@ -654,7 +664,7 @@ export function CampaignNotes({ notes }: { notes: readonly Note[] }) {
                   aria-label={note.title}
                   tabIndex={0}
                   className={`tree-row kind-${note.kind}${isSelected ? ' selected' : ''}${dnd.rowClass(note)}`}
-                  style={{ paddingLeft: 6 + depth * 14 }}
+                  style={{ paddingLeft: 8 + depth * 14 }}
                   data-testid="note-row"
                   onClick={() => select(note)}
                   onKeyDown={(e) => {
@@ -676,10 +686,12 @@ export function CampaignNotes({ notes }: { notes: readonly Note[] }) {
                           toggleCollapsed(note.id);
                         }}
                       >
-                        <Icon name={open ? 'down' : 'right'} size={12} />
+                        <Icon name={open ? 'down' : 'right'} />
                       </button>
                     ) : (
-                      <Icon name="card" size={14} />
+                      <span className="tree-slot" aria-hidden="true">
+                        <Icon name="card" size={14} />
+                      </span>
                     )}
                     <span className="tree-name">{note.title}</span>
                   </span>

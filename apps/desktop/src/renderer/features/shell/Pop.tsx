@@ -94,7 +94,7 @@ export function Pop() {
           aria-label="Close pop-up"
           onClick={closePop}
         >
-          <Icon name="close" size={13} />
+          <Icon name="close" />
         </button>
       </header>
       <div className="fly-body">

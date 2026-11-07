@@ -37,7 +37,7 @@ export function Dock() {
           title="Expand dock"
           onClick={() => (trimmed ? expandDock() : setDockMode('narrow'))}
         >
-          <Icon name="expand" size={15} />
+          <Icon name="expand" />
         </button>
         {dock.sections.map((s) => (
           <button
@@ -50,7 +50,7 @@ export function Dock() {
             data-tool={s.tool}
             onClick={() => openTool(s.tool)}
           >
-            <Icon name={MINOR_ICON[s.tool]} size={16} />
+            <Icon name={MINOR_ICON[s.tool]} />
             {pips.has(s.tool) && <span className="pip" />}
           </button>
         ))}
@@ -109,7 +109,7 @@ export function Dock() {
             data-tool={s.tool}
             onClick={() => toggleSection(s.tool)}
           >
-            <Icon name={MINOR_ICON[s.tool]} size={16} />
+            <Icon name={MINOR_ICON[s.tool]} />
             {pips.has(s.tool) && <span className="pip" />}
           </button>
         ))}
@@ -121,7 +121,7 @@ export function Dock() {
           title="Collapse to icons"
           onClick={() => setDockMode('icons')}
         >
-          <Icon name="collapse" size={15} />
+          <Icon name="collapse" />
         </button>
       </div>
       <div className="dock-sections">
@@ -147,7 +147,7 @@ export function Dock() {
                   aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${MINOR_TITLES[s.tool]}`}
                   onClick={() => toggleCollapsed(s.tool)}
                 >
-                  <Icon name={isCollapsed ? 'down' : 'up'} size={13} />
+                  <Icon name={isCollapsed ? 'down' : 'up'} />
                 </button>
               </header>
               {!isCollapsed && (
@@ -187,9 +187,10 @@ function SectionSummary({ tool, collapsed }: { tool: MinorKind; collapsed: boole
             type="button"
             className="chrome-btn xs"
             aria-label={playing ? 'Pause music' : 'Play music'}
+            title={playing ? 'Pause music' : 'Play music'}
             onClick={() => void togglePlay()}
           >
-            <Icon name={playing ? 'pause' : 'play'} size={12} />
+            <Icon name={playing ? 'pause' : 'play'} />
           </button>
         )}
       </>

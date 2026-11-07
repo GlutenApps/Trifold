@@ -324,10 +324,10 @@ describe('CombatView: adding mid-fight', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add to fight' }));
     const panel = screen.getByRole('region', { name: 'Add to the fight' });
     // Zed is already in; Bram is waiting.
-    expect(within(panel).queryByRole('button', { name: '+ Zed' })).not.toBeInTheDocument();
-    await userEvent.click(within(panel).getByRole('button', { name: '+ Bram' }));
+    expect(within(panel).queryByRole('button', { name: 'Add Zed' })).not.toBeInTheDocument();
+    await userEvent.click(within(panel).getByRole('button', { name: 'Add Bram' }));
     await waitFor(() => expect(screen.getAllByTestId('combatant-row')).toHaveLength(4));
-    expect(within(panel).queryByRole('button', { name: '+ Bram' })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole('button', { name: 'Add Bram' })).not.toBeInTheDocument();
 
     await userEvent.type(within(panel).getByLabelText('How many'), '2', {
       initialSelectionStart: 0,

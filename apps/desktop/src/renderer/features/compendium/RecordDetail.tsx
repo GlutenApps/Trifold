@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CompendiumRecord, Roll } from '@trifold/schema';
 import { useRollLogStore } from '../../stores/rollLogStore';
+import { InlineConfirm } from '../shell/InlineConfirm';
 import { RollReveal, useRollReveal } from '../dice/RollReveal';
+import { Icon } from '../shell/icons';
 import { compendiumActions, logDiceRoll } from './compendiumRolls';
 import { itemTypeName } from './formatting';
 import { diffRecords, type DiffLine } from './recordDiff';
@@ -11,6 +13,8 @@ interface Props {
   record: CompendiumRecord;
   editions: CompendiumRecord[];
   canGoBack: boolean;
+  /** The name of the record Back returns to, for its tooltip and accessible name. */
+  backTo?: string;
   onBack(): void;
   onSwitchEdition(record: CompendiumRecord): void;
   onOpenSpell(key: string): void;
@@ -52,36 +56,38 @@ function HomebrewBar({
   return (
     <div className="homebrew-bar" data-testid="homebrew-bar">
       <div className="row">
-        <button type="button" className="btn tiny" onClick={actions.onDuplicate}>
+        {isHomebrew && (
+          <button type="button" className="btn primary" onClick={actions.onEdit}>
+            <Icon name="pencil" />
+            Edit
+          </button>
+        )}
+        <button type="button" className="btn" onClick={actions.onDuplicate}>
           Duplicate to homebrew
         </button>
+        {isHomebrew && record.basedOn && (
+          <button type="button" className="btn" onClick={() => void showDiff()}>
+            {diff ? 'Hide changes' : 'Changes from original'}
+          </button>
+        )}
         {isHomebrew && (
           <>
-            <button type="button" className="btn tiny primary" onClick={actions.onEdit}>
-              Edit
-            </button>
-            {record.basedOn && (
-              <button type="button" className="btn tiny" onClick={() => void showDiff()}>
-                {diff ? 'Hide changes' : 'Changes from original'}
-              </button>
-            )}
+            <span className="spacer" />
             {confirm ? (
-              <>
-                <span className="small">Delete this homebrew record?</span>
-                <button
-                  type="button"
-                  className="btn tiny danger"
-                  onClick={() => actions.onRemove(record.id)}
-                >
-                  Delete
-                </button>
-                <button type="button" className="btn tiny" onClick={() => setConfirm(false)}>
-                  Cancel
-                </button>
-              </>
+              <InlineConfirm
+                name={record.displayName}
+                onConfirm={() => actions.onRemove(record.id)}
+                onKeep={() => setConfirm(false)}
+              />
             ) : (
-              <button type="button" className="btn tiny" onClick={() => setConfirm(true)}>
-                Delete…
+              <button
+                type="button"
+                className="chrome-btn danger"
+                aria-label={`Delete ${record.displayName}`}
+                title="Delete this homebrew record"
+                onClick={() => setConfirm(true)}
+              >
+                <Icon name="trash" />
               </button>
             )}
           </>
@@ -372,6 +378,7 @@ export function RecordDetail({
   record,
   editions,
   canGoBack,
+  backTo,
   onBack,
   onSwitchEdition,
   onOpenSpell,
@@ -385,8 +392,14 @@ export function RecordDetail({
     <div className="detail">
       <div className="row detail-bar">
         {canGoBack && (
-          <button type="button" className="btn" onClick={onBack}>
-            Back
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label={backTo ? `Back to ${backTo}` : 'Back'}
+            title={backTo ? `Back to ${backTo}` : 'Back'}
+            onClick={onBack}
+          >
+            <Icon name="left" />
           </button>
         )}
         {editions.length > 1 && (

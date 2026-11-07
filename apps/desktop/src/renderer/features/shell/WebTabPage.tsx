@@ -1,3 +1,4 @@
+import { InlineConfirm } from './InlineConfirm';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   normalizeWebUrl,
@@ -92,7 +93,7 @@ export function WebTabIconPicker({
           title={WEB_TAB_ICON_LABELS[icon]}
           onClick={() => onChange(icon)}
         >
-          <Icon name={icon} size={15} />
+          <Icon name={icon} />
         </button>
       ))}
     </div>
@@ -184,12 +185,6 @@ export function WebTabPage({ tab }: { tab: WebTab }) {
     // The page is mounted for the tab's lifetime; a new address arrives through `go`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab.id]);
-
-  useEffect(() => {
-    if (!confirmRemove) return;
-    const t = window.setTimeout(() => setConfirmRemove(false), 3000);
-    return () => window.clearTimeout(t);
-  }, [confirmRemove]);
 
   const guest = () => (hasGuest(ref.current) ? ref.current : null);
 
@@ -292,7 +287,7 @@ export function WebTabPage({ tab }: { tab: WebTab }) {
           disabled={!nav.back}
           onClick={() => guest()?.goBack()}
         >
-          <Icon name="left" size={14} />
+          <Icon name="left" />
         </button>
         <button
           type="button"
@@ -302,7 +297,7 @@ export function WebTabPage({ tab }: { tab: WebTab }) {
           disabled={!nav.forward}
           onClick={() => guest()?.goForward()}
         >
-          <Icon name="right" size={14} />
+          <Icon name="right" />
         </button>
         <button
           type="button"
@@ -311,7 +306,7 @@ export function WebTabPage({ tab }: { tab: WebTab }) {
           title={nav.loading ? 'Stop loading' : 'Reload'}
           onClick={() => (nav.loading ? guest()?.stop() : guest()?.reload())}
         >
-          <Icon name={nav.loading ? 'close' : 'refresh'} size={14} />
+          <Icon name={nav.loading ? 'close' : 'refresh'} />
         </button>
         <button
           type="button"
@@ -321,7 +316,7 @@ export function WebTabPage({ tab }: { tab: WebTab }) {
           disabled={atHome}
           onClick={() => go(tab.url)}
         >
-          <Icon name="home" size={14} />
+          <Icon name="home" />
         </button>
         <button
           type="button"
@@ -331,7 +326,7 @@ export function WebTabPage({ tab }: { tab: WebTab }) {
           disabled={tab.zoom <= stepZoom(tab.zoom, -1)}
           onClick={() => zoomBy(-1)}
         >
-          <Icon name="minus" size={14} />
+          <Icon name="minus" />
         </button>
         <button
           type="button"
@@ -351,7 +346,7 @@ export function WebTabPage({ tab }: { tab: WebTab }) {
           disabled={tab.zoom >= stepZoom(tab.zoom, 1)}
           onClick={() => zoomBy(1)}
         >
-          <Icon name="plus" size={14} />
+          <Icon name="plus" />
         </button>
         <input
           type="text"
@@ -374,7 +369,7 @@ export function WebTabPage({ tab }: { tab: WebTab }) {
           title="Open in system browser"
           onClick={() => void window.trifold.app.openExternal(address)}
         >
-          <Icon name="external" size={14} />
+          <Icon name="external" />
         </button>
         <button
           type="button"
@@ -384,20 +379,26 @@ export function WebTabPage({ tab }: { tab: WebTab }) {
           aria-pressed={draft !== null}
           onClick={openEditor}
         >
-          <Icon name="pencil" size={14} />
+          <Icon name="pencil" />
         </button>
-        <button
-          type="button"
-          className={`chrome-btn${confirmRemove ? ' danger' : ''}`}
-          aria-label={confirmRemove ? 'Confirm remove web tab' : 'Remove web tab'}
-          title={confirmRemove ? 'Click again to remove this tab' : 'Remove this web tab'}
-          onClick={() => {
-            if (confirmRemove) removeWebTab(tab.id);
-            else setConfirmRemove(true);
-          }}
-        >
-          <Icon name="trash" size={14} />
-        </button>
+        {confirmRemove ? (
+          <InlineConfirm
+            name={tab.title}
+            verb="Remove"
+            onConfirm={() => removeWebTab(tab.id)}
+            onKeep={() => setConfirmRemove(false)}
+          />
+        ) : (
+          <button
+            type="button"
+            className="chrome-btn danger"
+            aria-label="Remove web tab"
+            title="Remove this web tab"
+            onClick={() => setConfirmRemove(true)}
+          >
+            <Icon name="trash" />
+          </button>
+        )}
       </div>
       {draft && (
         <div className="web-edit" role="group" aria-label="Edit web tab">

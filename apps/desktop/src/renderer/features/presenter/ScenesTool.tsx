@@ -161,7 +161,7 @@ export function ScenesTool() {
             aria-label="New title card"
             title="New title card"
           >
-            <Icon name="card" size={16} />
+            <Icon name="card" />
           </button>
           {(
             [
@@ -179,7 +179,7 @@ export function ScenesTool() {
               title={label}
               onClick={() => void createScene(kind, newTitle).then(() => setNewTitle(''))}
             >
-              <Icon name={icon} size={16} />
+              <Icon name={icon} />
             </button>
           ))}
         </span>
@@ -207,7 +207,7 @@ export function ScenesTool() {
               aria-selected={isSelected}
               tabIndex={0}
               className={`scene-row kind-${scene.kind}${isLive ? ' live' : ''}${isSelected ? ' selected' : ''}${dnd.rowClass(scene)}`}
-              style={{ paddingLeft: 6 + depth * 14 }}
+              style={{ paddingLeft: 8 + depth * 14 }}
               data-testid="scene-row"
               onMouseEnter={(e) => hoverRow(scene, e.currentTarget)}
               onClick={() => select(scene.id)}
@@ -234,7 +234,7 @@ export function ScenesTool() {
                       send(scene);
                     }}
                   >
-                    <Icon name="play" size={12} />
+                    <Icon name="play" />
                   </button>
                 )}
                 <button
@@ -248,7 +248,7 @@ export function ScenesTool() {
                     setEditOpen(true);
                   }}
                 >
-                  <Icon name="pencil" size={13} />
+                  <Icon name="pencil" />
                 </button>
               </span>
             </div>
@@ -290,7 +290,7 @@ export function ScenesTool() {
             {selected.kind !== 'folder' && (
               <button
                 type="button"
-                className="btn small primary"
+                className="btn primary"
                 disabled={selected.id === liveId && !blackout}
                 onClick={() => send(selected)}
               >
@@ -299,7 +299,7 @@ export function ScenesTool() {
             )}
             <button
               type="button"
-              className="btn small"
+              className="btn"
               aria-expanded={editOpen}
               onClick={() => setEditOpen((v) => !v)}
             >

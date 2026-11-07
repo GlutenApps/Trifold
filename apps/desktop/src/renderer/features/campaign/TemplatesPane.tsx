@@ -3,6 +3,7 @@ import type { NoteTemplate } from '@trifold/schema';
 import { blankTemplate, useNoteTemplateStore } from '../../stores/noteTemplateStore';
 import { Icon } from '../shell/icons';
 import { AUTOSAVE_MS } from './autosave';
+import { InlineConfirm } from '../shell/InlineConfirm';
 import { NoteEditor } from './NoteEditor';
 
 /** A template's name and body, saved shortly after the last change and on close. */
@@ -63,27 +64,20 @@ function TemplateEditor({ template }: { template: NoteTemplate }) {
           {dirty ? 'Unsaved' : 'Saved'}
         </span>
         {confirm ? (
-          <>
-            <button
-              type="button"
-              className="btn small danger"
-              onClick={() => void remove(template.id)}
-            >
-              Delete {template.name}
-            </button>
-            <button type="button" className="btn small" onClick={() => setConfirm(false)}>
-              Keep it
-            </button>
-          </>
+          <InlineConfirm
+            name={template.name}
+            onConfirm={() => void remove(template.id)}
+            onKeep={() => setConfirm(false)}
+          />
         ) : (
           <button
             type="button"
-            className="chrome-btn xs danger"
+            className="chrome-btn danger"
             aria-label={`Delete template ${template.name}`}
             title="Delete template"
             onClick={() => setConfirm(true)}
           >
-            <Icon name="trash" size={13} />
+            <Icon name="trash" />
           </button>
         )}
       </div>
@@ -119,8 +113,17 @@ export function TemplatesPane({
 
   return (
     <div className="notes-pane templates-pane" data-testid="templates-pane">
-      <div className="row">
-        <strong>Templates</strong>
+      <div className="row templates-head">
+        <button
+          type="button"
+          className="chrome-btn"
+          aria-label="Back to notes"
+          title="Back to notes"
+          onClick={onDone}
+        >
+          <Icon name="left" />
+        </button>
+        <h2>Templates</h2>
         <span className="muted small">Starting points for new notes, in every campaign.</span>
         <span className="spacer" />
         <button
@@ -130,10 +133,7 @@ export function TemplatesPane({
           title="New template"
           onClick={() => void add()}
         >
-          <Icon name="plus" size={16} />
-        </button>
-        <button type="button" className="btn small" onClick={onDone}>
-          Done
+          <Icon name="plus" />
         </button>
       </div>
       {templates.length === 0 ? (

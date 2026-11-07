@@ -60,7 +60,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 26px;
+  height: var(--control-h);
   padding: 0 8px;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -279,9 +279,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   visibility: hidden;
   cursor: pointer;
@@ -290,6 +290,11 @@
 .tab:hover .tab-close,
 .tab.active .tab-close {
   visibility: visible;
+}
+
+.tab .tab-close .icon {
+  width: 12px;
+  height: 12px;
 }
 
 .tab .tab-close:hover {
@@ -331,7 +336,7 @@
 }
 
 .tab-menu .count {
-  font-size: 10px;
+  font-size: 12px;
   margin-left: 2px;
 }
 
@@ -616,7 +621,7 @@ body.resizing {
   padding: 0 4px;
   cursor: pointer;
   border-radius: var(--radius-sm);
-  height: 28px;
+  height: var(--control-h);
 }
 
 .strip-text:hover {
@@ -832,12 +837,13 @@ body.resizing {
 /* Shared chrome */
 .chrome-btn {
   all: unset;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  width: var(--control-h);
+  height: var(--control-h);
+  border-radius: var(--radius-control);
   color: var(--text-muted);
   cursor: pointer;
   flex-shrink: 0;
@@ -889,8 +895,20 @@ body.resizing {
 }
 
 .chrome-btn.xs {
-  width: 22px;
-  height: 22px;
+  width: var(--control-h-row);
+  height: var(--control-h-row);
+}
+
+/* Icon size follows the button, never the call site (ADR 0013). */
+.chrome-btn .icon {
+  width: var(--icon);
+  height: var(--icon);
+  flex-shrink: 0;
+}
+
+.chrome-btn.xs .icon {
+  width: var(--icon-row);
+  height: var(--icon-row);
 }
 
 .chrome-btn.primary {
@@ -903,12 +921,35 @@ body.resizing {
   color: var(--accent-contrast);
 }
 
+/* A bordered group of icon buttons is one control tall: the border sits inside the tier and the
+   buttons fill what is left, so a toolbar lines up with a field or a button beside it. */
 .icon-toolbar {
   display: inline-flex;
-  gap: 2px;
-  padding: 2px;
+  align-items: center;
+  gap: 0;
+  box-sizing: border-box;
+  height: var(--control-h);
+  padding: 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-control);
+  flex-shrink: 0;
+}
+
+.icon-toolbar .chrome-btn:not(.xs) {
+  width: calc(var(--control-h) - 2px);
+  height: calc(var(--control-h) - 2px);
+}
+
+/* Window chrome (top bar, tab strips, dock and pop-up headers, live strip, web bar) uses the
+   compact tier, so the chrome sits quieter than the panel content it frames. */
+.topbar,
+.tabs,
+.dock-tabs,
+.dh,
+.fly-head,
+.strip,
+.web-bar {
+  --control-h: var(--control-h-compact);
 }
 
 .icon {
@@ -1037,12 +1078,6 @@ body.resizing {
   flex: 1;
 }
 
-.layout-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 /* Dice pool: click to add, right-click to take away. The seven chips share one row. */
 .die-row {
   display: flex;
@@ -1121,10 +1156,6 @@ body.resizing {
 .pool-modifier input[type='number'] {
   width: 64px;
   text-align: center;
-}
-
-.pool-modifier .chrome-btn {
-  font-size: 18px;
 }
 
 /* Roll takes its own full-width line so the expression has room and nothing wraps around it. */
@@ -1298,9 +1329,9 @@ body.resizing {
 
 .dice-pool.compact .die-chip {
   min-width: 30px;
-  height: 26px;
+  height: var(--control-h-compact);
   padding: 0 5px;
-  font-size: 11px;
+  font-size: 12px;
   border-radius: var(--radius-sm);
 }
 
@@ -1314,13 +1345,13 @@ body.resizing {
   right: -6px;
   min-width: 16px;
   height: 16px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 16px;
   padding: 0 4px;
 }
 
 .roll-source {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 /* Map major */
@@ -1389,22 +1420,12 @@ body.resizing {
   justify-content: center;
 }
 
-/* One 30 px line: small buttons, and icon toolbars with no inner padding (28 px + border). */
 .tv-head .icon-toolbar {
   margin-left: 10px;
-  padding: 0;
-  box-sizing: border-box;
-  height: 30px;
-  align-items: center;
 }
 
 .tv-head .scene-picker .icon-toolbar {
   margin-left: 0;
-}
-
-.tv-head .btn.small {
-  box-sizing: border-box;
-  height: 30px;
 }
 
 .tv-preview {
@@ -1473,7 +1494,7 @@ body.resizing {
 
 .scene-pick-folder {
   padding: 6px 8px 2px;
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
@@ -1540,7 +1561,6 @@ body.resizing {
 .web-bar .web-address {
   flex: 1;
   min-width: 0;
-  height: 26px;
   margin: 0 4px;
   font-family: var(--mono, inherit);
   font-size: 12px;
@@ -1638,12 +1658,12 @@ body.resizing {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
+  height: var(--control-h);
   min-width: 40px;
   padding: 0 4px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-control);
   font-family: var(--mono, inherit);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   cursor: pointer;
 }

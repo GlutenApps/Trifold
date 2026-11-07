@@ -1,4 +1,5 @@
 import { useMusicStore } from '../../stores/musicStore';
+import { Icon } from '../shell/icons';
 
 /** Scan progress, then what the last scan changed. Shared by Library › Music and the Music panel. */
 export function ScanStatus() {
@@ -35,11 +36,19 @@ export function MusicFolders() {
       {library?.folders.length ? (
         <ul className="picker-list">
           {library.folders.map((f) => (
-            <li key={f}>
-              <span className="mono small">{f}</span>
-              <button type="button" className="btn tiny" onClick={() => void removeFolder(f)}>
-                Remove
-              </button>
+            <li key={f} className="music-folder-row">
+              <span className="mono small music-folder-path">{f}</span>
+              <span className="row-actions">
+                <button
+                  type="button"
+                  className="chrome-btn xs"
+                  aria-label={`Remove ${f}`}
+                  title="Remove from the scan (files stay)"
+                  onClick={() => void removeFolder(f)}
+                >
+                  <Icon name="close" />
+                </button>
+              </span>
             </li>
           ))}
         </ul>
@@ -54,11 +63,13 @@ export function MusicFolders() {
         </button>
         <button
           type="button"
-          className="btn"
+          className="chrome-btn"
+          aria-label="Rescan music folders"
+          title="Rescan music folders: picks up new, renamed and deleted files"
           onClick={() => void rescan()}
           disabled={!library?.folders.length}
         >
-          Rescan
+          <Icon name="refresh" />
         </button>
         <ScanStatus />
       </div>

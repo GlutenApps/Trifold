@@ -135,7 +135,7 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('button', { name: 'Changes from original' }).click();
     await expect(console_.getByTestId('record-diff')).toContainText('Aboleth Elder');
     await expect(console_.getByTestId('record-diff')).toContainText('12');
-    await console_.getByRole('button', { name: 'Delete…' }).click();
+    await console_.getByRole('button', { name: 'Delete Aboleth Elder' }).click();
     await console_.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(console_.getByRole('heading', { name: 'Aboleth Elder' })).toHaveCount(0);
 
@@ -145,7 +145,7 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('button', { name: 'Fireball' }).click();
     await expect(console_.getByRole('heading', { name: 'Fireball' })).toBeVisible();
     await expect(console_.getByText('Level 3 Evocation')).toBeVisible();
-    await console_.getByRole('button', { name: 'Back', exact: true }).click();
+    await console_.getByRole('button', { name: 'Back to Mage' }).click();
     await expect(console_.getByRole('heading', { name: 'Mage' })).toBeVisible();
 
     const timing = await console_.evaluate(

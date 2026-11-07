@@ -195,7 +195,7 @@ const PATHS: Record<IconName, string> = {
     'M3 3l18 18M9.5 7.5l1.5-1.5a4 4 0 0 1 5.7 5.7l-1.5 1.5M14.5 16.5l-1.5 1.5a4 4 0 0 1-5.7-5.7l1.5-1.5',
 };
 
-export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
   return (
     <svg
       className="icon"

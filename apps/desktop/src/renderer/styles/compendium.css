@@ -189,11 +189,11 @@
 }
 
 .seg .btn:first-child {
-  border-radius: var(--radius) 0 0 var(--radius);
+  border-radius: var(--radius-control) 0 0 var(--radius-control);
 }
 
 .seg .btn:last-child {
-  border-radius: 0 var(--radius) var(--radius) 0;
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
 }
 
 .badge {
@@ -228,7 +228,7 @@
   border-color: var(--accent);
   color: var(--accent-contrast);
   font-weight: 700;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 2px 7px;
@@ -438,27 +438,12 @@ button.badge {
   color: var(--text);
 }
 
-input[type='number'] {
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 6px 8px;
-  font: inherit;
-  width: 90px;
-}
-
 input.narrow {
   width: 64px;
 }
 
 input.narrow-text {
   min-width: 120px;
-}
-
-.btn.tiny {
-  padding: 1px 6px;
-  font-size: 11px;
 }
 
 .campaign-title {
@@ -631,6 +616,12 @@ input.narrow-text {
   margin-bottom: 0;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
+}
+
+.condition-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .combatant-drawer {
@@ -1126,7 +1117,7 @@ input.narrow-text {
   position: absolute;
   right: 3px;
   bottom: 2px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
 }
@@ -1156,19 +1147,22 @@ input.narrow-text {
   max-width: 100%;
 }
 
-/* Folder tabs over the Music panel's body: the active tab joins the card below it. */
+/* Folder tabs over the Music panel's body: the active tab joins the card below it. The tabs
+   sit on the bar's bottom line; the tools at the end centre in a bar a little taller than one
+   control, so a button never rests on that line. */
 .music-tabbar {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 6px;
   min-width: 0;
-  margin-top: 4px;
+  min-height: calc(var(--control-h) + 4px);
   border-bottom: 1px solid var(--border);
 }
 
 .music-tablist {
   display: flex;
   align-items: flex-end;
+  align-self: flex-end;
   gap: 2px;
   flex-shrink: 0;
   padding-left: 4px;
@@ -1214,12 +1208,6 @@ input.narrow-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  align-self: center;
-}
-
-.music-tabbar .chrome-btn {
-  align-self: center;
-  margin-bottom: 2px;
 }
 
 .music-tabpanel.card,
@@ -1526,8 +1514,15 @@ input[type='range'].wide {
 }
 
 .playlist-tracks li:hover .row-actions,
-.playlist-tracks li:focus-within .row-actions {
+.playlist-tracks li:focus-within .row-actions,
+.music-folder-row:hover .row-actions,
+.music-folder-row:focus-within .row-actions {
   visibility: visible;
+}
+
+.music-folder-path {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .row.wrap {
@@ -1547,38 +1542,65 @@ input[type='range'].wide {
 .slot-level {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 0;
   margin-right: 8px;
 }
 
 .slot-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   margin-right: 2px;
 }
 
+/* A 12 px dot inside a 22 px target (row tier: it is clicked during combat). */
 .slot-pip {
-  width: 12px;
-  height: 12px;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
   padding: 0;
+  border: 0;
   border-radius: 50%;
-  border: 1.5px solid var(--accent);
-  background: var(--accent);
+  background: transparent;
   cursor: pointer;
 }
 
-.slot-pip.spent {
+.slot-pip::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  background: var(--accent);
+}
+
+.slot-pip.spent::before {
   background: transparent;
   opacity: 0.6;
 }
 
-.slot-pip:hover {
+.slot-pip:hover::before {
   transform: scale(1.15);
 }
 
 /* Homebrew (DESIGN.md §6.2) */
 .homebrew-bar {
   margin-bottom: 8px;
+}
+
+/* The inline delete confirm (UI guidelines §9), in place of a row's or header's actions. */
+.inline-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.inline-confirm-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .diff-from {
@@ -1760,6 +1782,10 @@ input[type='range'].wide {
   flex-shrink: 0;
 }
 
+.templates-head h2 {
+  margin: 0;
+}
+
 .note-title {
   flex: 1;
   min-width: 0;
@@ -1839,16 +1865,14 @@ input[type='range'].wide {
   font-weight: 600;
 }
 
-.tree-actions {
+/* A note row's icon sits in a slot as wide as a folder's toggle, so names line up. */
+.tree-slot {
   display: inline-flex;
-  gap: 0;
-  visibility: hidden;
-}
-
-.tree-row:hover .tree-actions,
-.tree-row.selected .tree-actions,
-.tree-row:focus-within .tree-actions {
-  visibility: visible;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--control-h-row);
+  height: var(--control-h-row);
 }
 
 /* Notes: the tree pane's width is a variable so the narrow layout below can override it. */
@@ -2026,7 +2050,7 @@ input[type='range'].wide {
 }
 
 .note-toolbar .toolbar-text {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   font-family: var(--font-mono);
 }

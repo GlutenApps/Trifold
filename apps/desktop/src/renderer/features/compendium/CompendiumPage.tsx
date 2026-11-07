@@ -95,7 +95,7 @@ export function CompendiumPage() {
       {error && (
         <div className="banner error" role="alert">
           <span>{error}</span>
-          <button type="button" className="btn" onClick={clearError}>
+          <button type="button" className="btn small" onClick={clearError}>
             Dismiss
           </button>
         </div>
@@ -331,6 +331,7 @@ export function CompendiumPage() {
               record={selected}
               editions={editions}
               canGoBack={history.length > 0}
+              backTo={history[history.length - 1]?.displayName}
               onBack={back}
               onSwitchEdition={switchEdition}
               onOpenSpell={(key) => void openByKey('spell', key)}

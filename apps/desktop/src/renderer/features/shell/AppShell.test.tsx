@@ -276,6 +276,8 @@ describe('AppShell', () => {
       'true',
     );
     await userEvent.click(list().getByRole('button', { name: 'Delete layout Prep' }));
+    expect(list().getByRole('button', { name: 'Apply layout Prep' })).toBeInTheDocument();
+    await userEvent.click(list().getByRole('button', { name: 'Delete' }));
     expect(list().queryByRole('button', { name: 'Apply layout Prep' })).not.toBeInTheDocument();
     await userEvent.keyboard('{Control>}1{/Control}');
     expect(useShellStore.getState().presets[0]!.name).toBe('Table');

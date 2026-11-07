@@ -125,7 +125,7 @@ function ScenePicker({
         trigger={
           <button
             type="button"
-            className="btn small scene-pick"
+            className="btn scene-pick"
             aria-haspopup="listbox"
             aria-expanded={open}
             title="Jump to a scene you have set up"
@@ -133,13 +133,13 @@ function ScenePicker({
           >
             {shown ? (
               <>
-                <Icon name={kindIcon(shown)} size={15} />
+                <Icon name={kindIcon(shown)} />
                 <strong data-testid="tv-title">{shown.title}</strong>
               </>
             ) : (
               <span className="muted">Pick a scene</span>
             )}
-            <Icon name="down" size={12} />
+            <Icon name="down" />
           </button>
         }
       >
@@ -187,7 +187,7 @@ function ScenePicker({
           disabled={!previous || !shown}
           onClick={() => previous && go(previous)}
         >
-          <Icon name="up" size={15} />
+          <Icon name="up" />
         </button>
         <button
           type="button"
@@ -197,7 +197,7 @@ function ScenePicker({
           disabled={!next || !shown}
           onClick={() => next && go(next)}
         >
-          <Icon name="down" size={15} />
+          <Icon name="down" />
         </button>
       </span>
     </span>
@@ -224,7 +224,7 @@ function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean })
     <>
       <button
         type="button"
-        className={`btn small tv-power${playerOpen ? ' tally' : ''}`}
+        className={`btn tv-power${playerOpen ? ' tally' : ''}`}
         aria-pressed={playerOpen}
         title={
           playerOpen
@@ -239,7 +239,7 @@ function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean })
       <span className="row tv-show" role="group" aria-label="Show on the TV">
         <button
           type="button"
-          className="btn small primary"
+          className="btn primary"
           disabled={!canSend || isLive}
           title={canSend ? 'Put the selected scene on the TV' : 'Select a scene first'}
           onClick={() => shown && send(shown)}
@@ -248,7 +248,7 @@ function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean })
         </button>
         <button
           type="button"
-          className={`btn small${live.blackout && live.scene ? ' primary' : ''}`}
+          className={`btn${live.blackout && live.scene ? ' primary' : ''}`}
           aria-label="Blackout the TV"
           aria-pressed={live.blackout && !!live.scene}
           disabled={!live.scene}
@@ -264,7 +264,7 @@ function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean })
         {live.breakScreen ? (
           <button
             type="button"
-            className="btn small primary"
+            className="btn primary"
             title="Take the break screen down"
             onClick={presenter.clearBreak}
           >
@@ -279,7 +279,7 @@ function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean })
             trigger={
               <button
                 type="button"
-                className={`btn small${pop === 'break' ? ' on' : ''}`}
+                className={`btn${pop === 'break' ? ' on' : ''}`}
                 aria-haspopup="dialog"
                 aria-expanded={pop === 'break'}
                 title="Show a break screen with a countdown"
@@ -313,7 +313,7 @@ function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean })
             </div>
             <button
               type="button"
-              className="btn small primary"
+              className="btn primary"
               onClick={() => {
                 presenter.showBreak(
                   breakTitle.trim() || 'Break',
@@ -338,7 +338,7 @@ function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean })
           disabled={presenter.history.length === 0}
           onClick={presenter.undo}
         >
-          <Icon name="undo" size={15} />
+          <Icon name="undo" />
         </button>
         <MapPop
           open={pop === 'overlays'}
@@ -355,7 +355,7 @@ function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean })
               title={`Overlays on the TV (${overlayCount} on)`}
               onClick={() => togglePop('overlays')}
             >
-              <Icon name="layers" size={15} />
+              <Icon name="layers" />
             </button>
           }
         >
@@ -419,7 +419,7 @@ function EmptyState({ onOpenScenes }: { onOpenScenes(): void }) {
         <button type="button" className="btn" onClick={() => void createScene('blankGrid', '')}>
           New blank grid
         </button>
-        <button type="button" className="btn small" onClick={onOpenScenes}>
+        <button type="button" className="btn" onClick={onOpenScenes}>
           Open Scenes
         </button>
       </div>

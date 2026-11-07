@@ -76,7 +76,7 @@ describe('EncountersPage', () => {
     expect(screen.getAllByTestId('encounter-row')).toHaveLength(2);
     // One fight at a time: the others wait, and the running one cannot be removed.
     expect(screen.getByRole('button', { name: 'Start combat: Crypt guards' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Remove Bridge ambush' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete Bridge ambush' })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Return to fight: Bridge ambush' }));
     expect(screen.getByRole('button', { name: 'End combat' })).toBeInTheDocument();
@@ -126,6 +126,6 @@ describe('EncountersPage: named NPCs (ADR 0012)', () => {
     const rows = screen.getAllByTestId('template-row');
     expect(rows[0]).toHaveTextContent('Bandit');
     expect(rows[1]).toHaveTextContent('NPC');
-    expect(screen.getByRole('button', { name: '+ Bandit' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Bandit' })).toBeInTheDocument();
   });
 });

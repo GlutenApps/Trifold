@@ -21,6 +21,7 @@ import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useIconStore } from '../../stores/iconStore';
 import { useShellStore } from '../../stores/shellStore';
+import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
 import { GridLines } from './MapLayer';
 import { MapPop } from './MapPop';
@@ -133,6 +134,8 @@ export function MapEditor({
   } | null>(null);
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState<CompendiumRow[]>([]);
+  /** The background whose delete waits on the inline confirm. */
+  const [confirmBg, setConfirmBg] = useState<string | null>(null);
   const [pop, setPop] = useState<Pop | null>(null);
   const drag = useRef<{ tokenId: string; dx: number; dy: number } | null>(null);
   const pan = useRef<{ startX: number; startY: number; camX: number; camY: number } | null>(null);
@@ -694,7 +697,7 @@ export function MapEditor({
             closePop();
           }}
         >
-          <Icon name="hand" size={16} />
+          <Icon name="hand" />
         </button>
 
         <MapPop
@@ -712,7 +715,7 @@ export function MapEditor({
               title="Grid: align it to the map, cell size, colour"
               onClick={() => togglePop('grid')}
             >
-              <Icon name="grid" size={16} />
+              <Icon name="grid" />
             </button>
           }
         >
@@ -720,7 +723,7 @@ export function MapEditor({
           <div className="map-align-row">
             <button
               type="button"
-              className="btn small"
+              className="btn"
               title="Click two opposite corners of a square block of cells on the map. A bigger block (10×10 or more) aligns a printed grid far more accurately than one cell."
               onClick={() => {
                 setAlignFirst(null);
@@ -873,7 +876,7 @@ export function MapEditor({
                 title="Backgrounds: switch the map's art (day, night…) and keep tokens and grid"
                 onClick={() => togglePop('backgrounds')}
               >
-                <Icon name="image" size={16} />
+                <Icon name="image" />
               </button>
             }
           >
@@ -895,34 +898,49 @@ export function MapEditor({
                       value={b.name}
                       onChange={(e) => commit(renameBackground(scene, b.id, e.target.value))}
                     />
-                    <button
-                      type="button"
-                      className="btn tiny"
-                      disabled={showing}
-                      aria-label={`${showing ? 'Showing' : 'Show'} ${b.name}`}
-                      onClick={() => commit(showBackground(scene, b.id))}
-                    >
-                      {showing ? 'Showing' : 'Show'}
-                    </button>
-                    <button
-                      type="button"
-                      className="chrome-btn xs"
-                      aria-label={`Replace ${b.name} image`}
-                      title="Replace image…: pick a new file, keep the name"
-                      onClick={() => void replaceBackgroundFile(b.id)}
-                    >
-                      <Icon name="folder" size={12} />
-                    </button>
-                    <button
-                      type="button"
-                      className="chrome-btn xs danger"
-                      aria-label={`Remove ${b.name}`}
-                      title="Remove this background (the image stays in the campaign folder)"
-                      disabled={backgrounds.length < 2}
-                      onClick={() => commit(removeBackground(scene, b.id))}
-                    >
-                      <Icon name="trash" size={12} />
-                    </button>
+                    {confirmBg === b.id ? (
+                      <InlineConfirm
+                        name={b.name}
+                        onConfirm={() => {
+                          setConfirmBg(null);
+                          commit(removeBackground(scene, b.id));
+                        }}
+                        onKeep={() => setConfirmBg(null)}
+                      />
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className={`chrome-btn xs${showing ? ' on' : ''}`}
+                          disabled={showing}
+                          aria-pressed={showing}
+                          aria-label={`${showing ? 'Showing' : 'Show'} ${b.name}`}
+                          title={showing ? 'Showing on the map' : 'Show this background'}
+                          onClick={() => commit(showBackground(scene, b.id))}
+                        >
+                          <Icon name="eye" />
+                        </button>
+                        <button
+                          type="button"
+                          className="chrome-btn xs"
+                          aria-label={`Replace ${b.name} image`}
+                          title="Replace image…: pick a new file, keep the name"
+                          onClick={() => void replaceBackgroundFile(b.id)}
+                        >
+                          <Icon name="folder" />
+                        </button>
+                        <button
+                          type="button"
+                          className="chrome-btn xs danger"
+                          aria-label={`Delete ${b.name}`}
+                          title="Delete this background (the image file stays in the campaign folder)"
+                          disabled={backgrounds.length < 2}
+                          onClick={() => setConfirmBg(b.id)}
+                        >
+                          <Icon name="trash" />
+                        </button>
+                      </>
+                    )}
                   </li>
                 );
               })}
@@ -933,7 +951,7 @@ export function MapEditor({
                   Some art has a different shape; check the grid after switching.
                 </p>
               )}
-            <button type="button" className="btn small" onClick={() => void addBackgroundFile()}>
+            <button type="button" className="btn" onClick={() => void addBackgroundFile()}>
               Add background…
             </button>
             <p className="muted small">Tokens and grid stay put; the TV crossfades.</p>
@@ -955,12 +973,12 @@ export function MapEditor({
               title="Player camera: what the TV shows (the dashed box)"
               onClick={() => togglePop('camera')}
             >
-              <Icon name="camera" size={16} />
+              <Icon name="camera" />
             </button>
           }
         >
           <h3>Player camera</h3>
-          <div className="map-pop-choices">
+          <div className="seg" role="group" aria-label="Camera mode">
             {(
               [
                 ['fitMap', 'Fit map'],
@@ -1005,14 +1023,14 @@ export function MapEditor({
               title="Add player characters: the whole party or one at a time"
               onClick={() => togglePop('party')}
             >
-              <Icon name="party" size={16} />
+              <Icon name="party" />
             </button>
           }
         >
           <h3>Player characters</h3>
           <button
             type="button"
-            className="btn small primary"
+            className="btn primary"
             disabled={pcs.length === 0}
             title="Click the map to drop the party there"
             onClick={() => beginPlacing('party')}
@@ -1032,11 +1050,12 @@ export function MapEditor({
                     </span>
                     <button
                       type="button"
-                      className="btn tiny"
+                      className="chrome-btn xs"
                       aria-label={`${verb} ${pc.name}`}
+                      title={verb === 'Move' ? 'Move: click the map' : 'Place: click the map'}
                       onClick={() => beginPlacing('place', { kind: 'pc', pc })}
                     >
-                      {verb}
+                      <Icon name={verb === 'Move' ? 'hand' : 'plus'} />
                     </button>
                   </li>
                 );
@@ -1060,7 +1079,7 @@ export function MapEditor({
               title="Add a creature or a marker token"
               onClick={() => togglePop('creature')}
             >
-              <Icon name="paw" size={16} />
+              <Icon name="paw" />
             </button>
           }
         >
@@ -1083,11 +1102,12 @@ export function MapEditor({
                   </span>
                   <button
                     type="button"
-                    className="btn tiny"
+                    className="chrome-btn xs"
                     aria-label={`Place ${row.displayName}`}
+                    title="Place: click the map"
                     onClick={() => beginPlacing('place', { kind: 'creature', row })}
                   >
-                    Place
+                    <Icon name="plus" />
                   </button>
                 </li>
               ))}
@@ -1095,7 +1115,7 @@ export function MapEditor({
           )}
           <button
             type="button"
-            className="btn small"
+            className="btn"
             title="A plain disc for objects, traps and notes"
             onClick={() => beginPlacing('place', { kind: 'marker' })}
           >
@@ -1323,7 +1343,7 @@ export function MapEditor({
       <div className="map-actions">
         <button
           type="button"
-          className="btn small primary"
+          className="btn primary"
           onClick={() => void startCombat()}
           disabled={!linkedEncounter && scene.tokens.every((t) => t.kind !== 'creature')}
         >
@@ -1343,7 +1363,7 @@ export function MapEditor({
           trigger={
             <button
               type="button"
-              className="btn small"
+              className="btn"
               aria-haspopup="dialog"
               aria-expanded={pop === 'encounter'}
               disabled={!!combatEncounterId}
@@ -1374,11 +1394,12 @@ export function MapEditor({
                 </span>
                 <button
                   type="button"
-                  className="btn tiny"
+                  className="chrome-btn xs"
                   aria-label={`Place ${e.name}`}
+                  title="Place it on the map, hidden from the players"
                   onClick={() => void placeEncounter(e)}
                 >
-                  Place
+                  <Icon name="plus" />
                 </button>
               </li>
             ))}
@@ -1386,7 +1407,7 @@ export function MapEditor({
         </MapPop>
         <button
           type="button"
-          className="btn small"
+          className="btn"
           disabled={!scene.tokens.some((t) => t.kind === 'pc')}
           title="Take every player character token off this map"
           onClick={() => {
@@ -1399,7 +1420,7 @@ export function MapEditor({
         {hiddenCreatures.length > 0 && (
           <button
             type="button"
-            className="btn small"
+            className="btn"
             title="Show every hidden creature token to the players"
             onClick={() => {
               patch({
@@ -1422,7 +1443,7 @@ export function MapEditor({
         {linkedEncounter && (
           <button
             type="button"
-            className="btn small"
+            className="btn"
             onClick={() => patch({ encounterId: undefined })}
             title="Forget the linked encounter so a new one is built from the tokens"
           >
@@ -1437,7 +1458,7 @@ export function MapEditor({
             <p className="muted small" role="status">
               {hint}
             </p>
-            <button type="button" className="btn tiny" onClick={cancelMode}>
+            <button type="button" className="btn small" onClick={cancelMode}>
               Cancel
             </button>
           </>
@@ -1497,7 +1518,7 @@ export function MapEditor({
                     patchToken(selectedToken.id, { nameMasked: !selectedToken.nameMasked })
                   }
                 >
-                  <Icon name={selectedToken.nameMasked ? 'mask' : 'maskOff'} size={15} />
+                  <Icon name={selectedToken.nameMasked ? 'mask' : 'maskOff'} />
                 </button>
               )}
               <button
@@ -1512,7 +1533,7 @@ export function MapEditor({
                 }
                 onClick={() => setTokenHidden(selectedToken, !selectedToken.hidden)}
               >
-                <Icon name={selectedToken.hidden ? 'eyeOff' : 'eye'} size={15} />
+                <Icon name={selectedToken.hidden ? 'eyeOff' : 'eye'} />
               </button>
               {selectedToken.kind !== 'marker' && (
                 <button
@@ -1523,7 +1544,7 @@ export function MapEditor({
                   title={selectedToken.dead ? 'Revive' : 'Mark dead'}
                   onClick={() => setTokenDead(selectedToken, !selectedToken.dead)}
                 >
-                  <Icon name={selectedToken.dead ? 'skull' : 'skullOff'} size={15} />
+                  <Icon name={selectedToken.dead ? 'skull' : 'skullOff'} />
                 </button>
               )}
               {inPlay &&
@@ -1539,7 +1560,7 @@ export function MapEditor({
                       title={`In the fight as ${fighter.name}. Unlink it`}
                       onClick={() => linkToken(fighter.id, null)}
                     >
-                      <Icon name="link" size={15} />
+                      <Icon name="link" />
                     </button>
                   ) : (
                     <button
@@ -1549,7 +1570,7 @@ export function MapEditor({
                       title="Link to a combatant in the fight, or add it as a newcomer"
                       onClick={() => linkSelected(selectedToken)}
                     >
-                      <Icon name="linkOff" size={15} />
+                      <Icon name="linkOff" />
                     </button>
                   );
                 })()}
@@ -1560,16 +1581,16 @@ export function MapEditor({
                 title="Set art…"
                 onClick={() => void setArt(selectedToken.id)}
               >
-                <Icon name="image" size={15} />
+                <Icon name="image" />
               </button>
               <button
                 type="button"
-                className="chrome-btn danger"
+                className="chrome-btn"
                 aria-label="Remove token"
-                title="Remove token (Delete)"
+                title="Remove token from the map (Delete)"
                 onClick={() => removeToken(selectedToken.id)}
               >
-                <Icon name="trash" size={15} />
+                <Icon name="close" />
               </button>
             </span>
             {inPlay && fighterByToken.has(selectedToken.id) && (
@@ -1584,7 +1605,7 @@ export function MapEditor({
                   <button
                     key={c.id}
                     type="button"
-                    className="btn tiny"
+                    className="btn small"
                     onClick={() => {
                       linkToken(c.id, selectedToken.id);
                       setFighterChoices(null);
@@ -1595,7 +1616,7 @@ export function MapEditor({
                 ))}
                 <button
                   type="button"
-                  className="btn tiny"
+                  className="btn small"
                   onClick={() => {
                     void addFromToken(selectedToken);
                     setFighterChoices(null);
@@ -1603,7 +1624,7 @@ export function MapEditor({
                 >
                   Newcomer
                 </button>
-                <button type="button" className="btn tiny" onClick={() => setFighterChoices(null)}>
+                <button type="button" className="btn small" onClick={() => setFighterChoices(null)}>
                   Cancel
                 </button>
               </span>

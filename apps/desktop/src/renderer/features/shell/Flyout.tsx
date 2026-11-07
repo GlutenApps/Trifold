@@ -53,7 +53,7 @@ export function Flyout() {
           aria-label="Close flyout"
           onClick={closeFlyout}
         >
-          <Icon name="close" size={13} />
+          <Icon name="close" />
         </button>
       </header>
       <div className="fly-body">

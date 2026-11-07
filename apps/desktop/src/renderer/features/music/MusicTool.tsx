@@ -8,6 +8,7 @@ import { ScanStatus } from './MusicFolders';
 import { PhoneAudio } from './PhoneAudio';
 import { SUGGESTED_TAGS, displayTags, withTags, withoutTag } from './tags';
 import { Icon } from '../shell/icons';
+import { InlineConfirm } from '../shell/InlineConfirm';
 
 const TAG_LIST_ID = 'music-tag-suggestions';
 
@@ -34,7 +35,7 @@ function TagEditor({ track }: { track: TrackView }) {
             title={`Remove tag ${tag}`}
             aria-label={`Remove tag ${tag}`}
           >
-            <Icon name="close" size={11} />
+            <Icon name="close" size={12} />
           </button>
         </span>
       ))}
@@ -81,7 +82,7 @@ function TrackPlaylists({ track, playlists }: { track: TrackView; playlists: Pla
             title={`Remove from ${p.name}`}
             aria-label={`Remove from ${p.name}`}
           >
-            <Icon name="close" size={11} />
+            <Icon name="close" size={12} />
           </button>
         </span>
       ))}
@@ -92,7 +93,7 @@ function TrackPlaylists({ track, playlists }: { track: TrackView; playlists: Pla
           value=""
           onChange={(e) => e.target.value && void addToPlaylist(e.target.value, track.id)}
         >
-          <option value="">{member.length ? '+ playlist' : 'Add to playlist…'}</option>
+          <option value="">{member.length ? 'Add to…' : 'Add to playlist…'}</option>
           {others.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -124,7 +125,7 @@ function TrackRow({
           title="Play now"
           aria-label="Play now"
         >
-          <Icon name="play" size={14} />
+          <Icon name="play" />
         </button>
       </td>
       <td className="tt-title">
@@ -165,6 +166,7 @@ function PlaylistItem({
   const playTrack = useMusicStore((s) => s.playTrack);
   const live = useMusicStore((s) => s.playlistId === playlist.id && s.playing);
   const defaultFade = useMusicStore((s) => s.settings.crossfadeSec);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const tracks = playlist.trackIds
     .map((id) => library?.tracks.find((t) => t.id === id))
     .filter((t): t is TrackView => Boolean(t));
@@ -211,15 +213,23 @@ function PlaylistItem({
               value={playlist.name}
               onChange={(e) => patch({ name: e.target.value })}
             />
-            <button
-              type="button"
-              className="chrome-btn danger"
-              onClick={() => void removePlaylist(playlist.id)}
-              title="Delete playlist"
-              aria-label={`Delete playlist ${playlist.name}`}
-            >
-              <Icon name="trash" />
-            </button>
+            {confirmDelete ? (
+              <InlineConfirm
+                name={playlist.name}
+                onConfirm={() => void removePlaylist(playlist.id)}
+                onKeep={() => setConfirmDelete(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                className="chrome-btn danger"
+                onClick={() => setConfirmDelete(true)}
+                title="Delete playlist"
+                aria-label={`Delete playlist ${playlist.name}`}
+              >
+                <Icon name="trash" />
+              </button>
+            )}
           </div>
           <div className="row">
             <label className="field inline">
@@ -280,9 +290,9 @@ function PlaylistItem({
                       onClick={() => move(i, -1)}
                       disabled={i === 0}
                       title="Move up"
-                      aria-label="Move up"
+                      aria-label={`Move ${t.title} up`}
                     >
-                      <Icon name="up" size={14} />
+                      <Icon name="up" />
                     </button>
                     <button
                       type="button"
@@ -290,9 +300,9 @@ function PlaylistItem({
                       onClick={() => move(i, 1)}
                       disabled={i === tracks.length - 1}
                       title="Move down"
-                      aria-label="Move down"
+                      aria-label={`Move ${t.title} down`}
                     >
-                      <Icon name="down" size={14} />
+                      <Icon name="down" />
                     </button>
                     <button
                       type="button"
@@ -301,9 +311,9 @@ function PlaylistItem({
                         patch({ trackIds: playlist.trackIds.filter((_, j) => j !== i) })
                       }
                       title="Remove from playlist"
-                      aria-label="Remove from playlist"
+                      aria-label={`Remove ${t.title} from playlist`}
                     >
-                      <Icon name="close" size={14} />
+                      <Icon name="close" />
                     </button>
                   </span>
                 </li>
@@ -432,7 +442,7 @@ export function MusicTool() {
       {error && (
         <div className="banner error" role="alert">
           <span>{error}</span>
-          <button type="button" className="btn" onClick={clearError}>
+          <button type="button" className="btn small" onClick={clearError}>
             Dismiss
           </button>
         </div>
@@ -452,7 +462,7 @@ export function MusicTool() {
             aria-label={label}
             onClick={() => void setSource(id)}
           >
-            <Icon name={icon} size={16} />
+            <Icon name={icon} />
             <span className="audio-source-label">{label}</span>
           </button>
         ))}

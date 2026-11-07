@@ -74,14 +74,6 @@
   max-width: 100%;
 }
 
-/* Density: the feature stylesheets predate the panel shell; these tighten them uniformly. */
-.btn.tiny {
-  min-height: 22px;
-  padding: 0 5px;
-  font-size: 11px;
-  border-radius: 4px;
-}
-
 .mt {
   margin-top: 12px;
 }
@@ -146,15 +138,17 @@
   gap: 6px;
 }
 
+/* Reorder sits side by side at row tier and shows on hover, focus or selection. */
 .combatant-row .reorder {
   display: inline-flex;
-  flex-direction: column;
-  gap: 0;
+  gap: 2px;
+  visibility: hidden;
 }
 
-.combatant-row .reorder .chrome-btn.xs {
-  height: 16px;
-  width: 20px;
+.combatant-row:hover .reorder,
+.combatant-row:focus-within .reorder,
+.combatant-row.selected .reorder {
+  visibility: visible;
 }
 
 .combatant-row .init input[type='number'] {
@@ -198,7 +192,7 @@ textarea {
   gap: 2px;
   padding: 2px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-control);
   align-self: start;
 }
 
@@ -230,6 +224,11 @@ textarea {
 .row:hover .row-actions,
 .row:focus-within .row-actions,
 .pc-row:hover .row-actions,
+.layout-row:hover .row-actions,
+.layout-row:focus-within .row-actions,
+.source-row:hover .row-actions,
+.backup-row:hover .row-actions,
+.backup-row:focus-within .row-actions,
 .row-actions.pinned {
   visibility: visible;
 }

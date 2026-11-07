@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CampaignSummary } from '@trifold/api';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { deleteCampaign, switchCampaign } from '../shell/campaignFlow';
+import { Icon } from '../shell/icons';
 
 /** Inline confirm on a campaign card: the DM types DELETE before the folder goes. */
 function DeleteCampaignConfirm({
@@ -37,10 +38,10 @@ function DeleteCampaignConfirm({
             if (e.key === 'Escape') onCancel();
           }}
         />
-        <button type="submit" className="btn small danger" disabled={!ready}>
+        <button type="submit" className="btn danger" disabled={!ready}>
           Delete campaign
         </button>
-        <button type="button" className="btn small" onClick={onCancel}>
+        <button type="button" className="btn" onClick={onCancel}>
           Keep
         </button>
       </div>
@@ -137,7 +138,7 @@ export function CampaignsPage() {
                 <div className="row">
                   <button
                     type="button"
-                    className="btn small primary"
+                    className="btn primary"
                     onClick={() => switchCampaign(c.id)}
                   >
                     {isCurrent ? 'Back to console' : 'Open'}
@@ -145,7 +146,7 @@ export function CampaignsPage() {
                   {isCurrent && (
                     <button
                       type="button"
-                      className="btn small"
+                      className="btn"
                       disabled={importing}
                       onClick={() => void importXml('merge')}
                     >
@@ -156,11 +157,12 @@ export function CampaignsPage() {
                   {deleting !== c.id && (
                     <button
                       type="button"
-                      className="btn small"
+                      className="chrome-btn danger"
+                      title="Delete campaign…"
                       aria-label={`Delete ${c.name}…`}
                       onClick={() => setDeleting(c.id)}
                     >
-                      Delete…
+                      <Icon name="trash" />
                     </button>
                   )}
                 </div>

@@ -148,7 +148,7 @@ export function TopBar() {
         <>
           <button
             type="button"
-            className={`btn small ghost${pop === 'layouts' ? ' on' : ''}`}
+            className={`btn ghost${pop === 'layouts' ? ' on' : ''}`}
             aria-label="Layouts"
             aria-haspopup="dialog"
             aria-expanded={pop === 'layouts'}
@@ -156,7 +156,7 @@ export function TopBar() {
             title="Layouts"
             onClick={() => togglePop('layouts')}
           >
-            <Icon name="layout" size={14} />
+            <Icon name="layout" />
             <span>{preset ? preset.name : 'No layout'}</span>
             {preset && currentIndex < 9 && (
               <kbd className="kbd">{hk(`Ctrl+${currentIndex + 1}`)}</kbd>
@@ -164,14 +164,14 @@ export function TopBar() {
           </button>
           <button
             type="button"
-            className={`btn small ghost${pop === 'hotkeys' ? ' on' : ''}`}
+            className={`btn ghost${pop === 'hotkeys' ? ' on' : ''}`}
             aria-haspopup="dialog"
             aria-expanded={pop === 'hotkeys'}
             data-pop="hotkeys"
             title={`Hotkeys (${hk('Ctrl+/')})`}
             onClick={() => togglePop('hotkeys')}
           >
-            <Icon name="keys" size={14} />
+            <Icon name="keys" />
             <span>Hotkeys</span>
           </button>
           <button
@@ -181,13 +181,13 @@ export function TopBar() {
             title={`Settings, in the Library (${hk('Ctrl+,')})`}
             onClick={() => enterLibrary('settings')}
           >
-            <Icon name="settings" size={16} />
+            <Icon name="settings" />
           </button>
         </>
       ) : (
         current &&
         campaignSlug && (
-          <button type="button" className="btn small" onClick={() => enterConsole(campaignSlug)}>
+          <button type="button" className="btn" onClick={() => enterConsole(campaignSlug)}>
             Back to {current.campaign.name} <span className="pip" />
           </button>
         )

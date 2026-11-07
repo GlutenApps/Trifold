@@ -109,7 +109,7 @@ export function NoteEditor({
       onMouseDown={(e) => e.preventDefault()}
       onClick={run}
     >
-      {icon ? <Icon name={icon} size={14} /> : <span className="toolbar-text">{text}</span>}
+      {icon ? <Icon name={icon} /> : <span className="toolbar-text">{text}</span>}
     </button>
   );
 

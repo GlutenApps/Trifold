@@ -1,3 +1,4 @@
+import { InlineConfirm } from './InlineConfirm';
 import { useState } from 'react';
 import { describeLayout, matchesPreset } from '../../stores/shellLayout';
 import { useShellStore } from '../../stores/shellStore';
@@ -21,6 +22,7 @@ export function LayoutsTool() {
   const restore = useShellStore((s) => s.restoreStarterLayouts);
   const [name, setName] = useState('');
   const [renaming, setRenaming] = useState<{ index: number; value: string } | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   return (
     <div className="layouts">
@@ -40,7 +42,7 @@ export function LayoutsTool() {
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <button type="submit" className="btn small primary" disabled={!name.trim()}>
+        <button type="submit" className="btn primary" disabled={!name.trim()}>
           Save current as new
         </button>
       </form>
@@ -75,10 +77,10 @@ export function LayoutsTool() {
                       if (e.key === 'Escape') setRenaming(null);
                     }}
                   />
-                  <button type="submit" className="btn small">
+                  <button type="submit" className="btn">
                     Rename
                   </button>
-                  <button type="button" className="btn small" onClick={() => setRenaming(null)}>
+                  <button type="button" className="btn" onClick={() => setRenaming(null)}>
                     Cancel
                   </button>
                 </form>
@@ -97,58 +99,73 @@ export function LayoutsTool() {
                   <span className="muted small">{describeLayout(preset.layout, webTabs)}</span>
                 </button>
               )}
-              <span className="layout-actions">
-                <button
-                  type="button"
-                  className="btn small"
-                  title="Overwrite this layout with the screen as it is now"
-                  aria-label={`Overwrite layout ${preset.name}`}
-                  disabled={current}
-                  onClick={() => updatePreset(index)}
-                >
-                  Overwrite
-                </button>
-                <button
-                  type="button"
-                  className="btn small"
-                  aria-label={`Rename layout ${preset.name}`}
-                  onClick={() => setRenaming({ index, value: preset.name })}
-                >
-                  Rename
-                </button>
-                <button
-                  type="button"
-                  className="chrome-btn xs"
-                  aria-label={`Move layout ${preset.name} up`}
-                  disabled={index === 0}
-                  onClick={() => movePreset(index, -1)}
-                >
-                  <Icon name="up" size={13} />
-                </button>
-                <button
-                  type="button"
-                  className="chrome-btn xs"
-                  aria-label={`Move layout ${preset.name} down`}
-                  disabled={index === presets.length - 1}
-                  onClick={() => movePreset(index, 1)}
-                >
-                  <Icon name="down" size={13} />
-                </button>
-                <button
-                  type="button"
-                  className="chrome-btn xs danger"
-                  aria-label={`Delete layout ${preset.name}`}
-                  onClick={() => deletePreset(index)}
-                >
-                  <Icon name="close" size={13} />
-                </button>
-              </span>
+              {deleting === index ? (
+                <InlineConfirm
+                  name={preset.name}
+                  onConfirm={() => {
+                    deletePreset(index);
+                    setDeleting(null);
+                  }}
+                  onKeep={() => setDeleting(null)}
+                />
+              ) : (
+                <span className="row-actions">
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    title="Overwrite with the screen as it is now"
+                    aria-label={`Overwrite layout ${preset.name}`}
+                    disabled={current}
+                    onClick={() => updatePreset(index)}
+                  >
+                    <Icon name="refresh" />
+                  </button>
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    title="Rename"
+                    aria-label={`Rename layout ${preset.name}`}
+                    onClick={() => setRenaming({ index, value: preset.name })}
+                  >
+                    <Icon name="pencil" />
+                  </button>
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    title="Move up"
+                    aria-label={`Move layout ${preset.name} up`}
+                    disabled={index === 0}
+                    onClick={() => movePreset(index, -1)}
+                  >
+                    <Icon name="up" />
+                  </button>
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    title="Move down"
+                    aria-label={`Move layout ${preset.name} down`}
+                    disabled={index === presets.length - 1}
+                    onClick={() => movePreset(index, 1)}
+                  >
+                    <Icon name="down" />
+                  </button>
+                  <button
+                    type="button"
+                    className="chrome-btn xs danger"
+                    title="Delete"
+                    aria-label={`Delete layout ${preset.name}`}
+                    onClick={() => setDeleting(index)}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </span>
+              )}
             </li>
           );
         })}
       </ol>
       <div className="row">
-        <button type="button" className="btn small" onClick={restore}>
+        <button type="button" className="btn" onClick={restore}>
           Bring back the starter layouts
         </button>
         <span className="muted small">Adds Prep, Table and Combat again if you deleted them.</span>

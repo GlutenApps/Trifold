@@ -100,7 +100,11 @@ describe('web tabs', () => {
     expect(strip(1).getByRole('tab', { name: 'example.com' })).toBeInTheDocument();
 
     await user.click(bar('example.com').getByRole('button', { name: 'Remove web tab' }));
-    await user.click(bar('example.com').getByRole('button', { name: 'Confirm remove web tab' }));
+    expect(bar('example.com').getByText('Remove example.com?')).toBeInTheDocument();
+    await user.click(bar('example.com').getByRole('button', { name: 'Keep' }));
+    expect(bar('example.com').queryByRole('button', { name: 'Remove' })).toBeNull();
+    await user.click(bar('example.com').getByRole('button', { name: 'Remove web tab' }));
+    await user.click(bar('example.com').getByRole('button', { name: 'Remove' }));
     expect(useShellStore.getState().webTabs).toHaveLength(0);
     expect(strip(1).queryByRole('tab', { name: 'example.com' })).toBeNull();
   });

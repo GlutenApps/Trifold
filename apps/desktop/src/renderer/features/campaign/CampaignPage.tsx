@@ -3,6 +3,7 @@ import type { PCCard } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
+import { InlineConfirm } from '../shell/InlineConfirm';
 
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
@@ -179,6 +180,7 @@ function PartyTab() {
   const removePc = useCampaignStore((s) => s.removePc);
   const [quick, setQuick] = useState('');
   const [editing, setEditing] = useState<PCCard | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   if (!current) return null;
   const wounded = current.pcs.filter(
     (pc) => (pc.currentHp !== undefined && pc.currentHp < pc.maxHp) || (pc.tempHp ?? 0) > 0,
@@ -227,26 +229,37 @@ function PartyTab() {
               {pc.initiativeBonus} · PP {pc.passives.perception}
             </span>
             <span className="spacer" />
-            <span className="row-actions">
-              <button
-                type="button"
-                className="chrome-btn xs"
-                aria-label={`Edit ${pc.name}`}
-                title="Edit"
-                onClick={() => setEditing(pc)}
-              >
-                <Icon name="pencil" size={13} />
-              </button>
-              <button
-                type="button"
-                className="chrome-btn xs danger"
-                aria-label={`Remove ${pc.name}`}
-                title="Remove"
-                onClick={() => void removePc(pc.id)}
-              >
-                <Icon name="trash" size={13} />
-              </button>
-            </span>
+            {confirmId === pc.id ? (
+              <InlineConfirm
+                name={pc.name}
+                onConfirm={() => {
+                  setConfirmId(null);
+                  void removePc(pc.id);
+                }}
+                onKeep={() => setConfirmId(null)}
+              />
+            ) : (
+              <span className="row-actions">
+                <button
+                  type="button"
+                  className="chrome-btn xs"
+                  aria-label={`Edit ${pc.name}`}
+                  title="Edit"
+                  onClick={() => setEditing(pc)}
+                >
+                  <Icon name="pencil" />
+                </button>
+                <button
+                  type="button"
+                  className="chrome-btn xs danger"
+                  aria-label={`Delete ${pc.name}`}
+                  title="Delete"
+                  onClick={() => setConfirmId(pc.id)}
+                >
+                  <Icon name="trash" />
+                </button>
+              </span>
+            )}
           </div>
         ),
       )}
@@ -294,6 +307,7 @@ function NpcsTab() {
   const current = useCampaignStore((s) => s.current);
   const removeNpc = useCampaignStore((s) => s.removeNpc);
   const saveNpc = useCampaignStore((s) => s.saveNpc);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   if (!current) return null;
   return (
     <div className="card">
@@ -314,25 +328,45 @@ function NpcsTab() {
             )}
             {!n.isAlive && <span className="badge">dead</span>}
             <span className="spacer" />
-            {n.hp && (n.hp.current < n.hp.max || n.hp.temp > 0 || !n.isAlive) && (
-              <button
-                type="button"
-                className="btn tiny"
-                title="Back to full HP and alive"
-                onClick={() =>
-                  void saveNpc({
-                    ...n,
-                    hp: { current: n.hp!.max, max: n.hp!.max, temp: 0 },
-                    isAlive: true,
-                  })
-                }
-              >
-                Restore
-              </button>
+            {confirmId === n.id ? (
+              <InlineConfirm
+                name={n.name}
+                onConfirm={() => {
+                  setConfirmId(null);
+                  void removeNpc(n.id);
+                }}
+                onKeep={() => setConfirmId(null)}
+              />
+            ) : (
+              <span className="row-actions">
+                {n.hp && (n.hp.current < n.hp.max || n.hp.temp > 0 || !n.isAlive) && (
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-label={`Restore ${n.name}`}
+                    title="Restore: back to full HP and alive"
+                    onClick={() =>
+                      void saveNpc({
+                        ...n,
+                        hp: { current: n.hp!.max, max: n.hp!.max, temp: 0 },
+                        isAlive: true,
+                      })
+                    }
+                  >
+                    <Icon name="refresh" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="chrome-btn xs danger"
+                  aria-label={`Delete ${n.name}`}
+                  title="Delete"
+                  onClick={() => setConfirmId(n.id)}
+                >
+                  <Icon name="trash" />
+                </button>
+              </span>
             )}
-            <button type="button" className="btn tiny" onClick={() => void removeNpc(n.id)}>
-              Remove
-            </button>
           </div>
           {n.notes && <p className="muted">{n.notes}</p>}
         </div>
@@ -372,7 +406,7 @@ export function CampaignPage() {
       {error && (
         <div className="banner error" role="alert">
           <span>{error}</span>
-          <button type="button" className="btn" onClick={clearError}>
+          <button type="button" className="btn small" onClick={clearError}>
             Dismiss
           </button>
         </div>

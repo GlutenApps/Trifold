@@ -5,6 +5,7 @@ import { difficultyBand, partyBudget } from '@trifold/rules';
 import type { CombatantTemplate, Encounter, NPC } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
+import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
 import { CombatView } from './CombatView';
 import { retargetToNpc } from './templates';
@@ -266,15 +267,17 @@ function Builder({
               title="Make this a named NPC whose HP carries to the next fight"
               onClick={() => void trackAsNpc(t)}
             >
-              <Icon name="person" size={13} />
+              <Icon name="person" />
             </button>
           )}
           <button
             type="button"
-            className="btn"
+            className="chrome-btn xs"
+            aria-label={`Remove ${t.label || t.ref.name}`}
+            title="Remove from the encounter"
             onClick={() => set({ combatants: encounter.combatants.filter((x) => x.id !== t.id) })}
           >
-            Remove
+            <Icon name="close" />
           </button>
         </div>
       ))}
@@ -289,8 +292,15 @@ function Builder({
           Add all PCs
         </button>
         {pcs.map((p) => (
-          <button key={p.id} type="button" className="btn" onClick={() => addPcs([p.id])}>
-            + {p.name}
+          <button
+            key={p.id}
+            type="button"
+            className="btn"
+            aria-label={`Add ${p.name}`}
+            onClick={() => addPcs([p.id])}
+          >
+            <Icon name="plus" />
+            {p.name}
           </button>
         ))}
       </div>
@@ -302,10 +312,12 @@ function Builder({
               key={n.id}
               type="button"
               className="btn"
+              aria-label={`Add ${n.name}`}
               title={n.hp ? `HP ${n.hp.current}/${n.hp.max} from the last fight` : undefined}
               onClick={() => void addNpc(n)}
             >
-              + {n.name}
+              <Icon name="plus" />
+              {n.name}
             </button>
           ))}
         </div>
@@ -383,6 +395,8 @@ export function EncountersPage() {
   const finished = useCombatStore((s) => s.finished);
   const dismissFinished = useCombatStore((s) => s.dismissFinished);
   const [draft, setDraft] = useState<Encounter | null>(null);
+  /** The saved encounter whose delete is waiting on the inline confirm. */
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const saveTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -446,7 +460,7 @@ export function EncountersPage() {
               title="Dismiss"
               onClick={dismissFinished}
             >
-              <Icon name="close" size={13} />
+              <Icon name="close" />
             </button>
           </div>
           <p className="muted">
@@ -460,8 +474,14 @@ export function EncountersPage() {
       {draft ? (
         <>
           <div className="row">
-            <button type="button" className="btn" onClick={() => setDraft(null)}>
-              Back to list
+            <button
+              type="button"
+              className="chrome-btn"
+              aria-label="Back to list"
+              title="Back to list"
+              onClick={() => setDraft(null)}
+            >
+              <Icon name="left" />
             </button>
           </div>
           <Builder
@@ -499,73 +519,86 @@ export function EncountersPage() {
                   <span className="badge warn">combat in progress · round {e.state.round}</span>
                 )}
               </div>
-              <span className="encounter-row-actions">
-                <span className="row-actions pinned">
-                  {!e.state && (
+              {confirmDelete === e.id ? (
+                <span className="encounter-row-actions">
+                  <InlineConfirm
+                    name={e.name}
+                    onConfirm={() => {
+                      setConfirmDelete(null);
+                      void removeEncounter(e.id);
+                    }}
+                    onKeep={() => setConfirmDelete(null)}
+                  />
+                </span>
+              ) : (
+                <span className="encounter-row-actions">
+                  <span className="row-actions pinned">
+                    {!e.state && (
+                      <button
+                        type="button"
+                        className="chrome-btn xs"
+                        aria-label={`Edit ${e.name}`}
+                        title="Edit"
+                        onClick={() => setDraft(e)}
+                      >
+                        <Icon name="pencil" />
+                      </button>
+                    )}
+                    {e.id !== fightId && (
+                      <button
+                        type="button"
+                        className="chrome-btn xs danger"
+                        aria-label={`Delete ${e.name}`}
+                        title="Delete"
+                        onClick={() => setConfirmDelete(e.id)}
+                      >
+                        <Icon name="trash" />
+                      </button>
+                    )}
+                  </span>
+                  {e.id === fightId ? (
                     <button
                       type="button"
                       className="chrome-btn xs"
-                      aria-label={`Edit ${e.name}`}
-                      title="Edit"
-                      onClick={() => setDraft(e)}
+                      aria-label={`Return to fight: ${e.name}`}
+                      title="Return to fight"
+                      onClick={() => setBrowsing(false)}
                     >
-                      <Icon name="pencil" size={13} />
+                      <Icon name="play" />
                     </button>
-                  )}
-                  {e.id !== fightId && (
+                  ) : e.state ? (
                     <button
                       type="button"
-                      className="chrome-btn xs danger"
-                      aria-label={`Remove ${e.name}`}
-                      title="Remove"
-                      onClick={() => void removeEncounter(e.id)}
+                      className="chrome-btn xs"
+                      aria-label={`Resume combat: ${e.name}`}
+                      title={fightId ? 'End the current fight first' : 'Resume combat'}
+                      disabled={!!fightId}
+                      onClick={() => void resume(e)}
                     >
-                      <Icon name="close" size={13} />
+                      <Icon name="play" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-label={`Start combat: ${e.name}`}
+                      title={
+                        fightId
+                          ? 'End the current fight first'
+                          : e.combatants.length === 0
+                            ? 'Add combatants first'
+                            : 'Start combat'
+                      }
+                      disabled={e.combatants.length === 0 || !!fightId}
+                      onClick={() =>
+                        void begin(e, current.pcs, current.campaign.settings.initiativeMode)
+                      }
+                    >
+                      <Icon name="play" />
                     </button>
                   )}
                 </span>
-                {e.id === fightId ? (
-                  <button
-                    type="button"
-                    className="chrome-btn xs"
-                    aria-label={`Return to fight: ${e.name}`}
-                    title="Return to fight"
-                    onClick={() => setBrowsing(false)}
-                  >
-                    <Icon name="play" size={13} />
-                  </button>
-                ) : e.state ? (
-                  <button
-                    type="button"
-                    className="chrome-btn xs"
-                    aria-label={`Resume combat: ${e.name}`}
-                    title={fightId ? 'End the current fight first' : 'Resume combat'}
-                    disabled={!!fightId}
-                    onClick={() => void resume(e)}
-                  >
-                    <Icon name="play" size={13} />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="chrome-btn xs"
-                    aria-label={`Start combat: ${e.name}`}
-                    title={
-                      fightId
-                        ? 'End the current fight first'
-                        : e.combatants.length === 0
-                          ? 'Add combatants first'
-                          : 'Start combat'
-                    }
-                    disabled={e.combatants.length === 0 || !!fightId}
-                    onClick={() =>
-                      void begin(e, current.pcs, current.campaign.settings.initiativeMode)
-                    }
-                  >
-                    <Icon name="play" size={13} />
-                  </button>
-                )}
-              </span>
+              )}
             </div>
           ))}
         </div>

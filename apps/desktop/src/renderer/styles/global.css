@@ -48,6 +48,16 @@
   --font-ui: 'Outfit', 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', Consolas, ui-monospace, monospace;
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  /* Control scale (ADR 0013, docs/UI-GUIDELINES.md). Every button, icon button, input and
+     select on a line takes its height from one tier, so rows line up without local fixes.
+     Chrome bars set --control-h to the compact tier below; nothing else overrides it. */
+  --control-h: 30px;
+  --control-h-compact: 26px;
+  --control-h-row: 22px;
+  --radius-control: 6px;
+  --icon: 16px;
+  --icon-row: 14px;
+  --icon-text: 14px;
   font-family: var(--font-ui);
   font-size: 13px;
   line-height: 1.4;
@@ -152,15 +162,25 @@ h2 {
 }
 
 button.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 3px 10px;
+  border-radius: var(--radius-control);
+  padding: 0 10px;
   cursor: pointer;
   font: inherit;
   font-weight: 600;
-  min-height: 30px;
+  min-height: var(--control-h);
+}
+
+button.btn .icon {
+  width: var(--icon-text);
+  height: var(--icon-text);
+  flex-shrink: 0;
 }
 
 button.btn:hover:not(:disabled) {
@@ -213,24 +233,39 @@ button.btn[aria-pressed='true'] {
 }
 
 button.btn.small {
-  min-height: 26px;
-  padding: 2px 8px;
+  min-height: var(--control-h-compact);
+  padding: 0 8px;
   font-size: 12px;
 }
 
+input:not([type]),
 input[type='text'],
+input[type='search'],
 input[type='number'],
 select,
 textarea {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-control);
   padding: 4px 8px;
   font: inherit;
 }
 
+/* Single-line fields are exactly one control tall, so they line up with the buttons beside them. */
+input:not([type]),
+input[type='text'],
+input[type='search'],
+input[type='number'],
+select {
+  height: var(--control-h);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+input:not([type]):focus-visible,
 input[type='text']:focus-visible,
+input[type='search']:focus-visible,
 input[type='number']:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
@@ -245,6 +280,7 @@ input[type='text'] {
 
 input[type='number'] {
   font-family: var(--font-mono);
+  width: 90px;
 }
 
 label {
@@ -315,7 +351,7 @@ code {
   color: var(--danger);
 }
 
-.btn.danger:hover {
+.btn.danger:hover:not(:disabled) {
   background: var(--danger);
   color: #fff;
 }

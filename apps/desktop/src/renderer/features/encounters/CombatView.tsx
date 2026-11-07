@@ -121,14 +121,15 @@ function CombatantRow({
         {c.initiative === null && !c.isLair && (
           <button
             type="button"
-            className="btn tiny"
+            className="chrome-btn xs"
+            aria-label={`Roll initiative for ${c.name}`}
             title="Roll initiative"
             onClick={(e) => {
               e.stopPropagation();
               rollInit(c.id);
             }}
           >
-            roll
+            <Icon name="dice" />
           </button>
         )}
       </span>
@@ -172,7 +173,7 @@ function CombatantRow({
             move(c.id, -1);
           }}
         >
-          <Icon name="up" size={12} />
+          <Icon name="up" />
         </button>
         <button
           type="button"
@@ -184,7 +185,7 @@ function CombatantRow({
             move(c.id, 1);
           }}
         >
-          <Icon name="down" size={12} />
+          <Icon name="down" />
         </button>
       </span>
     </div>
@@ -304,7 +305,7 @@ function CombatantDrawer({
                 }
                 onClick={() => store.reveal(c.id, !c.revealed)}
               >
-                <Icon name={c.revealed ? 'maskOff' : 'mask'} size={15} />
+                <Icon name={c.revealed ? 'maskOff' : 'mask'} />
               </button>
             )}
             <button
@@ -319,7 +320,7 @@ function CombatantDrawer({
               }
               onClick={() => store.toggleHidden(c.id)}
             >
-              <Icon name={c.hidden ? 'eyeOff' : 'eye'} size={15} />
+              <Icon name={c.hidden ? 'eyeOff' : 'eye'} />
             </button>
             {!c.isLair && (
               <button
@@ -330,7 +331,7 @@ function CombatantDrawer({
                 title={c.dead ? 'Revive' : 'Mark dead'}
                 onClick={() => store.markDead(c.id, !c.dead)}
               >
-                <Icon name={c.dead ? 'skull' : 'skullOff'} size={15} />
+                <Icon name={c.dead ? 'skull' : 'skullOff'} />
               </button>
             )}
             {(c.ref.kind === 'record' || c.ref.kind === 'custom') && !c.isLair && (
@@ -341,7 +342,7 @@ function CombatantDrawer({
                 title="Make this a named NPC whose HP carries to the next fight"
                 onClick={() => void store.trackAsNpc(c.id)}
               >
-                <Icon name="person" size={15} />
+                <Icon name="person" />
               </button>
             )}
             {map && !c.isLair && (
@@ -357,17 +358,17 @@ function CombatantDrawer({
                 }
                 onClick={onMap ? () => store.linkToken(c.id, null) : placeOnMap}
               >
-                <Icon name={onMap ? 'link' : 'linkOff'} size={15} />
+                <Icon name={onMap ? 'link' : 'linkOff'} />
               </button>
             )}
             <button
               type="button"
-              className="chrome-btn danger"
-              aria-label="Remove"
+              className="chrome-btn"
+              aria-label={`Remove ${c.name}`}
               title="Remove from the fight"
               onClick={() => store.remove(c.id)}
             >
-              <Icon name="trash" size={15} />
+              <Icon name="close" />
             </button>
           </span>
         </div>
@@ -378,7 +379,7 @@ function CombatantDrawer({
               <button
                 key={t.id}
                 type="button"
-                className="btn tiny"
+                className="btn small"
                 onClick={() => {
                   store.linkToken(c.id, t.id);
                   setTokenChoices(null);
@@ -387,7 +388,7 @@ function CombatantDrawer({
                 {t.label}
               </button>
             ))}
-            <button type="button" className="btn tiny" onClick={() => setTokenChoices(null)}>
+            <button type="button" className="btn small" onClick={() => setTokenChoices(null)}>
               Cancel
             </button>
           </div>
@@ -423,19 +424,6 @@ function CombatantDrawer({
             </button>
             <button
               type="button"
-              className="chrome-btn"
-              disabled={!valid}
-              aria-label="Damage several"
-              title="Deal this damage to several combatants, full or half each"
-              onClick={() => {
-                onAssign(n, type);
-                setAmount('');
-              }}
-            >
-              <Icon name="fanout" size={15} />
-            </button>
-            <button
-              type="button"
               className="btn"
               disabled={!valid}
               onClick={() => {
@@ -456,6 +444,20 @@ function CombatantDrawer({
             >
               Temp HP
             </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={!valid}
+              aria-label="Damage several"
+              title="Deal this damage to several combatants, full or half each"
+              onClick={() => {
+                onAssign(n, type);
+                setAmount('');
+              }}
+            >
+              <Icon name="fanout" />
+              Several
+            </button>
             {c.deathSaves && (
               <button type="button" className="btn" onClick={() => store.deathSave(c.id)}>
                 Death save
@@ -470,12 +472,14 @@ function CombatantDrawer({
               <button
                 key={k.id}
                 type="button"
-                className="badge warn clickable"
+                className="badge warn clickable condition-chip"
+                aria-label={`Remove ${k.name}`}
                 title="Remove"
                 onClick={() => store.removeCondition(c.id, k.id)}
               >
                 {k.name}
-                {k.level ? ` ${k.level}` : ''} ×
+                {k.level ? ` ${k.level}` : ''}
+                <Icon name="close" size={12} />
               </button>
             ))}
           </div>
@@ -626,17 +630,21 @@ function CombatantDrawer({
                   {k.name} {k.current}/{k.max}
                   <button
                     type="button"
-                    className="btn tiny"
+                    className="chrome-btn xs"
+                    aria-label={`Use one ${k.name}`}
+                    title={`Use one ${k.name}`}
                     onClick={() => store.useCounter(c.id, k.id, -1)}
                   >
-                    −
+                    <Icon name="minus" />
                   </button>
                   <button
                     type="button"
-                    className="btn tiny"
+                    className="chrome-btn xs"
+                    aria-label={`Restore one ${k.name}`}
+                    title={`Restore one ${k.name}`}
                     onClick={() => store.useCounter(c.id, k.id, 1)}
                   >
-                    +
+                    <Icon name="plus" />
                   </button>
                 </span>
               ))}
@@ -646,10 +654,12 @@ function CombatantDrawer({
                 {r.available && (
                   <button
                     type="button"
-                    className="btn tiny"
+                    className="chrome-btn xs"
+                    aria-label={`Use ${r.featureName}`}
+                    title={`Use ${r.featureName} (it recharges on ${r.min}+)`}
                     onClick={() => store.spendRecharge(c.id, r.id)}
                   >
-                    use
+                    <Icon name="play" />
                   </button>
                 )}
               </span>
@@ -767,7 +777,7 @@ function DamagePopup({ request, queued }: { request: DamageRequest; queued: numb
           title="Dismiss (Esc)"
           onClick={request.dismiss}
         >
-          <Icon name="close" size={13} />
+          <Icon name="close" />
         </button>
       </div>
       {request.detail && <div className="muted small popup-detail">{request.detail}</div>}
@@ -803,14 +813,14 @@ function DamagePopup({ request, queued }: { request: DamageRequest; queued: numb
       )}
       <div className="row popup-quick">
         <span className="muted small">Set all</span>
-        <button type="button" className="btn tiny" onClick={() => setAll('full')}>
-          full
+        <button type="button" className="btn small" onClick={() => setAll('full')}>
+          Full
         </button>
-        <button type="button" className="btn tiny" onClick={() => setAll('half')}>
-          half
+        <button type="button" className="btn small" onClick={() => setAll('half')}>
+          Half
         </button>
-        <button type="button" className="btn tiny" onClick={() => setAll('none')}>
-          none
+        <button type="button" className="btn small" onClick={() => setAll('none')}>
+          None
         </button>
       </div>
       <div className="damage-targets" role="group" aria-label="Targets">
@@ -844,7 +854,7 @@ function DamagePopup({ request, queued }: { request: DamageRequest; queued: numb
                   <button
                     key={s.share}
                     type="button"
-                    className="btn tiny"
+                    className="btn small"
                     aria-label={s.name(c.name)}
                     aria-pressed={share === s.share}
                     onClick={() => setShares({ ...shares, [c.id]: s.share })}
@@ -1013,15 +1023,17 @@ export function CombatView() {
   return (
     <section className="combat">
       <div className="row combat-bar">
-        <button
-          type="button"
-          className="chrome-btn"
-          aria-label="Back to encounters"
-          title="Back to the encounter list (the fight keeps running)"
-          onClick={() => store.setBrowsing(true)}
-        >
-          <Icon name="left" size={15} />
-        </button>
+        <span className="icon-toolbar" role="group" aria-label="Navigation">
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label="Back to encounters"
+            title="Back to list (the fight keeps running)"
+            onClick={() => store.setBrowsing(true)}
+          >
+            <Icon name="left" />
+          </button>
+        </span>
         <h2>
           {state.turnIndex < 0 ? 'Set initiative' : `Round ${state.round}`}
           {active && state.turnIndex >= 0 ? <span className="muted"> · {active.name}</span> : null}
@@ -1053,30 +1065,34 @@ export function CombatView() {
           </>
         ) : (
           <>
-            <button
-              type="button"
-              className="chrome-btn"
-              aria-label="Previous"
-              title="Previous turn (P)"
-              onClick={() => store.previous()}
-            >
-              <Icon name="prev" size={15} />
-            </button>
+            <span className="icon-toolbar" role="group" aria-label="Turn">
+              <button
+                type="button"
+                className="chrome-btn"
+                aria-label="Previous"
+                title="Previous turn (P)"
+                onClick={() => store.previous()}
+              >
+                <Icon name="prev" />
+              </button>
+            </span>
             <button type="button" className="btn primary" onClick={() => store.next()}>
               Next turn (N)
             </button>
           </>
         )}
-        <button
-          type="button"
-          className={`chrome-btn${adding ? ' on' : ''}`}
-          aria-label="Add to fight"
-          aria-pressed={adding}
-          title={`Add PCs, NPCs or creatures to the fight (${hk('A')})`}
-          onClick={() => setAdding((v) => !v)}
-        >
-          <Icon name="plus" size={15} />
-        </button>
+        <span className="icon-toolbar" role="group" aria-label="Fight">
+          <button
+            type="button"
+            className={`chrome-btn${adding ? ' on' : ''}`}
+            aria-label="Add to fight"
+            aria-pressed={adding}
+            title={`Add PCs, NPCs or creatures to the fight (${hk('A')})`}
+            onClick={() => setAdding((v) => !v)}
+          >
+            <Icon name="plus" />
+          </button>
+        </span>
         <button
           type="button"
           className="btn danger"
@@ -1198,8 +1214,15 @@ export function CombatView() {
           <div className="row">
             <h2>Log</h2>
             <span className="spacer" />
-            <button type="button" className="btn tiny" onClick={() => setShowLog((v) => !v)}>
-              {showLog ? 'hide' : 'show'}
+            <button
+              type="button"
+              className="chrome-btn"
+              aria-label={showLog ? 'Hide log' : 'Show log'}
+              aria-expanded={showLog}
+              title={showLog ? 'Hide the log' : 'Show the log'}
+              onClick={() => setShowLog((v) => !v)}
+            >
+              <Icon name={showLog ? 'eyeOff' : 'eye'} />
             </button>
           </div>
           {showLog && (

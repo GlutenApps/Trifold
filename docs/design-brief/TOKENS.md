@@ -52,8 +52,8 @@ Health bar: healthy #6FB08A → bloodied #E0B252 → down #E0685E.
 
 ## Shape and size
 
-- Radii: panels 14 px, buttons and inputs 10 px, small controls 6 px, badges pill.
-- Buttons 30 px tall (small 26, primary same height), icon buttons 28 px, row actions 22 px shown on hover/selection, dice chips 34 px (tray 26 px), tabs 28 px.
+- Radii: panels 14 px, cards 10 px, every control (buttons, icon buttons, fields, toolbars) 6 px, badges pill.
+- Control scale (ADR 0013, `docs/UI-GUIDELINES.md`): regular 30 px for buttons, icon buttons and fields; compact 26 px in window chrome; row actions 22 px, icon-only, shown on hover/selection. Dice chips 34 px (tray 26 px), tabs 28 px.
 - Panel header 34 px; status bar 42 px; rail 64 px wide; gutters 8 px; panel padding 10 × 12 px; card padding 12 px; row gap 6 px.
 - Borders 1 px `border`; focus ring 2 px `accent` inset; live and selected states use an `accent` border; a focused-but-idle panel is `border` only.
 - Shadows only on floating things (menus, drag ghosts): 0 8 24 rgba(0,0,0,.35).

@@ -56,7 +56,7 @@ function TvSection() {
       </button>
       <button
         type="button"
-        className={`btn small${blackout && scene ? ' primary' : ''}`}
+        className={`btn${blackout && scene ? ' primary' : ''}`}
         aria-pressed={blackout && !!scene}
         disabled={!scene}
         onClick={toggleBlackout}
@@ -72,7 +72,7 @@ function TvSection() {
         title={`${playerOpen ? 'TV on: the players can see it. Click to close it' : 'Open the TV on the second display'} (${hk('Ctrl+Shift+P')})`}
         onClick={() => void (playerOpen ? closePlayer() : openPlayer())}
       >
-        <Icon name="window" size={15} />
+        <Icon name="window" />
       </button>
       <button
         type="button"
@@ -82,7 +82,7 @@ function TvSection() {
         disabled={history === 0}
         onClick={undo}
       >
-        <Icon name="undo" size={15} />
+        <Icon name="undo" />
       </button>
     </div>
   );
@@ -127,7 +127,7 @@ function CombatSection() {
         onClick={previous}
         title="Previous turn (P)"
       >
-        <Icon name="prev" size={15} />
+        <Icon name="prev" />
       </button>
       <button
         type="button"
@@ -137,7 +137,7 @@ function CombatSection() {
         onClick={next}
         title="Next turn (N)"
       >
-        <Icon name="next" size={15} />
+        <Icon name="next" />
       </button>
     </div>
   );
@@ -179,13 +179,13 @@ function PhoneSection() {
       </button>
       {status.supported &&
         (active && status.state !== 'failed' ? (
-          <button type="button" className="btn small" onClick={() => void disconnect()}>
+          <button type="button" className="btn" onClick={() => void disconnect()}>
             Disconnect
           </button>
         ) : (
           <button
             type="button"
-            className="btn small primary"
+            className="btn primary"
             onClick={() =>
               last ? void connect({ id: last.id, name: last.name }) : openTool('music')
             }
@@ -246,7 +246,7 @@ function PlayerSection() {
         onClick={() => void previous()}
         title={`Previous track (${hk('Ctrl+Alt+Left')})`}
       >
-        <Icon name="prev" size={15} />
+        <Icon name="prev" />
       </button>
       <button
         type="button"
@@ -256,7 +256,7 @@ function PlayerSection() {
         onClick={() => void togglePlay()}
         title={`Play or pause (${hk('Ctrl+Alt+P')})`}
       >
-        <Icon name={playing ? 'pause' : 'play'} size={15} />
+        <Icon name={playing ? 'pause' : 'play'} />
       </button>
       <button
         type="button"
@@ -266,7 +266,7 @@ function PlayerSection() {
         onClick={() => void next()}
         title={`Next track (${hk('Ctrl+Alt+Right')})`}
       >
-        <Icon name="next" size={15} />
+        <Icon name="next" />
       </button>
       <button
         type="button"
@@ -276,7 +276,7 @@ function PlayerSection() {
         onClick={toggleMuted}
         title={`Panic mute (${hk('Ctrl+Alt+M')})`}
       >
-        <Icon name="mute" size={15} />
+        <Icon name="mute" />
       </button>
     </div>
   );
@@ -298,7 +298,7 @@ function DiceSection() {
         title={`Dice (${hk('Ctrl+D')})`}
         onClick={() => togglePop('dice')}
       >
-        <Icon name="dice" size={15} />
+        <Icon name="dice" />
       </button>
     </div>
   );
