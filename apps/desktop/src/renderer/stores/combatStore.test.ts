@@ -234,7 +234,7 @@ describe('the fight and the map (ADR 0012)', () => {
   beforeEach(() => {
     useCampaignStore.setState({
       current: {
-        campaign: { id: 'c1', slug: 'cave' },
+        campaign: { id: 'c1', slug: 'cave', settings: { initiativeMode: 'perGroup' } },
         pcs: [],
         npcs: [],
         encounters: [enc],
@@ -323,7 +323,7 @@ describe('the fight and the map (ADR 0012)', () => {
   it('starts a fight from what the map in play shows, then drives it', async () => {
     useCampaignStore.setState({
       current: {
-        campaign: { id: 'c1', slug: 'cave' },
+        campaign: { id: 'c1', slug: 'cave', settings: { initiativeMode: 'perGroup' } },
         pcs: [],
         npcs: [],
         encounters: [enc],
@@ -347,5 +347,76 @@ describe('the fight and the map (ADR 0012)', () => {
     });
     expect(useCombatStore.getState().state!.combatants[0]!.ref).toMatchObject({ kind: 'npc' });
     expect(await useCombatStore.getState().trackAsNpc('thora')).toBeNull();
+  });
+});
+
+describe('adding to a running fight', () => {
+  beforeEach(() => {
+    useCampaignStore.setState({
+      current: {
+        campaign: { id: 'c1', slug: 'cave', settings: { initiativeMode: 'perGroup' } },
+        pcs: [
+          { id: 'p', name: 'Thora', maxHp: 30, ac: 16, initiativeBonus: 2, saves: {} },
+          { id: 'b', name: 'Bram', maxHp: 22, ac: 14, initiativeBonus: 0, saves: {} },
+        ],
+        npcs: [],
+        encounters: [{ id: 'enc', combatants: [], results: [] }],
+        scenes: [],
+      } as unknown as CampaignBundle,
+    });
+    useCombatStore.setState({
+      state: {
+        ...useCombatStore.getState().state!,
+        combatants: [
+          combatant('wolf'),
+          combatant('thora', { ref: { kind: 'pc', pcId: 'p', name: 'Thora' }, role: 'ally' }),
+        ],
+      },
+    });
+  });
+
+  it('numbers newcomers after the ones already there and keeps them on the encounter', async () => {
+    await useCombatStore.getState().addToFight({
+      id: 't',
+      ref: { kind: 'custom', name: 'wolf' },
+      quantity: 2,
+      role: 'enemy',
+      hidden: false,
+      cache: { xp: 50, cr: '1/4', type: 'beast', hp: 11, ac: 13 },
+    });
+    const names = useCombatStore.getState().state!.combatants.map((c) => c.name);
+    expect(names).toEqual(['wolf', 'thora', 'wolf 2', 'wolf 3']);
+    expect(useCombatStore.getState().state!.combatants[2]!.hp).toEqual({
+      current: 11,
+      max: 11,
+      temp: 0,
+    });
+    await vi.waitFor(() =>
+      expect(window.trifold.encounters.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          combatants: [expect.objectContaining({ id: 't', quantity: 2 })],
+        }),
+      ),
+    );
+  });
+
+  it('adds a waiting PC from the card and leaves one already fighting alone', async () => {
+    const pcTemplate = (pcId: string, name: string) =>
+      ({
+        id: `t-${pcId}`,
+        ref: { kind: 'pc', pcId, name },
+        quantity: 1,
+        role: 'ally',
+        hidden: false,
+      }) as const;
+    await useCombatStore.getState().addToFight(pcTemplate('p', 'Thora'));
+    expect(useCombatStore.getState().state!.combatants).toHaveLength(2);
+    await useCombatStore.getState().addToFight(pcTemplate('b', 'Bram'));
+    const bram = useCombatStore.getState().state!.combatants.find((c) => c.name === 'Bram')!;
+    expect(bram).toMatchObject({
+      ref: { kind: 'pc', pcId: 'b' },
+      hp: { max: 22 },
+      initiative: null,
+    });
   });
 });

@@ -14,6 +14,7 @@ import {
   rewindTurn,
   rollAttack,
   rollD20,
+  numberedNames,
   rollInitiative,
   roll as rollDice,
   type RollMode,
@@ -23,6 +24,7 @@ import type {
   EncounterResult,
   Attack,
   Combatant,
+  CombatantTemplate,
   CombatState,
   CompendiumRecord,
   ConditionDuration,
@@ -135,6 +137,11 @@ interface CombatStoreState {
   relinkTokens(tokens: readonly Token[]): void;
   /** Adds a fighter for a map token that matches no one in the fight, in initiative order. */
   addFromToken(token: Token): Promise<void>;
+  /**
+   * Adds a template's creatures, PC or NPC to the running fight in initiative order and keeps
+   * it on the encounter; a PC or NPC already fighting is left alone.
+   */
+  addToFight(template: CombatantTemplate): Promise<void>;
   /** Turns a creature into a named NPC whose HP carries between fights. */
   trackAsNpc(id: string): Promise<NPC | null>;
   remove(id: string): void;
@@ -255,6 +262,54 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     }));
     for (const c of get().state?.combatants ?? []) if (byCombatant.has(c.id)) syncToken(c);
     rememberLinks(links);
+  };
+
+  /**
+   * Names for creatures joining a fight that may already hold some of the same: numbering
+   * continues after the ones present, so a second pair of goblins becomes Goblin 3 and 4.
+   */
+  const namesFor = (base: string, quantity: number): string[] => {
+    const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const numbered = new RegExp(`^${escaped} \\d+$`);
+    const taken = (get().state?.combatants ?? []).filter(
+      (c) => c.name === base || numbered.test(c.name),
+    ).length;
+    if (taken === 0) return numberedNames(base, quantity);
+    return Array.from({ length: quantity }, (_, i) => `${base} ${taken + i + 1}`);
+  };
+
+  /** Combatants for a template added mid-fight, with their records fetched and cached. */
+  const buildFor = async (template: CombatantTemplate): Promise<Combatant[]> => {
+    const campaign = useCampaignStore.getState().current;
+    const mode = campaign?.campaign.settings.initiativeMode ?? 'perGroup';
+    const ref = template.ref;
+    const fetchMonster = async (recordId: string) => {
+      const found = await window.trifold.compendium.get(recordId).catch(() => null);
+      if (found?.kind !== 'monster') return undefined;
+      set({ records: { ...get().records, [found.id]: found } });
+      return found;
+    };
+    if (ref.kind === 'pc') {
+      const pc = campaign?.pcs.find((p) => p.id === ref.pcId);
+      return pc ? [combatantFromPc(pc, template)] : [];
+    }
+    if (ref.kind === 'npc') {
+      const npc = campaign?.npcs.find((n) => n.id === ref.npcId);
+      if (!npc) return [];
+      const record = npc.recordRef ? await fetchMonster(npc.recordRef.recordId) : undefined;
+      const bonus = record
+        ? (record.data.initiativeBonus ?? abilityModifier(record.data.abilities.dex))
+        : 0;
+      return [combatantFromNpc(npc, record, template, rollInitiative(bonus, 'normal'))];
+    }
+    const names = namesFor(template.label || ref.name, template.quantity);
+    const record = ref.kind === 'record' ? await fetchMonster(ref.ref.recordId) : undefined;
+    if (!record) return names.map((name) => customCombatant(template, name));
+    const bonus = record.data.initiativeBonus ?? abilityModifier(record.data.abilities.dex);
+    const groupRoll = mode === 'perGroup' ? rollInitiative(bonus, 'normal') : null;
+    return names.map((name) =>
+      combatantFromMonster(record, template, name, groupRoll ?? rollInitiative(bonus, 'normal')),
+    );
   };
 
   /** Puts a newcomer where its initiative belongs without reordering anyone else. */
@@ -711,8 +766,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
 
     async addFromToken(token) {
       if (!get().state || token.kind === 'marker') return;
-      const campaign = useCampaignStore.getState().current;
-      const template = {
+      const template: CombatantTemplate = {
         id: ulid(),
         ref: token.ref,
         label: token.label,
@@ -721,39 +775,34 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         hidden: token.hidden,
         tokenId: token.id,
       };
-      let c: Combatant | null = null;
-      if (token.ref.kind === 'pc') {
-        const pcId = token.ref.pcId;
-        const pc = campaign?.pcs.find((p) => p.id === pcId);
-        if (pc) c = combatantFromPc(pc, template);
-      } else if (token.ref.kind === 'npc') {
-        const npcId = token.ref.npcId;
-        const npc = campaign?.npcs.find((n) => n.id === npcId);
-        if (npc) {
-          const found = npc.recordRef
-            ? await window.trifold.compendium.get(npc.recordRef.recordId).catch(() => null)
-            : null;
-          const record = found?.kind === 'monster' ? found : undefined;
-          if (record) set({ records: { ...get().records, [record.id]: record } });
-          const bonus = record
-            ? (record.data.initiativeBonus ?? abilityModifier(record.data.abilities.dex))
-            : 0;
-          c = combatantFromNpc(npc, record, template, rollInitiative(bonus, 'normal'));
-        }
-      } else if (token.ref.kind === 'record') {
-        const found = await window.trifold.compendium.get(token.ref.ref.recordId).catch(() => null);
-        if (found?.kind === 'monster') {
-          set({ records: { ...get().records, [found.id]: found } });
-          const bonus = found.data.initiativeBonus ?? abilityModifier(found.data.abilities.dex);
-          c = combatantFromMonster(found, template, token.label, rollInitiative(bonus, 'normal'));
-        }
+      const built = await buildFor(template);
+      for (const c of built) {
+        const joined = { ...c, hidden: token.hidden, dead: c.dead || token.dead };
+        insertCombatant(joined);
+        log('note', `${joined.name} joins the fight`, joined.id);
       }
-      if (!c) c = customCombatant(template, token.label);
-      c = { ...c, hidden: token.hidden, dead: c.dead || token.dead };
-      insertCombatant(c);
-      log('note', `${c.name} joins the fight`, c.id);
+      const encounter = currentEncounter();
+      if (encounter && built.length) saveTemplates([...encounter.combatants, template]);
+    },
+
+    async addToFight(template) {
+      const s = get().state;
+      if (!s) return;
+      const present = (c: Combatant) =>
+        (template.ref.kind === 'pc' && c.ref.kind === 'pc' && c.ref.pcId === template.ref.pcId) ||
+        (template.ref.kind === 'npc' && c.ref.kind === 'npc' && c.ref.npcId === template.ref.npcId);
+      if (s.combatants.some(present)) return;
+      const built = await buildFor(template);
+      for (const c of built) {
+        insertCombatant(c);
+        log('note', `${c.name} joins the fight`, c.id);
+      }
+      if (built.length === 0) return;
       const encounter = currentEncounter();
       if (encounter) saveTemplates([...encounter.combatants, template]);
+      // A newcomer may already have a token waiting on the map in play.
+      const tokens = mapInPlay(encounter)?.tokens ?? [];
+      if (tokens.length) applyLinks(autoLink(get().state?.combatants ?? [], tokens));
     },
 
     async trackAsNpc(id) {

@@ -8,6 +8,7 @@ import { useIconStore } from '../../stores/iconStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useSceneStore } from '../../stores/sceneStore';
 import { formatCombatLog, logFileName } from './logExport';
+import { AddToFight } from './AddToFight';
 import { StatBlock } from '../compendium/StatBlock';
 import { DEFAULT_GRID, footprintForSize, mapSize, pixelToGrid } from '../presenter/mapMath';
 import { sceneInPlay, tokenCandidates } from '../presenter/tokenLinks';
@@ -965,6 +966,17 @@ export function CombatView() {
   const openByKey = useCompendiumStore((s) => s.openByKey);
   const openMajor = useShellStore((s) => s.openMajor);
   const [showLog, setShowLog] = useState(true);
+  const [adding, setAdding] = useState(false);
+  useEffect(
+    () =>
+      registerHotkey({
+        id: 'combat.add',
+        combo: 'A',
+        description: 'Add to the fight',
+        run: () => setAdding((v) => !v),
+      }),
+    [],
+  );
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [manual, setManual] = useState<{
     key: string;
@@ -1048,6 +1060,16 @@ export function CombatView() {
         )}
         <button
           type="button"
+          className={`chrome-btn${adding ? ' on' : ''}`}
+          aria-label="Add to fight"
+          aria-pressed={adding}
+          title={`Add PCs, NPCs or creatures to the fight (${hk('A')})`}
+          onClick={() => setAdding((v) => !v)}
+        >
+          <Icon name="plus" size={15} />
+        </button>
+        <button
+          type="button"
           className="btn danger"
           title="End the fight: HP carries to PC cards and tracked NPCs"
           onClick={() => void endCombat()}
@@ -1056,6 +1078,7 @@ export function CombatView() {
         </button>
       </div>
 
+      {adding && <AddToFight onClose={() => setAdding(false)} />}
       {error && <div className="banner error">{error}</div>}
       {missing.length > 0 && (
         <div className="banner warn">

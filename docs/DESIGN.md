@@ -236,6 +236,8 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Starting combat.** Roll initiative per creature or per group (setting); PCs prompt for their rolled initiative (or roll from the card's bonus). Surprise flag = disadvantage on that combatant's initiative roll (2024). Lair actions insert a "Lair" entry at initiative 20 when any combatant has lair actions. Ties: Dex, then DM drag.
 
+**Adding mid-fight.** The tracker's bar has Add to fight (hotkey A): a panel with the party members and named NPCs not yet in the fight as one-tap buttons, and a creature search with a quantity. Newcomers join in initiative order, are numbered after any of the same name already present, are kept on the encounter, and tie themselves to a waiting token on the map in play.
+
 **Turn loop.** Active combatant highlighted; Next/Previous; round counter; per-turn automation at start of turn: roll recharge for `recharge` abilities (d6 ≥ min), reset the legendary action pool, expire conditions with `untilStartOfTurn`, prompt for "save at end of turn" conditions at end of turn. Delay/ready: drag to reorder (the hold button was removed, ADR 0012; the `held` field remains for saved fights).
 
 **Stat block panel.** The active combatant's full stat block with buttons:

@@ -1,6 +1,6 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CampaignBundle } from '@trifold/api';
 import type { Combatant, Scene, Token } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
@@ -254,7 +254,7 @@ describe('CombatView: the row toolbar and the map (ADR 0012)', () => {
   it('places a combatant on the map in play by tying it to the matching free token', async () => {
     useCampaignStore.setState({
       current: {
-        campaign: { id: 'c1', slug: 'cave' },
+        campaign: { id: 'c1', slug: 'cave', settings: { initiativeMode: 'perGroup' } },
         pcs: [],
         npcs: [],
         scenes: [cave],
@@ -267,5 +267,59 @@ describe('CombatView: the row toolbar and the map (ADR 0012)', () => {
     expect(useCombatStore.getState().state!.combatants[0]!.tokenId).toBe('w1');
     expect(screen.getAllByTestId('combatant-row')[0]).toHaveTextContent('map');
     expect(within(wolf).queryByRole('button', { name: 'Place on map' })).not.toBeInTheDocument();
+  });
+});
+
+describe('CombatView: adding mid-fight', () => {
+  it('opens a panel that adds a waiting PC and a searched creature without leaving the fight', async () => {
+    useCampaignStore.setState({
+      current: {
+        campaign: { id: 'c1', slug: 'cave', settings: { initiativeMode: 'perGroup' } },
+        pcs: [
+          { id: 'z', name: 'Zed', maxHp: 10, ac: 10, initiativeBonus: 0, saves: {} },
+          { id: 'b', name: 'Bram', maxHp: 22, ac: 14, initiativeBonus: 0, saves: {} },
+        ],
+        npcs: [],
+        encounters: [{ id: 'enc', combatants: [], results: [] }],
+        scenes: [],
+      } as unknown as CampaignBundle,
+    });
+    vi.mocked(window.trifold.compendium.search).mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'r1',
+          displayName: 'Goblin',
+          sourceId: 's',
+          sourceName: 'SRD',
+          key: 'goblin',
+          edition: '2024',
+          cr: '1/4',
+          type: 'humanoid',
+          kind: 'monster',
+        },
+      ],
+      total: 1,
+      tookMs: 1,
+    } as never);
+    render(<CombatView />);
+    await userEvent.click(screen.getByRole('button', { name: 'Add to fight' }));
+    const panel = screen.getByRole('region', { name: 'Add to the fight' });
+    // Zed is already in; Bram is waiting.
+    expect(within(panel).queryByRole('button', { name: '+ Zed' })).not.toBeInTheDocument();
+    await userEvent.click(within(panel).getByRole('button', { name: '+ Bram' }));
+    await waitFor(() => expect(screen.getAllByTestId('combatant-row')).toHaveLength(4));
+    expect(within(panel).queryByRole('button', { name: '+ Bram' })).not.toBeInTheDocument();
+
+    await userEvent.type(within(panel).getByLabelText('How many'), '2', {
+      initialSelectionStart: 0,
+      initialSelectionEnd: 1,
+    });
+    await userEvent.type(within(panel).getByLabelText('Add creature'), 'gob');
+    await userEvent.click(await within(panel).findByRole('option', { name: /Goblin/ }));
+    await waitFor(() => expect(screen.getAllByTestId('combatant-row')).toHaveLength(6));
+    const names = useCombatStore.getState().state!.combatants.map((c) => c.name);
+    expect(names).toEqual(expect.arrayContaining(['Goblin 1', 'Goblin 2', 'Bram']));
+    await userEvent.click(within(panel).getByRole('button', { name: 'Close add to fight' }));
+    expect(screen.queryByRole('region', { name: 'Add to the fight' })).not.toBeInTheDocument();
   });
 });
