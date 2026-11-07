@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { ShellLayout } from '@trifold/schema';
 import {
   applyPreset,
+  isOpen,
   closeTab,
   pruneTabs,
   tabTitle,
@@ -21,7 +23,25 @@ import {
   toggleSection,
 } from './shellLayout';
 
-const table = STARTER_PRESETS[1]!.layout;
+/** A fixed two-group layout for the stage math, independent of the starter layouts. */
+const table: ShellLayout = {
+  stage: {
+    groups: [
+      { tabs: ['map', 'campaign'], active: 'map' },
+      { tabs: ['encounters', 'compendium'], active: 'encounters' },
+    ],
+    split: 0.5,
+    maximized: null,
+  },
+  dock: {
+    state: 'narrow',
+    width: 360,
+    sections: [
+      { tool: 'music', open: false },
+      { tool: 'scenes', open: true },
+    ],
+  },
+};
 
 describe('stage', () => {
   it('opens a closed major in the first group and activates an open one in place', () => {
@@ -99,12 +119,37 @@ describe('dock', () => {
 });
 
 describe('presets', () => {
-  it('summons named tabs and keeps unnamed open tabs in group 1', () => {
-    const current = openMajor(defaultLayout(), 'compendium');
-    const applied = applyPreset(current, STARTER_PRESETS[2]!.layout);
-    expect(applied.stage.groups[1]!.tabs).toEqual(['encounters']);
-    expect(applied.stage.maximized).toBe(1);
-    expect(applied.stage.groups[0]!.tabs).toEqual(['map', 'campaign', 'compendium']);
+  it('opens exactly the tabs a layout names and closes the rest', () => {
+    const notes = {
+      id: '01A',
+      title: 'Notes',
+      url: 'https://example.com',
+      autoTitle: false,
+      icon: 'tome' as const,
+      zoom: 1,
+    };
+    const prep: ShellLayout = {
+      ...STARTER_PRESETS[0]!.layout,
+      stage: {
+        ...STARTER_PRESETS[0]!.layout.stage,
+        groups: [
+          { tabs: ['compendium', 'web:01A'], active: 'web:01A' },
+          { tabs: ['web:gone'], active: 'web:gone' },
+        ],
+      },
+    };
+    // A custom layout with a web tab, then a starter that does not name it: the web tab closes.
+    const custom = applyPreset(prep, [notes]);
+    expect(custom.stage.groups).toEqual([{ tabs: ['compendium', 'web:01A'], active: 'web:01A' }]);
+    const combat = applyPreset(STARTER_PRESETS[2]!.layout, [notes]);
+    expect(combat.stage.groups.flatMap((g) => g.tabs)).not.toContain('web:01A');
+    expect(combat.stage.groups[1]!.tabs).toEqual(['encounters']);
+    // A layout that leaves out a major closes it too.
+    const noMap = applyPreset({
+      ...table,
+      stage: { ...table.stage, groups: [{ tabs: ['campaign'], active: 'campaign' }] },
+    });
+    expect(isOpen(noMap, 'map')).toBe(false);
   });
 
   it('matches on intent: a narrow dock trimmed to icons still counts', () => {

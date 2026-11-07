@@ -427,7 +427,7 @@ export const useShellStore = create<ShellState>((set, get) => {
     applyLayout(index) {
       const preset = get().presets[index];
       if (!preset || get().space !== 'console') return;
-      change(applyPreset(get().layout, preset.layout));
+      change(applyPreset(preset.layout, get().webTabs));
       set({ focusedGroup: 0, flyout: null });
     },
 

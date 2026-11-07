@@ -324,13 +324,14 @@ A layout captures chrome only:
                            { "tool": "music", "open": false } ] } }
 ```
 Not captured, on purpose: what is live, the fight, what is playing, the pool,
-any tab's contents. Applying: tabs the layout names are summoned into their
-groups; tabs it does not name stay where they are in group 1; the strip does
-not move. The current-layout highlight (and the top-bar name) holds while the
+any tab's contents. Applying: a layout decides which tabs are open as well as
+where, so the tabs it names open in their groups and every other tab (web tabs
+included) closes; the strip does not move. The current-layout highlight (and the top-bar name) holds while the
 screen still matches; any change drops it, and Overwrite is the way to keep
-it. Starter layouts: Prep = Compendium ⧉ Campaign, dock wide: Dice, Hotkeys ·
-Table = Map ⧉ Combat, dock narrow: TV controls, Scenes · Combat = Combat
-maximized, dock icons.
+it. Starter layouts: Prep = Compendium / Encounters / VTT ⧉ Campaign, dock
+narrow: Scenes · Table = VTT ⧉ Campaign / Encounters / Compendium, dock
+narrow: Scenes · Combat = Campaign / Compendium / VTT ⧉ Encounters, dock
+icons: Music.
 
 ## 7. Flows to verify
 

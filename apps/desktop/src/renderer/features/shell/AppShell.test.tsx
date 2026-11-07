@@ -292,7 +292,7 @@ describe('AppShell', () => {
     const list = () => within(screen.getByRole('list', { name: 'Layouts' }));
     await userEvent.click(list().getByRole('button', { name: 'Apply layout Table' }));
     expect(group(1).getByRole('tab', { name: 'VTT' })).toHaveAttribute('aria-selected', 'true');
-    expect(group(2).getByRole('tab', { name: 'Encounters' })).toHaveAttribute(
+    expect(group(2).getByRole('tab', { name: 'Campaign' })).toHaveAttribute(
       'aria-selected',
       'true',
     );

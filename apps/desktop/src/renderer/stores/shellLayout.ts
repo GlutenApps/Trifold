@@ -9,7 +9,6 @@ import {
   webTabId,
   type MinorKind,
   type ShellLayout,
-  type StageGroup,
   type WorkspacePreset,
 } from '@trifold/schema';
 
@@ -154,13 +153,13 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
     layout: {
       stage: {
         groups: [
-          { tabs: ['compendium', 'encounters'], active: 'compendium' },
+          { tabs: ['compendium', 'encounters', 'map'], active: 'compendium' },
           { tabs: ['campaign'], active: 'campaign' },
         ],
         split: 0.66,
         maximized: null,
       },
-      dock: { state: 'wide', width: 400, sections: sections(['scenes']) },
+      dock: { state: 'narrow', width: 360, sections: sections(['scenes']) },
     },
   },
   {
@@ -168,10 +167,10 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
     layout: {
       stage: {
         groups: [
-          { tabs: ['map', 'campaign'], active: 'map' },
-          { tabs: ['encounters', 'compendium'], active: 'encounters' },
+          { tabs: ['map'], active: 'map' },
+          { tabs: ['campaign', 'encounters', 'compendium'], active: 'campaign' },
         ],
-        split: 0.5,
+        split: 0.62,
         maximized: null,
       },
       dock: { state: 'narrow', width: 360, sections: sections(['scenes']) },
@@ -182,13 +181,13 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
     layout: {
       stage: {
         groups: [
-          { tabs: ['map', 'campaign', 'compendium'], active: 'map' },
+          { tabs: ['campaign', 'compendium', 'map'], active: 'campaign' },
           { tabs: ['encounters'], active: 'encounters' },
         ],
         split: 0.5,
-        maximized: 1,
+        maximized: null,
       },
-      dock: { state: 'icons', width: 300, sections: sections(['scenes']) },
+      dock: { state: 'icons', width: 360, sections: sections(['music']) },
     },
   },
 ];
@@ -387,18 +386,12 @@ export function reorderSection(layout: ShellLayout, tool: MinorKind, index: numb
 }
 
 /**
- * Applies a saved layout: the tabs it names are summoned into their groups; open tabs it does
- * not name stay in group 1; closed tabs stay closed. The dock takes the layout's state and
- * section flags; the current section order survives when the layout lists the same tools.
+ * Applies a saved layout: it decides which tabs are open as well as where. The tabs it names
+ * open in their groups; every other tab closes (its state lives on in the feature's store).
+ * Web tabs the Library no longer has are dropped. The dock takes the layout's state and flags.
  */
-export function applyPreset(current: ShellLayout, preset: ShellLayout): ShellLayout {
-  const next = cloneLayout(preset);
-  const named = new Set(next.stage.groups.flatMap((g) => g.tabs));
-  const leftovers = current.stage.groups.flatMap((g) => g.tabs).filter((t) => !named.has(t));
-  const first: StageGroup = next.stage.groups[0] ?? { tabs: [], active: null };
-  first.tabs.push(...leftovers);
-  next.stage.groups[0] = first;
-  return normalize(next);
+export function applyPreset(preset: ShellLayout, webTabs: readonly WebTab[] = []): ShellLayout {
+  return pruneTabs(normalize(cloneLayout(preset)), webTabs);
 }
 
 /** Whether the screen still matches a layout's intent: tabs, actives, maximize, dock state and flags. */
