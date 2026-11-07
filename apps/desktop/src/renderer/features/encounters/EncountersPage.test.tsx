@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CampaignBundle } from '@trifold/api';
 import type { Encounter } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
@@ -130,5 +130,56 @@ describe('EncountersPage: named NPCs (ADR 0012)', () => {
     expect(screen.queryByRole('button', { name: 'Add Bandit' })).not.toBeInTheDocument();
     await userEvent.click(screen.getAllByRole('button', { name: 'Remove Bandit' })[1]!);
     expect(screen.getByRole('button', { name: 'Add Bandit' })).toBeInTheDocument();
+  });
+});
+
+describe('EncountersPage: builder autosave (ADR 0015)', () => {
+  beforeEach(() => {
+    useCampaignStore.setState({ current: bundle() });
+    useCombatStore.setState({ encounterId: null, state: null, browsing: false, finished: null });
+    vi.mocked(window.trifold.encounters.save).mockClear();
+  });
+
+  const renameBridge = async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Bridge ambush' }));
+    const name = screen.getByLabelText('Encounter name');
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Bridge toll');
+  };
+
+  it('lets the last edit land when the DM goes back straight away', async () => {
+    render(<EncountersPage />);
+    await renameBridge();
+    await userEvent.click(screen.getByRole('button', { name: 'Back to list' }));
+    await waitFor(() =>
+      expect(window.trifold.encounters.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'e1', name: 'Bridge toll' }),
+      ),
+    );
+  });
+
+  it('lets the last edit land when the DM switches to another encounter', async () => {
+    render(<EncountersPage />);
+    await renameBridge();
+    await userEvent.click(screen.getByRole('button', { name: 'Back to list' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Crypt guards' }));
+    await waitFor(() =>
+      expect(window.trifold.encounters.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'e1', name: 'Bridge toll' }),
+      ),
+    );
+  });
+
+  it('never writes back an encounter deleted while its edit waits', async () => {
+    render(<EncountersPage />);
+    await renameBridge();
+    await userEvent.click(screen.getByRole('button', { name: 'Back to list' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Bridge ambush' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Delete$/ }));
+    await waitFor(() => expect(window.trifold.encounters.remove).toHaveBeenCalledWith('e1'));
+    await new Promise((done) => setTimeout(done, 600));
+    expect(window.trifold.encounters.save).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'e1', name: 'Bridge toll' }),
+    );
   });
 });

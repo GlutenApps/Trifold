@@ -12,6 +12,7 @@ import {
   type WorkspacePreset,
   type WorkspaceSettings,
 } from '@trifold/schema';
+import { scheduleSave } from './pendingSaves';
 import { useAppStore } from './appStore';
 import {
   applyPreset,
@@ -129,20 +130,20 @@ interface ShellState {
   currentPresetIndex(): number;
 }
 
-let persistTimer: number | null = null;
-
 /** Chrome edits are frequent while dragging; the Library sees one write per settle. */
 function persist(get: () => ShellState): void {
-  if (persistTimer) window.clearTimeout(persistTimer);
-  persistTimer = window.setTimeout(() => {
-    persistTimer = null;
-    const { presets, consoles, layout, campaignSlug, webTabs } = get();
-    const next = { ...consoles };
-    if (campaignSlug) next[campaignSlug] = layout;
-    void useAppStore.getState().updateSettings({
-      workspace: { presets, seeded: true, consoles: next, webTabs },
-    });
-  }, 500);
+  scheduleSave(
+    'shell',
+    () => {
+      const { presets, consoles, layout, campaignSlug, webTabs } = get();
+      const next = { ...consoles };
+      if (campaignSlug) next[campaignSlug] = layout;
+      return useAppStore.getState().updateSettings({
+        workspace: { presets, seeded: true, consoles: next, webTabs },
+      });
+    },
+    500,
+  );
 }
 
 /** A new web tab's first title: the site's host, until the page reports its own. */

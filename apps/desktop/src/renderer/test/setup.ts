@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
+import { discardPendingSaves } from '../stores/pendingSaves';
 import { initialPresenterState, type PhoneAudioStatus, type TrifoldBridge } from '@trifold/api';
 import { defaultLibrarySettings, type CompendiumRecord, type Playlist } from '@trifold/schema';
 
@@ -23,6 +24,7 @@ export function installBridgeMock(): TrifoldBridge {
       })),
       openSystemPage: vi.fn(async () => true),
       openExternal: vi.fn(async () => true),
+      savesFlushed: vi.fn(async () => undefined),
     },
     library: {
       getInfo: vi.fn(async () => ({
@@ -67,6 +69,32 @@ export function installBridgeMock(): TrifoldBridge {
         index: { ok: true, version: 0, error: null },
       })),
       openFolder: vi.fn(async () => undefined),
+      chooseFile: vi.fn(async () => null),
+      restoreFile: vi.fn(async () => ({
+        path: '',
+        ok: true,
+        error: null,
+        settings: defaultLibrarySettings(),
+        index: { ok: true, version: 0, error: null },
+      })),
+      copyStatus: vi.fn(async () => ({
+        folder: null,
+        target: null,
+        lastCopyAt: null,
+        lastError: null,
+      })),
+      chooseCopyFolder: vi.fn(async () => ({
+        folder: null,
+        target: null,
+        lastCopyAt: null,
+        lastError: null,
+      })),
+      stopCopying: vi.fn(async () => ({
+        folder: null,
+        target: null,
+        lastCopyAt: null,
+        lastError: null,
+      })),
     },
     music: {
       library: vi.fn(async () => ({ folders: [], tracks: [], lastScanAt: null })),
@@ -151,6 +179,12 @@ export function installBridgeMock(): TrifoldBridge {
       importXml: vi.fn(async () => {
         throw new Error('not mocked');
       }),
+      exportPreview: vi.fn(async () => ({ pcs: 0, homebrew: 0, importedRecords: 0 })),
+      exportTo: vi.fn(async () => null),
+      choosePackage: vi.fn(async () => null),
+      importPackage: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
     },
     adventures: {
       save: vi.fn(async (a) => a),
@@ -208,6 +242,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  discardPendingSaves();
 });
 
 // ProseMirror (the note editor) measures ranges and elements; jsdom has no layout, so give it

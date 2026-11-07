@@ -47,6 +47,13 @@ import {
 } from '../features/encounters/build';
 import { retargetToNpc, withTokenLink } from '../features/encounters/templates';
 import { autoLink, sceneInPlay, type TokenLink } from '../features/presenter/tokenLinks';
+import {
+  cancelSave,
+  COMBAT_NOTES_SLOT,
+  encounterSlot,
+  flushSave,
+  scheduleSave,
+} from './pendingSaves';
 import { useCampaignStore } from './campaignStore';
 import { usePresenterStore } from './presenterStore';
 import { facesText, useRollLogStore } from './rollLogStore';
@@ -144,7 +151,8 @@ interface CombatStoreState {
    */
   addToFight(template: CombatantTemplate): Promise<void>;
   /** Edits the running encounter's DM notes, saved with the live state. */
-  setNotes(notes: string): void;
+  /** Resolves when the edit is written. */
+  setNotes(notes: string): Promise<void>;
   /** Turns a creature into a named NPC whose HP carries between fights. */
   trackAsNpc(id: string): Promise<NPC | null>;
   remove(id: string): void;
@@ -170,18 +178,19 @@ interface CombatStoreState {
 }
 
 const LOG_LIMIT = 2000;
-let saveTimer: number | null = null;
 
 export const useCombatStore = create<CombatStoreState>((set, get) => {
   const persist = () => {
     const { encounterId, state } = get();
     if (!encounterId) return;
-    if (saveTimer) window.clearTimeout(saveTimer);
-    saveTimer = window.setTimeout(() => {
-      window.trifold.encounters.saveState(encounterId, state).catch((err: unknown) => {
-        set({ error: err instanceof Error ? err.message : String(err) });
-      });
-    }, 250);
+    scheduleSave(
+      'combat',
+      () =>
+        window.trifold.encounters.saveState(encounterId, state).catch((err: unknown) => {
+          set({ error: err instanceof Error ? err.message : String(err) });
+        }),
+      250,
+    );
   };
 
   const update = (fn: (state: CombatState) => CombatState) => {
@@ -236,7 +245,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     const next = { ...encounter, ...patch, state: get().state, updatedAt: nowIso() };
     const campaign = useCampaignStore.getState();
     campaign.putEncounter(next);
-    void campaign.saveEncounter(next);
+    return campaign.saveEncounter(next);
   };
   const saveTemplates = (combatants: Encounter['combatants']) => saveEncounterEdit({ combatants });
 
@@ -425,6 +434,8 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     finished: null,
 
     async begin(encounter, pcs, initiativeMode) {
+      // A builder edit still waiting would write the encounter without its fight.
+      cancelSave(encounterSlot(encounter.id));
       const records = await loadRecords(null, encounter);
       const map = new Map(Object.entries(records));
       const npcs = useCampaignStore.getState().current?.npcs ?? [];
@@ -813,10 +824,10 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       if (tokens.length) applyLinks(autoLink(get().state?.combatants ?? [], tokens));
     },
 
-    setNotes(notes) {
+    async setNotes(notes) {
       const encounter = currentEncounter();
       if (!encounter || encounter.notes === notes) return;
-      saveEncounterEdit({ notes });
+      await saveEncounterEdit({ notes });
     },
 
     async trackAsNpc(id) {
@@ -1095,10 +1106,9 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     async end() {
       const { encounterId, state, enemyXp } = get();
       if (!encounterId || !state) return null;
-      if (saveTimer) {
-        window.clearTimeout(saveTimer);
-        saveTimer = null;
-      }
+      // Notes typed a moment ago land before the result, never after it (ADR 0015).
+      await flushSave(COMBAT_NOTES_SLOT);
+      cancelSave('combat');
       const casualties = state.combatants
         .filter((c) => c.ref.kind === 'pc' && c.dead)
         .map((c) => c.name);

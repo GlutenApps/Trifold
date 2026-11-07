@@ -2,6 +2,7 @@ import { app, dialog, shell } from 'electron';
 import { reopenLibrary } from './libraryOpen';
 import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
+import { copyStatus } from './backupCopy';
 import { createCampaignApi } from './campaignApi';
 import { createMusicApi } from './musicApi';
 import { createNoteTemplatesApi } from './noteTemplates';
@@ -15,6 +16,7 @@ import type { PresenterHub } from './presenter';
 import { importXmlSource, isStale, reimportSource } from './sources/importXml';
 import { systemPageUrl } from './systemPages';
 import { isWebUrl } from './webTabs';
+import type { SaveFlush } from './saveFlush';
 import { WindowManager } from './windows';
 
 export interface ApiContext {
@@ -25,6 +27,7 @@ export interface ApiContext {
   logger: Logger;
   icons: IconResources;
   phoneAudio: PhoneAudioReceiver;
+  saves: SaveFlush;
 }
 
 /** The main-process implementation of `TrifoldApi`. Registered by `registerIpc`. */
@@ -63,6 +66,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         if (!isWebUrl(url)) return false;
         await shell.openExternal(url);
         return true;
+      },
+      async savesFlushed() {
+        ctx.saves.acknowledge();
       },
     },
 
@@ -267,6 +273,43 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async openFolder() {
         const error = await shell.openPath(requireBackups().dir);
         if (error) throw new Error(error);
+      },
+      async chooseFile() {
+        const service = requireBackups();
+        const result = await dialog.showOpenDialog({
+          title: 'Restore a Library backup',
+          properties: ['openFile'],
+          filters: [{ name: 'Trifold backup', extensions: ['zip'] }],
+        });
+        const path = result.canceled ? null : (result.filePaths[0] ?? null);
+        return path ? service.inspect(path) : null;
+      },
+      async restoreFile(path) {
+        const service = requireBackups();
+        const root = requireStore().root;
+        await service.restoreFile(path);
+        return reopenLibrary(ctx, root);
+      },
+      async copyStatus() {
+        return copyStatus(ctx.config, ctx.session);
+      },
+      async chooseCopyFolder() {
+        const result = await dialog.showOpenDialog({
+          title: 'Also copy backups to',
+          properties: ['openDirectory', 'createDirectory', 'promptToCreate'],
+        });
+        const folder = result.canceled ? null : (result.filePaths[0] ?? null);
+        if (folder) {
+          await ctx.config.update({ backupCopy: { folder, lastCopyAt: null, lastError: null } });
+          ctx.logger.info(`backups will also be copied to ${folder}`);
+        }
+        return copyStatus(ctx.config, ctx.session);
+      },
+      async stopCopying() {
+        await ctx.config.update({
+          backupCopy: { folder: null, lastCopyAt: null, lastError: null },
+        });
+        return copyStatus(ctx.config, ctx.session);
       },
     },
 

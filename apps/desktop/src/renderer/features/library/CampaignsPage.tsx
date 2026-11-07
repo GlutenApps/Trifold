@@ -3,6 +3,7 @@ import type { CampaignSummary } from '@trifold/api';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { deleteCampaign, switchCampaign } from '../shell/campaignFlow';
 import { Icon } from '../shell/icons';
+import { CampaignExportPanel, useCampaignPackageImport } from './CampaignPackages';
 
 /** Inline confirm on a campaign card: the DM types DELETE before the folder goes. */
 function DeleteCampaignConfirm({
@@ -61,12 +62,15 @@ export function CampaignsPage() {
   const clearError = useCampaignStore((s) => s.clearError);
   const [newName, setNewName] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
+  const packageImport = useCampaignPackageImport();
 
   return (
     <section className="campaigns-page">
       <div className="row">
         <h1>Campaigns</h1>
         <span className="spacer" />
+        {packageImport.button}
         <button
           type="button"
           className="btn"
@@ -76,6 +80,7 @@ export function CampaignsPage() {
           Import campaign XML…
         </button>
       </div>
+      {packageImport.panel}
       {error && (
         <div className="banner error" role="alert">
           <span>{error}</span>
@@ -154,6 +159,16 @@ export function CampaignsPage() {
                     </button>
                   )}
                   <span className="spacer" />
+                  <button
+                    type="button"
+                    className="chrome-btn"
+                    title="Export campaign…"
+                    aria-label={`Export ${c.name}…`}
+                    aria-expanded={exporting === c.id}
+                    onClick={() => setExporting(exporting === c.id ? null : c.id)}
+                  >
+                    <Icon name="send" />
+                  </button>
                   {deleting !== c.id && (
                     <button
                       type="button"
@@ -166,6 +181,9 @@ export function CampaignsPage() {
                     </button>
                   )}
                 </div>
+                {exporting === c.id && (
+                  <CampaignExportPanel campaign={c} onClose={() => setExporting(null)} />
+                )}
                 {deleting === c.id && (
                   <DeleteCampaignConfirm campaign={c} onCancel={() => setDeleting(null)} />
                 )}

@@ -3,6 +3,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import type { Note, NoteTemplate } from '@trifold/schema';
 import { ancestorsOf, descendantsOf, flattenTree, nextOrder, searchNotes } from '@trifold/rules';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { cancelSave, scheduleSave } from '../../stores/pendingSaves';
 import { blankTemplate, useNoteTemplateStore } from '../../stores/noteTemplateStore';
 import { useTreeDnd } from '../../treeDnd';
 import { Icon } from '../shell/icons';
@@ -67,22 +68,28 @@ function useDraft(note: Note) {
   const latest = useRef(note);
   latest.current = note;
   const pending = useRef<Editable | null>(null);
-  const timer = useRef<number | undefined>(undefined);
+  /** This editor's slot in the pending-save registry. */
+  const timer = useRef({});
 
   const flush = useCallback(() => {
-    window.clearTimeout(timer.current);
+    cancelSave(timer);
     const patch = pending.current;
     if (!patch) return;
     pending.current = null;
     setDirty(false);
-    void saveNote({
+    return saveNote({
       ...latest.current,
       ...patch,
       title: patch.title.trim() || latest.current.title,
     });
   }, [saveNote]);
 
-  useEffect(() => flush, [flush]);
+  useEffect(
+    () => () => {
+      void flush();
+    },
+    [flush],
+  );
 
   const update = (patch: Partial<Editable>) => {
     setDraft((d) => {
@@ -91,8 +98,7 @@ function useDraft(note: Note) {
       return next;
     });
     setDirty(true);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(flush, AUTOSAVE_MS);
+    scheduleSave(timer, flush, AUTOSAVE_MS);
   };
 
   return { draft, update, dirty, flush };

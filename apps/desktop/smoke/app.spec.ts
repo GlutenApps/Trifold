@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { _electron as electron, expect, test } from '@playwright/test';
 import type { TrifoldBridge } from '@trifold/api';
 
@@ -17,6 +17,8 @@ const FIXTURE = resolve(__dirname, '..', '..', '..', 'fixtures', 'compendium-sam
 test('console, Library, import, search, stat block and player window all work end to end', async () => {
   const userData = await mkdtemp(join(tmpdir(), 'trifold-userdata-'));
   const library = await mkdtemp(join(tmpdir(), 'trifold-library-'));
+  const away = await mkdtemp(join(tmpdir(), 'trifold-backup-copy-'));
+  let backupsAfterClose: string[] = [];
 
   // Editors and extension hosts export ELECTRON_RUN_AS_NODE=1, which would make electron.exe run
   // as plain Node and reject Chromium switches. Never pass it through to the app under test.
@@ -84,6 +86,27 @@ test('console, Library, import, search, stat block and player window all work en
     await libNav('Settings').click();
     await console_.getByRole('button', { name: 'Back up now' }).click();
     await expect(console_.getByTestId('backup-row').filter({ hasText: 'manual' })).toHaveCount(1);
+
+    // A second location (ADR 0015): the next backup is also copied to the folder the DM picks,
+    // and Restore from file takes that copy back. The native pickers answer with a set path.
+    const pickNext = (path: string) =>
+      app.evaluate(({ dialog }, picked) => {
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] });
+      }, path);
+    await pickNext(away);
+    await console_.getByRole('button', { name: 'Choose folder…' }).click();
+    await expect(console_.getByTestId('backup-copy-target')).toContainText('Trifold backups');
+    await console_.getByRole('button', { name: 'Back up now' }).click();
+    await expect(console_.getByTestId('backup-copy-status')).toContainText('Last copied');
+    const copies = join(away, 'Trifold backups', basename(library));
+    const [copied] = await readdir(copies);
+    expect(copied).toMatch(/\.zip$/);
+    await pickNext(join(copies, copied!));
+    await console_.getByRole('button', { name: 'Restore from file…' }).click();
+    await expect(console_.getByTestId('backup-file-picked')).toContainText('1 imported source');
+    await console_.getByRole('button', { name: 'Restore', exact: true }).click();
+    await expect(console_.getByText(/A copy of the previous state was saved first/)).toBeVisible();
+    await expect(console_.getByTestId('index-status')).toHaveText('Index: ok');
     await libNav('Compendium').click();
     await console_.getByRole('button', { name: 'Browse', exact: true }).click();
 
@@ -342,6 +365,31 @@ test('console, Library, import, search, stat block and player window all work en
       console_.getByTestId('music-player').getByRole('button', { name: 'Play', exact: true }),
     ).toBeVisible();
 
+    // Campaign export and import (ADR 0015): a fresh start without the party goes out through
+    // the save dialog and comes back in as a copy beside the original.
+    const exported = join(away, 'Smoke Campaign.trifold-campaign');
+    await app.evaluate(({ dialog }, target) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: target });
+    }, exported);
+    await console_.getByRole('button', { name: 'Library', exact: true }).click();
+    await libNav('Campaigns').click();
+    await console_.getByRole('button', { name: 'Export Smoke Campaign…' }).click();
+    await console_.getByRole('radio', { name: 'Fresh start' }).click();
+    await console_.getByRole('checkbox', { name: /^Party/ }).click();
+    await console_.getByRole('button', { name: 'Export…' }).click();
+    await expect(console_.getByText(`Exported to ${exported}`)).toBeVisible();
+    await pickNext(exported);
+    await console_.getByRole('button', { name: 'Import campaign…' }).click();
+    await console_.getByRole('button', { name: 'Import as a copy' }).click();
+    await expect(console_.getByTestId('campaign-package-result')).toContainText(
+      'Imported Smoke Campaign (copy)',
+    );
+    const copyDir = join(library, 'campaigns', 'smoke-campaign-2');
+    expect(JSON.parse(await readFile(join(copyDir, 'campaign.json'), 'utf8')).name).toBe(
+      'Smoke Campaign (copy)',
+    );
+    expect(await readdir(join(copyDir, 'pcs'))).toEqual([]);
+
     // Bundled glyphs are served to the player over the media scheme (only when fetched).
     if (existsSync(join(__dirname, '..', '..', '..', 'resources', 'icons', 'svg'))) {
       const loads = (url: string) =>
@@ -371,9 +419,13 @@ test('console, Library, import, search, stat block and player window all work en
     expect(rendererErrors).toEqual([]);
   } finally {
     await app.close();
+    // Closing flushed the last saves and wrote the day's on-close zip (ADR 0015).
+    backupsAfterClose = await readdir(join(library, 'backups')).catch(() => []);
     await rm(userData, { recursive: true, force: true });
     await rm(library, { recursive: true, force: true });
+    await rm(away, { recursive: true, force: true });
   }
+  expect(backupsAfterClose.some((name) => name.endsWith('-quit.zip'))).toBe(true);
 });
 
 /** A valid silent 16-bit mono PCM WAV of `seconds` at 8 kHz. */

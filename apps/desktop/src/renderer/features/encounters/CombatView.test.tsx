@@ -371,4 +371,30 @@ describe('CombatView: encounter notes', () => {
     expect(screen.queryByLabelText('Encounter notes')).not.toBeInTheDocument();
     expect(screen.getByTestId('encounter-notes')).toHaveTextContent('Whistle brings stalkers.');
   });
+
+  it('writes notes typed just before the fight ends ahead of its result (ADR 0015)', async () => {
+    useCampaignStore.setState({
+      current: {
+        campaign: { id: 'c1', slug: 'cave', settings: { initiativeMode: 'perGroup' } },
+        pcs: [],
+        npcs: [],
+        encounters: [{ id: 'enc', combatants: [], results: [], notes: 'Whistle' }],
+        scenes: [],
+      } as unknown as CampaignBundle,
+    });
+    const { save, saveState, finish } = window.trifold.encounters;
+    vi.mocked(save).mockClear();
+    vi.mocked(saveState).mockResolvedValue({} as never);
+    vi.mocked(finish).mockResolvedValue({} as never);
+    render(<CombatView />);
+    await userEvent.type(screen.getByLabelText('Encounter notes'), '!');
+    expect(save).not.toHaveBeenCalled();
+    await act(async () => {
+      await useCombatStore.getState().end();
+    });
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ notes: 'Whistle!' }));
+    expect(vi.mocked(save).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(saveState).mock.invocationCallOrder[0]!,
+    );
+  });
 });

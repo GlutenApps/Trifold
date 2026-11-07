@@ -4,6 +4,7 @@ import type { Combatant, ConditionDuration, Scene, Token } from '@trifold/schema
 import { registerHotkey } from '../../hotkeys';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore, type DamageTarget } from '../../stores/combatStore';
+import { COMBAT_NOTES_SLOT, hasPendingSave, scheduleSave } from '../../stores/pendingSaves';
 import { useIconStore } from '../../stores/iconStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useSceneStore } from '../../stores/sceneStore';
@@ -1292,26 +1293,15 @@ function EncounterNotes({ open, onToggle }: { open: boolean; onToggle(): void })
   );
   const setNotes = useCombatStore((s) => s.setNotes);
   const [draft, setDraft] = useState(saved);
-  const timer = useRef<number | null>(null);
-
   // Take outside changes (another fight, a reload) unless an edit is still waiting to save.
   useEffect(() => {
-    if (!timer.current) setDraft(saved);
+    if (!hasPendingSave(COMBAT_NOTES_SLOT)) setDraft(saved);
   }, [saved]);
-  useEffect(
-    () => () => {
-      if (timer.current) window.clearTimeout(timer.current);
-    },
-    [],
-  );
 
+  // Collapsing or leaving the tracker lets a waiting edit land; ending the fight writes it first.
   const edit = (text: string) => {
     setDraft(text);
-    if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      timer.current = null;
-      setNotes(text);
-    }, 400);
+    scheduleSave(COMBAT_NOTES_SLOT, () => setNotes(text), 400);
   };
 
   return (

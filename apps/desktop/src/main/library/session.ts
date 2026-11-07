@@ -3,7 +3,7 @@ import type { LibraryInfo } from '@trifold/api';
 import { INDEX_VERSION, IndexDb } from '../index/IndexDb';
 import { syncIndex } from '../index/sync';
 import { CampaignRepository } from '../campaign/repository';
-import { BackupService } from '../backups';
+import { BackupService, type BackupOptions } from '../backups';
 import { MusicRepository } from '../music/repository';
 import { errorMessage, type Logger } from '../log';
 import { BundledSources } from '../sources/bundled';
@@ -38,6 +38,8 @@ export class LibrarySession {
   constructor(
     private readonly logger: Logger,
     bundledResourcesDir: string,
+    /** App version and the second backup location, for every Library this session opens. */
+    private readonly backupOptions?: BackupOptions,
   ) {
     this.bundled = new BundledSources(bundledResourcesDir, logger);
   }
@@ -58,7 +60,7 @@ export class LibrarySession {
       this.catalog = new CombinedCatalog(this.bundled, this.sources, this.store, this.homebrew);
       this.campaigns = new CampaignRepository(this.store, this.logger);
       this.music = new MusicRepository(this.store, this.logger);
-      this.backups = new BackupService(this.store, this.logger);
+      this.backups = new BackupService(this.store, this.logger, this.backupOptions);
       this.error = null;
       this.logger.info(`Library opened: ${this.store.root}`);
     } catch (err) {
