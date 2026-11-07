@@ -687,22 +687,67 @@ body.resizing {
   padding: 0 4px 4px;
 }
 
+/* Library pages fill the window: the content area is the only width cap, and it is a panel
+   container so the feature stylesheets' narrow-panel rules (split collapse, stacked track
+   table, hidden list columns) apply here as they do in the console. */
 .lib-content {
   flex: 1;
   min-width: 0;
   overflow: auto;
-  padding: 24px 40px;
+  padding: 20px clamp(16px, 2.5vw, 40px);
+  container: panel / inline-size;
 }
 
-.lib-content > * {
-  max-width: 1100px;
+.lib-content .card,
+.lib-content .banner,
+.lib-content textarea {
+  max-width: none;
 }
 
+/* Library › Compendium: Browse and Homebrew fill the height so the list and the stat block
+   scroll on their own; Sources is a card that scrolls with the page. */
+.compendium-library[data-segment='browse'],
+.compendium-library[data-segment='homebrew'] {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.compendium-library > .compendium {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+/* Library › Settings: short cards share a row; the backups table and the About text span it. */
+.settings-page {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.settings-page > .card {
+  margin: 0;
+  min-width: 0;
+}
+
+.settings-page > .card.span {
+  grid-column: 1 / -1;
+}
+
+/* Two campaigns per row: wide enough that the open one's three buttons sit on one line. */
 .campaign-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin: 12px 0;
+}
+
+@container panel (max-width: 760px) {
+  .campaign-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .campaign-card {
@@ -725,7 +770,26 @@ body.resizing {
 }
 
 .wide-input {
-  min-width: 320px;
+  min-width: min(320px, 100%);
+  flex: 1 1 320px;
+  max-width: 520px;
+}
+
+/* A half-screen window: the Library nav keeps its icons and drops the labels. */
+@media (max-width: 1100px) {
+  .lib-nav {
+    width: auto;
+    padding: 10px 6px;
+  }
+
+  .lib-row {
+    padding: 0 8px;
+  }
+
+  .lib-row > :not(.icon),
+  .lib-hint {
+    display: none;
+  }
 }
 
 /* Modal (the only one: closing with something on the TV) */
@@ -791,6 +855,17 @@ body.resizing {
 
 .chrome-btn[aria-pressed='true'],
 .chrome-btn.on {
+  color: var(--accent);
+}
+
+/* Toolbars whose buttons are states (masked, hidden, dead, linked): the icon says which, and
+   the pressed one also sits on a tint so the pair reads at a glance. */
+.state-toolbar .chrome-btn[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.state-toolbar .chrome-btn[aria-pressed='true']:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
   color: var(--accent);
 }
 

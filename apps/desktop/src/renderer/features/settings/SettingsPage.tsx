@@ -33,7 +33,7 @@ export function SettingsPage() {
   const autoDisplay = settings?.playerDisplayId === null || settings?.playerDisplayId === undefined;
 
   return (
-    <section>
+    <section className="settings-page">
       <div className="card">
         <h2>Library</h2>
         <p>
@@ -56,8 +56,6 @@ export function SettingsPage() {
           </button>
         </div>
       </div>
-
-      <BackupsCard />
 
       <div className="card">
         <h2>Displays</h2>
@@ -107,7 +105,9 @@ export function SettingsPage() {
         </label>
       </div>
 
-      <div className="card">
+      <BackupsCard />
+
+      <div className="card span">
         <h2>About</h2>
         <p>
           Trifold {info?.version ?? ''} · Electron {info?.electron ?? ''} · Chromium{' '}

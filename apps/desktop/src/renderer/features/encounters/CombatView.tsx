@@ -7,7 +7,6 @@ import { useCombatStore, type DamageTarget } from '../../stores/combatStore';
 import { useIconStore } from '../../stores/iconStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useSceneStore } from '../../stores/sceneStore';
-import { formatCombatLog, logFileName } from './logExport';
 import { AddToFight } from './AddToFight';
 import { StatBlock } from '../compendium/StatBlock';
 import { DEFAULT_GRID, footprintForSize, mapSize, pixelToGrid } from '../presenter/mapMath';
@@ -291,16 +290,21 @@ function CombatantDrawer({
             {c.ac !== undefined ? `AC ${c.ac} · ` : ''}init {signedText(c.initiativeBonus)}
           </span>
           <span className="spacer" />
-          <span className="icon-toolbar" role="group" aria-label="Combatant actions">
-            {!c.revealed && c.ref.kind !== 'pc' && (
+          <span className="icon-toolbar state-toolbar" role="group" aria-label="Combatant actions">
+            {c.ref.kind !== 'pc' && (
               <button
                 type="button"
-                className="chrome-btn"
-                aria-label="Reveal name"
-                title="Reveal name to the players"
-                onClick={() => store.reveal(c.id)}
+                className={`chrome-btn${c.revealed ? '' : ' on'}`}
+                aria-label={c.revealed ? 'Mask name' : 'Reveal name'}
+                aria-pressed={!c.revealed}
+                title={
+                  c.revealed
+                    ? `Players see "${c.name}". Mask it as "${c.maskedName}"`
+                    : `Players see "${c.maskedName}". Reveal "${c.name}"`
+                }
+                onClick={() => store.reveal(c.id, !c.revealed)}
               >
-                <Icon name="tv" size={15} />
+                <Icon name={c.revealed ? 'maskOff' : 'mask'} size={15} />
               </button>
             )}
             <button
@@ -326,7 +330,7 @@ function CombatantDrawer({
                 title={c.dead ? 'Revive' : 'Mark dead'}
                 onClick={() => store.markDead(c.id, !c.dead)}
               >
-                <Icon name="skull" size={15} />
+                <Icon name={c.dead ? 'skull' : 'skullOff'} size={15} />
               </button>
             )}
             {(c.ref.kind === 'record' || c.ref.kind === 'custom') && !c.isLair && (
@@ -340,15 +344,20 @@ function CombatantDrawer({
                 <Icon name="person" size={15} />
               </button>
             )}
-            {map && !c.isLair && !onMap && (
+            {map && !c.isLair && (
               <button
                 type="button"
-                className="chrome-btn"
-                aria-label="Place on map"
-                title="Tie to a token on the map in play, or drop one there"
-                onClick={placeOnMap}
+                className={`chrome-btn${onMap ? ' on' : ''}`}
+                aria-label={onMap ? 'Unlink from map' : 'Link to map'}
+                aria-pressed={onMap}
+                title={
+                  onMap
+                    ? 'Linked to a token on the map in play. Unlink it'
+                    : 'Link to a token on the map in play, or drop one there'
+                }
+                onClick={onMap ? () => store.linkToken(c.id, null) : placeOnMap}
               >
-                <Icon name="map" size={15} />
+                <Icon name={onMap ? 'link' : 'linkOff'} size={15} />
               </button>
             )}
             <button
@@ -1189,23 +1198,6 @@ export function CombatView() {
           <div className="row">
             <h2>Log</h2>
             <span className="spacer" />
-            <button
-              type="button"
-              className="btn tiny"
-              onClick={() => {
-                const encounterId = useCombatStore.getState().encounterId;
-                const name =
-                  useCampaignStore.getState().current?.encounters.find((e) => e.id === encounterId)
-                    ?.name ?? 'Encounter';
-                void window.trifold.app.saveTextFile({
-                  title: 'Export combat log',
-                  defaultName: logFileName(name, state.startedAt),
-                  text: formatCombatLog(name, state),
-                });
-              }}
-            >
-              export
-            </button>
             <button type="button" className="btn tiny" onClick={() => setShowLog((v) => !v)}>
               {showLog ? 'hide' : 'show'}
             </button>

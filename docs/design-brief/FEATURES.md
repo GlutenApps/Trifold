@@ -67,7 +67,7 @@ Hotkeys (fixed):
 - Inspector for the selected combatant: AC and init; Reveal name, Hide, Hold, Mark dead, Remove; damage amount + damage type + Damage / Heal / Temp HP; condition picker + duration + Add condition; concentration field + Concentrate; counters and recharges (one pip per use, click to spend); spell slot tracker (pips per level, spend and restore).
 - Stat block of the selected monster with action buttons: attack (rolls to hit and damage), multiattack, feature rolls, save calls. PC rows show "PC card: no stat block. Ask the player."
 - Inline prompts, never modal: concentration check ("Aria must make a DC 13 Constitution save to keep concentrating" with roll / keep / drop), save call panel (DC, ability, per-target results, apply damage half/full), rolled damage waiting for a target (choose target, half, dismiss).
-- Log: every roll and turn, "export" (save as text) and "hide".
+- Log: every roll and turn, with "hide".
 - Banners: records not found, errors.
 
 ## Major: Presenter (scenes)
@@ -76,7 +76,7 @@ Hotkeys (fixed):
 - New scene toolbar: title field + New title card, New image scene…, New map…, New blank grid, New folder. "Recent:" links to the last scenes shown.
 - Selected scene: preview card ("Selected: The Sunken Keep", Send to TV).
 - Edit scene: title, subtitle, Show title on TV (follow overlay setting / always / never), Music on go-live (keep current audio / a playlist), backdrop, DM notes, Remove scene.
-- Map editor (for map and blank-grid scenes): canvas with zoom and pan; grid alignment (click two opposite corners of one cell); Place party (click the map or an entry marker); entry markers (name field, add, remove); creature tokens (Find creature to place, count); token states hidden / masked / dead; drag tokens (mirrored to the TV); "Show the players what you see now" (player camera); camera presets; linked encounter: start or resume combat from the tokens, or forget the link.
+- Map editor (for map and blank-grid scenes): canvas with zoom and pan; grid alignment (click two opposite corners of one cell, or of a square block of N cells for maps with a printed grid; a live preview shows the block); Place party (click the map or an entry marker); entry markers (name field, add, remove); creature tokens (Find creature to place, count); token states hidden / masked / dead; drag tokens (mirrored to the TV); "Show the players what you see now" (player camera); camera presets; linked encounter: start or resume combat from the tokens, or forget the link.
 
 ## Major: Music (library)
 

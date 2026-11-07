@@ -58,6 +58,24 @@ describe('map math', () => {
     expect(alignFromClicks({ x: 10, y: 10 }, { x: 11, y: 12 })).toBeNull();
   });
 
+  it('aligns from a block of cells so click error is divided by the count', () => {
+    // 10×10 block of 40 px cells starting at (23, 17), each click 3 px off.
+    expect(alignFromClicks({ x: 26, y: 14 }, { x: 420, y: 423 }, 10)).toEqual({
+      cellPx: 40.15,
+      offsetX: 26,
+      offsetY: 14,
+    });
+    // Same misses over a single cell would be far worse.
+    expect(alignFromClicks({ x: 26, y: 14 }, { x: 60, y: 63 })?.cellPx).toBe(41.5);
+    // Order of the corners and a fractional count are tolerated.
+    expect(alignFromClicks({ x: 420, y: 423 }, { x: 26, y: 14 }, 10.7)).toEqual({
+      cellPx: 40.15,
+      offsetX: 26,
+      offsetY: 14,
+    });
+    expect(alignFromClicks({ x: 0, y: 0 }, { x: 30, y: 30 }, 10)).toBeNull();
+  });
+
   it('snaps to whole cells and bounds visible tokens', () => {
     expect(snap({ x: 2.4, y: 3.6 })).toEqual({ x: 2, y: 4 });
     const bounds = tokenBounds(

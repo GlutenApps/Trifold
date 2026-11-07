@@ -122,8 +122,15 @@ export function MapEditor({
   const [mode, setMode] = useState<Mode>('select');
   const [pending, setPending] = useState<Pending | null>(null);
   const [alignFirst, setAlignFirst] = useState<Point | null>(null);
+  const [alignHover, setAlignHover] = useState<Point | null>(null);
+  const [alignCells, setAlignCells] = useState(1);
   const [selection, setSelection] = useState<Selection>(null);
   const [menu, setMenu] = useState<{ tokenId: string; x: number; y: number } | null>(null);
+  /** Combatants the DM must choose between when more than one could be the selected token. */
+  const [fighterChoices, setFighterChoices] = useState<{
+    tokenId: string;
+    fighters: Combatant[];
+  } | null>(null);
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState<CompendiumRow[]>([]);
   const [pop, setPop] = useState<Pop | null>(null);
@@ -162,12 +169,12 @@ export function MapEditor({
     if (inPlay && unlinkedKey) relinkTokens(tokensRef.current);
   }, [inPlay, unlinkedKey, tokensKey, relinkTokens]);
 
-  /** The plus on an unlinked token: the one match, a choice of several, or a newcomer. */
-  const joinFight = (token: Token, at: { x: number; y: number }) => {
+  /** The inspector's Link button: the one match, a choice of several, or a newcomer. */
+  const linkSelected = (token: Token) => {
     const candidates = combatantCandidates(token, fighters, scene.tokens);
     if (candidates.length === 1) linkToken(candidates[0]!.id, token.id);
     else if (candidates.length === 0) void addFromToken(token);
-    else setMenu({ tokenId: token.id, ...at });
+    else setFighterChoices({ tokenId: token.id, fighters: candidates });
   };
 
   /** Hidden and dead on a token in the fight belong to its combatant; the token follows. */
@@ -368,9 +375,10 @@ export function MapEditor({
         setAlignFirst(at);
         return;
       }
-      const derived = alignFromClicks(alignFirst, at);
+      const derived = alignFromClicks(alignFirst, at, alignCells);
       if (derived) patchGrid(derived);
       setAlignFirst(null);
+      setAlignHover(null);
       setMode('select');
       return;
     }
@@ -384,6 +392,7 @@ export function MapEditor({
   };
 
   const onBackgroundMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (mode === 'align' && alignFirst) setAlignHover(mapPoint(e));
     if (pan.current) {
       setCam({
         ...cam,
@@ -642,11 +651,12 @@ export function MapEditor({
         ? 'crosshair'
         : 'copy';
 
+  const block = alignCells > 1 ? `a block of ${alignCells}×${alignCells} cells` : 'a cell';
   const hint =
     mode === 'align'
       ? alignFirst
-        ? 'Now click the opposite corner of that cell'
-        : 'Click one corner of a cell'
+        ? `Now click the opposite corner of ${alignCells > 1 ? 'that block' : 'that cell'}`
+        : `Click one corner of ${block}`
       : mode === 'party'
         ? 'Click the map to place the party'
         : mode === 'place'
@@ -658,6 +668,8 @@ export function MapEditor({
   const cancelMode = () => {
     setMode('select');
     setPending(null);
+    setAlignFirst(null);
+    setAlignHover(null);
     setAlignFirst(null);
   };
   /** Starts a placing mode from a pop-up and hands the keyboard to the map. */
@@ -705,17 +717,35 @@ export function MapEditor({
           }
         >
           <h3>Grid</h3>
-          <button
-            type="button"
-            className="btn small"
-            title="Click two opposite corners of one cell on the map"
-            onClick={() => {
-              setAlignFirst(null);
-              beginPlacing('align');
-            }}
-          >
-            Align grid to map
-          </button>
+          <div className="map-align-row">
+            <button
+              type="button"
+              className="btn small"
+              title="Click two opposite corners of a square block of cells on the map. A bigger block (10×10 or more) aligns a printed grid far more accurately than one cell."
+              onClick={() => {
+                setAlignFirst(null);
+                setAlignHover(null);
+                beginPlacing('align');
+              }}
+            >
+              Align grid to map
+            </button>
+            <label className="field">
+              Cells across
+              <input
+                type="number"
+                className="narrow"
+                min={1}
+                max={200}
+                step={1}
+                value={alignCells}
+                title="How many cells wide (and tall) the block you click is. 1 is one cell; 10 means click opposite corners of a 10×10 block."
+                onChange={(e) =>
+                  setAlignCells(Math.min(200, Math.max(1, Math.floor(Number(e.target.value) || 1))))
+                }
+              />
+            </label>
+          </div>
           <div className="map-pop-fields">
             <label className="field">
               Cell px
@@ -1121,6 +1151,9 @@ export function MapEditor({
           {alignFirst && (
             <div className="align-dot" style={{ left: alignFirst.x, top: alignFirst.y }} />
           )}
+          {alignFirst && alignHover && (
+            <AlignPreview a={alignFirst} b={alignHover} cells={alignCells} />
+          )}
           <div
             className="player-viewport"
             data-testid="player-viewport"
@@ -1173,23 +1206,15 @@ export function MapEditor({
                   </span>
                 )}
                 {inPlay && !turnOrder.has(token.id) && token.kind !== 'marker' && (
-                  <button
-                    type="button"
-                    className="chrome-btn xs token-add"
-                    aria-label={`Add ${token.label} to the fight`}
-                    title="Add to the fight"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const rect = containerRef.current?.getBoundingClientRect();
-                      joinFight(token, {
-                        x: e.clientX - (rect?.left ?? 0),
-                        y: e.clientY - (rect?.top ?? 0),
-                      });
-                    }}
+                  <span
+                    className="token-order unlinked"
+                    data-testid="token-unlinked"
+                    role="img"
+                    aria-label={`${token.label} is not in the fight`}
+                    title="Not in the fight. Select the token to link it."
                   >
-                    <Icon name="plus" size={12} />
-                  </button>
+                    ?
+                  </span>
                 )}
               </div>
             );
@@ -1280,7 +1305,7 @@ export function MapEditor({
                       setMenu(null);
                     }}
                   >
-                    {t.dead ? 'Mark alive' : 'Mark dead'}
+                    {t.dead ? 'Revive' : 'Mark dead'}
                   </button>
                   <button type="button" role="menuitem" onClick={() => void setArt(t.id)}>
                     Set art…
@@ -1456,51 +1481,133 @@ export function MapEditor({
                 <option value={4}>4 cells</option>
               </select>
             </label>
-            {selectedToken.kind === 'creature' && (
-              <label className="field inline">
-                <input
-                  type="checkbox"
-                  checked={selectedToken.nameMasked}
-                  onChange={(e) => patchToken(selectedToken.id, { nameMasked: e.target.checked })}
-                />
-                Mask name on TV
-              </label>
+            <span className="icon-toolbar state-toolbar" role="group" aria-label="Token actions">
+              {selectedToken.kind === 'creature' && (
+                <button
+                  type="button"
+                  className={`chrome-btn${selectedToken.nameMasked ? ' on' : ''}`}
+                  aria-label={selectedToken.nameMasked ? 'Reveal name' : 'Mask name'}
+                  aria-pressed={selectedToken.nameMasked}
+                  title={
+                    selectedToken.nameMasked
+                      ? `Players see "${selectedToken.maskedLabel ?? 'Creature'}". Reveal "${selectedToken.label}"`
+                      : `Players see "${selectedToken.label}". Mask it as "${selectedToken.maskedLabel ?? 'Creature'}"`
+                  }
+                  onClick={() =>
+                    patchToken(selectedToken.id, { nameMasked: !selectedToken.nameMasked })
+                  }
+                >
+                  <Icon name={selectedToken.nameMasked ? 'mask' : 'maskOff'} size={15} />
+                </button>
+              )}
+              <button
+                type="button"
+                className={`chrome-btn${selectedToken.hidden ? ' on' : ''}`}
+                aria-label={selectedToken.hidden ? 'Show to players' : 'Hide from players'}
+                aria-pressed={selectedToken.hidden}
+                title={
+                  selectedToken.hidden
+                    ? 'Show to the players (map and initiative strip)'
+                    : 'Hide from the players (map and initiative strip)'
+                }
+                onClick={() => setTokenHidden(selectedToken, !selectedToken.hidden)}
+              >
+                <Icon name={selectedToken.hidden ? 'eyeOff' : 'eye'} size={15} />
+              </button>
+              {selectedToken.kind !== 'marker' && (
+                <button
+                  type="button"
+                  className={`chrome-btn${selectedToken.dead ? ' on' : ''}`}
+                  aria-label={selectedToken.dead ? 'Revive' : 'Mark dead'}
+                  aria-pressed={selectedToken.dead}
+                  title={selectedToken.dead ? 'Revive' : 'Mark dead'}
+                  onClick={() => setTokenDead(selectedToken, !selectedToken.dead)}
+                >
+                  <Icon name={selectedToken.dead ? 'skull' : 'skullOff'} size={15} />
+                </button>
+              )}
+              {inPlay &&
+                selectedToken.kind !== 'marker' &&
+                (() => {
+                  const fighter = fighterByToken.get(selectedToken.id);
+                  return fighter ? (
+                    <button
+                      type="button"
+                      className="chrome-btn on"
+                      aria-label={`Unlink from ${fighter.name}`}
+                      aria-pressed
+                      title={`In the fight as ${fighter.name}. Unlink it`}
+                      onClick={() => linkToken(fighter.id, null)}
+                    >
+                      <Icon name="link" size={15} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="chrome-btn"
+                      aria-label={`Link ${selectedToken.label} to the fight`}
+                      title="Link to a combatant in the fight, or add it as a newcomer"
+                      onClick={() => linkSelected(selectedToken)}
+                    >
+                      <Icon name="linkOff" size={15} />
+                    </button>
+                  );
+                })()}
+              <button
+                type="button"
+                className="chrome-btn"
+                aria-label="Set token art"
+                title="Set art…"
+                onClick={() => void setArt(selectedToken.id)}
+              >
+                <Icon name="image" size={15} />
+              </button>
+              <button
+                type="button"
+                className="chrome-btn danger"
+                aria-label="Remove token"
+                title="Remove token (Delete)"
+                onClick={() => removeToken(selectedToken.id)}
+              >
+                <Icon name="trash" size={15} />
+              </button>
+            </span>
+            {inPlay && fighterByToken.has(selectedToken.id) && (
+              <span className="muted small">
+                In the fight as {fighterByToken.get(selectedToken.id)!.name}
+              </span>
             )}
-            <label className="field inline">
-              <input
-                type="checkbox"
-                checked={selectedToken.hidden}
-                onChange={(e) => setTokenHidden(selectedToken, e.target.checked)}
-              />
-              Hidden from players
-            </label>
-            <label className="field inline">
-              <input
-                type="checkbox"
-                checked={selectedToken.dead}
-                onChange={(e) => setTokenDead(selectedToken, e.target.checked)}
-              />
-              Dead
-            </label>
-            <span className="spacer" />
-            <button
-              type="button"
-              className="chrome-btn"
-              aria-label="Set token art"
-              title="Set art…"
-              onClick={() => void setArt(selectedToken.id)}
-            >
-              <Icon name="image" size={15} />
-            </button>
-            <button
-              type="button"
-              className="chrome-btn danger"
-              aria-label="Remove token"
-              title="Remove token (Delete)"
-              onClick={() => removeToken(selectedToken.id)}
-            >
-              <Icon name="trash" size={15} />
-            </button>
+            {fighterChoices && fighterChoices.tokenId === selectedToken.id && (
+              <span className="row" role="group" aria-label="Which combatant">
+                <span className="muted">Which combatant is {selectedToken.label}?</span>
+                {fighterChoices.fighters.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="btn tiny"
+                    onClick={() => {
+                      linkToken(c.id, selectedToken.id);
+                      setFighterChoices(null);
+                    }}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="btn tiny"
+                  onClick={() => {
+                    void addFromToken(selectedToken);
+                    setFighterChoices(null);
+                  }}
+                >
+                  Newcomer
+                </button>
+                <button type="button" className="btn tiny" onClick={() => setFighterChoices(null)}>
+                  Cancel
+                </button>
+              </span>
+            )}
           </div>
         ) : (
           <p className="muted small">
@@ -1521,4 +1628,35 @@ const TOKEN_KIND_LABEL: Record<Token['kind'], string> = {
 
 function capitalize(s: string): string {
   return s.length ? s[0]!.toUpperCase() + s.slice(1) : s;
+}
+
+/**
+ * Rubber-band preview while aligning: the block of cells the two clicks would span, drawn as a
+ * grid so the DM can see its lines land on the map's own grid before committing.
+ */
+function AlignPreview({ a, b, cells }: { a: Point; b: Point; cells: number }) {
+  const left = Math.min(a.x, b.x);
+  const top = Math.min(a.y, b.y);
+  const w = Math.abs(b.x - a.x);
+  const h = Math.abs(b.y - a.y);
+  if (w < 1 || h < 1) return null;
+  const n = Math.max(1, Math.floor(cells));
+  const lines: string[] = [];
+  for (let i = 0; i <= n; i++) {
+    const x = (w * i) / n;
+    const y = (h * i) / n;
+    lines.push(`M ${x} 0 L ${x} ${h}`, `M 0 ${y} L ${w} ${y}`);
+  }
+  return (
+    <svg
+      className="align-preview"
+      style={{ left, top }}
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      aria-hidden="true"
+    >
+      <path d={lines.join(' ')} vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
 }

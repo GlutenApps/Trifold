@@ -23,7 +23,7 @@ tracker while one does. The tab carries the live pip during a fight.
   running fight with a "Return to fight" banner. Other encounters can be read
   and edited but not started, and the running one cannot be removed. One
   fight at a time, as before.
-- When a fight ends, a result card (rounds, XP, fallen PCs, export log) shows
+- When a fight ends, a result card (rounds, XP, fallen PCs) shows
   above the list until dismissed.
 - Everything that brought Combat forward (a fight starting anywhere, the live
   strip, Ctrl+K and map routing that avoid the tracker) now targets Encounters.

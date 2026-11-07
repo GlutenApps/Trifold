@@ -40,6 +40,7 @@ export function LibraryView() {
             type="button"
             className="lib-row"
             aria-label={p.label}
+            title={p.label}
             aria-current={page === p.id ? 'page' : undefined}
             onClick={() => setPage(p.id)}
           >

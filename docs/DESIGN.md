@@ -255,7 +255,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Player-facing display.** The initiative strip on the TV shows masked names (creature type until revealed), portraits/tokens, the active turn and the round; PC health bars optional. Creature HP is never shown exactly; a "bloodied" marker at half HP is optional.
 
-**Log.** Every roll, damage application and condition change is logged with timestamps; the log is exportable as text.
+**Log.** Every roll, damage application and condition change is logged with timestamps and kept with the encounter's results.
 
 ### 6.5 Presenter
 

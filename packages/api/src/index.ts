@@ -439,12 +439,6 @@ export interface TrifoldApi {
     getInfo(): Promise<AppInfo>;
     /** Opens an OS settings page; false when this OS has no such page. */
     openSystemPage(page: SystemPage): Promise<boolean>;
-    /** Save-as dialog plus write; resolves to the path, or null when cancelled. */
-    saveTextFile(options: {
-      title: string;
-      defaultName: string;
-      text: string;
-    }): Promise<string | null>;
     /** Opens an http(s) URL in the system browser (ADR 0011); false for any other scheme. */
     openExternal(url: string): Promise<boolean>;
   };
@@ -609,7 +603,7 @@ export type ApiNamespace = keyof TrifoldApi;
 
 /** Every method, by namespace. The preload and the IPC registry iterate this table. */
 export const API_METHODS = {
-  app: ['getInfo', 'openSystemPage', 'saveTextFile', 'openExternal'],
+  app: ['getInfo', 'openSystemPage', 'openExternal'],
   library: ['getInfo', 'chooseFolder', 'open', 'openInExplorer', 'getSettings', 'updateSettings'],
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],

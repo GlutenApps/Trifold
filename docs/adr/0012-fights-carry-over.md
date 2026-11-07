@@ -40,10 +40,11 @@ the **map in play**: the live scene when it is a map, else the scene the encount
 on. On that map:
 
 - a linked token wears its place in the turn order; an unlinked PC or creature token wears a
-  plus that adds it to the fight;
-- the tracker marks linked rows "map" and the open row offers **Place on map**;
-- the plus ties to the one matching unlinked combatant, asks when there are several, and
-  adds a newcomer when there are none; Place on map does the same the other way and drops a
+  circled question mark in that spot instead;
+- the tracker marks linked rows "map" and the open row offers **Link to map**; selecting an
+  unlinked token on the map shows **Link to the fight** in its inspector;
+- Link to the fight ties to the one matching unlinked combatant, asks when there are several,
+  and adds a newcomer when there are none; Link to map does the same the other way and drops a
   new token in the middle of the map when nothing matches;
 - links that need no judgement (a label equal to the combatant's name, or one free pair of
   an identity) are made on their own when the fight begins, when the map in play changes

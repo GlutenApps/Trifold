@@ -1,4 +1,25 @@
 /* Loaded last so these container rules win over the feature stylesheets at equal specificity. */
+/* Library › Compendium has the whole window, so the list and the stat block share it evenly;
+   in a half-screen window the list drops its type and size columns before the names go. */
+:where(.compendium-library) .split {
+  grid-template-columns: minmax(320px, 1fr) minmax(360px, 1fr);
+}
+
+@container panel (max-width: 1100px) {
+  :where(.compendium-library) .list-row.columns[data-kind='monster'] {
+    --meta-cols: 46px 32px auto;
+  }
+
+  :where(.compendium-library) .list-row.columns[data-kind='item'] {
+    --meta-cols: 76px auto;
+  }
+
+  :where(.compendium-library) .list-row.columns .cell.type,
+  :where(.compendium-library) .list-row.columns .cell.size {
+    display: none;
+  }
+}
+
 /* Panels can be any width: the feature splits collapse to one column when the panel is narrow,
    so nothing scrolls sideways while a fight and a map share the screen. */
 @container panel (max-width: 720px) {
@@ -265,4 +286,34 @@ textarea {
   .track-table .tt-lists {
     grid-area: lists;
   }
+}
+
+/* Encounter list rows: the text wraps inside its own block while the action buttons stay
+   together on the right, so a narrow panel never strands a lone button on its own line. */
+.encounter-row {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.encounter-row-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 2px;
+  padding-top: 3px;
+}
+
+.encounter-row-text strong {
+  overflow-wrap: anywhere;
+}
+
+.encounter-row-actions {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }

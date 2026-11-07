@@ -22,7 +22,6 @@ export function installBridgeMock(): TrifoldBridge {
         userDataPath: 'C:\\test',
       })),
       openSystemPage: vi.fn(async () => true),
-      saveTextFile: vi.fn(async () => null),
       openExternal: vi.fn(async () => true),
     },
     library: {

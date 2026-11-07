@@ -165,6 +165,37 @@ describe('MapEditor: tools and selection', () => {
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+
+  it('aligns the grid from a block of cells and previews the block between the clicks', async () => {
+    const { container } = render(<Harness />);
+    const canvas = screen.getByTestId('map-canvas');
+    await userEvent.click(screen.getByRole('button', { name: 'Grid' }));
+    const pop = screen.getByRole('dialog', { name: 'Grid settings' });
+    const cells = within(pop).getByLabelText('Cells across');
+    expect(cells).toHaveValue(1);
+    fireEvent.change(cells, { target: { value: '10' } });
+    expect(cells).toHaveValue(10);
+    await userEvent.click(within(pop).getByRole('button', { name: 'Align grid to map' }));
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Click one corner of a block of 10×10 cells',
+    );
+
+    // The DM camera is 0.25 zoom at the origin in jsdom, so client px × 4 = map px.
+    fireEvent.pointerDown(canvas, { button: 0, clientX: 12, clientY: 12 });
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Now click the opposite corner of that block',
+    );
+    expect(container.querySelector('.align-preview')).toBeNull();
+    fireEvent.pointerMove(canvas, { clientX: 62, clientY: 62 });
+    const preview = container.querySelector('.align-preview');
+    expect(preview).not.toBeNull();
+    expect(preview).toHaveAttribute('width', '200');
+
+    fireEvent.pointerDown(canvas, { button: 0, clientX: 112, clientY: 112 });
+    expect(latest.grid).toMatchObject({ cellPx: 40, offsetX: 8, offsetY: 8 });
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(container.querySelector('.align-preview')).toBeNull();
+  });
 });
 
 describe('MapEditor: backgrounds', () => {
@@ -318,8 +349,12 @@ describe('MapEditor: the fight on the map (ADR 0012)', () => {
       expect(useCombatStore.getState().state!.combatants[1]!.tokenId).toBe('wolf'),
     );
     expect(screen.getByTestId('token-order')).toHaveTextContent('2');
-    expect(screen.queryByRole('button', { name: 'Add Wolf to the fight' })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Add Goblin to the fight' }));
+    // The goblin wears a question mark instead of a place; nothing on the token itself links it.
+    expect(screen.getByRole('img', { name: 'Goblin is not in the fight' })).toHaveTextContent('?');
+    expect(screen.queryByRole('img', { name: 'Wolf is not in the fight' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /to the fight/ })).not.toBeInTheDocument();
+    fireEvent.contextMenu(screen.getAllByTestId('console-token')[1]!);
+    await userEvent.click(screen.getByRole('button', { name: 'Link Goblin to the fight' }));
     await waitFor(() =>
       expect(useCombatStore.getState().state!.combatants.map((c) => c.name)).toEqual([
         'Bandit 1',
@@ -328,6 +363,80 @@ describe('MapEditor: the fight on the map (ADR 0012)', () => {
       ]),
     );
     expect(useCombatStore.getState().state!.combatants[2]!.tokenId).toBe('gob');
+    expect(screen.queryByTestId('token-unlinked')).not.toBeInTheDocument();
+  });
+
+  it('links the selected token from the inspector, asking when several fighters could be it', async () => {
+    useCombatStore.setState({
+      encounterId: 'e1',
+      state: {
+        round: 1,
+        turnIndex: 0,
+        combatants: [
+          fighter('b', 'Bandit 1', { tokenId: 'elsewhere' }),
+          fighter('w1', 'Wolf 1', { ref: { kind: 'custom', name: 'Wolf' } }),
+          fighter('w2', 'Wolf 2', { ref: { kind: 'custom', name: 'Wolf' } }),
+        ],
+        log: [],
+        startedAt: now,
+      },
+    });
+    render(<Harness initial={withGoblin} />);
+    const tokens = screen.getAllByTestId('console-token');
+    // Two wolves could be the one wolf token, so nothing was linked on its own.
+    expect(useCombatStore.getState().state!.combatants.every((c) => c.tokenId !== 'wolf')).toBe(
+      true,
+    );
+    fireEvent.contextMenu(tokens[0]!);
+    const inspector = screen.getByTestId('token-inspector');
+    await userEvent.click(
+      within(inspector).getByRole('button', { name: 'Link Wolf to the fight' }),
+    );
+    const which = within(inspector).getByRole('group', { name: 'Which combatant' });
+    expect(which).toHaveTextContent('Which combatant is Wolf?');
+    await userEvent.click(within(which).getByRole('button', { name: 'Wolf 2' }));
+    expect(useCombatStore.getState().state!.combatants[2]!.tokenId).toBe('wolf');
+    expect(within(inspector).queryByRole('group', { name: 'Which combatant' })).toBeNull();
+    expect(inspector).toHaveTextContent('In the fight as Wolf 2');
+    expect(within(inspector).queryByRole('button', { name: 'Link Wolf to the fight' })).toBeNull();
+    expect(within(inspector).getByRole('button', { name: 'Unlink from Wolf 2' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    // The same toolbar as the tracker's: hidden and dead go through the fighter, which the
+    // map's own copy of the token then follows.
+    const hide = within(inspector).getByRole('button', { name: 'Hide from players' });
+    expect(hide).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(hide);
+    expect(useCombatStore.getState().state!.combatants[2]!.hidden).toBe(true);
+    await userEvent.click(within(inspector).getByRole('button', { name: 'Mark dead' }));
+    expect(useCombatStore.getState().state!.combatants[2]!.dead).toBe(true);
+    await waitFor(() =>
+      expect(useCampaignStore.getState().current!.scenes[0]!.tokens[0]).toMatchObject({
+        hidden: true,
+        dead: true,
+      }),
+    );
+    await userEvent.click(within(inspector).getByRole('button', { name: 'Reveal name' }));
+    expect(latest.tokens[0]!.nameMasked).toBe(false);
+    expect(within(inspector).getByRole('button', { name: 'Mask name' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    // The goblin matches no one, so Link adds it as a newcomer.
+    fireEvent.contextMenu(tokens[1]!);
+    await userEvent.click(screen.getByRole('button', { name: 'Link Goblin to the fight' }));
+    await waitFor(() =>
+      expect(useCombatStore.getState().state!.combatants.map((c) => c.name)).toEqual([
+        'Bandit 1',
+        'Wolf 1',
+        'Wolf 2',
+        'Goblin',
+      ]),
+    );
+    expect(useCombatStore.getState().state!.combatants[3]!.tokenId).toBe('gob');
   });
 
   it('hides and kills a token in the fight through its combatant', async () => {

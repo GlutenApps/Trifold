@@ -75,7 +75,7 @@ export function BackupsCard() {
   };
 
   return (
-    <div className="card" data-testid="backups-card">
+    <div className="card span" data-testid="backups-card">
       <h2>Backups</h2>
       <p className="muted">
         A zip of the Library (everything except the search index, logs and music files) is written

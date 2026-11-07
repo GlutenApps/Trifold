@@ -248,10 +248,10 @@ describe('CombatView: the row toolbar and the map (ADR 0012)', () => {
     expect(within(wolf).getByRole('button', { name: 'Mark dead' })).toBeInTheDocument();
     expect(within(wolf).getByRole('button', { name: 'Hide from players' })).toBeInTheDocument();
     expect(within(wolf).getByRole('button', { name: 'Track as NPC' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Place on map' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Link to map' })).not.toBeInTheDocument();
   });
 
-  it('places a combatant on the map in play by tying it to the matching free token', async () => {
+  it('links a combatant to the matching free token on the map in play', async () => {
     useCampaignStore.setState({
       current: {
         campaign: { id: 'c1', slug: 'cave', settings: { initiativeMode: 'perGroup' } },
@@ -263,10 +263,29 @@ describe('CombatView: the row toolbar and the map (ADR 0012)', () => {
     });
     render(<CombatView />);
     const wolf = screen.getByRole('region', { name: 'Wolf controls' });
-    await userEvent.click(within(wolf).getByRole('button', { name: 'Place on map' }));
+    await userEvent.click(within(wolf).getByRole('button', { name: 'Link to map' }));
     expect(useCombatStore.getState().state!.combatants[0]!.tokenId).toBe('w1');
     expect(screen.getAllByTestId('combatant-row')[0]).toHaveTextContent('map');
-    expect(within(wolf).queryByRole('button', { name: 'Place on map' })).not.toBeInTheDocument();
+    expect(within(wolf).queryByRole('button', { name: 'Link to map' })).not.toBeInTheDocument();
+    const unlink = within(wolf).getByRole('button', { name: 'Unlink from map' });
+    expect(unlink).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(unlink);
+    expect(useCombatStore.getState().state!.combatants[0]!.tokenId).toBeUndefined();
+    expect(within(wolf).getByRole('button', { name: 'Link to map' })).toBeInTheDocument();
+  });
+
+  it('masks and reveals a name with one toggle', async () => {
+    useCampaignStore.setState({ current: null });
+    render(<CombatView />);
+    const wolf = screen.getByRole('region', { name: 'Wolf controls' });
+    const mask = within(wolf).getByRole('button', { name: 'Mask name' });
+    expect(mask).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(mask);
+    expect(useCombatStore.getState().state!.combatants[0]!.revealed).toBe(false);
+    const reveal = within(wolf).getByRole('button', { name: 'Reveal name' });
+    expect(reveal).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(reveal);
+    expect(useCombatStore.getState().state!.combatants[0]!.revealed).toBe(true);
   });
 });
 

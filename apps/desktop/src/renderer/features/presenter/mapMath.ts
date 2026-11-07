@@ -62,16 +62,20 @@ export function snap(p: Point): Point {
 }
 
 /**
- * Two-click alignment: the DM clicks opposite corners of one cell. Uses the mean of the two
- * spans so a slightly diagonal drag still gives a square cell.
+ * Two-click alignment: the DM clicks opposite corners of a square block of `cells` × `cells`
+ * cells (one cell by default). Uses the mean of the two spans so a slightly diagonal drag still
+ * gives a square cell. Spanning a bigger block divides any click error by the cell count, which is
+ * what makes a map with thick, blurry printed grid lines alignable at all.
  */
 export function alignFromClicks(
   a: Point,
   b: Point,
+  cells = 1,
 ): Pick<GridSpec, 'cellPx' | 'offsetX' | 'offsetY'> | null {
+  const n = Math.max(1, Math.floor(cells));
   const w = Math.abs(b.x - a.x);
   const h = Math.abs(b.y - a.y);
-  const cellPx = (w + h) / 2;
+  const cellPx = (w + h) / (2 * n);
   if (cellPx < 4) return null;
   const left = Math.min(a.x, b.x);
   const top = Math.min(a.y, b.y);

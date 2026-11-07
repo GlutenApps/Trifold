@@ -1,6 +1,4 @@
 import { app, dialog, shell } from 'electron';
-import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { reopenLibrary } from './libraryOpen';
 import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
@@ -65,16 +63,6 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         if (!isWebUrl(url)) return false;
         await shell.openExternal(url);
         return true;
-      },
-      async saveTextFile({ title, defaultName, text }) {
-        const result = await dialog.showSaveDialog({
-          title,
-          defaultPath: join(app.getPath('documents'), defaultName),
-          filters: [{ name: 'Text', extensions: ['txt'] }],
-        });
-        if (result.canceled || !result.filePath) return null;
-        await writeFile(result.filePath, text, 'utf8');
-        return result.filePath;
       },
     },
 

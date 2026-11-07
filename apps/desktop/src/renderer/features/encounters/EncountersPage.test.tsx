@@ -95,10 +95,6 @@ describe('EncountersPage', () => {
     const result = screen.getByTestId('fight-result');
     expect(result).toHaveTextContent('Bridge ambush finished');
     expect(result).toHaveTextContent('4 rounds · 200 XP · fallen: Thora');
-    await userEvent.click(screen.getByRole('button', { name: 'Export combat log' }));
-    expect(window.trifold.app.saveTextFile).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Export combat log' }),
-    );
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss result' }));
     expect(screen.queryByTestId('fight-result')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('encounter-row')).toHaveLength(2);

@@ -77,7 +77,11 @@ export type IconName =
   | 'star'
   | 'minus'
   | 'eye'
-  | 'eyeOff';
+  | 'eyeOff'
+  | 'mask'
+  | 'maskOff'
+  | 'skullOff'
+  | 'linkOff';
 
 /** Hand-drawn 24 px stroke glyphs; no icon dependency, so the chrome stays small and ours. */
 const PATHS: Record<IconName, string> = {
@@ -179,6 +183,16 @@ const PATHS: Record<IconName, string> = {
     'M12 3a7 7 0 0 0-7 7c0 2.5 1.2 4 2.5 5v3h9v-3c1.3-1 2.5-2.5 2.5-5a7 7 0 0 0-7-7zM9 11h.01M15 11h.01M10.5 18v3M13.5 18v3',
   gem: 'M7 4h10l4 5-9 12L3 9zM3 9h18M9 9l3 12M15 9l-3 12',
   star: 'M12 3l2.7 5.7 6.3.8-4.6 4.3 1.2 6.2L12 17l-5.6 3 1.2-6.2L3 9.5l6.3-.8z',
+  // Masked name, or revealed: the tracker's and the map's name toggle, drawn like eye / eyeOff.
+  mask: 'M2 9c3-2 7-2 10 0 3-2 7-2 10 0v3c0 3.5-2.5 6-5.5 6-2 0-3.5-1-4.5-2.5C11 17 9.5 18 7.5 18 4.5 18 2 15.5 2 12zM5.5 12.5a1.5 1 0 1 0 3 0 1.5 1 0 1 0-3 0zM15.5 12.5a1.5 1 0 1 0 3 0 1.5 1 0 1 0-3 0z',
+  maskOff:
+    'M3 3l18 18M2 9c3-2 7-2 10 0 3-2 7-2 10 0v3c0 3.5-2.5 6-5.5 6-2 0-3.5-1-4.5-2.5C11 17 9.5 18 7.5 18 4.5 18 2 15.5 2 12zM5.5 12.5a1.5 1 0 1 0 3 0 1.5 1 0 1 0-3 0zM15.5 12.5a1.5 1 0 1 0 3 0 1.5 1 0 1 0-3 0z',
+  // Dead, or alive: the tracker's and the map's death toggle, drawn like eye / eyeOff.
+  skullOff:
+    'M3 3l18 18M12 3a7 7 0 0 0-7 7c0 2.5 1.2 4 2.5 5v3h9v-3c1.3-1 2.5-2.5 2.5-5a7 7 0 0 0-7-7zM9 11h.01M15 11h.01M10.5 18v3M13.5 18v3',
+  // Linked, or not: the tracker's and the map's link toggle.
+  linkOff:
+    'M3 3l18 18M9.5 7.5l1.5-1.5a4 4 0 0 1 5.7 5.7l-1.5 1.5M14.5 16.5l-1.5 1.5a4 4 0 0 1-5.7-5.7l1.5-1.5',
 };
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {

@@ -7,7 +7,6 @@ import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { Icon } from '../shell/icons';
 import { CombatView } from './CombatView';
-import { formatResultLog, logFileName } from './logExport';
 import { retargetToNpc } from './templates';
 
 const NO_NPCS: NPC[] = [];
@@ -443,24 +442,6 @@ export function EncountersPage() {
             <button
               type="button"
               className="chrome-btn xs"
-              aria-label="Export combat log"
-              title="Export the log as text"
-              onClick={() =>
-                void window.trifold.app.saveTextFile({
-                  title: 'Export combat log',
-                  defaultName: logFileName(
-                    finishedEncounter?.name ?? 'combat',
-                    finished.result.endedAt,
-                  ),
-                  text: formatResultLog(finishedEncounter?.name ?? 'Combat', finished.result),
-                })
-              }
-            >
-              <Icon name="send" size={13} />
-            </button>
-            <button
-              type="button"
-              className="chrome-btn xs"
               aria-label="Dismiss result"
               title="Dismiss"
               onClick={dismissFinished}
@@ -507,98 +488,84 @@ export function EncountersPage() {
           </div>
           {current.encounters.length === 0 && <p className="muted">No encounters yet.</p>}
           {current.encounters.map((e) => (
-            <div key={e.id} className="row" data-testid="encounter-row">
-              <strong>{e.name}</strong>
-              <span className="muted">
-                {e.combatants.reduce((n, t) => n + t.quantity, 0)} combatants
-                {e.results.length ? ` · fought ${e.results.length}×` : ''}
-              </span>
-              {e.state && (
-                <span className="badge warn">combat in progress · round {e.state.round}</span>
-              )}
-              <span className="spacer" />
-              {e.results.length > 0 && (
-                <button
-                  type="button"
-                  className="btn tiny"
-                  title="Export the last fight's log as text"
-                  onClick={() => {
-                    const last = e.results[e.results.length - 1]!;
-                    void window.trifold.app.saveTextFile({
-                      title: 'Export combat log',
-                      defaultName: logFileName(e.name, last.endedAt),
-                      text: formatResultLog(e.name, last),
-                    });
-                  }}
-                >
-                  Export log
-                </button>
-              )}
-              <span className="row-actions pinned">
-                {!e.state && (
+            <div key={e.id} className="row encounter-row" data-testid="encounter-row">
+              <div className="encounter-row-text">
+                <strong>{e.name}</strong>
+                <span className="muted">
+                  {e.combatants.reduce((n, t) => n + t.quantity, 0)} combatants
+                  {e.results.length ? ` · fought ${e.results.length}×` : ''}
+                </span>
+                {e.state && (
+                  <span className="badge warn">combat in progress · round {e.state.round}</span>
+                )}
+              </div>
+              <span className="encounter-row-actions">
+                <span className="row-actions pinned">
+                  {!e.state && (
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-label={`Edit ${e.name}`}
+                      title="Edit"
+                      onClick={() => setDraft(e)}
+                    >
+                      <Icon name="pencil" size={13} />
+                    </button>
+                  )}
+                  {e.id !== fightId && (
+                    <button
+                      type="button"
+                      className="chrome-btn xs danger"
+                      aria-label={`Remove ${e.name}`}
+                      title="Remove"
+                      onClick={() => void removeEncounter(e.id)}
+                    >
+                      <Icon name="close" size={13} />
+                    </button>
+                  )}
+                </span>
+                {e.id === fightId ? (
                   <button
                     type="button"
                     className="chrome-btn xs"
-                    aria-label={`Edit ${e.name}`}
-                    title="Edit"
-                    onClick={() => setDraft(e)}
+                    aria-label={`Return to fight: ${e.name}`}
+                    title="Return to fight"
+                    onClick={() => setBrowsing(false)}
                   >
-                    <Icon name="pencil" size={13} />
+                    <Icon name="play" size={13} />
                   </button>
-                )}
-                {e.id !== fightId && (
+                ) : e.state ? (
                   <button
                     type="button"
-                    className="chrome-btn xs danger"
-                    aria-label={`Remove ${e.name}`}
-                    title="Remove"
-                    onClick={() => void removeEncounter(e.id)}
+                    className="chrome-btn xs"
+                    aria-label={`Resume combat: ${e.name}`}
+                    title={fightId ? 'End the current fight first' : 'Resume combat'}
+                    disabled={!!fightId}
+                    onClick={() => void resume(e)}
                   >
-                    <Icon name="close" size={13} />
+                    <Icon name="play" size={13} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-label={`Start combat: ${e.name}`}
+                    title={
+                      fightId
+                        ? 'End the current fight first'
+                        : e.combatants.length === 0
+                          ? 'Add combatants first'
+                          : 'Start combat'
+                    }
+                    disabled={e.combatants.length === 0 || !!fightId}
+                    onClick={() =>
+                      void begin(e, current.pcs, current.campaign.settings.initiativeMode)
+                    }
+                  >
+                    <Icon name="play" size={13} />
                   </button>
                 )}
               </span>
-              {e.id === fightId ? (
-                <button
-                  type="button"
-                  className="chrome-btn xs"
-                  aria-label={`Return to fight: ${e.name}`}
-                  title="Return to fight"
-                  onClick={() => setBrowsing(false)}
-                >
-                  <Icon name="play" size={13} />
-                </button>
-              ) : e.state ? (
-                <button
-                  type="button"
-                  className="chrome-btn xs"
-                  aria-label={`Resume combat: ${e.name}`}
-                  title={fightId ? 'End the current fight first' : 'Resume combat'}
-                  disabled={!!fightId}
-                  onClick={() => void resume(e)}
-                >
-                  <Icon name="play" size={13} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="chrome-btn xs"
-                  aria-label={`Start combat: ${e.name}`}
-                  title={
-                    fightId
-                      ? 'End the current fight first'
-                      : e.combatants.length === 0
-                        ? 'Add combatants first'
-                        : 'Start combat'
-                  }
-                  disabled={e.combatants.length === 0 || !!fightId}
-                  onClick={() =>
-                    void begin(e, current.pcs, current.campaign.settings.initiativeMode)
-                  }
-                >
-                  <Icon name="play" size={13} />
-                </button>
-              )}
             </div>
           ))}
         </div>

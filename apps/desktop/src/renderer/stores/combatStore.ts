@@ -129,7 +129,8 @@ interface CombatStoreState {
   toggleHeld(id: string): void;
   /** Hidden and dead also reach the combatant's map token, so both views agree (ADR 0012). */
   toggleHidden(id: string): void;
-  reveal(id: string): void;
+  /** Shows the players the real name, or masks it again with `revealed: false`. */
+  reveal(id: string, revealed?: boolean): void;
   markDead(id: string, dead: boolean): void;
   /** Ties a combatant to a map token (null unties); the fight's hidden and dead flags win. */
   linkToken(id: string, tokenId: string | null): void;
@@ -724,8 +725,8 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       patchCombatant(id, (x) => ({ ...x, hidden: !x.hidden }));
     },
 
-    reveal(id) {
-      patchCombatant(id, (x) => ({ ...x, revealed: true }));
+    reveal(id, revealed = true) {
+      patchCombatant(id, (x) => ({ ...x, revealed }));
     },
 
     markDead(id, dead) {

@@ -18,7 +18,7 @@ export function CompendiumLibraryPage() {
   };
 
   return (
-    <section className="compendium-library">
+    <section className="compendium-library" data-segment={segment}>
       <div className="row">
         <h1>Compendium</h1>
         <span className="seg" role="group" aria-label="Compendium section">
