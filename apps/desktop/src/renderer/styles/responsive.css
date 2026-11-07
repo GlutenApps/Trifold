@@ -1,67 +1,19 @@
 /* Loaded last so these container rules win over the feature stylesheets at equal specificity. */
-/* Library › Compendium has the whole window, so the list and the stat block share it evenly;
-   in a half-screen window the list drops its type and size columns before the names go. */
-:where(.compendium-library) .split {
-  grid-template-columns: minmax(320px, 1fr) minmax(360px, 1fr);
-}
-
-@container panel (max-width: 1100px) {
-  :where(.compendium-library) .list-row.columns[data-kind='monster'] {
-    --meta-cols: 46px 32px auto;
-  }
-
-  :where(.compendium-library) .list-row.columns[data-kind='item'] {
-    --meta-cols: 76px auto;
-  }
-
-  :where(.compendium-library) .list-row.columns .cell.type,
-  :where(.compendium-library) .list-row.columns .cell.size {
-    display: none;
-  }
-}
-
-/* Panels can be any width: the feature splits collapse to one column when the panel is narrow,
-   so nothing scrolls sideways while a fight and a map share the screen. */
-@container panel (max-width: 720px) {
-  .split,
-  .scenes-split,
-  .scenes-split.with-map,
-  .music-columns {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@container panel (max-width: 960px) {
+/* Combat gains its second column only when both get room: the list about 410 px, the stat
+   block about 535 px. Each then scrolls on its own; below this they share one scroll. */
+@container panel (min-width: 960px) {
   .combat-split {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
-  }
-
-  .combat-log {
-    grid-column: 1 / -1;
-    max-height: 200px;
-  }
-}
-
-/* A narrow combat panel becomes one scrolling column instead of three cramped ones. */
-@container panel (max-width: 640px) {
-  .combat {
-    height: auto;
-  }
-
-  .combat-split {
-    display: block;
+    display: grid;
+    grid-template-columns: minmax(380px, 1fr) minmax(480px, 1.3fr);
+    gap: 12px;
+    overflow: hidden;
   }
 
   .initiative-list,
   .combat-inspector {
-    overflow: visible;
-    max-height: none;
-    margin-bottom: 12px;
-  }
-
-  .combat-log {
-    grid-column: auto;
-    max-height: 240px;
+    overflow: auto;
+    min-height: 0;
+    margin-bottom: 0;
   }
 }
 
@@ -235,7 +187,7 @@ textarea {
 
 /* A narrow Music panel stacks each track: play, title and length, then tags, then playlists
    and gain, so the table never runs off the side. */
-@container panel (max-width: 720px) {
+@container panel (width < 640px) {
   .track-table thead {
     display: none;
   }

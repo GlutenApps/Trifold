@@ -138,7 +138,8 @@ export class WindowManager {
       width: bounds?.width ?? 1400,
       height: bounds?.height ?? 900,
       ...(bounds ? { x: bounds.x, y: bounds.y } : {}),
-      minWidth: 1000,
+      // One panel at its floor plus the icon dock (ADR 0014): half of a 1920 screen at 125 %.
+      minWidth: 760,
       minHeight: 640,
       title: 'Trifold',
       backgroundColor: '#14181d',

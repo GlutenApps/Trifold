@@ -3,7 +3,7 @@ import type { MinorKind } from '@trifold/schema';
 import { useMusicStore } from '../../stores/musicStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { MINOR_TITLES } from '../../stores/shellLayout';
-import { useShellStore } from '../../stores/shellStore';
+import { useFit, useShellStore } from '../../stores/shellStore';
 import { Icon } from './icons';
 import { MINOR_ICON, MinorBody } from './minors';
 
@@ -21,9 +21,10 @@ export function Dock() {
   const setDockWidth = useShellStore((s) => s.setDockWidth);
   const [collapsed, setCollapsed] = useState<Set<MinorKind>>(new Set());
   const pips = useLivePips();
-  const effective = useShellStore((s) => s.effectiveDock)();
+  const fit = useFit();
+  const effective = fit.dock;
   const expandDock = useShellStore((s) => s.expandDock);
-  const trimmed = effective === 'icons' && dock.state === 'narrow';
+  const trimmed = fit.dockTrimmed;
 
   if (dock.state === 'hidden') return null;
 
@@ -34,7 +35,8 @@ export function Dock() {
           type="button"
           className="chrome-btn"
           aria-label="Expand dock"
-          title="Expand dock"
+          title={fit.canExpandDock ? 'Expand dock' : 'Widen the window to expand the dock'}
+          disabled={!fit.canExpandDock}
           onClick={() => (trimmed ? expandDock() : setDockMode('narrow'))}
         >
           <Icon name="expand" />

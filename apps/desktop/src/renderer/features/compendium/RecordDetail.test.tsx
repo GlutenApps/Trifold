@@ -65,6 +65,29 @@ describe('RecordDetail', () => {
     expect(screen.getByTestId('detail-last-roll')).toHaveTextContent(String(entries[0]!.total));
   });
 
+  it('puts Back to results ahead of the history back when the list is hidden', async () => {
+    const onBack = vi.fn();
+    const onBackToResults = vi.fn();
+    render(
+      <RecordDetail
+        record={record('Fireball')}
+        editions={[record('Fireball')]}
+        canGoBack
+        backTo="Mage"
+        onBack={onBack}
+        onBackToResults={onBackToResults}
+        onSwitchEdition={() => undefined}
+        onOpenSpell={() => undefined}
+      />,
+    );
+    const [results, history] = screen.getAllByRole('button', { name: /^Back to/ });
+    expect(results).toHaveAccessibleName('Back to results');
+    expect(history).toHaveAccessibleName('Back to Mage');
+    await userEvent.click(results!);
+    expect(onBackToResults).toHaveBeenCalledOnce();
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
   it('rolls a spell’s dice from a pill', async () => {
     const fireball = record('Fireball');
     if (fireball.kind !== 'spell' || fireball.data.rolls.length === 0) throw new Error('fixture');

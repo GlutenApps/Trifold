@@ -402,7 +402,7 @@ function CombatantDrawer({
                 <input
                   type="number"
                   aria-label="Amount"
-                  className="narrow"
+                  className="narrow hp-amount"
                   placeholder="amount"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -1248,31 +1248,31 @@ export function CombatView() {
             <p className="muted">PC card: no stat block. Ask the player.</p>
           )}
         </div>
-        <div className="combat-log">
-          <div className="row">
-            <h2>Log</h2>
-            <span className="spacer" />
-            <button
-              type="button"
-              className="chrome-btn"
-              aria-label={showLog ? 'Hide log' : 'Show log'}
-              aria-expanded={showLog}
-              title={showLog ? 'Hide the log' : 'Show the log'}
-              onClick={() => setShowLog((v) => !v)}
-            >
-              <Icon name={showLog ? 'eyeOff' : 'eye'} />
-            </button>
-          </div>
-          {showLog && (
-            <ol aria-label="Combat log">
-              {[...state.log].reverse().map((e) => (
-                <li key={e.id} className={`log-${e.kind}`}>
-                  <span className="muted">R{e.round}</span> {e.text}
-                </li>
-              ))}
-            </ol>
-          )}
+      </div>
+      <div className="combat-log">
+        <div className="row">
+          <h2>Log</h2>
+          <span className="spacer" />
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label={showLog ? 'Hide log' : 'Show log'}
+            aria-expanded={showLog}
+            title={showLog ? 'Hide the log' : 'Show the log'}
+            onClick={() => setShowLog((v) => !v)}
+          >
+            <Icon name={showLog ? 'eyeOff' : 'eye'} />
+          </button>
         </div>
+        {showLog && (
+          <ol aria-label="Combat log">
+            {[...state.log].reverse().map((e) => (
+              <li key={e.id} className={`log-${e.kind}`}>
+                <span className="muted">R{e.round}</span> {e.text}
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
 
       {request && (

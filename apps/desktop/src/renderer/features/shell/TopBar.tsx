@@ -157,7 +157,7 @@ export function TopBar() {
             onClick={() => togglePop('layouts')}
           >
             <Icon name="layout" />
-            <span>{preset ? preset.name : 'No layout'}</span>
+            <span className="topbar-label">{preset ? preset.name : 'No layout'}</span>
             {preset && currentIndex < 9 && (
               <kbd className="kbd">{hk(`Ctrl+${currentIndex + 1}`)}</kbd>
             )}
@@ -165,6 +165,7 @@ export function TopBar() {
           <button
             type="button"
             className={`btn ghost${pop === 'hotkeys' ? ' on' : ''}`}
+            aria-label="Hotkeys"
             aria-haspopup="dialog"
             aria-expanded={pop === 'hotkeys'}
             data-pop="hotkeys"
@@ -172,7 +173,7 @@ export function TopBar() {
             onClick={() => togglePop('hotkeys')}
           >
             <Icon name="keys" />
-            <span>Hotkeys</span>
+            <span className="topbar-label hotkeys-label">Hotkeys</span>
           </button>
           <button
             type="button"

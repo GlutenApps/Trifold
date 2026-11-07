@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { create } from 'zustand';
 import { ulid } from 'ulid';
 import {
@@ -18,6 +18,7 @@ import {
   closeTab,
   cloneLayout,
   defaultLayout,
+  fitLayout,
   groupOf,
   matchesPreset,
   moveTab,
@@ -34,6 +35,7 @@ import {
   STARTER_PRESETS,
   toggleMaximize,
   toggleSection,
+  type Fit,
 } from './shellLayout';
 
 export type Space = 'library' | 'console';
@@ -65,9 +67,9 @@ interface ShellState {
   focusedTab: TabKey | null;
   /** Set when closing a campaign needs the stop-sharing warning. */
   closePrompt: boolean;
-  /** Window width; below 1400 with a split stage a narrow dock shows as icons (§4). */
+  /** Window width: what fits side by side is worked out from it (fitLayout, ADR 0014). */
   viewportWidth: number;
-  /** The DM expanded a trimmed dock; cleared on the next resize. */
+  /** The DM expanded a trimmed dock, folding the groups instead; cleared on the next resize. */
   dockExpanded: boolean;
   hydratedFor: string | null;
 
@@ -75,6 +77,8 @@ interface ShellState {
   expandDock(): void;
   /** The dock as drawn: the layout's mode, or icons when trimmed for a narrow window. */
   effectiveDock(): DockMode;
+  /** What the window can show of the layout right now. */
+  fit(): Fit;
 
   hydrate(libraryPath: string, settings: WorkspaceSettings | undefined): void;
   enterConsole(slug: string): void;
@@ -200,13 +204,12 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     effectiveDock() {
+      return get().fit().dock;
+    },
+
+    fit() {
       const { layout, viewportWidth, dockExpanded } = get();
-      const trimmed =
-        layout.dock.state === 'narrow' &&
-        layout.stage.groups.length === 2 &&
-        viewportWidth < 1400 &&
-        !dockExpanded;
-      return trimmed ? 'icons' : layout.dock.state;
+      return fitLayout(layout, viewportWidth, dockExpanded);
     },
 
     hydrate(libraryPath, settings) {
@@ -312,12 +315,14 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     splitRight(kind) {
+      if (!get().fit().canSplit) return;
       change(splitRight(get().layout, kind));
       set({ focusedGroup: 1 });
     },
 
     setSplit(split) {
-      change(setSplit(get().layout, split));
+      const { splitMin, splitMax } = get().fit();
+      change(setSplit(get().layout, split, splitMin, splitMax));
     },
 
     toggleMaximize(group) {
@@ -387,7 +392,7 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     setDockWidth(px) {
-      change(setDockWidth(get().layout, px));
+      change(setDockWidth(get().layout, px, get().fit().dockMax));
     },
 
     toggleSection(tool) {
@@ -484,6 +489,14 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
   };
 });
+
+/** The current fit, re-computed when the layout, the window width or the dock choice changes. */
+export function useFit(): Fit {
+  const layout = useShellStore((s) => s.layout);
+  const width = useShellStore((s) => s.viewportWidth);
+  const expanded = useShellStore((s) => s.dockExpanded);
+  return useMemo(() => fitLayout(layout, width, expanded), [layout, width, expanded]);
+}
 
 /** Runs `refresh` each time a tab becomes the active one of its group (data may have gone stale). */
 export function useTabFocus(kind: TabKey, refresh: () => void): void {

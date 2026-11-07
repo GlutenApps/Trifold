@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type WheelEvent } from 'react';
 import { CR_ORDER, crToNumber } from '@trifold/rules';
 import { Edition, type RecordKind } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
@@ -72,6 +72,13 @@ export function CompendiumPage() {
   const preferredEdition = useCampaignStore((s) => s.current?.campaign.preferredEdition);
 
   const debounce = useRef<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const listScroll = useRef(0);
+  const activeTab = useRef<HTMLButtonElement>(null);
+  // Below 960 px the list and the record take turns (see `.split` in compendium.css): an open
+  // record replaces the list until Back to results, a new search or a new kind brings it back.
+  const [backedOut, setBackedOut] = useState(false);
+  const showDetail = (editing !== null || selected !== null) && !backedOut;
 
   useEffect(() => {
     void search();
@@ -87,7 +94,49 @@ export function CompendiumPage() {
     };
   }, [filters, preferredEdition, search]);
 
-  const update = (patch: Parameters<typeof setFilters>[0]) => setFilters(patch);
+  // A record opened another way (a spell link, a new homebrew copy) shows itself.
+  useEffect(() => setBackedOut(false), [selected?.id, editing]);
+
+  // Back to results finds the list where it was: hiding it drops its scroll position.
+  useLayoutEffect(() => {
+    if (!showDetail && listRef.current) listRef.current.scrollTop = listScroll.current;
+  }, [showDetail]);
+
+  // The kind tabs scroll inside their strip in a narrow panel; keep the active one in view
+  // when it is picked and when the panel narrows.
+  useEffect(() => {
+    const reveal = () => {
+      const tab = activeTab.current;
+      const strip = tab?.parentElement;
+      if (!tab || !strip) return;
+      if (tab.offsetLeft < strip.scrollLeft) strip.scrollLeft = tab.offsetLeft;
+      const end = tab.offsetLeft + tab.offsetWidth - strip.clientWidth;
+      if (end > strip.scrollLeft) strip.scrollLeft = end;
+    };
+    reveal();
+    const strip = activeTab.current?.parentElement;
+    if (!strip || typeof ResizeObserver === 'undefined') return;
+    const watch = new ResizeObserver(reveal);
+    watch.observe(strip);
+    return () => watch.disconnect();
+  }, [kind]);
+
+  const update = (patch: Parameters<typeof setFilters>[0]) => {
+    setBackedOut(true);
+    setFilters(patch);
+  };
+  const open = (id: string) => {
+    if (listRef.current) listScroll.current = listRef.current.scrollTop;
+    setBackedOut(false);
+    void select(id);
+  };
+  // A mouse wheel scrolls the tab strip sideways when it overflows.
+  const wheelTabs = (e: WheelEvent<HTMLDivElement>) => {
+    const strip = e.currentTarget;
+    if (strip.scrollWidth > strip.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      strip.scrollLeft += e.deltaY;
+    }
+  };
   const sourceId = filters.sourceIds?.[0] ?? '';
 
   return (
@@ -102,15 +151,19 @@ export function CompendiumPage() {
       )}
 
       <div className="subtabbar">
-        <div className="subtablist" role="tablist" aria-label="Record kind">
+        <div className="subtablist" role="tablist" aria-label="Record kind" onWheel={wheelTabs}>
           {KINDS.map((k) => (
             <button
               key={k.id}
+              ref={k.id === kind ? activeTab : undefined}
               type="button"
               role="tab"
               className={`subtab${k.id === kind ? ' active' : ''}`}
               aria-selected={k.id === kind}
-              onClick={() => void setKind(k.id)}
+              onClick={() => {
+                setBackedOut(true);
+                void setKind(k.id);
+              }}
             >
               {k.label}
             </button>
@@ -243,8 +296,8 @@ export function CompendiumPage() {
         )}
       </div>
 
-      <div className="split">
-        <div className="list" role="listbox" aria-label="Results">
+      <div className={`split${showDetail ? ' show-detail' : ''}`}>
+        <div className="list" role="listbox" aria-label="Results" ref={listRef}>
           <p className="muted list-status">
             {loading
               ? 'Searching…'
@@ -258,7 +311,7 @@ export function CompendiumPage() {
               aria-selected={selected?.id === r.id}
               className="list-row columns"
               data-kind={kind}
-              onClick={() => void select(r.id)}
+              onClick={() => open(r.id)}
             >
               {/* One grid cell per fact, always rendered (empty when unknown), so every column
                   keeps its place and a value lines up with the same value on the rows around it. */}
@@ -333,6 +386,7 @@ export function CompendiumPage() {
               canGoBack={history.length > 0}
               backTo={history[history.length - 1]?.displayName}
               onBack={back}
+              onBackToResults={() => setBackedOut(true)}
               onSwitchEdition={switchEdition}
               onOpenSpell={(key) => void openByKey('spell', key)}
               sourceNames={Object.fromEntries(sources.map((s) => [s.id, s.name]))}

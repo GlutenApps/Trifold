@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { MINOR_TITLES } from '../../stores/shellLayout';
-import { useShellStore } from '../../stores/shellStore';
+import { useFit, useShellStore } from '../../stores/shellStore';
 import { Icon } from './icons';
 import { MINOR_ICON, MinorBody } from './minors';
 
@@ -11,7 +11,7 @@ import { MINOR_ICON, MinorBody } from './minors';
 export function Flyout() {
   const flyout = useShellStore((s) => s.flyout);
   const dock = useShellStore((s) => s.layout.dock);
-  const effective = useShellStore((s) => s.effectiveDock)();
+  const effective = useFit().dock;
   const closeFlyout = useShellStore((s) => s.closeFlyout);
   const ref = useRef<HTMLDivElement>(null);
 

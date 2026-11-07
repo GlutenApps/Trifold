@@ -53,6 +53,8 @@ function group(n: number) {
 
 describe('AppShell', () => {
   beforeEach(() => {
+    // A desktop-sized window: jsdom's 1024 px is just under two panels and a dock (ADR 0014).
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1600 });
     useShellStore.setState({
       space: 'library',
       libraryPage: 'campaigns',
@@ -181,6 +183,33 @@ describe('AppShell', () => {
     await userEvent.click(group(2).getByRole('button', { name: 'Close Encounters tab' }));
     expect(screen.queryByRole('region', { name: 'Stage group 2' })).not.toBeInTheDocument();
     expect(grow(1)).toBe('1');
+  });
+
+  it('folds two groups into one stack in a narrow window and restores them when it widens', async () => {
+    render(<AppShell />);
+    openCampaign();
+    await waitFor(() =>
+      expect(screen.getByRole('region', { name: 'Stage group 1' })).toBeInTheDocument(),
+    );
+    act(() => useShellStore.getState().moveTab('encounters', 1));
+    expect(screen.getByRole('region', { name: 'Stage group 2' })).toBeInTheDocument();
+
+    // Half of a 1920 screen: two 480 px panels and the icon dock do not fit.
+    act(() => useShellStore.getState().setViewportWidth(960));
+    // The group not on show stays mounted but leaves the accessibility tree.
+    expect(screen.getAllByRole('region', { name: /^Stage group/ })).toHaveLength(1);
+    const strip = screen.getByRole('tablist', { name: /tabs$/ });
+    for (const name of ['Campaign', 'Compendium', 'VTT', 'Encounters']) {
+      expect(within(strip).getByRole('tab', { name })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('separator', { name: 'Resize groups' })).not.toBeInTheDocument();
+    // Picking a tab from the other group shows that group.
+    await userEvent.click(within(strip).getByRole('tab', { name: 'Campaign' }));
+    expect(screen.getByRole('region', { name: 'Stage group 1' })).toBeInTheDocument();
+    // The saved layout is untouched, so widening brings the split back.
+    expect(useShellStore.getState().layout.stage.groups).toHaveLength(2);
+    act(() => useShellStore.getState().setViewportWidth(1600));
+    expect(screen.getAllByRole('region', { name: /^Stage group/ })).toHaveLength(2);
   });
 
   it('toggles dock tools and collapses to icons with flyouts', async () => {

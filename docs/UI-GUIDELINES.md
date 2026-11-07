@@ -111,7 +111,21 @@ One pattern each. Reuse these; do not invent a variant.
 | **Reorder** | `up` / `down` icons at row tier (22 px each), or drag; never squeezed |
 | **Dismiss** an error banner | `btn small` **Dismiss** |
 
-## 10. Checklist for new UI
+## 10. Panel widths and layouts
+
+ADR 0014 records how these came about.
+
+- **The floor.** A stage panel is never narrower than 480 px, and a dock tool is never narrower than 360 px. The shell guarantees both (`PANEL_MIN`, `DOCK_MIN` in `stores/shellLayout.ts`). Build every panel to work from its floor up, with no sideways scrolling at any width.
+- **The shell decides what fits.** When the window narrows, the dock folds to icons first, then two stage groups fold into one stack. Features never need to know about this.
+- **Switch points.** A panel's own layout gains a column only at **640** or **960** px, written as `@container panel (min-width: …)` or `(width < …)`, and only when every column then gets the room its content needs. No other panel-level breakpoints. The `panel` container is the panel's content box (24 px of padding inside the panel edge), so a 480 px panel has about 454 px of content, and "960" switches when the panel itself is about 984 px wide.
+- **Window chrome** (top bar, live strip, Library nav) responds to the window with `@media` at 1180 or 960 px, shedding what has another home first.
+- **Inner parts follow their own width.** A results list, a row or a drawer that has to adapt declares its own container (`container: results / inline-size`) and queries that, not the panel. Example: the compendium list hides its type and size columns when the list is narrow, whatever the panel's width.
+- **Secondary content is a strip, not a column.** A log or summary that is usually short sits across the bottom (collapsible) rather than taking a full-height column.
+- **List and detail below 960 px:** show the list or the detail, not two short scrolling boxes. Selecting opens the detail with a `left` "Back to …" button; going back keeps the query, filters and scroll position. Campaign Notes (below 640) and the compendium (below 960) work this way.
+- **One scroll per panel when stacked.** In a one-column layout the panel scrolls as a whole; avoid fixed-height boxes that scroll separately.
+- **Check it** at 480, 640, 960 and a wide width, and for a dock tool at 360.
+
+## 11. Checklist for new UI
 
 1. Every control on each line uses one tier; no `height`/`padding`/`font-size`/`radius` overrides on controls.
 2. Hierarchy comes from `primary` / `danger`, at most one primary per group.
@@ -121,4 +135,5 @@ One pattern each. Reuse these; do not invent a variant.
 6. Delete, remove, add, back, close and confirm follow section 9.
 7. Colours and radii come from tokens.
 8. Headings are `h2` / `h3`; no `h1` in a panel.
-9. Check it in both themes, at 1366 × 768, and in a narrow panel.
+9. Works from 480 px (360 px for a dock tool) with no sideways scrolling; layout switches only at 640 or 960 (§10).
+10. Check it in both themes, at 1366 × 768, and at half of a 1920 screen.

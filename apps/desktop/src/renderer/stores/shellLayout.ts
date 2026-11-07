@@ -50,10 +50,87 @@ export const MINOR_TITLES: Record<MinorKind, string> = {
 
 export const DOCK_WIDTH: Record<DockMode, number> = {
   wide: 400,
-  narrow: 300,
+  narrow: 360,
   icons: 44,
   hidden: 0,
 };
+
+/**
+ * The panel floor (ADR 0014): no stage group is ever narrower than this, and no dock with
+ * sections narrower than DOCK_MIN. Features are built to work from these widths up.
+ */
+export const PANEL_MIN = 480;
+export const DOCK_MIN = 360;
+export const DOCK_MAX = 800;
+/** Horizontal chrome around the groups: the stage's padding and the divider between groups. */
+export const STAGE_PADDING = 16;
+export const STAGE_DIVIDER = 8;
+
+/** What the screen can show of a layout at a given window width. Never saved. */
+export interface Fit {
+  /** The dock as drawn: the layout's mode, or icons when panels need the room. */
+  dock: DockMode;
+  /** The dock gave way to the stage (the DM can expand it, folding the groups instead). */
+  dockTrimmed: boolean;
+  /** Two saved groups shown as one stack, because two panels do not fit side by side. */
+  folded: boolean;
+  /** Whether a second group would fit right now (split right, drag to split). */
+  canSplit: boolean;
+  /** Divider limits as a share of the stage, so each group keeps PANEL_MIN. */
+  splitMin: number;
+  splitMax: number;
+  /** The widest the dock may be dragged without pushing a panel under the floor. */
+  dockMax: number;
+  /** Whether expanding a trimmed (or icons) dock would still leave one panel at the floor. */
+  canExpandDock: boolean;
+}
+
+/**
+ * Fits a layout to a window (ADR 0014). The dock gives way first: a wide or narrow dock shows
+ * as icons when the panels need the room. If two groups still do not fit, they fold into one
+ * stack. Nothing here changes the saved layout, so widening the window restores it exactly.
+ * `dockExpanded` is the DM choosing the dock over a second panel.
+ */
+export function fitLayout(layout: ShellLayout, viewportWidth: number, dockExpanded = false): Fit {
+  const room = Math.max(0, viewportWidth - STAGE_PADDING);
+  const saved = layout.stage.groups.length;
+  const want = layout.stage.maximized !== null ? 1 : saved;
+  const pref = layout.dock.state === 'hidden' ? 'icons' : layout.dock.state;
+  const full = pref === 'icons' ? DOCK_WIDTH.icons : layout.dock.width;
+  const need = (n: number) => n * PANEL_MIN + (n - 1) * STAGE_DIVIDER;
+  const fits = (n: number, dockPx: number) => room - dockPx >= need(n);
+
+  let dock: DockMode = pref;
+  let shown = want;
+  if (fits(want, full)) {
+    // Everything fits as saved.
+  } else if (dockExpanded && pref !== 'icons' && fits(1, full)) {
+    shown = 1;
+  } else if (fits(want, DOCK_WIDTH.icons)) {
+    dock = 'icons';
+  } else {
+    dock = 'icons';
+    shown = 1;
+  }
+  const dockPx = dock === 'icons' ? DOCK_WIDTH.icons : full;
+  const stage = Math.max(1, room - dockPx - STAGE_DIVIDER);
+  const splitMin = Math.min(0.5, PANEL_MIN / stage);
+  return {
+    dock,
+    dockTrimmed: dock === 'icons' && pref !== 'icons',
+    folded: saved === 2 && want === 2 && shown === 1,
+    canSplit: fits(2, dockPx),
+    splitMin,
+    splitMax: 1 - splitMin,
+    dockMax: Math.max(DOCK_MIN, Math.min(DOCK_MAX, room - need(want))),
+    canExpandDock: fits(1, pref === 'icons' ? DOCK_WIDTH.narrow : full),
+  };
+}
+
+/** The divider position as drawn: the saved share, kept inside the fit's limits. */
+export function fitSplit(split: number, fit: Fit): number {
+  return Math.min(fit.splitMax, Math.max(fit.splitMin, split));
+}
 
 function sections(open: MinorKind[]): ShellLayout['dock']['sections'] {
   return MINOR_KINDS.map((tool) => ({ tool, open: open.includes(tool) }));
@@ -97,7 +174,7 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
         split: 0.5,
         maximized: null,
       },
-      dock: { state: 'narrow', width: 300, sections: sections(['scenes']) },
+      dock: { state: 'narrow', width: 360, sections: sections(['scenes']) },
     },
   },
   {
@@ -170,7 +247,7 @@ export function normalize(layout: ShellLayout): ShellLayout {
     if (!seen.has(tool)) ordered.push({ tool, open: false });
   }
   next.dock.sections = ordered;
-  next.dock.width = Math.min(800, Math.max(200, next.dock.width));
+  next.dock.width = Math.min(DOCK_MAX, Math.max(DOCK_MIN, next.dock.width));
   // Nothing hides the dock any more (ADR 0009); a layout saved hidden shows as icons.
   if (next.dock.state === 'hidden') next.dock.state = 'icons';
   return next;
@@ -243,9 +320,12 @@ export function reorderTab(layout: ShellLayout, kind: TabKey, index: number): Sh
   return moveTab(layout, kind, at as 0 | 1, index);
 }
 
-export function setSplit(layout: ShellLayout, split: number): ShellLayout {
+/** Sets the divider; `min`/`max` come from fitLayout so neither group drops under the floor. */
+export function setSplit(layout: ShellLayout, split: number, min = 0.2, max = 0.8): ShellLayout {
   const next = cloneLayout(layout);
-  next.stage.split = Math.round(Math.min(0.8, Math.max(0.2, split)) * 1000) / 1000;
+  const lo = Math.max(0.2, min);
+  const hi = Math.min(0.8, max);
+  next.stage.split = Math.round(Math.min(hi, Math.max(lo, split)) * 1000) / 1000;
   return next;
 }
 
@@ -263,16 +343,25 @@ export function setDockMode(layout: ShellLayout, state: DockMode): ShellLayout {
   return next;
 }
 
-/** A dragged dock edge snaps at 300 and 400 and collapses to icons below 200. */
-export function setDockWidth(layout: ShellLayout, width: number): ShellLayout {
+/**
+ * A dragged dock edge snaps at the narrow and wide presets and collapses to icons well below
+ * the floor. `max` keeps the panels at their floor (fitLayout's dockMax).
+ */
+export function setDockWidth(layout: ShellLayout, width: number, max = DOCK_MAX): ShellLayout {
   const next = cloneLayout(layout);
-  if (width < 200) {
+  if (width < DOCK_MIN - 80) {
     next.dock.state = 'icons';
     return next;
   }
-  const snapped = Math.abs(width - 300) < 24 ? 300 : Math.abs(width - 400) < 24 ? 400 : width;
-  next.dock.width = Math.min(800, Math.max(200, Math.round(snapped)));
-  next.dock.state = next.dock.width <= 320 ? 'narrow' : 'wide';
+  const near = (preset: number) => Math.abs(width - preset) < 16;
+  const snapped = near(DOCK_WIDTH.narrow)
+    ? DOCK_WIDTH.narrow
+    : near(DOCK_WIDTH.wide)
+      ? DOCK_WIDTH.wide
+      : width;
+  const top = Math.max(DOCK_MIN, Math.min(DOCK_MAX, max));
+  next.dock.width = Math.min(top, Math.max(DOCK_MIN, Math.round(snapped)));
+  next.dock.state = next.dock.width < DOCK_WIDTH.wide ? 'narrow' : 'wide';
   return next;
 }
 

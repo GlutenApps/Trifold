@@ -189,6 +189,15 @@
   background: var(--accent);
 }
 
+/* Folded (ADR 0014): the group not on show stays mounted, out of sight and out of the way, so
+   its tabs keep their place (a web tab keeps its page). */
+.grp.folded-away {
+  position: absolute;
+  inset: 8px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .grp {
   flex-basis: 0;
   min-width: 0;
@@ -754,7 +763,7 @@ body.resizing {
   margin: 12px 0;
 }
 
-@container panel (max-width: 760px) {
+@container panel (width < 960px) {
   .campaign-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -786,7 +795,7 @@ body.resizing {
 }
 
 /* A half-screen window: the Library nav keeps its icons and drops the labels. */
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
   .lib-nav {
     width: auto;
     padding: 10px 6px;
@@ -1673,4 +1682,45 @@ body.resizing {
 }
 .web-bar .web-zoom:disabled {
   cursor: default;
+}
+
+/* Narrow windows (ADR 0014): the window can be as narrow as one panel and the icon dock. The
+   strip and the top bar shed what has another home first, so table state stays readable. */
+.topbar-label {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strip-text {
+  flex-shrink: 1;
+  min-width: 56px;
+}
+
+/* The strip's dice pool mirrors the Dice pop-up, which stays one click away on the Dice button. */
+@media (max-width: 1180px) {
+  .strip .dice-pool.compact {
+    display: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .hotkeys-label {
+    display: none;
+  }
+
+  .crumb-name {
+    max-width: 180px;
+  }
+
+  /* Previous and next track have hotkeys and live in the Music tool. */
+  .strip [aria-label='Previous track'],
+  .strip [aria-label='Next track'] {
+    display: none;
+  }
+
+  .strip-sec {
+    padding: 0 6px;
+  }
 }

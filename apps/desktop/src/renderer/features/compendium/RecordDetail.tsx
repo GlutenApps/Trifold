@@ -16,6 +16,8 @@ interface Props {
   /** The name of the record Back returns to, for its tooltip and accessible name. */
   backTo?: string;
   onBack(): void;
+  /** Returns to the results list in a narrow panel, where the list and the record take turns. */
+  onBackToResults?(): void;
   onSwitchEdition(record: CompendiumRecord): void;
   onOpenSpell(key: string): void;
   /** Source names by id, used to tell apart editions that come from different sources. */
@@ -380,6 +382,7 @@ export function RecordDetail({
   canGoBack,
   backTo,
   onBack,
+  onBackToResults,
   onSwitchEdition,
   onOpenSpell,
   sourceNames = {},
@@ -391,6 +394,17 @@ export function RecordDetail({
   return (
     <div className="detail">
       <div className="row detail-bar">
+        {onBackToResults && (
+          <button
+            type="button"
+            className="chrome-btn results-back"
+            aria-label="Back to results"
+            title="Back to results"
+            onClick={onBackToResults}
+          >
+            <Icon name="left" />
+          </button>
+        )}
         {canGoBack && (
           <button
             type="button"

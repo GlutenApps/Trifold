@@ -1,6 +1,7 @@
 import {
   Fragment,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -17,8 +18,8 @@ import {
   type WebTab,
   type WebTabIcon,
 } from '@trifold/schema';
-import { tabTitle } from '../../stores/shellLayout';
-import { useShellStore } from '../../stores/shellStore';
+import { fitSplit, tabTitle } from '../../stores/shellLayout';
+import { useFit, useShellStore } from '../../stores/shellStore';
 import { useAppStore } from '../../stores/appStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
@@ -50,7 +51,9 @@ type DropSpot = { group: number; index: number } | { split: true } | null;
 
 /**
  * The stage (ADR 0004 §3): one or two tab groups. Every major stays mounted, active or not,
- * so nothing loses its place; closed majors live in a hidden holder.
+ * so nothing loses its place; closed majors live in a hidden holder. When two groups do not
+ * fit side by side (ADR 0014) they fold into one stack: both stay mounted, the focused one is
+ * shown under a strip of every tab, and widening the window brings the saved split back.
  */
 export function Stage() {
   const layout = useShellStore((s) => s.layout);
@@ -64,7 +67,13 @@ export function Stage() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [drop, setDrop] = useState<DropSpot>(null);
   const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
-  const { groups, split, maximized } = layout.stage;
+  const fit = useFit();
+  const { groups, maximized } = layout.stage;
+  const split = fitSplit(layout.stage.split, fit);
+  const folded = fit.folded;
+  /** Folded: the group on show is the focused one; its tab strip lists every open tab. */
+  const shownGroup = Math.min(focusedGroup, groups.length - 1);
+  const allTabs = groups.flatMap((g) => g.tabs);
   const open = new Set(groups.flatMap((g) => g.tabs));
   const parked = MAJOR_KINDS.filter((k) => !open.has(k));
 
@@ -104,14 +113,21 @@ export function Stage() {
       return { group, index };
     }
     const rect = stageRef.current?.getBoundingClientRect();
-    if (rect && groups.length === 1 && maximized === null && x > rect.left + rect.width / 2) {
+    if (
+      rect &&
+      groups.length === 1 &&
+      maximized === null &&
+      fit.canSplit &&
+      x > rect.left + rect.width / 2
+    ) {
       return { split: true };
     }
     return null;
   };
 
   const beginTabDrag = (kind: TabKey) => (e: ReactPointerEvent<HTMLElement>) => {
-    if (e.button !== 0) return;
+    // Folded, the strip mixes both groups, so dragging could not say where a tab belongs.
+    if (e.button !== 0 || folded) return;
     const startX = e.clientX;
     const startY = e.clientY;
     let active = false;
@@ -154,11 +170,13 @@ export function Stage() {
     <div className="stage" ref={stageRef}>
       {groups.map((g, i) => {
         if (maximized !== null && maximized !== i) return null;
+        const away = folded && i !== shownGroup;
         // A lone group takes the whole stage: a grow below 1 would leave the rest empty.
-        const grow = maximized !== null || groups.length === 1 ? 1 : i === 0 ? split : 1 - split;
+        const grow =
+          maximized !== null || groups.length === 1 || folded ? 1 : i === 0 ? split : 1 - split;
         return (
           <Fragment key={i}>
-            {i === 1 && maximized === null && (
+            {i === 1 && maximized === null && !folded && (
               <div
                 className="stage-div"
                 role="separator"
@@ -168,7 +186,8 @@ export function Stage() {
               />
             )}
             <section
-              className={`grp${focusedGroup === i ? ' focused' : ''}`}
+              className={`grp${focusedGroup === i && !folded ? ' focused' : ''}${away ? ' folded-away' : ''}`}
+              aria-hidden={away || undefined}
               style={{ flexGrow: grow }}
               data-group={i}
               aria-label={`Stage group ${i + 1}`}
@@ -176,7 +195,8 @@ export function Stage() {
             >
               <TabStrip
                 group={i}
-                data={g}
+                data={folded ? { tabs: allTabs, active: g.active } : g}
+                stacked={folded}
                 dropIndex={drop && 'group' in drop && drop.group === i ? drop.index : null}
                 onTabPointerDown={beginTabDrag}
               />
@@ -238,10 +258,13 @@ function TabStrip({
   group,
   data,
   dropIndex,
+  stacked = false,
   onTabPointerDown,
 }: {
   group: number;
   data: StageGroup;
+  /** Two groups shown as one stack: every tab, no maximize (ADR 0014). */
+  stacked?: boolean;
   dropIndex: number | null;
   onTabPointerDown: (kind: TabKey) => (e: ReactPointerEvent<HTMLElement>) => void;
 }) {
@@ -291,10 +314,18 @@ function TabStrip({
     (kind === 'map' && !!liveSceneId && liveSceneId === selectedSceneId);
   const keepsLabel = (kind: TabKey) => kind === data.active || isLive(kind);
 
-  // Too many tabs: labels drop from the others first, then the rest fold into ⋯.
+  // Too many tabs: labels drop from the others first, then the rest fold into ⋯. Long labels
+  // can overflow before the estimate says so, so a measured overflow also counts (`tight`);
+  // a resize or a tab change tries the labels again.
   const available = Math.max(0, width - STRIP_CHROME);
   const n = data.tabs.length;
-  const iconify = width > 0 && n * TAB_FULL > available;
+  const [tight, setTight] = useState(false);
+  useLayoutEffect(() => setTight(false), [width, n]);
+  useLayoutEffect(() => {
+    const el = stripRef.current;
+    if (el && !tight && el.scrollWidth > el.clientWidth + 1) setTight(true);
+  }, [tight, width, n, data.active]);
+  const iconify = width > 0 && (tight || n * TAB_FULL > available);
   const labelled = data.tabs.filter(keepsLabel).length;
   const capacity = Math.max(
     labelled,
@@ -484,16 +515,18 @@ function TabStrip({
             </div>
           )}
         </div>
-        <button
-          type="button"
-          className="chrome-btn"
-          aria-label={maximized ? 'Restore groups' : 'Maximize group'}
-          aria-pressed={maximized}
-          title={`${maximized ? 'Restore' : 'Maximize'} (${hk('Ctrl+Shift+M')})`}
-          onClick={() => toggleMaximize(group)}
-        >
-          <Icon name={maximized ? 'restore' : 'maximize'} />
-        </button>
+        {!stacked && (
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label={maximized ? 'Restore groups' : 'Maximize group'}
+            aria-pressed={maximized}
+            title={`${maximized ? 'Restore' : 'Maximize'} (${hk('Ctrl+Shift+M')})`}
+            onClick={() => toggleMaximize(group)}
+          >
+            <Icon name={maximized ? 'restore' : 'maximize'} />
+          </button>
+        )}
       </div>
     </div>
   );

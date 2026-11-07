@@ -6,12 +6,15 @@ import {
   tabTitle,
   describeLayout,
   defaultLayout,
+  fitLayout,
+  fitSplit,
   groupOf,
   matchesPreset,
   moveTab,
   normalize,
   openMajor,
   setDockWidth,
+  setSplit,
   splitRight,
   STARTER_PRESETS,
   toggleMaximize,
@@ -66,10 +69,20 @@ describe('stage', () => {
 });
 
 describe('dock', () => {
-  it('snaps widths and collapses to icons when dragged small', () => {
+  it('snaps widths, keeps the 360 floor and collapses to icons when dragged small', () => {
     expect(setDockWidth(table, 390).dock).toMatchObject({ state: 'wide', width: 400 });
-    expect(setDockWidth(table, 310).dock).toMatchObject({ state: 'narrow', width: 300 });
-    expect(setDockWidth(table, 150).dock.state).toBe('icons');
+    expect(setDockWidth(table, 350).dock).toMatchObject({ state: 'narrow', width: 360 });
+    expect(setDockWidth(table, 300).dock).toMatchObject({ state: 'narrow', width: 360 });
+    expect(setDockWidth(table, 250).dock.state).toBe('icons');
+  });
+
+  it('never drags wider than the panels allow', () => {
+    expect(setDockWidth(table, 700, 520).dock.width).toBe(520);
+    expect(setDockWidth(table, 700, 200).dock.width).toBe(360);
+  });
+
+  it('lifts a dock saved under the floor to 360', () => {
+    expect(normalize({ ...table, dock: { ...table.dock, width: 300 } }).dock.width).toBe(360);
   });
 
   it('shows a layout saved with a hidden dock as icons', () => {
@@ -138,5 +151,60 @@ describe('web tabs (ADR 0011)', () => {
     expect(groupOf(pruned, 'web:01A')).toBe(0);
     expect(groupOf(pruned, 'web:gone')).toBeNull();
     expect(pruneTabs(pruned, [docs])).toBe(pruned);
+  });
+});
+
+describe('fit (ADR 0014)', () => {
+  // Table: two groups, narrow dock (360).
+  it('shows the layout as saved when everything fits', () => {
+    for (const width of [1600, 1366]) {
+      const fit = fitLayout(table, width);
+      expect(fit).toMatchObject({
+        dock: 'narrow',
+        dockTrimmed: false,
+        folded: false,
+        canSplit: true,
+      });
+    }
+  });
+
+  it('folds the dock to icons before it folds the groups', () => {
+    expect(fitLayout(table, 1280)).toMatchObject({
+      dock: 'icons',
+      dockTrimmed: true,
+      folded: false,
+    });
+  });
+
+  it('folds two groups into one stack when two panels cannot fit (half of a 1920 screen)', () => {
+    const fit = fitLayout(table, 960);
+    expect(fit).toMatchObject({ dock: 'icons', folded: true, canSplit: false });
+  });
+
+  it('lets the DM keep the dock and fold the groups instead, while one panel still fits', () => {
+    expect(fitLayout(table, 960, true)).toMatchObject({ dock: 'narrow', folded: true });
+    expect(fitLayout(table, 960).canExpandDock).toBe(true);
+    expect(fitLayout(table, 720, true)).toMatchObject({ dock: 'icons', folded: true });
+    expect(fitLayout(table, 720).canExpandDock).toBe(false);
+  });
+
+  it('never folds a single group or a maximized one', () => {
+    expect(fitLayout(defaultLayout(), 720).folded).toBe(false);
+    expect(fitLayout(toggleMaximize(table, 1), 720).folded).toBe(false);
+  });
+
+  it('keeps both groups at the floor when the divider is dragged', () => {
+    const fit = fitLayout(table, 1600);
+    // Stage: 1600 - 16 padding - 360 dock - 8 divider = 1216; 480 / 1216.
+    expect(fit.splitMin).toBeCloseTo(480 / 1216, 3);
+    expect(fitSplit(0.2, fit)).toBeCloseTo(fit.splitMin, 3);
+    expect(setSplit(table, 0.2, fit.splitMin, fit.splitMax).stage.split).toBeCloseTo(0.395, 3);
+    expect(setSplit(table, 0.9, fit.splitMin, fit.splitMax).stage.split).toBeCloseTo(0.605, 3);
+  });
+
+  it('caps the dock drag so the saved groups keep their floor', () => {
+    // 1600 - 16 - (2 x 480 + 8) = 616.
+    expect(fitLayout(table, 1600).dockMax).toBe(616);
+    expect(fitLayout(defaultLayout(), 1600).dockMax).toBe(800);
   });
 });

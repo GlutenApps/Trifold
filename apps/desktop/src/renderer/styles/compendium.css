@@ -10,6 +10,31 @@
   margin-top: 0;
 }
 
+/* Seven kinds do not fit a narrow panel: the tabs scroll sideways inside their strip (wheel or
+   keyboard; the active one is scrolled into view) instead of pushing the panel wider. The strip
+   overlaps the bar's bottom line by a pixel so the active tab still covers it while clipped. */
+.compendium > .subtabbar > .subtablist {
+  position: relative;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  margin-bottom: -1px;
+}
+
+.compendium > .subtabbar > .subtablist::-webkit-scrollbar {
+  display: none;
+}
+
+.compendium > .subtabbar .subtab {
+  margin-bottom: 1px;
+}
+
+.compendium > .subtabbar .subtab.active {
+  margin-bottom: 0;
+}
+
 /* A list row that stands for more than one edition: the alternates sit dimmer beside its own. */
 .badge.alt-edition {
   opacity: 0.6;
@@ -53,13 +78,35 @@
 
 .split {
   display: grid;
-  grid-template-columns: minmax(320px, 2fr) minmax(360px, 3fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   flex: 1;
   min-height: 0;
 }
 
+/* From 960 px the results and the open record share the panel; below it they take turns,
+   like Campaign Notes: the list fills the panel until a record opens, then the record does,
+   with Back to results at the start of its bar. */
+@container panel (min-width: 960px) {
+  .split {
+    grid-template-columns: minmax(420px, 2fr) minmax(480px, 3fr);
+  }
+
+  .results-back {
+    display: none;
+  }
+}
+
+@container panel (width < 960px) {
+  .split.show-detail .list,
+  .split:not(.show-detail) .inspector {
+    display: none;
+  }
+}
+
+/* The list sizes its columns to its own width, not the panel's. */
 .list {
+  container: results / inline-size;
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -118,7 +165,7 @@
 }
 
 .list-row.columns[data-kind='monster'] {
-  --meta-cols: 46px minmax(0, 84px) 68px 32px auto;
+  --meta-cols: 46px minmax(0, 84px) 68px 36px auto;
 }
 
 .list-row.columns[data-kind='spell'] {
@@ -155,10 +202,10 @@
   width: 58px;
 }
 
-/* In a narrow panel the type and size columns go before the name does. */
-@container panel (max-width: 620px) {
+/* In a narrow list the type and size columns go before the name does. */
+@container results (max-width: 560px) {
   .list-row.columns[data-kind='monster'] {
-    --meta-cols: 46px 32px auto;
+    --meta-cols: 46px 36px auto;
   }
 
   .list-row.columns[data-kind='item'] {
@@ -491,24 +538,44 @@ input.narrow-text {
   white-space: nowrap;
 }
 
+/* Below 960 px the list and the stat block are one scrolling column; responsive.css puts them
+   side by side from 960. The log is never a column: a short strip under both. */
 .combat-split {
-  display: grid;
-  grid-template-columns: minmax(300px, 1.2fr) minmax(380px, 2fr) minmax(220px, 0.9fr);
-  gap: 12px;
   flex: 1;
   min-height: 0;
-}
-
-.initiative-list,
-.combat-inspector,
-.combat-log {
   overflow: auto;
-  min-height: 0;
 }
 
+.initiative-list {
+  margin-bottom: 12px;
+  container: initlist / inline-size;
+}
+
+.combat-log {
+  flex: none;
+  max-height: 180px;
+  overflow: auto;
+  margin-top: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.combat-log > .row {
+  position: sticky;
+  top: 0;
+  margin: 0;
+  background: var(--bg-panel);
+}
+
+.combat-log h2 {
+  margin: 0;
+}
+
+/* Initiative, then the name taking the free width, then HP and reorder. The initiative column is
+   exactly the number field plus the roll button, so every name starts at the same place. */
 .combatant-row {
   display: grid;
-  grid-template-columns: 96px 1fr auto auto;
+  grid-template-columns: calc(48px + 4px + var(--control-h-row)) minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: center;
   padding: 6px 8px;
@@ -555,6 +622,12 @@ input.narrow-text {
   display: flex;
   gap: 4px;
   align-items: center;
+}
+
+/* HP right-aligned to a common width so the column lines up down the list. */
+.combatant-row .hp {
+  min-width: 7ch;
+  text-align: right;
 }
 
 .hp {
@@ -645,6 +718,11 @@ input.narrow-text {
   margin: 4px 0;
 }
 
+/* Wide enough for its placeholder. */
+.combatant-drawer .hp-amount {
+  width: 84px;
+}
+
 /* Labelled lanes: a label column beside its controls, which wrap only inside their own lane, so
    sections never run together however wide the panel is (combat drawer, add panel). */
 .lanes {
@@ -685,13 +763,15 @@ input.narrow-text {
   max-width: 320px;
 }
 
-@container panel (max-width: 420px) {
-  .lanes {
+/* The drawer follows its list's width, not the panel's: in a narrow list each label sits above
+   its controls so the controls get the whole line. */
+@container initlist (max-width: 520px) {
+  .combatant-drawer .lanes {
     grid-template-columns: minmax(0, 1fr);
-    row-gap: 4px;
+    row-gap: 2px;
   }
 
-  .lane-label {
+  .combatant-drawer .lane-label {
     line-height: 1.5;
     margin-top: 4px;
   }
@@ -748,7 +828,7 @@ input.narrow-text {
   min-width: 0;
 }
 
-@container panel (max-width: 520px) {
+@container panel (width < 640px) {
   .template-row {
     grid-template-columns: 64px auto minmax(0, 1fr);
   }
@@ -984,14 +1064,6 @@ textarea.encounter-notes {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 0;
-}
-
-.scenes-split {
-  display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(380px, 1.2fr);
-  gap: 16px;
-  flex: 1;
   min-height: 0;
 }
 
@@ -1252,13 +1324,6 @@ textarea.encounter-notes {
 }
 
 /* Music */
-.music-columns {
-  display: grid;
-  grid-template-columns: minmax(300px, 1fr) minmax(420px, 2fr);
-  gap: 16px;
-  align-items: start;
-}
-
 .wide-card {
   max-width: none;
 }
