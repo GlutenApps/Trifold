@@ -133,7 +133,6 @@ interface CombatStoreState {
   dismissConcentration(): void;
   dismissSavePrompt(index: number): void;
   deathSave(id: string): void;
-  toggleHeld(id: string): void;
   /** Hidden and dead also reach the combatant's map token, so both views agree (ADR 0012). */
   toggleHidden(id: string): void;
   /** Shows the players the real name, or masks it again with `revealed: false`. */
@@ -173,7 +172,6 @@ interface CombatStoreState {
   callSave(id: string, feature: Feature, save: SaveCall): void;
   applySaveDamage(amount: number, type: string | undefined, targets: DamageTarget[]): void;
   clearSaveCall(): void;
-  addLog(kind: LogEntry['kind'], text: string, actorId?: string): void;
   end(): Promise<EncounterResult | null>;
 }
 
@@ -495,9 +493,15 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     async resume(encounter) {
       if (!encounter.state) return;
       const records = await loadRecords(encounter.state, encounter);
+      // The hold button went with ADR 0012. A fight saved before that could still carry
+      // `held`, and with no way to release it Next would skip that combatant forever.
+      const state: CombatState = {
+        ...encounter.state,
+        combatants: encounter.state.combatants.map((c) => (c.held ? { ...c, held: false } : c)),
+      };
       set({
         encounterId: encounter.id,
-        state: encounter.state,
+        state,
         records,
         missing: [],
         selectedId:
@@ -731,12 +735,6 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         `${c.name} death save: ${natural} → ${outcome.revived ? 'natural 20, back up with 1 HP' : outcome.dead ? 'dead' : outcome.stable ? 'stable' : `${outcome.saves.successes} successes, ${outcome.saves.failures} failures`}`,
         id,
       );
-    },
-
-    toggleHeld(id) {
-      const c = find(id);
-      patchCombatant(id, (x) => ({ ...x, held: !x.held }));
-      if (c) log('note', `${c.name} ${c.held ? 'acts' : 'holds'}`, id);
     },
 
     toggleHidden(id) {
@@ -1097,10 +1095,6 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
 
     clearSaveCall() {
       set({ saveCall: null });
-    },
-
-    addLog(kind, text, actorId) {
-      log(kind, text, actorId);
     },
 
     async end() {

@@ -48,6 +48,34 @@
   --font-ui: 'Outfit', 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', Consolas, ui-monospace, monospace;
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --scrim: rgba(0, 0, 0, 0.55);
+  /* The TV's own palette. The player window and the console's map canvas ignore the console
+     theme: these are the backdrops a scene can choose, the ink on each, the scrims behind
+     overlays and the token faces. Fixed in both themes. */
+  --tv-dark: #0b0b0d;
+  --tv-dark-ink: #f2f2f2;
+  --tv-parchment: #e8dcc0;
+  --tv-parchment-ink: #2b2114;
+  --tv-parchment-edge: #6b4a2b;
+  --tv-parchment-glyph: #3a2a16;
+  --tv-stone: #3a3f46;
+  --tv-stone-ink: #e6e6e6;
+  --tv-white: #fff;
+  --tv-black: #000;
+  --tv-scrim: rgba(0, 0, 0, 0.55);
+  --tv-scrim-soft: rgba(0, 0, 0, 0.25);
+  --tv-scrim-label: rgba(0, 0, 0, 0.65);
+  --tv-scrim-strong: rgba(0, 0, 0, 0.7);
+  --tv-glass: rgba(255, 255, 255, 0.25);
+  --tv-glass-strong: rgba(255, 255, 255, 0.35);
+  --token-flat: #5a6b85;
+  --token-flat-edge: #14161a;
+  --token-twotone: #1d2028;
+  --token-plain: #d9d5cb;
+  --token-plain-ink: #1f1d18;
+  --token-plain-edge: #6b6b6b;
+  --token-enemy-edge: #b23a35;
+  --token-neutral-edge: #8a8f99;
   /* Control scale (ADR 0013, docs/UI-GUIDELINES.md). Every button, icon button, input and
      select on a line takes its height from one tier, so rows line up without local fixes.
      Chrome bars set --control-h to the compact tier below; nothing else overrides it. */
@@ -291,10 +319,6 @@ label {
 
 .muted {
   color: var(--text-muted);
-}
-
-.danger-text {
-  color: var(--danger);
 }
 
 code {

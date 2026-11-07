@@ -57,7 +57,7 @@ interface Draft {
   icon: WebTabIcon;
 }
 
-export const WEB_TAB_ICON_LABELS: Record<WebTabIcon, string> = {
+const WEB_TAB_ICON_LABELS: Record<WebTabIcon, string> = {
   globe: 'Globe',
   tome: 'Book',
   person: 'Person',

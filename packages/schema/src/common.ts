@@ -1,9 +1,5 @@
 import { z } from 'zod';
 
-/** Crockford base32, 26 chars. Generated ids use ULIDs; bundled SRD ids may use other stable strings. */
-export const ULID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
-export const Ulid = z.string().regex(ULID_RE, 'expected a ULID');
-
 /** ISO 8601 date-time. On disk we always write UTC (`Date#toISOString`). */
 export const IsoDateTime = z.iso.datetime({ offset: true });
 
@@ -29,6 +25,11 @@ export const Timestamps = z.object({
   updatedAt: IsoDateTime,
 });
 export type Timestamps = z.infer<typeof Timestamps>;
+
+/** The text of a thrown value, for banners and logs: an Error's message, else String(err). */
+export function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
 export function nowIso(): string {
   return new Date().toISOString();

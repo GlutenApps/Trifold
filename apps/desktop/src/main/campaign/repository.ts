@@ -31,7 +31,7 @@ export const CAMPAIGN_LAYOUT = [
   'tokens',
 ];
 
-export function slugify(name: string): string {
+function slugify(name: string): string {
   const base = normalizeKey(name).replace(/\s+/g, '-');
   return base || 'campaign';
 }

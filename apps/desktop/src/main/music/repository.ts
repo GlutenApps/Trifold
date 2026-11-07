@@ -3,17 +3,13 @@ import { basename, dirname, extname, join } from 'node:path';
 import { parseFile } from 'music-metadata';
 import { ulid } from 'ulid';
 import type { MusicLibraryView, MusicScanProgress, TrackView } from '@trifold/api';
-import { MusicLibrary, Playlist, Track, emptyMusicLibrary } from '@trifold/schema';
+import { MusicLibrary, Playlist, Track, emptyMusicLibrary, nowIso } from '@trifold/schema';
 import type { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 
-export const AUDIO_EXTENSIONS = new Set(['.mp3', '.ogg', '.flac', '.wav', '.m4a']);
+const AUDIO_EXTENSIONS = new Set(['.mp3', '.ogg', '.flac', '.wav', '.m4a']);
 const LIBRARY_FILE = 'music/library.json';
 const PLAYLISTS_DIR = 'music/playlists';
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
 
 /** Music files referenced in place (DESIGN.md §6.6, DATA-FORMATS.md §5.5). Never moves or copies. */
 export class MusicRepository {
@@ -281,7 +277,7 @@ function insideAny(path: string, folders: readonly string[]): boolean {
  * length, or, for tracks scanned before sizes were stored, equal length in the same folder.
  * Anything ambiguous stays unpaired.
  */
-export function matchRenames(gone: readonly Track[], fresh: readonly Track[]): Map<Track, Track> {
+function matchRenames(gone: readonly Track[], fresh: readonly Track[]): Map<Track, Track> {
   const same = (old: Track, next: Track) => {
     if (Math.abs(old.durationSec - next.durationSec) > 0.1) return false;
     if (old.sizeBytes !== undefined) return old.sizeBytes === next.sizeBytes;

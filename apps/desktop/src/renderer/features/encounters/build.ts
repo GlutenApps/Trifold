@@ -210,7 +210,7 @@ export function customCombatant(template: CombatantTemplate, name: string): Comb
   };
 }
 
-export function lairCombatant(): Combatant {
+function lairCombatant(): Combatant {
   return {
     id: ulid(),
     name: 'Lair actions',

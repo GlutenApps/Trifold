@@ -521,7 +521,6 @@ export interface TrifoldApi {
     /** Opens (creating the layout if needed) and switches the app to that Library. */
     open(path: string): Promise<LibraryInfo>;
     openInExplorer(): Promise<void>;
-    getSettings(): Promise<LibrarySettings>;
     updateSettings(patch: Partial<LibrarySettings>): Promise<LibrarySettings>;
   };
   displays: {
@@ -573,10 +572,6 @@ export interface TrifoldApi {
     /** Native picker for a `.trifold-campaign`; read but not imported. Null when cancelled. */
     choosePackage(): Promise<CampaignPackageInfo | null>;
     importPackage(path: string, mode: CampaignPackageMode): Promise<CampaignPackageResult>;
-  };
-  adventures: {
-    save(adventure: Adventure): Promise<Adventure>;
-    remove(adventureId: string): Promise<void>;
   };
   notes: {
     /** A note without an id is new and goes last among its siblings (its folder, or the root). */
@@ -693,7 +688,7 @@ export type ApiNamespace = keyof TrifoldApi;
 /** Every method, by namespace. The preload and the IPC registry iterate this table. */
 export const API_METHODS = {
   app: ['getInfo', 'openSystemPage', 'openExternal', 'savesFlushed'],
-  library: ['getInfo', 'chooseFolder', 'open', 'openInExplorer', 'getSettings', 'updateSettings'],
+  library: ['getInfo', 'chooseFolder', 'open', 'openInExplorer', 'updateSettings'],
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],
   presenter: ['push', 'get'],
@@ -722,7 +717,6 @@ export const API_METHODS = {
     'choosePackage',
     'importPackage',
   ],
-  adventures: ['save', 'remove'],
   notes: ['save', 'remove', 'move'],
   noteTemplates: ['list', 'save', 'remove'],
   npcs: ['save', 'remove'],

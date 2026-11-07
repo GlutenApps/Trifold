@@ -221,7 +221,7 @@ export function initials(label: string): string {
 }
 
 /** Id for the one image of a map saved before it had background variants. */
-export const ORIGINAL_BACKGROUND_ID = 'original';
+const ORIGINAL_BACKGROUND_ID = 'original';
 
 /** A map's backgrounds; a map with only `image` has that one, named "Original". */
 export function backgroundsOf(scene: Scene): SceneBackground[] {

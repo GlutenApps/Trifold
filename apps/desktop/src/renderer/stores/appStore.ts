@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AppInfo, DisplayInfo, LibraryInfo } from '@trifold/api';
-import type { LibrarySettings } from '@trifold/schema';
+import { errorMessage, type LibrarySettings } from '@trifold/schema';
 
 interface AppState {
   info: AppInfo | null;
@@ -21,11 +21,7 @@ interface AppState {
   clearError(): void;
 }
 
-function messageOf(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
-export function applyTheme(theme: LibrarySettings['theme'] | undefined): void {
+function applyTheme(theme: LibrarySettings['theme'] | undefined): void {
   document.documentElement.dataset['theme'] = theme ?? 'dark';
 }
 
@@ -47,7 +43,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ info, library, displays, playerOpen, error: null });
       applyTheme(library.settings?.theme);
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 
@@ -59,7 +55,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ library, error: library.ok ? null : library.error });
       applyTheme(library.settings?.theme);
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 
@@ -67,7 +63,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       await window.trifold.library.openInExplorer();
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 
@@ -78,7 +74,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ library: library ? { ...library, settings } : library });
       applyTheme(settings.theme);
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 
@@ -86,7 +82,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       set({ displays: await window.trifold.displays.list() });
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 
@@ -97,7 +93,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       );
       set({ playerOpen: true });
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 
@@ -106,7 +102,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       await window.trifold.player.close();
       set({ playerOpen: false });
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 

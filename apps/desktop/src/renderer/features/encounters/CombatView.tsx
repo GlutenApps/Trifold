@@ -98,7 +98,7 @@ function CombatantRow({
   const move = useCombatStore((s) => s.move);
   return (
     <div
-      className={`combatant-row role-${c.role}${active ? ' active' : ''}${selected ? ' selected' : ''}${open ? ' open' : ''}${c.dead ? ' dead' : ''}${c.held ? ' held' : ''}`}
+      className={`combatant-row role-${c.role}${active ? ' active' : ''}${selected ? ' selected' : ''}${open ? ' open' : ''}${c.dead ? ' dead' : ''}`}
       data-testid="combatant-row"
       onClick={onToggle}
       aria-current={active ? 'step' : undefined}
@@ -147,7 +147,6 @@ function CombatantRow({
             {c.maskedName}
           </span>
         )}
-        {c.held && <span className="badge">holding</span>}
         {c.concentrating && <span className="badge save">conc: {c.concentrating.on}</span>}
         {c.conditions.map((k) => (
           <span key={k.id} className="badge warn">

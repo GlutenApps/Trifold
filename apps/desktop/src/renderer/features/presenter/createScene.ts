@@ -1,4 +1,4 @@
-import type { Scene } from '@trifold/schema';
+import { nowIso, type Scene } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useSceneStore } from '../../stores/sceneStore';
 import { DEFAULT_BLANK, DEFAULT_GRID } from './mapMath';
@@ -11,10 +11,6 @@ const DEFAULT_TITLES: Record<Scene['kind'], string> = {
   map: 'New map',
   blankGrid: 'Blank grid',
 };
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
 
 /** A new scene next to the selection (inside it when a folder is selected), then selects it. */
 export async function createScene(kind: Scene['kind'], title: string): Promise<Scene | null> {

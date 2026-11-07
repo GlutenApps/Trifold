@@ -66,8 +66,6 @@ describe('AppShell', () => {
       flyout: null,
       pop: null,
       draggingTab: null,
-      splitHover: false,
-      focusedTab: null,
       closePrompt: false,
       viewportWidth: 1600,
       dockExpanded: false,

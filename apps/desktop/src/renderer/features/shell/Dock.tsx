@@ -166,7 +166,7 @@ export function Dock() {
 }
 
 /** Which tools carry a live pip: Scenes while a scene is on, Music while playing. */
-export function useLivePips(): Set<MinorKind> {
+function useLivePips(): Set<MinorKind> {
   const sceneLive = usePresenterStore((s) => !!s.state.scene && !s.state.blackout);
   const playing = useMusicStore((s) => s.playing);
   const pips = new Set<MinorKind>();

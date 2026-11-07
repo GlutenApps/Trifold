@@ -21,9 +21,13 @@ export interface GlyphMatch {
   via: GlyphVia;
 }
 
+// Not normalizeKey: hyphens stay because mapping keywords use them ("half-orc") and
+// containsWord treats a hyphen as a word boundary. Accents fold the same way.
 function normalize(name: string): string {
   return name
     .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/\[.*?\]|\(.*?\)/g, ' ')
     .replace(/[^a-z0-9\s-]/g, ' ')
     .replace(/\s+/g, ' ')

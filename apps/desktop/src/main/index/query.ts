@@ -143,8 +143,8 @@ export interface SearchSql {
   countParams: unknown[];
 }
 
-export const DEFAULT_LIMIT = 200;
-export const MAX_LIMIT = 2000;
+const DEFAULT_LIMIT = 200;
+const MAX_LIMIT = 2000;
 
 export function buildSearch(query: CompendiumQuery): SearchSql {
   const where: string[] = ['r.kind = ?'];

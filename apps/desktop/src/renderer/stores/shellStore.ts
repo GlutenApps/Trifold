@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { ulid } from 'ulid';
 import {
@@ -61,11 +61,8 @@ interface ShellState {
   /** A tool popped up from its own button (ADR 0009): Dice from the strip, Hotkeys and Layouts
    *  from the top bar. One at a time; not part of a layout. */
   pop: PopKind | null;
-  /** A tab being dragged across the stage, and whether it hovers the split zone. */
+  /** A tab being dragged across the stage. */
   draggingTab: TabKey | null;
-  splitHover: boolean;
-  /** The last tab the user asked for; its group flashes once. */
-  focusedTab: TabKey | null;
   /** Set when closing a campaign needs the stop-sharing warning. */
   closePrompt: boolean;
   /** Window width: what fits side by side is worked out from it (fitLayout, ADR 0014). */
@@ -98,9 +95,7 @@ interface ShellState {
   setSplit(split: number): void;
   toggleMaximize(group?: number): void;
   focusGroup(group: 0 | 1): void;
-  clearFocusedTab(): void;
   setDraggingTab(kind: TabKey | null): void;
-  setSplitHover(on: boolean): void;
 
   /** Saves a web tab and opens it in `group` (default the focused one). Returns its key.
    *  A blank title means "follow the page title". */
@@ -147,7 +142,7 @@ function persist(get: () => ShellState): void {
 }
 
 /** A new web tab's first title: the site's host, until the page reports its own. */
-export function hostOf(url: string): string {
+function hostOf(url: string): string {
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
     return host || 'Web tab';
@@ -188,8 +183,6 @@ export const useShellStore = create<ShellState>((set, get) => {
     flyout: null,
     pop: null,
     draggingTab: null,
-    splitHover: false,
-    focusedTab: null,
     closePrompt: false,
     viewportWidth: typeof window === 'undefined' ? 1600 : window.innerWidth,
     dockExpanded: false,
@@ -293,7 +286,7 @@ export const useShellStore = create<ShellState>((set, get) => {
       }
       const next = openMajor(layout, kind, group);
       const at = groupOf(next, kind) ?? 0;
-      set({ focusedGroup: at as 0 | 1, focusedTab: kind });
+      set({ focusedGroup: at as 0 | 1 });
       // Asking for a tab while another group is maximized means "show me that one instead".
       if (next.stage.maximized !== null && next.stage.maximized !== at) {
         next.stage.maximized = at;
@@ -335,16 +328,8 @@ export const useShellStore = create<ShellState>((set, get) => {
       if (get().focusedGroup !== group) set({ focusedGroup: group });
     },
 
-    clearFocusedTab() {
-      if (get().focusedTab) set({ focusedTab: null });
-    },
-
     setDraggingTab(kind) {
-      set({ draggingTab: kind, splitHover: false });
-    },
-
-    setSplitHover(on) {
-      if (get().splitHover !== on) set({ splitHover: on });
+      set({ draggingTab: kind });
     },
 
     addWebTab({ url, title, icon }, group) {
@@ -497,12 +482,4 @@ export function useFit(): Fit {
   const width = useShellStore((s) => s.viewportWidth);
   const expanded = useShellStore((s) => s.dockExpanded);
   return useMemo(() => fitLayout(layout, width, expanded), [layout, width, expanded]);
-}
-
-/** Runs `refresh` each time a tab becomes the active one of its group (data may have gone stale). */
-export function useTabFocus(kind: TabKey, refresh: () => void): void {
-  const active = useShellStore((s) => s.layout.stage.groups.some((g) => g.active === kind));
-  useEffect(() => {
-    if (active) refresh();
-  }, [active, refresh]);
 }

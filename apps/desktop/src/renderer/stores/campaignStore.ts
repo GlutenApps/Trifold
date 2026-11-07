@@ -5,7 +5,16 @@ import type {
   CampaignSummary,
   NoteFolderContents,
 } from '@trifold/api';
-import type { Campaign, Encounter, Note, NPC, PCCard, Scene, SceneImage } from '@trifold/schema';
+import {
+  errorMessage,
+  type Campaign,
+  type Encounter,
+  type Note,
+  type NPC,
+  type PCCard,
+  type Scene,
+  type SceneImage,
+} from '@trifold/schema';
 import { childrenOf, descendantsOf, nextOrder, placeItem } from '@trifold/rules';
 import { cancelSave, encounterSlot } from './pendingSaves';
 
@@ -28,7 +37,6 @@ interface CampaignState {
   /** Saves an NPC; a new one (no id) is created. */
   saveNpc(npc: NPC): Promise<NPC | null>;
   removeNpc(npcId: string): Promise<void>;
-  removeAdventure(adventureId: string): Promise<void>;
   saveScene(scene: Scene): Promise<Scene | null>;
   saveScenes(scenes: Scene[]): Promise<void>;
   removeScene(sceneId: string): Promise<void>;
@@ -49,16 +57,12 @@ interface CampaignState {
   clearError(): void;
 }
 
-function messageOf(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
 export const useCampaignStore = create<CampaignState>((set, get) => {
   const guard = async <T>(task: () => Promise<T>): Promise<T | null> => {
     try {
       return await task();
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
       return null;
     }
   };
@@ -198,21 +202,6 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
         const current = get().current;
         if (current)
           set({ current: { ...current, npcs: current.npcs.filter((n) => n.id !== npcId) } });
-      });
-    },
-
-    async removeAdventure(adventureId) {
-      await guard(async () => {
-        await window.trifold.adventures.remove(adventureId);
-        const current = get().current;
-        if (current) {
-          set({
-            current: {
-              ...current,
-              adventures: current.adventures.filter((a) => a.id !== adventureId),
-            },
-          });
-        }
       });
     },
 

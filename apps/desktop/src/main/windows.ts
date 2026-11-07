@@ -10,6 +10,12 @@ import {
   webTabUserAgent,
 } from './webTabs';
 
+// The dark theme's --bg, --bg-rail and --text-muted from renderer/styles/global.css, so a window
+// shows the right colour before the renderer paints. The light theme repaints on load.
+const WINDOW_BG = '#14181d';
+const RAIL_BG = '#11151a';
+const TEXT_MUTED = '#9aa3ad';
+
 export type Route = 'console' | 'player';
 
 export interface WindowHooks {
@@ -88,7 +94,7 @@ export class WindowManager {
             width: 560,
             height: 720,
             autoHideMenuBar: true,
-            backgroundColor: '#14181d',
+            backgroundColor: WINDOW_BG,
             webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
           },
         };
@@ -112,7 +118,7 @@ export class WindowManager {
     }
     return {
       titleBarStyle: 'hidden',
-      titleBarOverlay: { color: '#11151a', symbolColor: '#9aa3ad', height: 34 },
+      titleBarOverlay: { color: RAIL_BG, symbolColor: TEXT_MUTED, height: 34 },
     };
   }
 
@@ -143,7 +149,7 @@ export class WindowManager {
       minWidth: 760,
       minHeight: 640,
       title: 'Trifold',
-      backgroundColor: '#14181d',
+      backgroundColor: WINDOW_BG,
       show: false,
       autoHideMenuBar: true,
       // The renderer draws the title bar (ADR 0004 §2.1). Windows draws the window controls

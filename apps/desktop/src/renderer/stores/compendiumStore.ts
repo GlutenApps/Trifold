@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { CompendiumFacets, CompendiumQuery, CompendiumRow } from '@trifold/api';
-import type { CompendiumRecord, RecordKind } from '@trifold/schema';
+import { errorMessage, type CompendiumRecord, type RecordKind } from '@trifold/schema';
 import { useCampaignStore } from './campaignStore';
 
 export type Filters = Omit<CompendiumQuery, 'kind' | 'limit' | 'offset'>;
@@ -40,10 +40,6 @@ interface CompendiumState {
 }
 
 const EMPTY_FACETS: CompendiumFacets = { types: [], sizes: [], environments: [] };
-
-function messageOf(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
 
 let searchSeq = 0;
 
@@ -98,7 +94,7 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
       });
     } catch (err) {
       if (seq !== searchSeq) return;
-      set({ error: messageOf(err), loading: false });
+      set({ error: errorMessage(err), loading: false });
     }
   },
 
@@ -120,7 +116,7 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
       const editions = await window.trifold.compendium.findByKey(record.kind, record.key);
       set({ selected: record, editions, history: [] });
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 
@@ -137,7 +133,7 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
       });
       return true;
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
       return false;
     }
   },

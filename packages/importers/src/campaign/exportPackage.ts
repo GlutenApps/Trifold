@@ -24,13 +24,6 @@ export interface CampaignParts {
   scenes: Scene[];
 }
 
-export const DEFAULT_EXPORT_OPTIONS: CampaignExportOptions = {
-  state: 'asIs',
-  party: true,
-  homebrew: true,
-  layout: false,
-};
-
 /** Bundled sources: they ship with every Trifold, so their records always resolve. */
 export function isBundledSource(sourceId: string): boolean {
   return sourceId.startsWith('srd-');

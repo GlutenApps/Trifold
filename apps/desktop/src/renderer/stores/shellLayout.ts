@@ -18,7 +18,7 @@ import {
  * group behind when another exists.
  */
 
-export const MAJOR_TITLES: Record<MajorKind, string> = {
+const MAJOR_TITLES: Record<MajorKind, string> = {
   campaign: 'Campaign',
   compendium: 'Compendium',
   encounters: 'Encounters',
@@ -47,7 +47,7 @@ export const MINOR_TITLES: Record<MinorKind, string> = {
   scenes: 'Scenes',
 };
 
-export const DOCK_WIDTH: Record<DockMode, number> = {
+const DOCK_WIDTH: Record<DockMode, number> = {
   wide: 400,
   narrow: 360,
   icons: 44,
@@ -58,12 +58,12 @@ export const DOCK_WIDTH: Record<DockMode, number> = {
  * The panel floor (ADR 0014): no stage group is ever narrower than this, and no dock with
  * sections narrower than DOCK_MIN. Features are built to work from these widths up.
  */
-export const PANEL_MIN = 480;
-export const DOCK_MIN = 360;
-export const DOCK_MAX = 800;
+const PANEL_MIN = 480;
+const DOCK_MIN = 360;
+const DOCK_MAX = 800;
 /** Horizontal chrome around the groups: the stage's padding and the divider between groups. */
-export const STAGE_PADDING = 16;
-export const STAGE_DIVIDER = 8;
+const STAGE_PADDING = 16;
+const STAGE_DIVIDER = 8;
 
 /** What the screen can show of a layout at a given window width. Never saved. */
 export interface Fit {
@@ -215,10 +215,6 @@ export function groupOf(layout: ShellLayout, kind: TabKey): number | null {
 
 export function isOpen(layout: ShellLayout, kind: TabKey): boolean {
   return groupOf(layout, kind) !== null;
-}
-
-export function activeTabs(layout: ShellLayout): Array<TabKey | null> {
-  return layout.stage.groups.map((g) => g.active);
 }
 
 /**

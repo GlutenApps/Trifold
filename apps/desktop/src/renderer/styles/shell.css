@@ -828,7 +828,7 @@ body.resizing {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1387,10 +1387,6 @@ body.resizing {
   margin: 0 0 6px;
 }
 
-.map-title {
-  font-size: 14px;
-}
-
 .map-empty {
   padding: 8px 0;
 }
@@ -1419,10 +1415,6 @@ body.resizing {
   display: block;
   font-size: 15px;
   margin: 2px 0 6px;
-}
-
-.combat-empty p {
-  margin: 4px 0 10px;
 }
 
 /* TV major: the header holds every screen control; a title card or image previews in a frame */

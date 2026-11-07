@@ -60,28 +60,28 @@
 }
 
 .style-engraved .token-face {
-  background: #e8dcc0;
-  color: #2b2114;
-  border-color: #6b4a2b;
+  background: var(--tv-parchment);
+  color: var(--tv-parchment-ink);
+  border-color: var(--tv-parchment-edge);
   box-shadow: inset 0 0 0.35em rgba(0, 0, 0, 0.35);
 }
 
 .style-flat .token-face {
-  background: #5a6b85;
-  color: #fff;
-  border-color: #14161a;
+  background: var(--token-flat);
+  color: var(--tv-white);
+  border-color: var(--token-flat-edge);
 }
 
 .style-twoTone .token-face {
-  background: #1d2028;
+  background: var(--token-twotone);
   color: var(--accent);
   border-color: var(--accent);
 }
 
 .style-plain .token-face {
-  background: #d9d5cb;
-  color: #1f1d18;
-  border-color: #6b6b6b;
+  background: var(--token-plain);
+  color: var(--token-plain-ink);
+  border-color: var(--token-plain-edge);
 }
 
 .token-disc.role-ally .token-face {
@@ -89,17 +89,17 @@
 }
 
 .token-disc.role-enemy .token-face {
-  border-color: #b23a35;
+  border-color: var(--token-enemy-edge);
 }
 
 .token-disc.role-neutral .token-face {
-  border-color: #8a8f99;
+  border-color: var(--token-neutral-edge);
 }
 
 .token-disc.kind-marker .token-face {
   border-style: dashed;
-  background: rgba(255, 255, 255, 0.35);
-  color: #1f1d18;
+  background: var(--tv-glass-strong);
+  color: var(--token-plain-ink);
 }
 
 .token-disc.active::before {
@@ -117,7 +117,7 @@
   position: absolute;
   inset: -12%;
   border-radius: 50%;
-  border: 0.12em dashed #fff;
+  border: 0.12em dashed var(--tv-white);
   pointer-events: none;
 }
 
@@ -152,8 +152,8 @@
   margin-top: 2%;
   padding: 0.1em 0.5em;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.65);
-  color: #fff;
+  background: var(--tv-scrim-label);
+  color: var(--tv-white);
   white-space: nowrap;
   font-weight: 600;
   pointer-events: none;
@@ -189,7 +189,7 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #0b0b0d;
+  background: var(--tv-dark);
   outline: none;
   touch-action: none;
 }
@@ -203,7 +203,7 @@
   border: 3px dashed var(--accent);
   box-sizing: border-box;
   pointer-events: none;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 0 9999px var(--tv-scrim-soft);
 }
 
 .align-dot {
@@ -213,7 +213,7 @@
   margin: -6px 0 0 -6px;
   border-radius: 50%;
   background: var(--accent);
-  border: 2px solid #000;
+  border: 2px solid var(--tv-black);
   pointer-events: none;
 }
 
@@ -410,12 +410,12 @@
 }
 
 .style-engraved .token-glyph {
-  color: #3a2a16;
+  color: var(--tv-parchment-glyph);
   filter: drop-shadow(0 0.04em 0 rgba(255, 255, 255, 0.45));
 }
 
 .style-flat .token-glyph {
-  color: #fff;
+  color: var(--tv-white);
 }
 
 .style-twoTone .token-glyph {

@@ -10,9 +10,7 @@ export interface Logger {
   error(message: string): void;
 }
 
-export function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
+export { errorMessage } from '@trifold/schema';
 
 /**
  * Writes to the process console and, when a Library is open, appends to

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ImportProgress, ImportReport, SourceSummary } from '@trifold/api';
+import { errorMessage } from '@trifold/schema';
 
 interface SourcesState {
   sources: SourceSummary[];
@@ -20,10 +21,6 @@ interface SourcesState {
   clearError(): void;
 }
 
-function messageOf(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
 export const useSourcesStore = create<SourcesState>((set, get) => ({
   sources: [],
   loading: false,
@@ -37,7 +34,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
     try {
       set({ sources: await window.trifold.sources.list(), loading: false });
     } catch (err) {
-      set({ error: messageOf(err), loading: false });
+      set({ error: errorMessage(err), loading: false });
     }
   },
 
@@ -47,7 +44,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
       if (!path) return;
       await get().importPath(path);
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 
@@ -59,7 +56,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
       await get().load();
       return report;
     } catch (err) {
-      set({ error: messageOf(err), importing: false, progress: null });
+      set({ error: errorMessage(err), importing: false, progress: null });
       return null;
     }
   },
@@ -71,7 +68,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
       set({ lastReport: report, importing: false, progress: null });
       await get().load();
     } catch (err) {
-      set({ error: messageOf(err), importing: false, progress: null });
+      set({ error: errorMessage(err), importing: false, progress: null });
     }
   },
 
@@ -82,7 +79,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
         sources: get().sources.map((s) => (s.id === sourceId ? { ...s, ...updated } : s)),
       });
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 
@@ -91,7 +88,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
       await window.trifold.sources.remove(sourceId);
       set({ sources: get().sources.filter((s) => s.id !== sourceId) });
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 
@@ -100,7 +97,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
       await window.trifold.sources.rebuildIndex();
       await get().load();
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { NoteTemplate } from '@trifold/schema';
+import { errorMessage, type NoteTemplate } from '@trifold/schema';
 
 /** Note templates are Library-wide (ADR 0010); loaded once the notes panel first needs them. */
 interface NoteTemplateState {
@@ -10,10 +10,6 @@ interface NoteTemplateState {
   save(template: NoteTemplate): Promise<NoteTemplate | null>;
   remove(templateId: string): Promise<void>;
   clearError(): void;
-}
-
-function messageOf(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }
 
 export function blankTemplate(name = 'New template', body = ''): NoteTemplate {
@@ -30,7 +26,7 @@ export const useNoteTemplateStore = create<NoteTemplateState>((set, get) => ({
     try {
       set({ templates: await window.trifold.noteTemplates.list(), loaded: true, error: null });
     } catch (err) {
-      set({ error: messageOf(err), loaded: true });
+      set({ error: errorMessage(err), loaded: true });
     }
   },
 
@@ -44,7 +40,7 @@ export const useNoteTemplateStore = create<NoteTemplateState>((set, get) => ({
       set({ templates, error: null });
       return saved;
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
       return null;
     }
   },
@@ -54,7 +50,7 @@ export const useNoteTemplateStore = create<NoteTemplateState>((set, get) => ({
       await window.trifold.noteTemplates.remove(templateId);
       set({ templates: get().templates.filter((t) => t.id !== templateId), error: null });
     } catch (err) {
-      set({ error: messageOf(err) });
+      set({ error: errorMessage(err) });
     }
   },
 

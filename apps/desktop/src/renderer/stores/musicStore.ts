@@ -6,7 +6,7 @@ import {
   type AudioSource,
   type TrackView,
 } from '@trifold/api';
-import type { MusicSettings, Playlist, Track } from '@trifold/schema';
+import { nowIso, type MusicSettings, type Playlist, type Track } from '@trifold/schema';
 import { AudioEngine } from '../features/music/engine';
 import { gainToTarget, integratedLoudness } from '../features/music/loudness';
 import {
@@ -78,11 +78,6 @@ export interface MusicState {
 }
 
 const engine = new AudioEngine();
-export const audioEngine = engine;
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
 
 export function newPlaylist(name: string): Playlist {
   return {

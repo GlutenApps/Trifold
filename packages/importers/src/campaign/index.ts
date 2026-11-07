@@ -1,7 +1,6 @@
 import { ulid } from 'ulid';
 import {
   abilityModifier,
-  normalizeKey,
   parseAc,
   parseHp,
   parseIntOrUndefined,
@@ -485,11 +484,6 @@ export function parseCampaignXml(xml: string, options: CampaignImportOptions): C
   const parser = createCampaignParser(options);
   parser.write(xml);
   return parser.end();
-}
-
-/** Key used to match combatant and NPC names against records and PC cards. */
-export function campaignKey(name: string): string {
-  return normalizeKey(name);
 }
 
 export { GM_SCHOOLS, GM_SKILLS, gmCrToString } from './gmNative';

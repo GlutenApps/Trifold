@@ -48,7 +48,7 @@ export class PhoneAudioReceiver {
     private readonly script: string,
     private readonly logger: Logger,
     private readonly onStatus: (status: ReceiverStatus) => void,
-    private readonly platform: NodeJS.Platform = process.platform,
+    platform: NodeJS.Platform = process.platform,
     private readonly spawn: SpawnHelper = nodeSpawn as unknown as SpawnHelper,
   ) {
     this.current = {

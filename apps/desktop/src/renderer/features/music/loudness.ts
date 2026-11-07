@@ -5,7 +5,7 @@
  * below the ungated mean. Returns LUFS, or -Infinity for silence.
  */
 
-export const LOUDNESS_TARGET_LUFS = -16;
+const LOUDNESS_TARGET_LUFS = -16;
 
 interface Biquad {
   b0: number;

@@ -8,14 +8,11 @@ import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 
-/** Campaign, PC card, encounter, adventure, note and NPC namespaces, backed by CampaignRepository. */
+/** Campaign, PC card, encounter, note, NPC and scene namespaces, backed by CampaignRepository. */
 export function createCampaignApi(
   session: LibrarySession,
   logger: Logger,
-): Pick<
-  TrifoldApi,
-  'campaigns' | 'pcs' | 'encounters' | 'adventures' | 'notes' | 'npcs' | 'scenes'
-> {
+): Pick<TrifoldApi, 'campaigns' | 'pcs' | 'encounters' | 'notes' | 'npcs' | 'scenes'> {
   const repo = () => {
     const campaigns = session.campaigns;
     if (!campaigns) throw new Error('No Library is open');
@@ -133,14 +130,6 @@ export function createCampaignApi(
       },
       async finish(encounterId, result) {
         return repo().finishEncounter(encounterId, result);
-      },
-    },
-    adventures: {
-      async save(adventure) {
-        return entities().saveAdventure(adventure);
-      },
-      async remove(id) {
-        await entities().removeAdventure(id);
       },
     },
     notes: {

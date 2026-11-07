@@ -20,7 +20,7 @@ export interface ImportContext {
   onProgress?: (progress: ImportProgress) => void;
 }
 
-export class ImportError extends Error {
+class ImportError extends Error {
   override name = 'ImportError';
 }
 

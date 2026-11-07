@@ -8,14 +8,16 @@ import {
 import { ulid } from 'ulid';
 import { mediaUrl, type CompendiumRow } from '@trifold/api';
 import { numberedNames } from '@trifold/rules';
-import type {
-  Combatant,
-  CombatantTemplate,
-  Encounter,
-  PCCard,
-  Scene,
-  Token,
+import {
+  nowIso,
+  type Combatant,
+  type CombatantTemplate,
+  type Encounter,
+  type PCCard,
+  type Scene,
+  type Token,
 } from '@trifold/schema';
+import { capitalize } from '../compendium/formatting';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
@@ -75,10 +77,6 @@ const ZOOM_MIN = 0.05;
 const ZOOM_MAX = 8;
 const NO_SCENES: Scene[] = [];
 const NO_COMBATANTS: Combatant[] = [];
-
-function nowIso() {
-  return new Date().toISOString();
-}
 
 /**
  * The console side of a map or blank-grid scene (DESIGN.md §6.5): DM camera, grid alignment,
@@ -1646,10 +1644,6 @@ const TOKEN_KIND_LABEL: Record<Token['kind'], string> = {
   creature: 'Creature',
   marker: 'Marker',
 };
-
-function capitalize(s: string): string {
-  return s.length ? s[0]!.toUpperCase() + s.slice(1) : s;
-}
 
 /**
  * Rubber-band preview while aligning: the block of cells the two clicks would span, drawn as a

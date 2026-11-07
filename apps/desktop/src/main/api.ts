@@ -90,9 +90,6 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         const error = await shell.openPath(requireStore().root);
         if (error) throw new Error(error);
       },
-      async getSettings() {
-        return requireStore().getSettings();
-      },
       async updateSettings(patch) {
         return requireStore().updateSettings(patch);
       },

@@ -5,7 +5,7 @@ import { HotkeysTool } from './HotkeysTool';
 import { Icon, type IconName } from './icons';
 import { LayoutsTool } from './LayoutsTool';
 
-export const POP_TITLES: Record<PopKind, string> = {
+const POP_TITLES: Record<PopKind, string> = {
   dice: 'Dice',
   hotkeys: 'Hotkeys',
   layouts: 'Layouts',

@@ -43,7 +43,6 @@ export function installBridgeMock(): TrifoldBridge {
         index: { ok: true, version: 1, error: null },
       })),
       openInExplorer: vi.fn(async () => undefined),
-      getSettings: vi.fn(async () => settings),
       updateSettings: vi.fn(async (patch) => ({ ...settings, ...patch })),
     },
     displays: {
@@ -185,10 +184,6 @@ export function installBridgeMock(): TrifoldBridge {
       importPackage: vi.fn(async () => {
         throw new Error('not mocked');
       }),
-    },
-    adventures: {
-      save: vi.fn(async (a) => a),
-      remove: vi.fn(async () => undefined),
     },
     notes: {
       save: vi.fn(async (n) => n),

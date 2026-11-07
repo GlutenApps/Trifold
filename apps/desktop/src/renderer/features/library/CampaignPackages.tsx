@@ -6,7 +6,7 @@ import type {
   CampaignPackageResult,
   CampaignSummary,
 } from '@trifold/api';
-import type { CampaignExportOptions } from '@trifold/schema';
+import { errorMessage, type CampaignExportOptions } from '@trifold/schema';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { flushPendingSaves } from '../../stores/pendingSaves';
@@ -14,10 +14,6 @@ import { useShellStore } from '../../stores/shellStore';
 import { InlineConfirm } from '../shell/InlineConfirm';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
-
-function messageOf(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
 
 /**
  * Export campaign (ADR 0015), inline in the campaign's card: the state to keep, what to include,
@@ -61,7 +57,7 @@ export function CampaignExportPanel({
       const path = await window.trifold.campaigns.exportTo(campaign.id, options);
       if (path) setMessage(`Exported to ${path}`);
     } catch (err) {
-      setMessage(messageOf(err));
+      setMessage(errorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -185,7 +181,7 @@ export function useCampaignPackageImport(): { button: JSX.Element; panel: JSX.El
     try {
       setPicked(await window.trifold.campaigns.choosePackage());
     } catch (err) {
-      setMessage(messageOf(err));
+      setMessage(errorMessage(err));
     }
   };
 
@@ -206,7 +202,7 @@ export function useCampaignPackageImport(): { button: JSX.Element; panel: JSX.El
       const layout = useAppStore.getState().library?.settings?.workspace.consoles[slug];
       if (layout) useShellStore.setState((s) => ({ consoles: { ...s.consoles, [slug]: layout } }));
     } catch (err) {
-      setMessage(messageOf(err));
+      setMessage(errorMessage(err));
     } finally {
       setBusy(false);
     }

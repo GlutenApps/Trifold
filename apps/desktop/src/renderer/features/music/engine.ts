@@ -24,7 +24,8 @@ interface Volumes {
 
 const FADE_STEPS = 64;
 
-function equalPowerCurve(from: number, to: number): Float32Array {
+/** Exported for tests. */
+export function equalPowerCurve(from: number, to: number): Float32Array {
   const curve = new Float32Array(FADE_STEPS);
   for (let i = 0; i < FADE_STEPS; i += 1) {
     const t = i / (FADE_STEPS - 1);

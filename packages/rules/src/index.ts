@@ -7,6 +7,7 @@ export * from './statblock/edition';
 export * from './statblock/sourceLine';
 export * from './statblock/attacks';
 export * from './statblock/modifier';
+export * from './statblock/editorText';
 export * from './combat/index';
 export * from './art/glyph';
 export * from './tree';

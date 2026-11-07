@@ -2,7 +2,10 @@ import { useState } from 'react';
 import {
   abilityModifier,
   average,
+  formatModifierPairs,
   isDiceExpression,
+  parseCommaList,
+  parseModifierPairs,
   proficiencyBonusForCr,
   xpForCr,
   CR_ORDER,
@@ -31,28 +34,6 @@ const SIZES: Array<[Data['size'], string]> = [
   ['G', 'Gargantuan'],
 ];
 const SPEEDS = ['walk', 'fly', 'swim', 'climb', 'burrow'] as const;
-
-function list(value: string): string[] {
-  return value
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function pairs(value: string): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const part of list(value)) {
-    const m = /^([A-Za-z ]+?)\s*([+-]?\d+)$/.exec(part);
-    if (m) out[m[1]!.trim().toLowerCase()] = Number(m[2]);
-  }
-  return out;
-}
-
-function pairsText(value: Record<string, number>): string {
-  return Object.entries(value)
-    .map(([k, v]) => `${k} ${v >= 0 ? '+' : ''}${v}`)
-    .join(', ');
-}
 
 function blankFeature(): Feature {
   return { name: '', displayName: '', text: '', tags: [], attacks: [], rolls: [], saves: [] };
@@ -154,8 +135,10 @@ export function MonsterEditor({
 }) {
   const [name, setName] = useState(record.displayName);
   const [d, setD] = useState<Data>(record.data);
-  const [savesText, setSavesText] = useState(pairsText(d.saves as Record<string, number>));
-  const [skillsText, setSkillsText] = useState(pairsText(d.skills));
+  const [savesText, setSavesText] = useState(
+    formatModifierPairs(d.saves as Record<string, number>),
+  );
+  const [skillsText, setSkillsText] = useState(formatModifierPairs(d.skills));
   const patch = (p: Partial<Data>) => setD((x) => ({ ...x, ...p }));
   const setFeatures = (key: FeatureList, features: Feature[]) =>
     patch({ [key]: features } as Partial<Data>);
@@ -175,13 +158,13 @@ export function MonsterEditor({
       name,
       data: {
         ...d,
-        saves: pairs(savesText) as Data['saves'],
-        skills: pairs(skillsText),
+        saves: parseModifierPairs(savesText) as Data['saves'],
+        skills: parseModifierPairs(skillsText),
         passivePerception:
           10 +
           abilityModifier(d.abilities.wis) +
-          (pairs(skillsText)['perception'] !== undefined
-            ? pairs(skillsText)['perception']! - abilityModifier(d.abilities.wis)
+          (parseModifierPairs(skillsText)['perception'] !== undefined
+            ? parseModifierPairs(skillsText)['perception']! - abilityModifier(d.abilities.wis)
             : 0),
       },
     });
@@ -417,7 +400,7 @@ export function MonsterEditor({
           <input
             type="text"
             value={d.damageVulnerabilities.join(', ')}
-            onChange={(e) => patch({ damageVulnerabilities: list(e.target.value) })}
+            onChange={(e) => patch({ damageVulnerabilities: parseCommaList(e.target.value) })}
           />
         </label>
         <label className="field">
@@ -425,7 +408,7 @@ export function MonsterEditor({
           <input
             type="text"
             value={d.damageResistances.join(', ')}
-            onChange={(e) => patch({ damageResistances: list(e.target.value) })}
+            onChange={(e) => patch({ damageResistances: parseCommaList(e.target.value) })}
           />
         </label>
         <label className="field">
@@ -433,7 +416,7 @@ export function MonsterEditor({
           <input
             type="text"
             value={d.damageImmunities.join(', ')}
-            onChange={(e) => patch({ damageImmunities: list(e.target.value) })}
+            onChange={(e) => patch({ damageImmunities: parseCommaList(e.target.value) })}
           />
         </label>
         <label className="field">
@@ -441,7 +424,7 @@ export function MonsterEditor({
           <input
             type="text"
             value={d.conditionImmunities.join(', ')}
-            onChange={(e) => patch({ conditionImmunities: list(e.target.value) })}
+            onChange={(e) => patch({ conditionImmunities: parseCommaList(e.target.value) })}
           />
         </label>
         <label className="field">
@@ -449,7 +432,7 @@ export function MonsterEditor({
           <input
             type="text"
             value={d.environment.join(', ')}
-            onChange={(e) => patch({ environment: list(e.target.value) })}
+            onChange={(e) => patch({ environment: parseCommaList(e.target.value) })}
           />
         </label>
         <label className="field">

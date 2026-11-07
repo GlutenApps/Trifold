@@ -28,10 +28,10 @@ declare module '@tiptap/core' {
   }
 }
 
-export const searchHighlightKey = new PluginKey<SearchHighlightState>('searchHighlight');
+const searchHighlightKey = new PluginKey<SearchHighlightState>('searchHighlight');
 
 /** Document positions of every occurrence of `phrase`, in reading order. */
-export function findMatches(doc: PmNode, phrase: string): TextMatch[] {
+function findMatches(doc: PmNode, phrase: string): TextMatch[] {
   const matches: TextMatch[] = [];
   if (!phrase) return matches;
   doc.descendants((node, pos) => {

@@ -489,10 +489,6 @@ input.narrow {
   width: 64px;
 }
 
-input.narrow-text {
-  min-width: 120px;
-}
-
 .campaign-title {
   margin: 0;
   color: var(--text);
@@ -1067,12 +1063,6 @@ textarea.encounter-notes {
   min-height: 0;
 }
 
-.scene-tree-pane,
-.scene-side-pane {
-  overflow: auto;
-  min-height: 0;
-}
-
 .scene-tree {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1113,10 +1103,6 @@ textarea.encounter-notes {
   white-space: nowrap;
 }
 
-.scene-row.kind-folder .scene-title {
-  font-weight: 600;
-}
-
 .preview-image {
   max-width: 100%;
   max-height: 260px;
@@ -1137,18 +1123,18 @@ textarea.encounter-notes {
 
 /* Player window: scenes and overlays */
 .backdrop-dark {
-  background: #0b0b0d;
-  color: #f2f2f2;
+  background: var(--tv-dark);
+  color: var(--tv-dark-ink);
 }
 
 .backdrop-parchment {
-  background: #e8dcc0;
-  color: #2b2114;
+  background: var(--tv-parchment);
+  color: var(--tv-parchment-ink);
 }
 
 .backdrop-stone {
-  background: #3a3f46;
-  color: #e6e6e6;
+  background: var(--tv-stone);
+  color: var(--tv-stone-ink);
 }
 
 .scene-layer {
@@ -1181,8 +1167,8 @@ textarea.encounter-notes {
   left: 3vw;
   font-size: 2.2vw;
   padding: 0.4vw 1vw;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
+  background: var(--tv-scrim);
+  color: var(--tv-white);
   border-radius: 8px;
   letter-spacing: 0.02em;
 }
@@ -1197,7 +1183,7 @@ textarea.encounter-notes {
   list-style: none;
   margin: 0;
   padding: 0.5vw 1vw;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--tv-scrim);
   border-radius: 12px;
   max-width: 94vw;
   overflow: hidden;
@@ -1212,7 +1198,7 @@ textarea.encounter-notes {
   border-radius: 8px;
   border: 2px solid transparent;
   font-size: 1.4vw;
-  color: #fff;
+  color: var(--tv-white);
   white-space: nowrap;
 }
 
@@ -1243,7 +1229,7 @@ textarea.encounter-notes {
 .hp-bar {
   width: 6vw;
   height: 0.6vh;
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--tv-glass);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -1260,8 +1246,8 @@ textarea.encounter-notes {
   bottom: 3vh;
   font-size: 2vw;
   padding: 0.4vw 1vw;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
+  background: var(--tv-scrim);
+  color: var(--tv-white);
   border-radius: 8px;
 }
 
@@ -1270,13 +1256,13 @@ textarea.encounter-notes {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--tv-scrim-strong);
   animation: scene-fade 300ms ease;
 }
 
 .handout-card {
-  background: #e8dcc0;
-  color: #2b2114;
+  background: var(--tv-parchment);
+  color: var(--tv-parchment-ink);
   padding: 4vh 4vw;
   border-radius: 12px;
   max-width: 70vw;
@@ -1287,7 +1273,7 @@ textarea.encounter-notes {
 .handout-card h2 {
   margin: 0 0 1vh;
   font-size: 2.8vw;
-  color: #2b2114;
+  color: var(--tv-parchment-ink);
   text-transform: none;
   letter-spacing: normal;
   border: none;
@@ -1306,8 +1292,8 @@ textarea.encounter-notes {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #0b0b0d;
-  color: #f2f2f2;
+  background: var(--tv-dark);
+  color: var(--tv-dark-ink);
   gap: 2vh;
 }
 

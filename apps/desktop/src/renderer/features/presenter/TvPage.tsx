@@ -13,7 +13,7 @@ import { MapEditor } from './MapEditor';
 import { MapPop } from './MapPop';
 import { flattenTree, showableAt } from './sceneTree';
 
-export const OVERLAY_LABELS: { [K in keyof PresenterOverlays]: string } = {
+const OVERLAY_LABELS: { [K in keyof PresenterOverlays]: string } = {
   sceneTitle: 'Scene title',
   initiativeStrip: 'Initiative strip',
   pcHealthBars: 'PC health bars',
