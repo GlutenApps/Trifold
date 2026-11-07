@@ -3,11 +3,18 @@ import { app, Menu, type MenuItemConstructorOptions } from 'electron';
 /**
  * Application menu (ADR 0006). macOS needs one: without an Edit menu the standard Cmd+C/V/X/A
  * and Cmd+Q do nothing inside the renderer, and the app menu is where the OS expects Quit and
- * Hide. Windows keeps its hidden default menu, so Ctrl+R and the devtools shortcut still work
- * there in development and the title bar stays the renderer's.
+ * Hide. Windows keeps Electron's hidden default menu in development, so Ctrl+R and the devtools
+ * shortcut work there; a packaged build gets no menu at all, so Alt cannot reveal Electron's
+ * stock File/View/Help entries and the reload and devtools shortcuts are gone.
  */
 export function installApplicationMenu(): void {
-  if (process.platform !== 'darwin') return;
+  if (process.platform !== 'darwin') {
+    if (app.isPackaged) Menu.setApplicationMenu(null);
+    return;
+  }
+  const developer: MenuItemConstructorOptions[] = app.isPackaged
+    ? []
+    : [{ role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' }];
   const template: MenuItemConstructorOptions[] = [
     {
       label: app.name,
@@ -35,12 +42,7 @@ export function installApplicationMenu(): void {
     },
     {
       label: 'View',
-      submenu: [
-        { role: 'reload' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' },
-      ],
+      submenu: [...developer, { role: 'togglefullscreen' }],
     },
     {
       label: 'Window',

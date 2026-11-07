@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   installApplicationMenu();
 
   let session: LibrarySession | null = null;
-  const logger = createLogger(() => session?.logDir ?? null);
+  const logger = createLogger(() => session?.logDir ?? null, join(app.getPath('userData'), 'logs'));
   const config = await AppConfigStore.load(join(app.getPath('userData'), 'config.json'), logger);
   // Bundled SRD content lives in resources/ (repo root in dev, extraResources when packaged).
   const bundledDir = app.isPackaged

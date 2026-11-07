@@ -13,10 +13,12 @@ export interface Logger {
 export { errorMessage } from '@trifold/schema';
 
 /**
- * Writes to the process console and, when a Library is open, appends to
- * `Library/logs/trifold-YYYY-MM-DD.log` (CLAUDE.md: main-process failures are logged to Library/logs/).
+ * Writes to the process console and appends to `trifold-YYYY-MM-DD.log` in the Library's
+ * `logs/` folder once one is open (CLAUDE.md: main-process failures are logged to Library/logs/).
+ * Until then lines go to `fallbackDir` (the app's userData/logs), so a failure to open the
+ * Library at all still leaves a trace a packaged app can show the DM.
  */
-export function createLogger(getLogDir: () => string | null): Logger {
+export function createLogger(getLogDir: () => string | null, fallbackDir?: string): Logger {
   let queue: Promise<void> = Promise.resolve();
 
   const log = (level: LogLevel, message: string): void => {
@@ -25,7 +27,7 @@ export function createLogger(getLogDir: () => string | null): Logger {
     if (level === 'error') console.error(line);
     else console.log(line);
 
-    const dir = getLogDir();
+    const dir = getLogDir() ?? fallbackDir;
     if (!dir) return;
     const file = join(dir, `trifold-${now.toISOString().slice(0, 10)}.log`);
     queue = queue

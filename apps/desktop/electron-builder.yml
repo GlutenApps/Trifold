@@ -4,17 +4,28 @@ copyright: Copyright © 2026 Trifold contributors
 directories:
   output: ../../dist
   buildResources: build
+# The app icon is build/icon.png (1024 px), rendered by `pnpm make:icon` from
+# docs/design-brief/logo.svg; electron-builder derives the .ico and .icns from it.
 files:
   - out/**/*
   - package.json
+  # better-sqlite3 ships its C sources in the npm package; only the prebuilt binary is needed.
+  - '!node_modules/better-sqlite3/{deps,src}/**'
 asarUnpack:
   - '**/*.node'
+# Bundled content (resources/, fetched by `pnpm fetch:content`; scripts/check-content.mjs refuses
+# to build without it) and the font licences, which the OFL requires to travel with the fonts.
 extraResources:
   - from: ../../resources
     to: resources
     filter:
       - '**/*'
       - '!README.md'
+  - from: src/renderer/assets/fonts
+    to: licenses
+    filter:
+      - '*-OFL.txt'
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 win:
   target:
     - target: nsis
@@ -25,16 +36,22 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
+  artifactName: ${productName}-Setup-${version}-win-${arch}.${ext}
+portable:
+  artifactName: ${productName}-Portable-${version}-win-${arch}.${ext}
+  # Unpack once into %TEMP%/Trifold and reuse it, instead of extracting 200 MB on every launch.
+  unpackDirName: Trifold
 # macOS: a dmg and a zip for the build machine's architecture (ADR 0006). better-sqlite3 is
 # fetched for that one architecture by scripts/rebuild-native.mjs, so a universal build needs
-# both prebuilds and is not attempted. Builds are unsigned until a Developer ID exists; the
-# first launch is right-click → Open.
+# both prebuilds and is not attempted. There is no Developer ID yet, so the bundle is ad-hoc
+# signed ("-"): Gatekeeper then shows the ordinary unidentified-developer prompt. Leaving
+# identity null would skip signing altogether and a downloaded build would report "damaged".
 mac:
   category: public.app-category.utilities
   target:
     - dmg
     - zip
-  identity: null
+  identity: '-'
   hardenedRuntime: false
   darkModeSupport: true
 dmg:

@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "node ../../scripts/dev.mjs",
     "build:bundle": "electron-vite build",
+    "prebuild": "node ../../scripts/check-content.mjs",
     "build": "electron-vite build && electron-builder --config electron-builder.yml",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "postinstall": "node ../../scripts/rebuild-native.mjs",

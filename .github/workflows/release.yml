@@ -1,0 +1,63 @@
+name: Release
+
+# Builds the installers when a version tag is pushed (docs/RELEASING.md). Each platform packages
+# itself (ADR 0006): Windows gets the NSIS installer and the portable exe, macOS a dmg and a zip
+# for the runner's architecture (macos-latest is Apple Silicon; macos-15-intel is x64). The content
+# step is not allowed to fail here: a release without the SRD snapshot is a content-less build.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Check that the tag matches apps/desktop/package.json
+        shell: bash
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          if [ "v$version" != "${GITHUB_REF_NAME}" ]; then
+            echo "tag ${GITHUB_REF_NAME} does not match package version v$version"; exit 1
+          fi
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm fetch:content
+      - run: pnpm check:content
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trifold-${{ matrix.os }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*-mac.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: artifacts/*
