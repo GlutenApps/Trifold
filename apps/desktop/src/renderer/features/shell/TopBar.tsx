@@ -89,10 +89,9 @@ export function TopBar() {
                     }}
                   >
                     <span className={`check${isCurrent ? ' on' : ''}`}>{isCurrent ? '✓' : ''}</span>
-                    <span className="grow">{c.name}</span>
-                    {!isCurrent && (
-                      <span className="muted small">closes {current.campaign.name} first</span>
-                    )}
+                    <span className="grow switcher-name" title={c.name}>
+                      {c.name}
+                    </span>
                   </button>
                 );
               })}

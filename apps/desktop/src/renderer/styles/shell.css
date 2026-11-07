@@ -89,6 +89,11 @@
   color: var(--accent);
 }
 
+.switcher-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .window-controls-space {
   width: 140px;
   flex-shrink: 0;
