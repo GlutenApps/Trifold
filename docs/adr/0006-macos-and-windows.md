@@ -18,8 +18,10 @@ places, and nowhere else:
 
 1. **Build.** `electron-builder.yml` gains a `mac` target (dmg + zip) for the architecture of
    the build machine. `scripts/rebuild-native.mjs` already fetches better-sqlite3 for the host
-   arch (or `npm_config_arch`), so a universal binary is not attempted. Builds are unsigned
-   until a Developer ID exists; the first launch is right-click → Open. CI runs the whole
+   arch (or `npm_config_arch`), so a universal binary is not attempted. Builds are ad-hoc
+   signed (`identity: "-"`) until a Developer ID exists: Gatekeeper then shows the ordinary
+   unidentified-developer prompt, and on macOS 15 the first launch is System Settings →
+   Privacy & Security → Open Anyway (right-click → Open no longer bypasses it). CI runs the whole
    check, smoke test included, on both `windows-latest` and `macos-latest`.
 2. **Menu.** macOS gets a minimal application menu (`src/main/menu.ts`) so Cmd+C/V/X/A, Hide
    and Quit behave; Windows keeps its hidden default menu. Closing the console window quits
@@ -45,4 +47,5 @@ identical and unaware of the OS.
 - The macOS build has not yet been exercised on real hardware by the maintainer; CI's macOS
   job is the gate until it has. Mixed-DPI and second-display behaviour on macOS needs the
   same hands-on check that Windows had (DESIGN.md §11).
-- Code signing and notarization are still M3. Until then, Gatekeeper warns on first launch.
+- Code signing and notarization are still M3. Until then, Gatekeeper warns on first launch and
+  the README carries the Open Anyway steps.

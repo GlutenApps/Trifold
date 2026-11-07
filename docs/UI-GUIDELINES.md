@@ -2,7 +2,7 @@
 
 How Trifold's console looks and why. Read this before building or changing any UI. The rules exist so a row of controls lines up without local fixes, and so a difference in size always means a difference in importance. ADR 0013 records how we got here.
 
-Colours, fonts and the palette are in `docs/design-brief/TOKENS.md`; the CSS tokens live in `apps/desktop/src/renderer/styles/global.css`. Never use a literal colour, size or radius where a token exists. (The player window's scene backdrops are the one place literal colours are allowed.)
+Colours, fonts and the palette are in `docs/TOKENS.md`; the CSS tokens live in `apps/desktop/src/renderer/styles/global.css`. Never use a literal colour, size or radius where a token exists. (The player window's scene backdrops are the one place literal colours are allowed.)
 
 ## 1. The control scale
 

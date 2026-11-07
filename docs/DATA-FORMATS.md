@@ -1,6 +1,6 @@
 # Trifold — Data Formats and Parsing Rules
 
-**Status:** v0.1, 2026-09-27. Companion to `DESIGN.md`.
+**Status:** v0.2, 2026-11-07. Companion to `DESIGN.md`. Describes the formats as read and written by the code; §2.15 is the one section that is still a plan.
 
 Everything in §2 was verified against real files: the SRD compendium XML bundled with Fight Club 5e (v1.65) and Game Master 5e (v1.30), the apps' in-app import tutorials, and a 31 MB community "Complete Compendium 5.5e" file (5,034 monsters, 1,420 spells, 6,296 items, 700 feats, 276 species, 238 backgrounds, 25 classes; 109 source books). Where a rule is inferred rather than documented it is marked **(observed)**. Where it still needs a real file to confirm it is marked **(verify)**.
 
@@ -158,9 +158,9 @@ Feat: `name`, `prerequisite`, `text`, `modifier`, `proficiency`, `special`, `rol
 
 `<modifier category="bonus|ability score|ability modifier|saving throw|skill">value</modifier>`, e.g. `ac +2`, `speed +10`, `melee attacks +1`, `ranged damage +3`, `saving throws +1`, `strength +2`. Store as `{ category, target, value }` by splitting on the last signed integer. `<roll description="Fire Damage" level="8">8d8</roll>` — `level` scales the roll by character or spell level; keep as-is.
 
-### 2.15 Export
+### 2.15 Export **(not built; DESIGN.md §10 M2)**
 
-Trifold writes the same schema: `<compendium version="5" auto_indent="NO">`, one element per record, fields in the documented order, `text` paragraphs as separate `<text>` elements, `Source: Trifold Homebrew` appended to descriptions of homebrew. Names must be unique per kind. Records with `basedOn` pointing at a `nonSrd` source trigger the export warning (`DESIGN.md` §8).
+Trifold will write the same schema: `<compendium version="5" auto_indent="NO">`, one element per record, fields in the documented order, `text` paragraphs as separate `<text>` elements, `Source: Trifold Homebrew` appended to descriptions of homebrew. Names must be unique per kind. Records with `basedOn` pointing at a `nonSrd` source trigger the export warning (`DESIGN.md` §8).
 
 ---
 
@@ -182,7 +182,7 @@ Trifold rewrites these into the compendium shape (`packages/importers/src/campai
 
 ### 3.3 Fight Club "GM export"
 
-Fight Club writes a file named `<Character Name> GM.xml` **(observed from the app binary)**: a campaign XML containing one `<pc>` stat block. It is lossy by design (no equipment, no prepared-spell state). Import it through the same campaign importer in merge mode; the PC merges by name. **(verify)** with a real export from a player.
+Fight Club writes a file named `<Character Name> GM.xml` **(observed from the app binary)**: a campaign XML containing one `<pc>` stat block. It is lossy by design (no equipment, no prepared-spell state). Import it through the same campaign importer in merge mode; the PC merges by name. The importer does this and a synthetic fixture covers it; still **(verify)** against a real export from a player.
 
 ### 3.4 Backups
 
@@ -192,10 +192,10 @@ Both apps write `FightClub5.backup` / `GameMaster5.backup` files that appear to 
 
 ## 4. Open5e (build-time SRD snapshot)
 
-- API: `https://api.open5e.com/v2/` with endpoints for documents, creatures, spells, items, species, classes, feats, backgrounds, conditions and rules, filterable by document (e.g. the 2024 SRD document vs the 2014 SRD). **(verify)** exact document keys and pagination at build time; pin them in `resources/srd-manifest.json`. The same data exists as JSON in the `open5e/open5e-api` repository, which is the fallback if the API is unavailable during a build.
+- API: `https://api.open5e.com/v2/` with endpoints for documents, creatures, spells, items, species, classes, feats, backgrounds, conditions and rules, filterable by document. `scripts/fetch-open5e.ts` uses the document keys `srd-2024` and `srd-2014`, pages with `?document__key=…&limit=200`, and records keys, counts, licence texts, fetch date and file hashes in `resources/srd-manifest.json`; `scripts/check-content.mjs` refuses to build when the files are missing or do not match. The same data exists as JSON in the `open5e/open5e-api` repository, which is the fallback if the API is unavailable during a build.
 - Licenses: SRD 5.1 and 5.2.1 documents are CC-BY 4.0; third-party documents carry their own license and attribution fields, which the fetch script copies into the manifest and the About page.
 - Normalization: map Open5e creature/spell/item fields onto the Trifold `Record.data` shapes in `DESIGN.md` §5.1. Open5e 2024 records are structured (species traits, feat benefits, class feature types) and need no text-pattern parsing, but the attack/save regexes in §2.5 are still run over action text to populate `Attack` and `SaveCall` for the tracker.
-- The fetch script never runs at app runtime; the app has no network access in v1 except an optional "check for app updates" (GitHub Releases) that the user enables.
+- The fetch script never runs at app runtime; the app makes no network calls of its own (the only network use is a web tab the DM opens, ADR 0011).
 
 ---
 
@@ -221,7 +221,7 @@ One `Record` (see `DESIGN.md` §5.1) per line. Order = file order. Rewritten in 
 A single `Record` with `sourceId = "homebrew"` and `basedOn` when duplicated.
 
 ### 5.4 Campaign folder
-`campaign.json` (Campaign), `adventures/`, `notes/`, `npcs/`, `pcs/`, `encounters/`, `scenes/` each holding one JSON object per file matching `DESIGN.md` §5.2; `images/<sceneImageId>.<ext>` + `images/<sceneImageId>.display.webp`; `tokens/<id>.png`.
+`campaign.json` (Campaign), `adventures/`, `notes/`, `npcs/`, `pcs/`, `encounters/`, `scenes/` each holding one JSON object per file matching `DESIGN.md` §5.2; `images/<sceneImageId>.<ext>` + `images/<sceneImageId>.display.jpg` (JPEG, long edge ≤ 4096 px); `tokens/<id>.png`.
 
 Note templates are Library-level, not per campaign: `templates/notes/<id>.json` holds `{ schemaVersion: 1, id, name, body (markdown), createdAt, updatedAt }`. The folder is created and seeded with one "Session prep" template the first time it is missing; deleting every template leaves it empty for good.
 
@@ -231,7 +231,7 @@ Scene token coordinates are in grid units (floats) relative to the grid origin (
 `music/library.json`: `{ folders: [path], tracks: Track[] }`; `music/playlists/<id>.json`: Playlist. Paths are absolute. A rescan relinks a renamed or moved file to its track (same `sizeBytes` and length; tracks without a stored size match on length within the same folder; ambiguous matches are left alone), so tags, gain and playlist membership follow the file. A track whose file is gone from a readable folder is removed, along with its playlist entries. When a folder cannot be read at all (an unplugged drive), its tracks stay listed as unavailable. Kind (`music`/`ambience`/`sfx`) is edited as a tag: the first kind word among the tags (`ambience`/`ambiance`/`ambient`, `effect`/`effects`/`sfx`, `music`) sets `kind`, and a track with none is music.
 
 ### 5.6 Index (`index.sqlite`)
-Derived. Tables: `records(id, kind, key, name, display_name, source_id, edition, cr, type, size, environment, is_npc, json)`, `records_fts(name, text)` (FTS5), `sources`, plus lightweight tables for campaign entity lookup. Rebuilt when any source's `fileHash` or a homebrew file's mtime changes, or when `library.json.indexVersion` is behind the app's.
+Derived. Tables: `records(id, kind, key, name, display_name, source_id, edition, cr, cr_num, type, type_code, size, environment, level, rarity, is_npc, json)`, `records_fts(id UNINDEXED, name, text)` (FTS5), `sources` and `meta` (see `apps/desktop/src/main/index/IndexDb.ts` for the exact DDL). Campaign entities are not indexed; they load from their JSON files. Rebuilt when any source's `fileHash` or a homebrew file's mtime changes, or when `library.json.indexVersion` is behind the app's.
 
 ---
 

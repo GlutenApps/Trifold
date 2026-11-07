@@ -1,6 +1,6 @@
 # Trifold — Design Document
 
-**Status:** v0.1 draft, 2026-09-27. Source of truth for what the app is and why.
+**Status:** v0.2, 2026-11-07. Source of truth for what the app is and why. It describes the app as built; a feature that is specified here but not yet built is marked **(not built; M2)** or similar, and §10 lists what shipped.
 **Companion docs:** `DATA-FORMATS.md` (file formats, parsing rules, schemas), `CLAUDE.md` (repo conventions).
 
 ---
@@ -48,7 +48,7 @@ Settled decisions, in one place. Rationale is in the sections that follow.
 | User content | Lion's Den compendium XML import (neutral importer, lenient parser). Game Master campaign XML import. Fight Club "GM export" import. Nothing is hosted or shared. |
 | Players | Represented by PC cards (name, HP, AC, saves, passives, portrait…). No sheets. |
 | Homebrew | New-from-scratch or Duplicate-then-edit for monsters, items, spells, feats, species, backgrounds. Classes/subclasses later. Duplicate is a universal verb (encounters, scenes, NPCs, PC cards, playlists). |
-| Presenter | Second Electron window on a chosen display. Scene tree of any depth. Tree click selects; Enter, double-click or ▶ sends (ADR 0004); hover shows a thumbnail; undo-last-scene hotkey. The TV tab shows the selected scene of any kind and holds every screen control; the live strip only mirrors the one-tap ones (ADR 0008). Party placed by clicking an entry point each time. Player-window overlays (scene title, initiative strip, PC health bars, round counter) are individually toggleable; scene title is a global toggle with per-scene override. |
+| Presenter | Second Electron window on a chosen display. Scene tree of any depth. Tree click selects; Enter, double-click or ▶ sends (ADR 0004); hover shows a thumbnail; undo-last-scene hotkey. The TV tab shows the selected scene of any kind and holds every screen control; the live strip only mirrors the one-tap ones (ADR 0008). Party placed by clicking anywhere on the map each time (entry markers were removed, ADR 0008). Player-window overlays (scene title, initiative strip, PC health bars, round counter) are individually toggleable; scene title is a global toggle with per-scene override. |
 | Token art | game-icons.net (CC BY 3.0) silhouettes rendered as generated tokens; "engraved" treatment default, "flat" alternative. Custom art per record by drag-drop; bulk folder match by filename. |
 | Music | Local files only (MP3/OGG/FLAC/WAV/M4A). Three layers: music (crossfade), ambience (seamless loops), effects (one-shot, ducking). Per-track loudness normalization. Output device selection. Scene-linked playback. |
 | Phone audio | On Windows, Trifold is the Bluetooth audio receiver (the OS's AudioPlaybackConnection API driven by a bundled PowerShell helper, no native module): paired phones are listed, remembered once used, and connect in one click, never automatically. On macOS the Phone tab is an AirPlay Receiver guide with deep links. Both state what Trifold cannot control from there. An "Audio source" toggle on the Music tool and the live strip switches between Trifold's player and the phone. See ADR 0007. |
@@ -68,11 +68,11 @@ Settled decisions, in one place. Rationale is in the sections that follow.
 
 ## 3. Users and workflows
 
-There is one user: the DM, on one Windows PC with a second display (TV or monitor) at the table.
+There is one user: the DM, on one Windows or macOS computer (ADR 0006) with a second display (TV or monitor) at the table.
 
 **Prep (days before):** import content → build the campaign (adventures, NPCs, notes) → enter PC cards from what players sent → build encounters from the compendium → build the scene tree (title cards, maps with grid alignment, pre-placed creatures) → tag music, build playlists, link them to scenes.
 
-**At the table:** open campaign → open player window on the TV (blackout) → click scenes as the party moves → click an entry point to drop the party on a map → start combat from the scene → run initiative, roll attacks and saves from stat blocks, apply damage, track conditions → music crossfades with scene changes and combat → end combat, tokens gray out, back to exploration.
+**At the table:** open campaign → open player window on the TV (blackout) → click scenes as the party moves → click the map to drop the party on it → start combat from the scene → run initiative, roll attacks and saves from stat blocks, apply damage, track conditions → music crossfades with scene changes and combat → end combat, tokens gray out, back to exploration.
 
 **After:** notes and encounter results stay in the campaign folder. The Library folder can be zipped, copied, or synced with OneDrive/Dropbox for use on another machine.
 
@@ -82,12 +82,12 @@ There is one user: the DM, on one Windows PC with a second display (TV or monito
 
 ### 4.1 Shell and UI
 
-- **Electron** (current LTS), packaged with electron-builder as an NSIS installer plus a portable exe. Windows only; no code signing in v1 (document the SmartScreen "unknown publisher" prompt in the README).
+- **Electron** (current LTS), packaged with electron-builder as an NSIS installer plus a portable exe on Windows and a dmg plus zip on macOS (ADR 0006). No code signing yet, so the README documents the SmartScreen and Gatekeeper prompts; signing and notarisation are M3.
 - **Renderer:** React 18 + TypeScript + Vite. State in Zustand stores. Validation with Zod schemas shared between main and renderer.
 - **Main process** owns: the Library (all file I/O), the SQLite index, window management (console + player window), display enumeration, global shortcuts, backups.
 - **Two renderer windows:** `console` (DM) and `player` (presenter). Both load the same bundle with a different entry route. The player window is `frameless`, opened fullscreen on the chosen display via `screen.getAllDisplays()`, and never receives keyboard focus by default.
 - **State flow for the presenter:** the console holds authoritative presenter state (live scene, camera, tokens, overlays). Changes are sent to main via IPC and re-broadcast to the player window. The player window is a pure view: it never mutates state. Target: token drag updates reach the player window within one frame at 60 fps.
-- **Audio** runs in the console renderer via the Web Audio API (`AudioContext` with one `GainNode` per layer and per track). Output device selection via `setSinkId` on a `MediaStreamAudioDestinationNode`→`<audio>` sink, or Electron's `--enable-features` fallback; see §6.6.
+- **Audio** runs in the console renderer via the Web Audio API (`AudioContext` with one `GainNode` per layer and per track). Output device selection via `AudioContext.setSinkId` (available in the pinned Electron); see §6.6.
 
 ### 4.2 The Library (files-first)
 
@@ -202,9 +202,9 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 ### 6.1 Compendium and sources
 
-**Bundled SRD.** A build script (`scripts/fetch-open5e.ts`) pulls the SRD 5.2.1 and SRD 5.1 documents from Open5e's v2 API (or the JSON in the open5e-api repository), normalizes them into Trifold `Record`s, and writes `resources/srd-2024.jsonl` and `resources/srd-2014.jsonl` into the app package. The snapshot is versioned in the repo's lockfile-style manifest (`resources/srd-manifest.json` with document keys, counts, fetch date, license texts). Optional third-party open documents (Kobold Press Tome of Beasts, etc.) use the same path but are opt-in in Settings → Sources.
+**Bundled SRD.** A build script (`scripts/fetch-open5e.ts`) pulls the SRD 5.2.1 and SRD 5.1 documents from Open5e's v2 API (or the JSON in the open5e-api repository), normalizes them into Trifold `Record`s, and writes `resources/srd-2024.jsonl` and `resources/srd-2014.jsonl` into the app package. The snapshot is versioned in the repo's lockfile-style manifest (`resources/srd-manifest.json` with document keys, counts, fetch date, license texts). Optional third-party open documents (Kobold Press Tome of Beasts, etc.) would use the same path as an opt-in **(not built; M2)**.
 
-**XML import.** Settings → Sources → Import file. Accepts Lion's Den compendium XML (`<compendium>`), Game Master campaign XML (`<campaign>`), and Fight Club GM exports (a `<campaign>` containing a `<pc>`). Import runs in the main process, streams the file (31 MB files must not block the UI), writes `original.xml` + `records.jsonl`, and indexes. Re-importing the same file (by hash) is a no-op; importing a changed file diffs by `key` and reports added/changed/removed counts. Sources can be enabled/disabled globally and per campaign, and deleted.
+**XML import.** Library › Compendium › Import file. Accepts Lion's Den compendium XML (`<compendium>`), Game Master campaign XML (`<campaign>`), and Fight Club GM exports (a `<campaign>` containing a `<pc>`). Import runs in the main process, streams the file (31 MB files must not block the UI), writes `original.xml` + `records.jsonl`, and indexes. Re-importing the same file (by hash) is a no-op; importing a changed file diffs by `key` and reports added/changed/removed counts. Sources can be enabled/disabled globally and deleted; per-campaign enabling has a schema field (`Campaign.enabledSourceIds`) but no UI **(not built; M2)**.
 
 **Lenient parser rules.** Unknown elements are preserved in `data.extra`. Missing fields never fail an import; they produce warnings listed on the source page. Names match case-insensitively for cross-references. See `DATA-FORMATS.md` for every field and convention found in real files.
 
@@ -218,24 +218,24 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 - Every compendium record has **Duplicate**; every kind has **New**. Both open the editor for that kind with the copy (or a blank) placed in the `homebrew` source. Originals are read-only.
 - Copies carry `basedOn` provenance. The editor shows a "changed from original" diff on request.
-- **Monster editor** covers every field in §5.1: ability scores with derived modifiers, saves and skills as proficiency toggles or explicit numbers, AC with note, HP average with formula (and "roll average from formula"), speeds, senses, languages, CR with auto-filled proficiency bonus and XP, damage/condition lists as chips, and feature lists for traits / actions / bonus actions / reactions / legendary / lair with uses, recharge, attack triples and save calls. A **CR scaler** is a batch edit on a copy: pick a target CR and the editor proposes AC, HP, to-hit, damage per round and save DC targets from the standard CR table, leaving the DM to accept or tweak.
-- Item, spell, feat, species, background editors are simple forms with the same field names as the XML.
+- **Monster editor** covers every field in §5.1: ability scores with derived modifiers, saves and skills as proficiency toggles or explicit numbers, AC with note, HP average with formula (and "roll average from formula"), speeds, senses, languages, CR with auto-filled proficiency bonus and XP, damage/condition lists as chips, and feature lists for traits / actions / bonus actions / reactions / legendary / lair with uses, recharge, attack triples and save calls. A **CR scaler** **(not built; M2)** would be a batch edit on a copy: pick a target CR and the editor proposes AC, HP, to-hit, damage per round and save DC targets from the standard CR table, leaving the DM to accept or tweak.
+- Item, spell, feat, species, background editors **(not built; M2; only the monster editor exists)** are simple forms with the same field names as the XML.
 - Names must be unique within a kind across enabled sources for export to work; the editor warns on collision and suggests a suffix.
-- **Encounter-level tweaks** (rename, HP override, one-off trait) live on the combatant, not in homebrew. "Promote to homebrew" copies the tweaked creature into a real record.
-- **Replace references**: when a copy is meant to replace a stock creature, a one-step action rewrites references in encounters and scenes of the current campaign.
+- **Encounter-level tweaks** (rename, HP override, one-off trait) live on the combatant, not in homebrew. "Promote to homebrew" **(not built; M2)** copies the tweaked creature into a real record.
+- **Replace references** **(not built; M2)**: when a copy is meant to replace a stock creature, a one-step action rewrites references in encounters and scenes of the current campaign.
 - **Duplicate** is also available on encounters, scenes (with or without subtree), NPCs, PC cards, playlists.
-- Export homebrew (or any source) as compendium XML in Lion's Den format so the files remain usable in Fight Club / Game Master. Exports of records whose `basedOn` source is flagged `nonSrd` show a warning before writing.
+- Export homebrew (or any source) **(not built; M2; see DATA-FORMATS.md §2.15)** as compendium XML in Lion's Den format so the files remain usable in Fight Club / Game Master. Exports of records whose `basedOn` source is flagged `nonSrd` show a warning before writing.
 
 ### 6.3 Campaign management
 
-- Campaign list on launch; one open at a time. The Campaign tab is three sub-tabs: Party, NPCs, Notes. Notes are a tree of folders beside the open note (ADR 0010): find in notes (a phrase, with context snippets that open the note at that hit), new note, new folder, collapse, drag to reorder or into a folder (scenes drag the same way); the open note is formatted text stored as markdown and saves itself as it is edited; a narrow panel shows the list or the note, not both. Folders took the place of Adventures in the UI; the adventure record stays in the schema and the importer so old campaigns and campaign XML load, and an imported adventure's notes land in a folder named after it. Notes are markdown with `[[links]]` to NPCs, scenes, encounters and compendium records (autocomplete). Backlinks are shown on the target.
+- Campaign list on launch; one open at a time. The Campaign tab is three sub-tabs: Party, NPCs, Notes. Notes are a tree of folders beside the open note (ADR 0010): find in notes (a phrase, with context snippets that open the note at that hit), new note, new folder, collapse, drag to reorder or into a folder (scenes drag the same way); the open note is formatted text stored as markdown and saves itself as it is edited; a narrow panel shows the list or the note, not both. Folders took the place of Adventures in the UI; the adventure record stays in the schema and the importer so old campaigns and campaign XML load, and an imported adventure's notes land in a folder named after it. `[[links]]` from notes to NPCs, scenes, encounters and compendium records, with autocomplete and backlinks, were deferred in ADR 0010 **(not built; M2)**.
 - NPC records can wrap a stat block (any monster record, including the 1,237 `npc`-flagged entries in community files) and carry a portrait, role, location and notes. A named NPC carries HP and the alive flag from fight to fight; any creature in an encounter or a running fight can be turned into one with Track as NPC, and the NPCs tab shows carried HP with Restore (ADR 0012).
 - **PC cards**: form with the fields in §5.2, including current HP, which a fight starts from and writes back when it ends; Long rest on the Party tab heals everyone (ADR 0012). Import from a Fight Club GM export fills what the stat block provides (AC, HP, saves, skills, passives, spells). A "quick add" text box accepts one line per PC: `Name, Player, Class L, HP, AC, Init, Speed, PP`. Unofficial D&D Beyond pre-fill is out of scope for v1 (tracked as a later convenience; unsupported endpoint).
-- Session log: encounter results (XP earned, rounds, casualties) append to a campaign log automatically; DM can add free-text session notes.
+- Encounter results (XP earned, rounds, casualties) are stored on the encounter (`Encounter.results`). A campaign-wide session log with free-text session notes is **(not built; M2)**.
 
 ### 6.4 Encounters and combat tracker
 
-**Encounter builder.** Add PCs (all, or a subset) and creatures from the compendium or from a scene's placed tokens. Quantity, label, role, hidden flag per row. Difficulty uses the **2024 XP budget** (§7.4): sum creature XP (no multiplier) against the party's Low / Moderate / High budget and show which band the encounter lands in, plus XP per PC. Random encounter: pick environment(s), CR range, edition filter, budget band → generate a set; re-roll individual rows.
+**Encounter builder.** Add PCs (all, or a subset) and creatures from the compendium or from a scene's placed tokens. Quantity, label, role, hidden flag per row. Difficulty uses the **2024 XP budget** (§7.4): sum creature XP (no multiplier) against the party's Low / Moderate / High budget and show which band the encounter lands in, plus XP per PC. Random encounter **(not built; M2)**: pick environment(s), CR range, edition filter, budget band → generate a set; re-roll individual rows.
 
 **Starting combat.** Roll initiative per creature or per group (setting); PCs prompt for their rolled initiative (or roll from the card's bonus). Surprise flag = disadvantage on that combatant's initiative roll (2024). Lair actions insert a "Lair" entry at initiative 20 when any combatant has lair actions. Ties: Dex, then DM drag.
 
@@ -262,9 +262,9 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 ### 6.5 Presenter
 
-**Windows.** Console + player window. Settings → Displays picks the target display; the player window opens fullscreen there on "Open player window" and remembers the choice. Blackout is a global hotkey. Undo-last-scene is a hotkey.
+**Windows.** Console + player window. Settings → Displays picks the target display; the player window opens fullscreen there on "Open player window" and remembers the choice. Blackout and undo-last-scene are console hotkeys (`hotkeys.ts`), not OS-level global shortcuts.
 
-**Scene tree.** One tree per campaign; folders allowed; drag to reorder/reparent; duplicate with subtree. Hovering a scene shows its thumbnail and notes in a side panel. **Clicking a scene selects it and previews it on the TV tab; Enter, double-click or ▶ sends it** (ADR 0004, Decision 10). Hotkeys: next/previous sibling, parent, first child, quick search (Ctrl+K) to jump by name. Recent scenes list.
+**Scene tree.** One tree per campaign; folders allowed; drag to reorder/reparent; duplicate with subtree. Hovering a scene shows its thumbnail and notes in a side panel. **Clicking a scene selects it and previews it on the TV tab; Enter, double-click or ▶ sends it** (ADR 0004). Hotkeys: Alt+Arrow keys move through the tree in the Scenes tool, and Ctrl+Alt+Up/Down step to the previous or next scene from the TV tab (Ctrl+K is the compendium search). Recent scenes list.
 
 **Scene kinds.**
 - *Title card:* text on a backdrop, optional subtitle, optional image.
@@ -273,7 +273,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 - *Blank grid:* generated backdrop (parchment / stone / dark) + grid; tokens; for improvised combat.
 - Any scene can have DM notes, linked audio, and a linked encounter.
 
-**Images.** Import copies the file into `campaigns/<slug>/images/`, stores width/height, and generates a display-size version (long edge ≤ 4096 px, WebP) for the player window. Supported: PNG, JPG, WebP.
+**Images.** Import copies the file into `campaigns/<slug>/images/`, stores width/height, and generates a display-size version (long edge ≤ 4096 px, JPEG, `<id>.display.jpg`) for the player window. Supported: PNG, JPG, WebP.
 
 **Grid.** Square cells, 5 ft each. Per-scene `cellPx`, `offsetX/Y`, color, opacity, `showToPlayers`. Alignment: numeric entry, or a two-click tool (click opposite corners of one cell) that derives cellPx and offset. Snap-to-grid for tokens; hold Alt to place freely.
 
@@ -285,7 +285,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Overlays on the TV.** Scene title (global toggle, per-scene override), initiative strip (top or side), PC health bars, round counter, handout (image or text card that overlays the live scene; rendered by the player but with no console control yet, ADR 0008), break screen (title + optional countdown; music continues), blackout.
 
-**Transitions.** Crossfade 400 ms default; "cut" setting.
+**Transitions.** Scene changes fade over 300 ms in the player window. A per-scene "cut" setting is **(not built; later)**.
 
 **Combat integration.** "Start combat" on a map scene builds an encounter from placed creature tokens (+ PCs) or opens the linked encounter with tokens matched by `tokenId`. "Place encounter…" drops a built encounter's creatures on the map hidden from the players and links it, so the DM can position them before starting (ADR 0005). During combat the active token is highlighted on both screens; killing a combatant grays its token; adding a creature mid-combat prompts for a click position.
 
@@ -293,29 +293,29 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 ### 6.6 Music
 
-**Library.** Settings → Music → folders. Scan recursively for MP3/OGG/FLAC/WAV/M4A; read tags with `music-metadata`; store references (never copy or move files); watch folders for changes. Per track: kind (music / ambience / sfx), mood tags (free text with suggestions: combat, tension, tavern, travel, eerie, sad, triumphant, boss), gain, loop trim. **Loudness normalization**: on first scan, measure integrated loudness per track (EBU R128 via an offline `AudioContext` pass, or `ffmpeg`-free JS implementation) and store `gainDb` to bring tracks to a common target (−16 LUFS). Runs in a background worker; tracks are playable before measurement finishes.
+**Library.** Music tool › Folders. Scan recursively for MP3/OGG/FLAC/WAV/M4A; read tags with `music-metadata`; store references (never copy or move files); rescan on demand, relinking files that moved (DATA-FORMATS.md §5.5). Per track: kind (music / ambience / sfx), mood tags (free text with suggestions: combat, tension, tavern, travel, eerie, sad, triumphant, boss), gain, loop trim. **Loudness normalization**: on first scan, measure integrated loudness per track (EBU R128 via an offline `AudioContext` pass, or `ffmpeg`-free JS implementation) and store `gainDb` to bring tracks to a common target (−16 LUFS). Runs in a background worker; tracks are playable before measurement finishes.
 
-**Player.** Three layers, each with its own volume and mute; master volume; panic mute (global hotkey).
+**Player.** Three layer gains (music, ambience, sfx) in one audio graph; master volume; panic mute (console hotkey). Only the music layer has a player today; ambience and effects are **(not built; M2)**.
 - *Music:* playlist queue, play/pause, next/previous, shuffle, loop. **Every transition crossfades** (equal-power curve) over the configured duration (default 4 s, range 1–10 s), including "stop" (fade out) and "start" (fade in). The next track is pre-decoded so a crossfade starts on the keypress.
-- *Ambience:* multiple concurrent seamless loops. Loop at the sample level using `AudioBufferSourceNode.loop` with `loopStart/loopEnd` from the track's trim; auto-trim leading/trailing silence on import.
-- *Effects:* one-shot buttons and hotkeys (F-keys configurable); optional ducking (music −8 dB for the effect's duration + 500 ms release). **Stinger** = an effect with ducking on by default.
+- *Ambience* **(not built; M2)**: multiple concurrent seamless loops. Loop at the sample level using `AudioBufferSourceNode.loop` with `loopStart/loopEnd` from the track's trim; auto-trim leading/trailing silence on import.
+- *Effects* **(not built; M2)**: one-shot buttons and hotkeys (F-keys configurable); optional ducking (music −8 dB for the effect's duration + 500 ms release). **Stinger** = an effect with ducking on by default.
 
 **Phone audio** (ADR 0007). The Music tool's Phone tab makes this computer the phone's speaker, so Spotify, a soundscape app or anything else on the phone plays through the table speakers. On Windows 11 Trifold is the receiver itself: the tab lists the paired phones, the ones used before first, and one click on a phone brings up the Bluetooth link and the audio together (never automatically at launch); a hidden helper keeps the connection open and reconnects when the phone wanders. Pairing a new phone is a button into Bluetooth settings. On macOS the tab is a two-step AirPlay Receiver guide (iPhone and iPad) with a button into the right settings pane. The OS carries the audio to its default output, so it bypasses Trifold's output choice and panic mute; the tab says so and points at the system sound settings. An **Audio source** toggle at the top of the Music tool chooses between "This computer" (Trifold's player, tabs and transport) and "Phone" (only the phone panel); choosing Phone pauses Trifold's player and makes its transport, hotkeys and scene links inert, and the live strip shows the phone's name, state and one Connect or Disconnect button instead of the player controls. The choice is remembered per machine; the phone still connects only by a click.
 - Output device selection (list from `enumerateDevices`), remembered.
 
-**Scene linking.** A scene may set a playlist and ambience set. On scene change: if the playlist differs, crossfade to it; ambience loops not in the new set fade out, new ones fade in. Encounters may set a combat playlist: starting combat crossfades to it and remembers what was playing; ending combat crossfades back. All automatic changes can be disabled per scene ("keep current audio").
+**Scene linking.** A scene may set a playlist (and an ambience set, stored but not played until the ambience layer exists). On scene change: if the playlist differs, crossfade to it. Encounters may set a combat playlist: starting combat crossfades to it and remembers what was playing; ending combat crossfades back. All automatic changes can be disabled per scene ("keep current audio").
 
 ### 6.7 Dice and reference
 
-- Roller: a dice pool built by clicking (each click on d4…d100 adds one; right-click takes one away), a modifier stepper, advantage/disadvantage for a lone d20, then Roll. One pool is shared app-wide: the Dice panel, the tray drawer and the tray bar show and edit the same selection. A typed expression (`2d6+3`, `4d6kh3`, `d20 adv`) remains as a secondary field. Roll log shared with combat. Optional roll sounds.
-- Rules reference: DM-screen pages generated from SRD 5.2.1 rules text (conditions, actions, cover, travel, exhaustion, etc.), organized as tabs; DM can add custom markdown pages. The 2014 SRD rules are available under a "legacy" tab.
+- Roller: a dice pool built by clicking (each click on d4…d100 adds one; right-click takes one away), a modifier stepper, advantage/disadvantage for a lone d20, then Roll. One pool is shared app-wide: the Dice pop-up and the live strip's pool show and edit the same selection (ADR 0009). A typed expression (`2d6+3`, `4d6kh3`, `d20 adv`) remains as a secondary field. Roll log shared with combat and the compendium. Roll sounds are **(not built; later)**.
+- Rules reference **(not built; M2)**: DM-screen pages generated from SRD 5.2.1 rules text (conditions, actions, cover, travel, exhaustion, etc.), organized as tabs; DM can add custom markdown pages. The 2014 SRD rules are available under a "legacy" tab.
 
 ### 6.8 Token art pipeline
 
-- Build step `scripts/fetch-game-icons.ts` clones `github.com/game-icons/icons`, copies the SVGs into `resources/icons/`, and generates `resources/icons/credits.json` from `license.txt` (author list) for the About page.
+- Build step `scripts/fetch-game-icons.ts` clones `github.com/game-icons/icons`, copies the SVGs into `resources/icons/svg/` with a `manifest.json`, and generates `resources/icons/credits.json` from `license.txt` (author list) for the About page.
 - Token renderer: SVG glyph inside a disc. Treatments: **engraved** (parchment disc, dark glyph, brown ring; default), **flat** (type-colored disc, white glyph, dark ring), **two-tone** (dark disc, type-colored glyph), **plain** (disc + initials). Ally/enemy ring color. Rendered to bitmap once per (glyph, treatment, size) and cached.
-- Glyph selection chain for creatures: custom art → `ancestry` table → name keyword table (species and humanoid roles) → synonym table (undead/beast families) → creature-type default. Items: custom art → name keyword table → item type code table. Spells: school table + damage type table. Tables live in `resources/icons/mapping.json`; unmatched names are logged so the tables can grow.
-- Custom art: drag an image onto any monster, NPC, item, PC card or token. **Bulk match:** pick a folder; files are matched to records by filename (case-insensitive, punctuation stripped, edition tags ignored); a preview lists matches and misses before applying. Custom art always wins over generated tokens.
+- Glyph selection chain for creatures: custom art → `ancestry` table → name keyword table (species and humanoid roles) → synonym table (undead/beast families) → creature-type default. Items: name keyword table → item type code table. Spells: school table. The item and spell tables live in `resources/icons/mapping.json` beside the creature tables and have lookups in `packages/rules`, but only creature tokens are rendered today. Unmatched names are logged so the tables can grow.
+- Custom art: a map token's menu has Set art…, which copies the image into the campaign. Drag-and-drop onto records and PC cards is **(not built; M2)**. **Bulk match** **(not built; M2)**: pick a folder; files are matched to records by filename (case-insensitive, punctuation stripped, edition tags ignored); a preview lists matches and misses before applying. Custom art always wins over generated tokens.
 
 ---
 
@@ -383,7 +383,7 @@ This section is binding for the codebase.
 
 ## 9. UX notes
 
-- Dark theme default; light theme available. Two spaces (ADR 0004): the **Library** (campaigns, compendium sources and homebrew, music folders, settings) and the **console**, the inside of exactly one open campaign. The console is a frameless window with a 34 px top bar (mark → Library, campaign breadcrumb → switcher, current layout, Hotkeys, Settings), a **stage** of one or two tab groups holding the majors (Campaign, Compendium, Encounters, TV; Encounters becomes the combat tracker while a fight runs; every tab keeps its place when switched or closed; two groups is how combat sits beside the map; TV shows the selected scene and carries every control for the screen, ADR 0008), a right-hand **dock** of the tall minor tools (Music, Scenes) that is wide, narrow (360 px), or icons-only with flyouts (never hidden since ADR 0009; it folds to icons on its own when the panels need the room, and two stage groups fold into one stack below that, ADR 0014), pop-ups for Dice (from the strip), Hotkeys and Layouts (from the top bar) that anchor to their buttons (ADR 0009), and a 42 px **live strip** with table state only: what is on the TV with blackout and the player window, round and turn with next/previous, music and mute, and at its right end the shared dice pool with the Dice button. Layouts capture the chrome (tabs, groups, dock) and are the DM's to save, overwrite, rename, reorder and delete; Prep, Table and Combat are copied in as starters.
+- Dark theme default; light theme available. Two spaces (ADR 0004): the **Library** (campaigns, compendium sources and homebrew, music folders, settings) and the **console**, the inside of exactly one open campaign. The console is a frameless window with a 34 px top bar (mark → Library, campaign breadcrumb → switcher, current layout, Hotkeys, Settings), a **stage** of one or two tab groups holding the majors (Campaign, Compendium, Encounters, VTT (the TV tab); Encounters becomes the combat tracker while a fight runs; every tab keeps its place when switched or closed; two groups is how combat sits beside the map; TV shows the selected scene and carries every control for the screen, ADR 0008), a right-hand **dock** of the tall minor tools (Music, Scenes) that is wide, narrow (360 px), or icons-only with flyouts (never hidden since ADR 0009; it folds to icons on its own when the panels need the room, and two stage groups fold into one stack below that, ADR 0014), pop-ups for Dice (from the strip), Hotkeys and Layouts (from the top bar) that anchor to their buttons (ADR 0009), and a 42 px **live strip** with table state only: what is on the TV with blackout and the player window, round and turn with next/previous, music and mute, and at its right end the shared dice pool with the Dice button. Layouts capture the chrome (tabs, groups, dock) and are the DM's to save, overwrite, rename, reorder and delete; Prep, Table and Combat are copied in as starters.
 - Look: "Slate and bone" palette (near-monochrome slate, warm bone accent; ally, enemy, healthy, bloodied and down carry the colour). Outfit for UI text, IBM Plex Mono for numbers. Compact: 13 px base; one control scale (30 px content, 26 px chrome, 22 px row actions revealed on hover) shared by buttons, icon buttons and fields. The rules for every control, size and common action are in `docs/UI-GUIDELINES.md` (ADR 0013).
 - Keyboard-first: every table-time action has a hotkey; a cheat sheet is one key away.
 - Never lose work: autosave on every change; daily backup zip; "restore backup" in settings.
@@ -396,33 +396,42 @@ This section is binding for the codebase.
 ### M0 — Scaffold (days 1–2)
 Electron + Vite + React + TS + Zod + Zustand + better-sqlite3 + electron-builder; two windows; typed IPC API; Library folder creation with atomic writes; settings; empty console shell with the left rail; CI running lint, typecheck and Vitest.
 
-### M1 — Session-ready cut (target: 2 weeks from start)
-The hard cut line for the one-shot. Everything listed here must work end to end; anything not listed is out.
+### M1 — Session-ready cut (done)
+Everything below works end to end on Windows 11 and macOS. Where the shape changed on the way, the ADR is cited.
 
 1. **Compendium:** bundled SRD 2024 + 2014 (Open5e snapshot); XML compendium import with the lenient parser and all conventions in `DATA-FORMATS.md` §2; source enable/disable; monster/spell/item browse and search with source and edition filters; stat block view in 2024 layout with clickable spells.
-2. **Campaign:** create campaign; adventures; notes (markdown, links); NPCs; PC cards with quick add and Fight Club GM export import.
+2. **Campaign:** create campaign; notes as a tree of folders with templates and phrase search (folders replaced adventures in the UI, ADR 0010; `[[links]]` deferred to M2); NPCs with carried HP (ADR 0012); PC cards with quick add and Fight Club GM export import.
 3. **Encounters & combat:** builder with 2024 budget; initiative (per creature/group, PC prompt); turn loop with recharge and legendary pools; conditions with durations; damage with type math, temp HP, concentration prompt; death saves; attack/multiattack/save-call buttons; roll log.
 4. **Presenter:** player window on chosen display; scene tree with click-to-live, hover preview, hotkeys, undo; title card / image / map / blank grid scenes; image import with display-size generation; grid with two-click alignment; tokens with generated art (engraved + flat), drag mirroring, hidden/masked/dead states; party placement by clicking the map; player camera presets and viewport rectangle; overlays (scene title, initiative strip, PC health bars, round counter), blackout, handout, break screen; start combat from scene.
-5. **Music:** folder scan, tags, playlists; music layer with crossfade on every transition; per-track normalization (may finish in background); output device selection; panic mute. Ambience and effects layers and scene linking if time allows; otherwise M2.
+5. **Music:** folder scan, tags, playlists; music layer with crossfade on every transition; per-track normalization (finishes in the background); output device selection; panic mute; scene-linked playlists. Ambience and effects layers went to M2.
 6. **Dice:** roller with log.
 7. **Homebrew:** Duplicate + edit for monsters only.
 8. **Backups** and "open Library folder".
 
-Acceptance test: import the DM's 31 MB compendium file in under 60 s; build a 6-encounter one-shot with 12 scenes; run a full mock session on a second display for 30 minutes without a crash, with music crossfading between scenes.
+Acceptance test: import the DM's 31 MB compendium file in under 60 s; build a 6-encounter one-shot with 12 scenes; run a full mock session on a second display for 30 minutes without a crash, with music crossfading between scenes. Run by hand; the smoke test (`pnpm smoke`) automates a shorter version on both platforms, and the performance budgets in `CLAUDE.md` are not yet automated tests.
 
-### M2 — Full v1
-Homebrew editors for all kinds + CR scaler + replace-references; item/spell/feat browse polish; random encounters; ambience/effects/stingers/ducking and full scene-linked audio; bulk art matching; rules reference pages; campaign log; XML export; edition switch UI; optional open third-party content; portable exe; README with install and SmartScreen notes.
+### Built beyond M1
+The shell (ADR 0004, 0009, 0013, 0014), the TV tab (ADR 0008), fights that carry over with mid-fight additions and token links (ADR 0012), phone audio (ADR 0007), web tabs (ADR 0011), note templates and phrase search (ADR 0010), campaign export and import as `.trifold-campaign` plus a second backup location and restore from file (ADR 0015), a macOS build (ADR 0006), the edition switch on a record, relinking music rescans, multiple Libraries with a recent list, and the smoke test against a packaged build.
+
+
+### M2 — Full v1 (remaining)
+Homebrew editors for all kinds + CR scaler + replace-references + promote to homebrew; random encounters; ambience/effects/stingers/ducking and full scene-linked audio; `[[links]]` and backlinks in notes; campaign session log; bulk art matching and drag-and-drop art on records; rules reference pages; XML export; per-campaign source enabling; optional open third-party content.
 
 ### M3 — Later
-Fog of war; movement ruler; hex grids; class/subclass editors; unofficial D&D Beyond pre-fill; LAN/web client behind the existing API seam; code signing and macOS notarization.
+Fog of war; movement ruler; hex grids; class/subclass editors; unofficial D&D Beyond pre-fill; LAN/web client behind the existing API seam; code signing and macOS notarization; an opt-in "check for app updates" (reserved in the settings schema).
 
 ---
 
 ## 11. Open questions and assumptions
 
-- Exact Open5e v2 endpoint names and document keys for SRD 5.2.1 vs 5.1 — verify at build time and pin in `srd-manifest.json`.
-- Whether the 2024 SRD includes the encounter budget and CR tables as text; if not, the numbers in §7.4–7.5 are used as facts (not copyrightable) and verified against the DMG.
-- Fight Club GM export: the exact set of `<pc>` fields — verify with a real export file (see `DATA-FORMATS.md` §3.3).
-- Loudness measurement library choice (pure JS EBU R128 vs. WASM). Any choice must not add a native dependency beyond better-sqlite3.
-- `setSinkId` availability for Web Audio in the current Electron; fall back to routing through an `<audio>` element sink if needed.
-- Windows display DPI scaling across mixed-DPI displays for the player window — test early on real hardware. The same check is still owed on macOS (ADR 0006).
+Still open:
+
+- Whether the 2024 SRD includes the encounter budget and CR tables as text; the numbers in `packages/rules/src/tables.ts` are used as facts (not copyrightable) and still want a check against the DMG.
+- Fight Club GM export: the importer handles a `<campaign>` with one `<pc>` and merges by name, tested on a synthetic fixture only; confirm with a real export (see `DATA-FORMATS.md` §3.3).
+- Mixed-DPI displays for the player window on macOS (Windows was checked on real hardware; ADR 0006).
+
+Closed:
+
+- Open5e endpoint names and document keys: `scripts/fetch-open5e.ts` pins `srd-2024` and `srd-2014` and records them in `resources/srd-manifest.json`.
+- Loudness measurement: a pure JS EBU R128 pass (`features/music/loudness.ts`), no native dependency.
+- `setSinkId`: `AudioContext.setSinkId` works in the pinned Electron and is used directly.

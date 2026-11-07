@@ -1,6 +1,6 @@
 # ADR 0013 · One control scale and the UI guidelines
 
-**Status:** accepted, 2026-11-07. Refines DESIGN.md §9 and the sizes in `docs/design-brief/TOKENS.md`.
+**Status:** accepted, 2026-11-07. Refines DESIGN.md §9 and the sizes in `docs/TOKENS.md`.
 
 ## Context
 

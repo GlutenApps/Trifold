@@ -11,8 +11,16 @@ declare const window: { trifold: TrifoldBridge };
 const FIXTURE = resolve(__dirname, '..', '..', '..', 'fixtures', 'compendium-sample.xml');
 
 /**
- * Smoke test (DESIGN.md §10): launch, create a Library, import the fixture, search and open a
- * stat block, open the player window on a display, push a title card and black out.
+ * The end-to-end smoke test (DESIGN.md §10) against the real Electron app, in one long session
+ * on a fresh Library: first-run files and the native index; importing the SRD fixture through
+ * the API, a no-op re-import, search with filters, a stat block, a spell link and an edition
+ * switch; a roll pill into the shared log; homebrew duplicate, edit and delete; backups to the
+ * Library and a second location with restore from file (ADR 0015); a campaign, an encounter
+ * from the party and the fixture, and a fight with spell slots and rolled damage; the Dice
+ * pop-up (ADR 0009); the player window, a title card sent from Scenes, the break screen from
+ * the TV tab (ADR 0008) and a blank grid with the party placed; a scanned music folder and the
+ * phone audio source (ADR 0007); campaign export and import; media served to the player; and
+ * the on-close backup. Comments at each step say what that step proves.
  */
 test('console, Library, import, search, stat block and player window all work end to end', async () => {
   const userData = await mkdtemp(join(tmpdir(), 'trifold-userdata-'));

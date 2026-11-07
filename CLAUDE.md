@@ -4,7 +4,7 @@ Trifold is a local desktop app for Windows and macOS (Electron + React + TypeScr
 
 ## Ground rules
 
-1. **Local only.** Trifold never phones home: no cloud services, no telemetry, no accounts, and no network calls the app makes on its own except the optional, user-enabled "check for app updates". The one other network use is **web tabs** (ADR 0011): pages the DM typed the address of, hosted in a sandboxed webview. Nothing in the repo, the UI copy or the defaults names a site. If a task seems to need a server, stop and ask. (Receiving a phone's audio over Bluetooth, ADR 0007, is an OS feature and not a network call.)
+1. **Local only.** Trifold never phones home: no cloud services, no telemetry, no accounts, and no network calls the app makes on its own. (A user-enabled "check for app updates" is reserved in the settings schema but not built; if it ever is, it stays opt-in.) The one network use is **web tabs** (ADR 0011): pages the DM typed the address of, hosted in a sandboxed webview. Nothing in the repo, the UI copy or the defaults names a site. If a task seems to need a server, stop and ask. (Receiving a phone's audio over Bluetooth, ADR 0007, is an OS feature and not a network call.)
 2. **Files-first.** All user data lives in the Library folder as JSON + media (`DESIGN.md` §4.2). SQLite is a derived index and must be rebuildable from files at any time. Never store anything only in SQLite. Never write to the Library except through `LibraryStore` in the main process; writes are atomic (temp file → fsync → rename).
 3. **Content licensing is a hard constraint.** The repo and the package contain only: SRD 5.1 / 5.2.1 content fetched at build time, open third-party documents the user opts into, game-icons SVGs, and our own text. No non-SRD game text, no WotC art or maps, no community compendium files, no token packs, no links to aggregator sites — not in code, tests, fixtures, screenshots, or comments. The full community XML used for local testing lives outside the repo and is git-ignored (`*.local.xml`, `fixtures/local/`).
 4. **No WotC trademarks** in the app name, window titles, UI chrome, README or package metadata. Say "5e-compatible". Book names appear only as imported data or SRD attribution.
@@ -14,30 +14,43 @@ Trifold is a local desktop app for Windows and macOS (Electron + React + TypeScr
 
 ## Stack (pin versions in package.json; do not add native deps beyond better-sqlite3 without asking)
 
-Electron (current LTS) · electron-builder (NSIS + portable) · Vite · React 18 · TypeScript strict · Zustand · Zod · better-sqlite3 (FTS5) · music-metadata · ulid · Vitest + @testing-library/react · Playwright (Electron) for smoke tests · ESLint + Prettier.
+Electron (current LTS) · electron-vite · electron-builder (NSIS + portable on Windows, dmg + zip on macOS) · Vite · React 18 · TypeScript strict · Zustand · Zod · Tiptap (notes editor, ADR 0010) · better-sqlite3 (FTS5) · music-metadata · yauzl/yazl (backup and package zips) · ulid · Vitest + @testing-library/react · Playwright (Electron) for smoke tests · ESLint + Prettier.
 
 ## Repo layout
 
 ```
-apps/desktop/            Electron main + preload + renderer (two routes: /console, /player)
-  src/main/              library store, sqlite index, importers, windows, audio device enum, backups, ipc handlers
+apps/desktop/            Electron main + preload + renderer (hash routes #/console and #/player, ADR 0002)
+  src/main/              index.ts (entry), api.ts + campaignApi.ts + musicApi.ts (IPC implementations), ipc.ts,
+                         library/ (LibraryStore, atomic writes, session), index/ (sqlite + FTS5), sources/ (bundled SRD,
+                         XML import, homebrew), campaign/ (repository, entities, GM-export import, images, packages),
+                         music/, phoneAudio/ (receiver + helper.ps1), backups.ts, backupCopy.ts, windows.ts, menu.ts,
+                         media.ts (trifold-media:// scheme), webTabs.ts, systemPages.ts, log.ts
   src/preload/           typed bridge → window.trifold (generated from packages/api)
-  src/renderer/          React app: features/{shell,library,compendium,campaign,encounters,presenter,music,dice,settings}; shell = top bar + stage (tab groups) + dock + live strip (ADR 0004)
-packages/schema/         Zod schemas + TS types for every stored object; migrations
+  src/renderer/          React app: features/{shell,library,compendium,campaign,encounters,presenter,music,dice,settings},
+                         stores/ (Zustand), styles/ (global.css tokens, shell, compendium, map, responsive), hotkeys.ts, platform.ts
+  smoke/                 Playwright specs that drive the real app (app.spec.ts, webtabs.spec.ts)
+  build/                 icon.png, rendered by `pnpm make:icon` (electron-builder derives .ico and .icns)
+packages/schema/         Zod schemas + TS types for every stored object (src/), migrations/
 packages/api/            the single TypeScript interface between renderer and main
-packages/rules/          pure functions: dice, CR/XP tables, 2024 budgets, condition defs, damage math, parsers (regexes from DATA-FORMATS.md §2.5)
-packages/importers/      xml (compendium, campaign, GM export), open5e (build-time), art-matching
-resources/               built at build time: srd-2024.jsonl, srd-2014.jsonl, srd-manifest.json, icons/ (svgs, credits.json, mapping.json)
-scripts/                 fetch-open5e.ts, fetch-game-icons.ts, build-credits.ts, verify-mapping.ts
-fixtures/                small SRD-only XML/JSON samples used by tests
-docs/                    DESIGN.md, DATA-FORMATS.md, ADRs
+packages/rules/          pure functions: dice, CR/XP tables, 2024 budgets, combat/ (turns, damage, rolls), statblock/ parsers
+                         (regexes from DATA-FORMATS.md §2.5), art/ (glyph matching), tree, noteSearch, normalizeKey
+packages/importers/      xml/ (stream parser), compendium/ (Lion's Den XML), campaign/ (campaign XML, GM export, package export),
+                         open5e/ (build-time SRD normalisation)
+resources/               built at build time: srd-2024.jsonl, srd-2014.jsonl (git-ignored), srd-manifest.json,
+                         icons/ (svg/ and credits.json git-ignored; mapping.json and manifest.json committed)
+scripts/                 dev.mjs, fetch-content.ts (runs fetch-open5e.ts + fetch-game-icons.ts + verify-mapping.ts),
+                         rebuild-native.mjs, check-content.mjs (build guard), make-icon.mjs
+fixtures/                small SRD-only XML/JSON samples used by tests (fixtures/local/ is git-ignored)
+docs/                    README.md (index), DESIGN.md, DATA-FORMATS.md, UI-GUIDELINES.md, USER-GUIDE.md, RELEASING.md,
+                         TOKENS.md, adr/, design-brief/ (frozen 2026-09 shell brief)
+.github/workflows/       ci.yml (lint, typecheck, test, smoke on Windows and macOS), release.yml (tag → installers)
 ```
 
 Rules of thumb: all parsing and rules math lives in `packages/*` as pure, tested functions; the renderer never imports `fs`, `sqlite`, or `electron` directly; the player window is a pure view of state pushed from the console.
 
 ## Commands
 
-`pnpm i` · `pnpm dev` (console + player windows, hot reload) · `pnpm test` (Vitest) · `pnpm typecheck` · `pnpm lint` · `pnpm fetch:content` (Open5e snapshot + game-icons; requires network; commits nothing but `resources/*-manifest.json`) · `pnpm build` (electron-builder → `dist/`) · `pnpm smoke` (Playwright: launch, create Library, import fixture, open player window, run a 3-round mock combat). Set `TRIFOLD_SMOKE_EXE=<path to dist/win-unpacked/Trifold.exe or dist/mac*/Trifold.app/Contents/MacOS/Trifold>` and run `playwright test -c smoke/playwright.config.ts` in `apps/desktop` to run the same smoke test against a packaged build.
+`pnpm i` · `pnpm dev` (console + player windows, hot reload) · `pnpm test` (Vitest) · `pnpm typecheck` · `pnpm lint` · `pnpm fetch:content` (Open5e snapshot + game-icons; requires network; commits nothing but the manifests) · `pnpm check:content` (fails unless the fetched content is present and matches the manifests; runs automatically before `build`) · `pnpm make:icon` (renders `apps/desktop/build/icon.png` from the logo) · `pnpm build` (electron-builder → `dist/`; see `docs/RELEASING.md`) · `pnpm smoke` (Playwright against the real app: create a Library, import the fixture, homebrew, backups and restore, campaign export and import, the player window, a short mock combat, the TV tab, music scan, phone audio, web tabs). Set `TRIFOLD_SMOKE_EXE=<path to dist/win-unpacked/Trifold.exe or dist/mac*/Trifold.app/Contents/MacOS/Trifold>` and run `playwright test -c smoke/playwright.config.ts` in `apps/desktop` to run the same smoke test against a packaged build.
 
 A pre-commit hook (simple-git-hooks + lint-staged, installed by the root `prepare` script on `pnpm i`) runs `eslint --fix` and `prettier --write` on staged files and blocks the commit on any lint error. It covers formatting and lint only; run `pnpm typecheck` and `pnpm test` yourself before pushing. `SKIP_SIMPLE_GIT_HOOKS=1 git commit` bypasses it when you must.
 
@@ -45,7 +58,7 @@ A pre-commit hook (simple-git-hooks + lint-staged, installed by the root `prepar
 
 - **IDs:** ULIDs. **Keys:** `normalizeKey(name)` = lowercase, strip `[…]`/`(…)` edition tags, strip punctuation, collapse spaces. One implementation in `packages/rules`.
 - **Dates:** ISO 8601 UTC strings on disk; `Date` only at the edges.
-- **Errors:** importers return `{ records, warnings }`; UI surfaces warnings on the source page. Main-process failures are logged to `Library/logs/` and shown as a toast, never a silent no-op.
+- **Errors:** importers return `{ records, warnings }`; UI surfaces warnings on the source page. Main-process failures are logged to `Library/logs/` (to the app's `userData/logs/` before a Library is open) and shown as a banner in the panel that asked, never a silent no-op. There are no toasts.
 - **Performance budgets** (`DESIGN.md` §9) are tests: search < 50 ms on the 5,000-monster fixture set, index rebuild < 10 s on a 31 MB XML, player-window frame updates ≤ 16 ms.
 - **UI:** dark theme default; sentence case; every table-time action has a hotkey registered in one `hotkeys.ts` (written `Ctrl+…`, which is Cmd on macOS; show combos through `hk()` from `platform.ts`, never as literal text; the platform is otherwise invisible to features, ADR 0006); no modal dialogs during combat. Features render inside workspace panels (ADR 0003): no page-level `h1`, stretch to the panel body, scroll inside it; a control lives in one home (tray or panel), and where it must appear in both, the accessible names differ. Colours come from the tokens in `global.css`, never literals. Follow `docs/UI-GUIDELINES.md` (ADR 0013) for every control: one height tier per line (30 px content, 26 px chrome, 22 px `chrome-btn xs` row actions), no height/padding/font-size/radius overrides on controls, icon size from the button, nothing under 12 px except keycaps and badges, and the shared patterns for delete, remove, confirm, add, back and close; panels work from a 480 px floor (dock tools 360 px) with no sideways scroll, and change columns only at 640 or 960 px (ADR 0014); prefer an icon toolbar with a `title` tooltip and an `aria-label` over a row of text buttons, and reveal per-row actions on hover/selection rather than always.
 - **Audio:** one `AudioContext`; per-layer and per-track gain nodes; every transition through a ramp (`linearRampToValueAtTime` on an equal-power curve). Never call `stop()` without a fade.

@@ -4,14 +4,26 @@ A local desktop console (Windows and macOS) for a Dungeon Master running 5e-comp
 
 Everything stays on your machine. There are no accounts, no cloud services and no telemetry. Your data lives in a plain folder of JSON files and media (the Library) that you can back up, copy or sync however you like. To play music from your phone's own apps through the laptop, open the Music tool's Phone tab: on Windows 11 Trifold is the Bluetooth audio receiver, so a paired phone connects in one click; on macOS it walks you to AirPlay Receiver. An "Audio source" toggle switches the Music tool and the live strip between Trifold's own player and the phone.
 
+- Using the app: [docs/USER-GUIDE.md](docs/USER-GUIDE.md)
 - What the app is and why: [docs/DESIGN.md](docs/DESIGN.md)
 - File formats and parsing rules: [docs/DATA-FORMATS.md](docs/DATA-FORMATS.md)
 - Repo conventions for contributors: [CLAUDE.md](CLAUDE.md)
-- Architecture decisions: [docs/adr/](docs/adr/)
+- Architecture decisions: [docs/adr/](docs/adr/), indexed in [docs/README.md](docs/README.md)
+- Building a release: [docs/RELEASING.md](docs/RELEASING.md)
+- What changed: [CHANGELOG.md](CHANGELOG.md)
 
 ## Status
 
-M0 scaffold. The app opens a console window and a player window, creates a Library folder with atomic writes, and pushes presenter state from the console to the player over a typed IPC bridge. Compendium, campaign, combat, music and dice features arrive in M1.
+Feature complete for the session-ready cut (`DESIGN.md` §10, M1) and beyond it: compendium with bundled SRD and XML import, campaign notes tree, encounters and combat tracker with carry-over, second-screen presenter with maps and tokens, music with crossfade and phone audio, dice, homebrew monsters, backups with a second location and campaign export, web tabs. Packaged builds are unsigned on both platforms.
+
+## Install
+
+Download the build for your machine from the project's releases page.
+
+- **Windows:** `Trifold-Setup-<version>-win-x64.exe` installs per user (no administrator rights) with Start menu and desktop shortcuts; `Trifold-Portable-<version>-win-x64.exe` runs without installing. The builds are not code-signed, so SmartScreen shows "Windows protected your PC" the first time: click **More info**, then **Run anyway**.
+- **macOS:** open the `.dmg` and drag Trifold to Applications. The app is not notarised. On macOS 15 the first launch says the app could not be opened: open **System Settings → Privacy & Security**, scroll to the message about Trifold and click **Open Anyway**, then confirm. (Right-click → Open no longer bypasses this on recent macOS.) Pick the download that matches your Mac's chip.
+
+On first launch Trifold creates its Library at `Documents/Trifold Library` (you can choose another folder in Settings). Everything you import or write lives there as plain files; see the [user guide](docs/USER-GUIDE.md).
 
 ## Development
 
@@ -37,7 +49,7 @@ Two things worth knowing:
 - `pnpm i` finishes by running `scripts/rebuild-native.mjs`, which makes sure Electron's binary is downloaded and fetches the prebuilt `better-sqlite3` for the pinned Electron version. If Electron is missing or fails to load the index, run `pnpm rebuild:native`. The Electron and better-sqlite3 pins move together; see [ADR 0001](docs/adr/0001-electron-and-native-module-pins.md).
 - Some editor and extension-host terminals export `ELECTRON_RUN_AS_NODE=1`, which makes Electron start as plain Node and refuse to open windows. `pnpm dev` (via `scripts/dev.mjs`) and the smoke test strip it automatically; the packaged exe does not, so unset it before launching that from such a terminal.
 - To start dev mode without a terminal, double-click `Trifold.cmd` (Windows) or `Trifold.command` (macOS) in the repo root.
-- macOS builds are unsigned for now: the first launch is right-click → Open. Build on the Mac you target; `pnpm build` packages for the build machine's architecture (ADR 0006).
+- `pnpm build` refuses to run until `pnpm fetch:content` has populated `resources/` (`scripts/check-content.mjs`), so an installer can never ship without the SRD. Build on the machine you target: each platform packages itself for its own architecture (ADR 0006). The steps are in [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Content and licensing
 

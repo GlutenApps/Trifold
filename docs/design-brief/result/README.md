@@ -1,3 +1,5 @@
+> **Historical.** Design result from 2026-09-28, kept as the record behind ADR 0004. Not maintained; see `docs/design-brief/README.md`.
+
 # Trifold console shell · design result
 
 Output of the shell redesign session (2026-09-28). Drop this folder into the
