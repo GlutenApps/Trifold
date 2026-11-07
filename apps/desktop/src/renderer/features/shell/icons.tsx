@@ -81,7 +81,9 @@ export type IconName =
   | 'mask'
   | 'maskOff'
   | 'skullOff'
-  | 'linkOff';
+  | 'linkOff'
+  | 'heart'
+  | 'shield';
 
 /** Hand-drawn 24 px stroke glyphs; no icon dependency, so the chrome stays small and ours. */
 const PATHS: Record<IconName, string> = {
@@ -193,6 +195,9 @@ const PATHS: Record<IconName, string> = {
   // Linked, or not: the tracker's and the map's link toggle.
   linkOff:
     'M3 3l18 18M9.5 7.5l1.5-1.5a4 4 0 0 1 5.7 5.7l-1.5 1.5M14.5 16.5l-1.5 1.5a4 4 0 0 1-5.7-5.7l1.5-1.5',
+  // Heal and temporary HP in the combat drawer.
+  heart: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z',
+  shield: 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z',
 };
 
 export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {

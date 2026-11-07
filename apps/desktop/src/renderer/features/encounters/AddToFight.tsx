@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
 import { ulid } from 'ulid';
 import type { CompendiumRow } from '@trifold/api';
 import type { CombatantTemplate, NPC } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { Icon } from '../shell/icons';
+import { AddPanel } from './AddPanel';
 
 const NO_NPCS: NPC[] = [];
 
@@ -18,29 +18,6 @@ export function AddToFight({ onClose }: { onClose(): void }) {
   const npcs = useCampaignStore((s) => s.current?.npcs ?? NO_NPCS);
   const combatants = useCombatStore((s) => s.state?.combatants ?? []);
   const addToFight = useCombatStore((s) => s.addToFight);
-  const [query, setQuery] = useState('');
-  const [rows, setRows] = useState<CompendiumRow[]>([]);
-  const [quantity, setQuantity] = useState(1);
-  const debounce = useRef<number | null>(null);
-  const input = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    input.current?.focus({ preventScroll: true });
-  }, []);
-
-  useEffect(() => {
-    if (debounce.current) window.clearTimeout(debounce.current);
-    if (!query.trim()) {
-      setRows([]);
-      return;
-    }
-    debounce.current = window.setTimeout(() => {
-      window.trifold.compendium
-        .search({ kind: 'monster', text: query, limit: 12, collapse: false })
-        .then((r) => setRows(r.rows))
-        .catch(() => setRows([]));
-    }, 150);
-  }, [query]);
 
   const fightingPcs = new Set(combatants.flatMap((c) => (c.ref.kind === 'pc' ? [c.ref.pcId] : [])));
   const fightingNpcs = new Set(
@@ -49,7 +26,7 @@ export function AddToFight({ onClose }: { onClose(): void }) {
   const waitingPcs = pcs.filter((p) => !fightingPcs.has(p.id));
   const waitingNpcs = npcs.filter((n) => (n.recordRef || n.hp) && !fightingNpcs.has(n.id));
 
-  const addCreature = async (row: CompendiumRow) => {
+  const addCreature = async (row: CompendiumRow, quantity: number) => {
     const record = await window.trifold.compendium.get(row.id).catch(() => null);
     const cache =
       record?.kind === 'monster'
@@ -73,19 +50,18 @@ export function AddToFight({ onClose }: { onClose(): void }) {
         },
         name: row.displayName,
       },
-      quantity: Math.max(1, quantity),
+      quantity,
       role: 'enemy',
       hidden: false,
       cache,
     };
     await addToFight(template);
-    setQuery('');
   };
 
   return (
     <div className="card add-to-fight" role="region" aria-label="Add to the fight">
       <div className="row">
-        <strong>Add to the fight</strong>
+        <h3>Add to the fight</h3>
         <span className="spacer" />
         <button
           type="button"
@@ -97,95 +73,36 @@ export function AddToFight({ onClose }: { onClose(): void }) {
           <Icon name="close" />
         </button>
       </div>
-      {(waitingPcs.length > 0 || waitingNpcs.length > 0) && (
-        <div className="row">
-          {waitingPcs.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className="btn"
-              aria-label={`Add ${p.name}`}
-              onClick={() =>
-                void addToFight({
-                  id: ulid(),
-                  ref: { kind: 'pc', pcId: p.id, name: p.name },
-                  quantity: 1,
-                  role: 'ally',
-                  hidden: false,
-                })
-              }
-            >
-              <Icon name="plus" />
-              {p.name}
-            </button>
-          ))}
-          {waitingNpcs.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              className="btn"
-              aria-label={`Add ${n.name}`}
-              title={n.hp ? `HP ${n.hp.current}/${n.hp.max} from the last fight` : 'Named NPC'}
-              onClick={() =>
-                void addToFight({
-                  id: ulid(),
-                  ref: { kind: 'npc', npcId: n.id, name: n.name },
-                  quantity: 1,
-                  role: 'enemy',
-                  hidden: false,
-                })
-              }
-            >
-              <Icon name="plus" />
-              {n.name}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="row">
-        <input
-          ref={input}
-          type="text"
-          aria-label="Add creature"
-          placeholder="Search creatures to add"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <label className="field inline">
-          ×
-          <input
-            type="number"
-            aria-label="How many"
-            className="narrow"
-            min={1}
-            max={50}
-            value={quantity}
-            onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
-          />
-        </label>
-      </div>
-      {rows.length > 0 && (
-        <div className="picker" role="listbox" aria-label="Creature results">
-          {rows.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              role="option"
-              aria-selected={false}
-              className="list-row"
-              onClick={() => void addCreature(r)}
-            >
-              <span className="list-name">{r.displayName}</span>
-              <span className="list-meta">
-                {r.cr !== null && <span>CR {r.cr}</span>}
-                {r.type && <span>{r.type}</span>}
-                <span className="badge">{r.edition === '2014' ? 'legacy' : r.edition}</span>
-                <span className="badge source">{r.sourceName}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+      <AddPanel
+        pcs={waitingPcs}
+        npcs={waitingNpcs}
+        withQuantity
+        autoFocus
+        onAddPcs={(ids) => {
+          // One at a time: each add saves the encounter's templates from the last one's result.
+          void (async () => {
+            for (const p of waitingPcs.filter((x) => ids.includes(x.id))) {
+              await addToFight({
+                id: ulid(),
+                ref: { kind: 'pc', pcId: p.id, name: p.name },
+                quantity: 1,
+                role: 'ally',
+                hidden: false,
+              });
+            }
+          })();
+        }}
+        onAddNpc={(n) =>
+          void addToFight({
+            id: ulid(),
+            ref: { kind: 'npc', npcId: n.id, name: n.name },
+            quantity: 1,
+            role: 'enemy',
+            hidden: false,
+          })
+        }
+        onAddCreature={addCreature}
+      />
     </div>
   );
 }

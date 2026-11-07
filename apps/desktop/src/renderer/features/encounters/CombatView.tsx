@@ -394,278 +394,307 @@ function CombatantDrawer({
           </div>
         )}
 
-        {!c.isLair && (
-          <div className="row">
-            <input
-              type="number"
-              aria-label="Amount"
-              className="narrow"
-              placeholder="amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-            <select aria-label="Damage type" value={type} onChange={(e) => setType(e.target.value)}>
-              {DAMAGE_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t || 'any type'}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={!valid}
-              onClick={() => {
-                store.damage(c.id, n, type || undefined);
-                setAmount('');
-              }}
-            >
-              Damage
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={!valid}
-              onClick={() => {
-                store.heal(c.id, n);
-                setAmount('');
-              }}
-            >
-              Heal
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={!valid}
-              onClick={() => {
-                store.tempHp(c.id, n);
-                setAmount('');
-              }}
-            >
-              Temp HP
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={!valid}
-              aria-label="Damage several"
-              title="Deal this damage to several combatants, full or half each"
-              onClick={() => {
-                onAssign(n, type);
-                setAmount('');
-              }}
-            >
-              <Icon name="fanout" />
-              Several
-            </button>
-            {c.deathSaves && (
-              <button type="button" className="btn" onClick={() => store.deathSave(c.id)}>
-                Death save
-              </button>
-            )}
-          </div>
-        )}
-
-        {c.conditions.length > 0 && (
-          <div className="row">
-            {c.conditions.map((k) => (
-              <button
-                key={k.id}
-                type="button"
-                className="badge warn clickable condition-chip"
-                aria-label={`Remove ${k.name}`}
-                title="Remove"
-                onClick={() => store.removeCondition(c.id, k.id)}
-              >
-                {k.name}
-                {k.level ? ` ${k.level}` : ''}
-                <Icon name="close" size={12} />
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="row">
-          <select
-            aria-label="Condition"
-            value={condition}
-            onChange={(e) => setCondition(e.target.value)}
-          >
-            {CONDITIONS.map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Duration"
-            value={durationKind}
-            onChange={(e) => setDurationKind(e.target.value as typeof durationKind)}
-          >
-            <option value="none">no duration</option>
-            <option value="rounds">rounds</option>
-            <option value="untilStartOfTurn">until start of active turn</option>
-            <option value="untilEndOfTurn">until end of active turn</option>
-            <option value="untilSave">until save</option>
-          </select>
-          {durationKind === 'rounds' && (
-            <input
-              type="number"
-              className="narrow"
-              aria-label="Rounds"
-              value={rounds}
-              onChange={(e) => setRounds(e.target.value)}
-            />
-          )}
-          {durationKind === 'untilSave' && (
+        <div className="lanes">
+          {!c.isLair && (
             <>
+              <span className="lane-label">HP</span>
+              <div className="lane-line">
+                <input
+                  type="number"
+                  aria-label="Amount"
+                  className="narrow"
+                  placeholder="amount"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && valid) {
+                      store.damage(c.id, n, type || undefined);
+                      setAmount('');
+                    }
+                  }}
+                />
+                <select
+                  aria-label="Damage type"
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                >
+                  {DAMAGE_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t || 'any type'}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn primary"
+                  disabled={!valid}
+                  title="Deal the damage (Enter in the amount)"
+                  onClick={() => {
+                    store.damage(c.id, n, type || undefined);
+                    setAmount('');
+                  }}
+                >
+                  Damage
+                </button>
+                <span className="icon-toolbar" role="group" aria-label="Other HP changes">
+                  <button
+                    type="button"
+                    className="chrome-btn"
+                    disabled={!valid}
+                    aria-label="Heal"
+                    title="Heal this amount"
+                    onClick={() => {
+                      store.heal(c.id, n);
+                      setAmount('');
+                    }}
+                  >
+                    <Icon name="heart" />
+                  </button>
+                  <button
+                    type="button"
+                    className="chrome-btn"
+                    disabled={!valid}
+                    aria-label="Temp HP"
+                    title="Give this much temporary HP"
+                    onClick={() => {
+                      store.tempHp(c.id, n);
+                      setAmount('');
+                    }}
+                  >
+                    <Icon name="shield" />
+                  </button>
+                  <button
+                    type="button"
+                    className="chrome-btn"
+                    disabled={!valid}
+                    aria-label="Damage several"
+                    title="Deal this damage to several combatants, full or half each"
+                    onClick={() => {
+                      onAssign(n, type);
+                      setAmount('');
+                    }}
+                  >
+                    <Icon name="fanout" />
+                  </button>
+                </span>
+                {c.deathSaves && (
+                  <button type="button" className="btn" onClick={() => store.deathSave(c.id)}>
+                    Death save
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
+          <span className="lane-label">Conditions</span>
+          <div className="lane-body">
+            {c.conditions.length > 0 && (
+              <div className="lane-line">
+                {c.conditions.map((k) => (
+                  <button
+                    key={k.id}
+                    type="button"
+                    className="badge warn clickable condition-chip"
+                    aria-label={`Remove ${k.name}`}
+                    title="Remove"
+                    onClick={() => store.removeCondition(c.id, k.id)}
+                  >
+                    {k.name}
+                    {k.level ? ` ${k.level}` : ''}
+                    <Icon name="close" size={12} />
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="lane-line">
               <select
-                aria-label="Save ability"
-                value={saveAbility}
-                onChange={(e) => setSaveAbility(e.target.value)}
+                aria-label="Condition"
+                value={condition}
+                onChange={(e) => setCondition(e.target.value)}
               >
-                {['str', 'dex', 'con', 'int', 'wis', 'cha'].map((a) => (
-                  <option key={a} value={a}>
-                    {a.toUpperCase()}
+                {CONDITIONS.map((k) => (
+                  <option key={k} value={k}>
+                    {k}
                   </option>
                 ))}
               </select>
-              <input
-                type="number"
-                className="narrow"
-                aria-label="Save DC"
-                value={saveDc}
-                onChange={(e) => setSaveDc(e.target.value)}
-              />
-            </>
-          )}
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              const level =
-                condition === 'Exhaustion'
-                  ? (c.conditions.find((k) => k.name === 'Exhaustion')?.level ?? 0) + 1
-                  : undefined;
-              store.addCondition(
-                c.id,
-                condition,
-                duration(),
-                level && level <= 6 ? level : undefined,
-              );
-            }}
-          >
-            Add condition
-          </button>
-        </div>
-
-        <div className="row">
-          {c.concentrating ? (
-            <button
-              type="button"
-              className="btn"
-              onClick={() => store.setConcentration(c.id, null)}
-            >
-              Stop concentrating on {c.concentrating.on}
-            </button>
-          ) : (
-            <>
-              <input
-                type="text"
-                aria-label="Concentrating on"
-                placeholder="concentrating on…"
-                value={concentrationOn}
-                onChange={(e) => setConcentrationOn(e.target.value)}
-              />
+              <select
+                aria-label="Duration"
+                value={durationKind}
+                onChange={(e) => setDurationKind(e.target.value as typeof durationKind)}
+              >
+                <option value="none">no duration</option>
+                <option value="rounds">rounds</option>
+                <option value="untilStartOfTurn">until start of active turn</option>
+                <option value="untilEndOfTurn">until end of active turn</option>
+                <option value="untilSave">until save</option>
+              </select>
+              {durationKind === 'rounds' && (
+                <input
+                  type="number"
+                  className="narrow"
+                  aria-label="Rounds"
+                  value={rounds}
+                  onChange={(e) => setRounds(e.target.value)}
+                />
+              )}
+              {durationKind === 'untilSave' && (
+                <>
+                  <select
+                    aria-label="Save ability"
+                    value={saveAbility}
+                    onChange={(e) => setSaveAbility(e.target.value)}
+                  >
+                    {['str', 'dex', 'con', 'int', 'wis', 'cha'].map((a) => (
+                      <option key={a} value={a}>
+                        {a.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    className="narrow"
+                    aria-label="Save DC"
+                    value={saveDc}
+                    onChange={(e) => setSaveDc(e.target.value)}
+                  />
+                </>
+              )}
               <button
                 type="button"
-                className="btn"
-                disabled={!concentrationOn.trim()}
+                className="chrome-btn"
+                aria-label="Add condition"
+                title="Add the condition"
                 onClick={() => {
-                  store.setConcentration(c.id, concentrationOn.trim());
-                  setConcentrationOn('');
+                  const level =
+                    condition === 'Exhaustion'
+                      ? (c.conditions.find((k) => k.name === 'Exhaustion')?.level ?? 0) + 1
+                      : undefined;
+                  store.addCondition(
+                    c.id,
+                    condition,
+                    duration(),
+                    level && level <= 6 ? level : undefined,
+                  );
                 }}
               >
-                Concentrate
+                <Icon name="plus" />
               </button>
+            </div>
+          </div>
+
+          <span className="lane-label">Concentration</span>
+          <div className="lane-line">
+            {c.concentrating ? (
+              <button
+                type="button"
+                className="badge save clickable condition-chip"
+                aria-label={`Stop concentrating on ${c.concentrating.on}`}
+                title="Stop concentrating"
+                onClick={() => store.setConcentration(c.id, null)}
+              >
+                {c.concentrating.on}
+                <Icon name="close" size={12} />
+              </button>
+            ) : (
+              <input
+                type="text"
+                className="lane-grow"
+                aria-label="Concentrating on"
+                placeholder="spell, then Enter"
+                value={concentrationOn}
+                onChange={(e) => setConcentrationOn(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && concentrationOn.trim()) {
+                    store.setConcentration(c.id, concentrationOn.trim());
+                    setConcentrationOn('');
+                  }
+                }}
+              />
+            )}
+          </div>
+
+          {c.counters.some((k) => k.kind === 'spellSlot') && (
+            <>
+              <span className="lane-label">Slots</span>
+              <div className="lane-line counters slot-tracker" data-testid="slot-tracker">
+                {c.counters
+                  .filter((k) => k.kind === 'spellSlot')
+                  .map((k) => (
+                    <span
+                      key={k.id}
+                      className="slot-level"
+                      title={`${k.name}: ${k.current} of ${k.max} left`}
+                    >
+                      <span className="slot-label">{ordinal(k.level ?? 0)}</span>
+                      {Array.from({ length: k.max }, (_, i) => {
+                        const available = i < k.current;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            className={`slot-pip${available ? ' available' : ' spent'}`}
+                            aria-label={`${available ? 'Spend' : 'Restore'} level ${k.level} slot`}
+                            aria-pressed={!available}
+                            onClick={() => store.useCounter(c.id, k.id, available ? -1 : 1)}
+                          />
+                        );
+                      })}
+                    </span>
+                  ))}
+              </div>
+            </>
+          )}
+
+          {(c.counters.some((k) => k.kind !== 'spellSlot') || c.recharges.length > 0) && (
+            <>
+              <span className="lane-label">Resources</span>
+              <div className="lane-line counters">
+                {c.counters
+                  .filter((k) => k.kind !== 'spellSlot')
+                  .map((k) => (
+                    <span key={k.id} className="counter">
+                      {k.name} {k.current}/{k.max}
+                      <button
+                        type="button"
+                        className="chrome-btn xs"
+                        aria-label={`Use one ${k.name}`}
+                        title={`Use one ${k.name}`}
+                        onClick={() => store.useCounter(c.id, k.id, -1)}
+                      >
+                        <Icon name="minus" />
+                      </button>
+                      <button
+                        type="button"
+                        className="chrome-btn xs"
+                        aria-label={`Restore one ${k.name}`}
+                        title={`Restore one ${k.name}`}
+                        onClick={() => store.useCounter(c.id, k.id, 1)}
+                      >
+                        <Icon name="plus" />
+                      </button>
+                    </span>
+                  ))}
+                {c.recharges.map((r) => (
+                  <span key={r.id} className={`counter${r.available ? '' : ' spent'}`}>
+                    {r.featureName}: {r.available ? 'ready' : `recharges on ${r.min}+`}
+                    {r.available && (
+                      <button
+                        type="button"
+                        className="chrome-btn xs"
+                        aria-label={`Use ${r.featureName}`}
+                        title={`Use ${r.featureName} (it recharges on ${r.min}+)`}
+                        onClick={() => store.spendRecharge(c.id, r.id)}
+                      >
+                        <Icon name="play" />
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
             </>
           )}
         </div>
-
-        {c.counters.some((k) => k.kind === 'spellSlot') && (
-          <div className="row counters slot-tracker" data-testid="slot-tracker">
-            <span className="muted small">Slots</span>
-            {c.counters
-              .filter((k) => k.kind === 'spellSlot')
-              .map((k) => (
-                <span
-                  key={k.id}
-                  className="slot-level"
-                  title={`${k.name}: ${k.current} of ${k.max} left`}
-                >
-                  <span className="slot-label">{ordinal(k.level ?? 0)}</span>
-                  {Array.from({ length: k.max }, (_, i) => {
-                    const available = i < k.current;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        className={`slot-pip${available ? ' available' : ' spent'}`}
-                        aria-label={`${available ? 'Spend' : 'Restore'} level ${k.level} slot`}
-                        aria-pressed={!available}
-                        onClick={() => store.useCounter(c.id, k.id, available ? -1 : 1)}
-                      />
-                    );
-                  })}
-                </span>
-              ))}
-          </div>
-        )}
-
-        {(c.counters.some((k) => k.kind !== 'spellSlot') || c.recharges.length > 0) && (
-          <div className="row counters">
-            {c.counters
-              .filter((k) => k.kind !== 'spellSlot')
-              .map((k) => (
-                <span key={k.id} className="counter">
-                  {k.name} {k.current}/{k.max}
-                  <button
-                    type="button"
-                    className="chrome-btn xs"
-                    aria-label={`Use one ${k.name}`}
-                    title={`Use one ${k.name}`}
-                    onClick={() => store.useCounter(c.id, k.id, -1)}
-                  >
-                    <Icon name="minus" />
-                  </button>
-                  <button
-                    type="button"
-                    className="chrome-btn xs"
-                    aria-label={`Restore one ${k.name}`}
-                    title={`Restore one ${k.name}`}
-                    onClick={() => store.useCounter(c.id, k.id, 1)}
-                  >
-                    <Icon name="plus" />
-                  </button>
-                </span>
-              ))}
-            {c.recharges.map((r) => (
-              <span key={r.id} className={`counter${r.available ? '' : ' spent'}`}>
-                {r.featureName}: {r.available ? 'ready' : `recharges on ${r.min}+`}
-                {r.available && (
-                  <button
-                    type="button"
-                    className="chrome-btn xs"
-                    aria-label={`Use ${r.featureName}`}
-                    title={`Use ${r.featureName} (it recharges on ${r.min}+)`}
-                    onClick={() => store.spendRecharge(c.id, r.id)}
-                  >
-                    <Icon name="play" />
-                  </button>
-                )}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -997,6 +1026,14 @@ export function CombatView() {
     [],
   );
   const [drawerOpen, setDrawerOpen] = useState(true);
+  /** The encounter's notes start open when there are any; collapsing them sticks for the fight. */
+  const [notesOpen, setNotesOpen] = useState(() => {
+    const { encounterId } = useCombatStore.getState();
+    const encounter = useCampaignStore
+      .getState()
+      .current?.encounters.find((e) => e.id === encounterId);
+    return !!encounter?.notes?.trim();
+  });
   const [manual, setManual] = useState<{
     key: string;
     amount: number;
@@ -1188,6 +1225,7 @@ export function CombatView() {
           })}
         </div>
         <div className="combat-inspector">
+          <EncounterNotes open={notesOpen} onToggle={() => setNotesOpen((v) => !v)} />
           {!selected && <p className="muted">Select a combatant to see its stat block.</p>}
           {selected && record?.kind === 'monster' && (
             <StatBlock
@@ -1243,6 +1281,67 @@ export function CombatView() {
         </div>
       )}
     </section>
+  );
+}
+
+/** The running encounter's DM notes, above the stat block: read at a glance, edit in place. */
+function EncounterNotes({ open, onToggle }: { open: boolean; onToggle(): void }) {
+  const encounterId = useCombatStore((s) => s.encounterId);
+  const saved = useCampaignStore(
+    (s) => s.current?.encounters.find((e) => e.id === encounterId)?.notes ?? '',
+  );
+  const setNotes = useCombatStore((s) => s.setNotes);
+  const [draft, setDraft] = useState(saved);
+  const timer = useRef<number | null>(null);
+
+  // Take outside changes (another fight, a reload) unless an edit is still waiting to save.
+  useEffect(() => {
+    if (!timer.current) setDraft(saved);
+  }, [saved]);
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const edit = (text: string) => {
+    setDraft(text);
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      timer.current = null;
+      setNotes(text);
+    }, 400);
+  };
+
+  return (
+    <div className="encounter-notes-block" data-testid="encounter-notes">
+      <div className="row">
+        <h2>Notes</h2>
+        {!open && draft.trim() && <span className="muted small notes-peek">{draft}</span>}
+        <span className="spacer" />
+        <button
+          type="button"
+          className="chrome-btn xs"
+          aria-label={open ? 'Collapse notes' : 'Expand notes'}
+          aria-expanded={open}
+          title={open ? 'Collapse the notes' : 'Show the notes'}
+          onClick={onToggle}
+        >
+          <Icon name={open ? 'up' : 'down'} />
+        </button>
+      </div>
+      {open && (
+        <textarea
+          aria-label="Encounter notes"
+          className="encounter-notes"
+          rows={4}
+          placeholder="Notes for this encounter"
+          value={draft}
+          onChange={(e) => edit(e.target.value)}
+        />
+      )}
+    </div>
   );
 }
 

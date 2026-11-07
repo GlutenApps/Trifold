@@ -2,15 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { ulid } from 'ulid';
 import type { CompendiumRow } from '@trifold/api';
 import { difficultyBand, partyBudget } from '@trifold/rules';
-import type { CombatantTemplate, Encounter, NPC } from '@trifold/schema';
+import type { CombatantTemplate, Encounter, NPC, PCCard } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
+import { AddPanel } from './AddPanel';
 import { CombatView } from './CombatView';
 import { retargetToNpc } from './templates';
 
 const NO_NPCS: NPC[] = [];
+const NO_PCS: PCCard[] = [];
 
 function newEncounter(name: string): Encounter {
   const now = new Date().toISOString();
@@ -27,6 +29,133 @@ function newEncounter(name: string): Encounter {
   };
 }
 
+/** One combatant in the builder: a single line, with the label behind a pencil (ADR 0013 §8). */
+function TemplateRow({
+  t,
+  onChange,
+  onRemove,
+  onTrackAsNpc,
+}: {
+  t: CombatantTemplate;
+  onChange(patch: Partial<CombatantTemplate>): void;
+  onRemove(): void;
+  onTrackAsNpc(): void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const name = t.label || t.ref.name;
+  const creature = t.ref.kind === 'record' || t.ref.kind === 'custom';
+  const meta = [
+    t.label ? t.ref.name : '',
+    t.cache && (t.cache.cr || t.cache.xp) ? `CR ${t.cache.cr} · ${t.cache.xp} XP` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <div className={`template-row role-${t.role}`} data-testid="template-row">
+      <div className="template-name">
+        {editing ? (
+          <input
+            type="text"
+            aria-label={`Label for ${t.ref.name}`}
+            placeholder={t.ref.name}
+            autoFocus
+            defaultValue={t.label ?? ''}
+            onBlur={(e) => {
+              onChange({ label: e.target.value.trim() || undefined });
+              setEditing(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur();
+              if (e.key === 'Escape') {
+                e.currentTarget.value = t.label ?? '';
+                e.currentTarget.blur();
+              }
+            }}
+          />
+        ) : (
+          <>
+            <span className="template-title">
+              <strong>{name}</strong>
+              {t.ref.kind === 'npc' && (
+                <span className="badge" title="A named NPC: HP carries between fights">
+                  NPC
+                </span>
+              )}
+            </span>
+            {meta && <span className="muted small">{meta}</span>}
+          </>
+        )}
+      </div>
+      <span className="template-qty">
+        {creature && (
+          <input
+            type="number"
+            className="narrow"
+            aria-label={`How many ${t.ref.name}`}
+            title="How many"
+            min={1}
+            max={50}
+            value={t.quantity}
+            onChange={(e) => onChange({ quantity: Math.max(1, Number(e.target.value) || 1) })}
+          />
+        )}
+      </span>
+      <select
+        aria-label={`Role of ${name}`}
+        value={t.role}
+        onChange={(e) => onChange({ role: e.target.value as CombatantTemplate['role'] })}
+      >
+        <option value="enemy">enemy</option>
+        <option value="ally">ally</option>
+        <option value="neutral">neutral</option>
+      </select>
+      <span className="icon-toolbar state-toolbar" role="group" aria-label={`${name} actions`}>
+        <button
+          type="button"
+          className={`chrome-btn${t.hidden ? ' on' : ''}`}
+          aria-label={t.hidden ? `Show ${name} to players` : `Hide ${name} from players`}
+          aria-pressed={t.hidden}
+          title={
+            t.hidden ? 'Starts hidden from the players. Show it' : 'Start hidden from the players'
+          }
+          onClick={() => onChange({ hidden: !t.hidden })}
+        >
+          <Icon name={t.hidden ? 'eyeOff' : 'eye'} />
+        </button>
+        <button
+          type="button"
+          className="chrome-btn"
+          aria-label={`Label ${t.ref.name}`}
+          title="Give it a label (players still see the masked name)"
+          onClick={() => setEditing(true)}
+        >
+          <Icon name="pencil" />
+        </button>
+        {creature && (
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label={`Track ${name} as NPC`}
+            title="Make this a named NPC whose HP carries to the next fight"
+            onClick={onTrackAsNpc}
+          >
+            <Icon name="person" />
+          </button>
+        )}
+        <button
+          type="button"
+          className="chrome-btn"
+          aria-label={`Remove ${name}`}
+          title="Remove from the encounter"
+          onClick={onRemove}
+        >
+          <Icon name="close" />
+        </button>
+      </span>
+    </div>
+  );
+}
+
 function Builder({
   encounter,
   onChange,
@@ -38,39 +167,24 @@ function Builder({
   onStart(): void;
   fightRunning: boolean;
 }) {
-  const pcs = useCampaignStore((s) => s.current?.pcs ?? []);
+  const pcs = useCampaignStore((s) => s.current?.pcs ?? NO_PCS);
   const npcs = useCampaignStore((s) => s.current?.npcs ?? NO_NPCS);
   const saveNpc = useCampaignStore((s) => s.saveNpc);
-  const [query, setQuery] = useState('');
-  const [rows, setRows] = useState<CompendiumRow[]>([]);
-  const debounce = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (debounce.current) window.clearTimeout(debounce.current);
-    if (!query.trim()) {
-      setRows([]);
-      return;
-    }
-    debounce.current = window.setTimeout(() => {
-      window.trifold.compendium
-        .search({ kind: 'monster', text: query, limit: 12, collapse: false })
-        .then((r) => setRows(r.rows))
-        .catch(() => setRows([]));
-    }, 150);
-  }, [query]);
 
   const set = (patch: Partial<Encounter>) => onChange({ ...encounter, ...patch });
   const setTemplate = (id: string, patch: Partial<CombatantTemplate>) =>
     set({ combatants: encounter.combatants.map((t) => (t.id === id ? { ...t, ...patch } : t)) });
 
+  const presentPcs = new Set(
+    encounter.combatants.flatMap((t) => (t.ref.kind === 'pc' ? [t.ref.pcId] : [])),
+  );
+  const presentNpcs = new Set(
+    encounter.combatants.flatMap((t) => (t.ref.kind === 'npc' ? [t.ref.npcId] : [])),
+  );
+
   const addPcs = (ids: string[]) => {
-    const present = new Set(
-      encounter.combatants
-        .filter((t) => t.ref.kind === 'pc')
-        .map((t) => (t.ref.kind === 'pc' ? t.ref.pcId : '')),
-    );
     const added: CombatantTemplate[] = pcs
-      .filter((p) => ids.includes(p.id) && !present.has(p.id))
+      .filter((p) => ids.includes(p.id) && !presentPcs.has(p.id))
       .map((p) => ({
         id: ulid(),
         ref: { kind: 'pc', pcId: p.id, name: p.name },
@@ -81,11 +195,11 @@ function Builder({
     if (added.length) set({ combatants: [...encounter.combatants, ...added] });
   };
 
-  /** NPCs that can fight: those with a stat block, or HP left over from a fight. */
-  const fightingNpcs = npcs.filter((n) => n.recordRef || n.hp);
+  /** NPCs that can fight (a stat block, or HP left over from a fight) and are not in yet. */
+  const waitingNpcs = npcs.filter((n) => (n.recordRef || n.hp) && !presentNpcs.has(n.id));
 
   const addNpc = async (npc: NPC) => {
-    if (encounter.combatants.some((t) => t.ref.kind === 'npc' && t.ref.npcId === npc.id)) return;
+    if (presentNpcs.has(npc.id)) return;
     const record = npc.recordRef
       ? await window.trifold.compendium.get(npc.recordRef.recordId).catch(() => null)
       : null;
@@ -167,7 +281,6 @@ function Builder({
         },
       ],
     });
-    setQuery('');
   };
 
   const partyLevels = encounter.combatants
@@ -201,178 +314,56 @@ function Builder({
       </div>
 
       <h2 className="mt">Combatants</h2>
-      {encounter.combatants.length === 0 && (
-        <p className="muted">Add the party and some creatures.</p>
-      )}
-      {encounter.combatants.map((t) => (
-        <div key={t.id} className="row template-row" data-testid="template-row">
-          <strong>{t.ref.name}</strong>
-          {t.ref.kind === 'npc' && (
-            <span className="badge" title="A named NPC: HP carries between fights">
-              NPC
-            </span>
-          )}
-          {t.cache && (
-            <span className="muted">
-              CR {t.cache.cr} · {t.cache.xp} XP
-            </span>
-          )}
-          {(t.ref.kind === 'record' || t.ref.kind === 'custom') && (
-            <label className="field inline">
-              ×
-              <input
-                type="number"
-                className="narrow"
-                min={1}
-                max={50}
-                value={t.quantity}
-                onChange={(e) =>
-                  setTemplate(t.id, { quantity: Math.max(1, Number(e.target.value) || 1) })
-                }
-              />
-            </label>
-          )}
-          <input
-            type="text"
-            className="narrow-text"
-            placeholder="label"
-            value={t.label ?? ''}
-            onChange={(e) => setTemplate(t.id, { label: e.target.value || undefined })}
-          />
-          <select
-            aria-label="Role"
-            value={t.role}
-            onChange={(e) =>
-              setTemplate(t.id, { role: e.target.value as CombatantTemplate['role'] })
-            }
-          >
-            <option value="enemy">enemy</option>
-            <option value="ally">ally</option>
-            <option value="neutral">neutral</option>
-          </select>
-          <label className="field inline">
-            <input
-              type="checkbox"
-              checked={t.hidden}
-              onChange={(e) => setTemplate(t.id, { hidden: e.target.checked })}
-            />{' '}
-            hidden
-          </label>
-          <span className="spacer" />
-          {(t.ref.kind === 'record' || t.ref.kind === 'custom') && (
-            <button
-              type="button"
-              className="chrome-btn xs"
-              aria-label={`Track ${t.label || t.ref.name} as NPC`}
-              title="Make this a named NPC whose HP carries to the next fight"
-              onClick={() => void trackAsNpc(t)}
-            >
-              <Icon name="person" />
-            </button>
-          )}
-          <button
-            type="button"
-            className="chrome-btn xs"
-            aria-label={`Remove ${t.label || t.ref.name}`}
-            title="Remove from the encounter"
-            onClick={() => set({ combatants: encounter.combatants.filter((x) => x.id !== t.id) })}
-          >
-            <Icon name="close" />
-          </button>
-        </div>
-      ))}
-
-      <div className="row">
-        <button
-          type="button"
-          className="btn"
-          disabled={pcs.length === 0}
-          onClick={() => addPcs(pcs.map((p) => p.id))}
-        >
-          Add all PCs
-        </button>
-        {pcs.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className="btn"
-            aria-label={`Add ${p.name}`}
-            onClick={() => addPcs([p.id])}
-          >
-            <Icon name="plus" />
-            {p.name}
-          </button>
-        ))}
-      </div>
-      {fightingNpcs.length > 0 && (
-        <div className="row">
-          <span className="muted">NPCs</span>
-          {fightingNpcs.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              className="btn"
-              aria-label={`Add ${n.name}`}
-              title={n.hp ? `HP ${n.hp.current}/${n.hp.max} from the last fight` : undefined}
-              onClick={() => void addNpc(n)}
-            >
-              <Icon name="plus" />
-              {n.name}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="row">
-        <input
-          type="text"
-          aria-label="Add creature"
-          placeholder="Search creatures to add"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
-      {rows.length > 0 && (
-        <div className="picker" role="listbox" aria-label="Creature results">
-          {rows.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              role="option"
-              aria-selected={false}
-              className="list-row"
-              onClick={() => void addCreature(r)}
-            >
-              <span className="list-name">{r.displayName}</span>
-              <span className="list-meta">
-                {r.cr !== null && <span>CR {r.cr}</span>}
-                {r.type && <span>{r.type}</span>}
-                <span className="badge">{r.edition === '2014' ? 'legacy' : r.edition}</span>
-                <span className="badge source">{r.sourceName}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      <h2 className="mt">Difficulty (2024 budget)</h2>
-      {partyLevels.length === 0 ? (
-        <p className="muted">Add PCs to see the party budget.</p>
+      {encounter.combatants.length === 0 ? (
+        <p className="muted">Add the party and some creatures below.</p>
       ) : (
-        <p data-testid="difficulty">
-          Enemy XP {enemyXp.toLocaleString()} · party budget low {budget.low.toLocaleString()} /
-          moderate {budget.moderate.toLocaleString()} / high {budget.high.toLocaleString()} ·{' '}
-          <strong>{band}</strong> · {Math.round(enemyXp / partyLevels.length).toLocaleString()} XP
-          per PC
-        </p>
+        <div className="template-list">
+          {encounter.combatants.map((t) => (
+            <TemplateRow
+              key={t.id}
+              t={t}
+              onChange={(patch) => setTemplate(t.id, patch)}
+              onRemove={() =>
+                set({ combatants: encounter.combatants.filter((x) => x.id !== t.id) })
+              }
+              onTrackAsNpc={() => void trackAsNpc(t)}
+            />
+          ))}
+        </div>
       )}
-      <label className="field">
-        Notes
-        <textarea
-          rows={2}
-          value={encounter.notes}
-          onChange={(e) => set({ notes: e.target.value })}
-        />
-      </label>
+      {partyLevels.length === 0 ? (
+        <p className="muted small">Add PCs to see the 2024 difficulty budget.</p>
+      ) : (
+        <div className="difficulty" data-testid="difficulty">
+          <span>
+            Enemy XP {enemyXp.toLocaleString()} · <strong>{band}</strong> ·{' '}
+            {Math.round(enemyXp / partyLevels.length).toLocaleString()} XP per PC
+          </span>
+          <span className="muted small">
+            2024 budget: low {budget.low.toLocaleString()} · moderate{' '}
+            {budget.moderate.toLocaleString()} · high {budget.high.toLocaleString()}
+          </span>
+        </div>
+      )}
+
+      <h2 className="mt">Add</h2>
+      <AddPanel
+        pcs={pcs.filter((p) => !presentPcs.has(p.id))}
+        npcs={waitingNpcs}
+        onAddPcs={addPcs}
+        onAddNpc={(n) => void addNpc(n)}
+        onAddCreature={addCreature}
+      />
+
+      <h2 className="mt">DM notes</h2>
+      <textarea
+        aria-label="DM notes"
+        className="encounter-notes"
+        rows={3}
+        placeholder="Shown beside the stat block while the fight runs"
+        value={encounter.notes}
+        onChange={(e) => set({ notes: e.target.value })}
+      />
     </div>
   );
 }

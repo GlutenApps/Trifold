@@ -645,6 +645,183 @@ input.narrow-text {
   margin: 4px 0;
 }
 
+/* Labelled lanes: a label column beside its controls, which wrap only inside their own lane, so
+   sections never run together however wide the panel is (combat drawer, add panel). */
+.lanes {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: start;
+  margin: 6px 0;
+}
+
+.lane-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: var(--control-h);
+  white-space: nowrap;
+}
+
+.lane-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lane-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  min-height: var(--control-h);
+}
+
+.lane-line .lane-grow {
+  flex: 1 1 160px;
+  max-width: 320px;
+}
+
+@container panel (max-width: 420px) {
+  .lanes {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 4px;
+  }
+
+  .lane-label {
+    line-height: 1.5;
+    margin-top: 4px;
+  }
+}
+
+/* Encounter builder: one line per combatant, coloured by role like the initiative list. */
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.template-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 6px 4px 8px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.template-row.role-enemy {
+  border-left-color: var(--danger);
+}
+
+.template-row.role-ally {
+  border-left-color: var(--ok);
+}
+
+.template-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.template-title {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.template-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-name input {
+  width: 100%;
+  min-width: 0;
+}
+
+@container panel (max-width: 520px) {
+  .template-row {
+    grid-template-columns: 64px auto minmax(0, 1fr);
+  }
+
+  .template-name {
+    grid-column: 1 / -1;
+  }
+
+  .template-row .icon-toolbar {
+    justify-self: end;
+  }
+}
+
+.difficulty {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px 0;
+}
+
+.add-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-panel .lanes {
+  margin: 0;
+}
+
+.add-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+input.add-search-field {
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 420px;
+}
+
+textarea.encounter-notes {
+  width: 100%;
+  max-width: none;
+  resize: vertical;
+}
+
+/* The running encounter's notes, above the stat block. */
+.encounter-notes-block {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.encounter-notes-block .row {
+  margin: 0 0 4px;
+  flex-wrap: nowrap;
+}
+
+.encounter-notes-block h2 {
+  margin: 0;
+}
+
+.notes-peek {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @keyframes drawer-open {
   from {
     grid-template-rows: 0fr;

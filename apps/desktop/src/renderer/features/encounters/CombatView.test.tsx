@@ -342,3 +342,33 @@ describe('CombatView: adding mid-fight', () => {
     expect(screen.queryByRole('region', { name: 'Add to the fight' })).not.toBeInTheDocument();
   });
 });
+
+describe('CombatView: encounter notes', () => {
+  it('shows the notes above the stat block and saves edits with the live state', async () => {
+    useCampaignStore.setState({
+      current: {
+        campaign: { id: 'c1', slug: 'cave', settings: { initiativeMode: 'perGroup' } },
+        pcs: [],
+        npcs: [],
+        encounters: [{ id: 'enc', combatants: [], results: [], notes: 'Whistle brings stalkers' }],
+        scenes: [],
+      } as unknown as CampaignBundle,
+    });
+    vi.mocked(window.trifold.encounters.save).mockClear();
+    render(<CombatView />);
+    const notes = screen.getByLabelText('Encounter notes');
+    expect(notes).toHaveValue('Whistle brings stalkers');
+    await userEvent.type(notes, '.');
+    await waitFor(() =>
+      expect(window.trifold.encounters.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notes: 'Whistle brings stalkers.',
+          state: expect.objectContaining({ round: 1 }),
+        }),
+      ),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Collapse notes' }));
+    expect(screen.queryByLabelText('Encounter notes')).not.toBeInTheDocument();
+    expect(screen.getByTestId('encounter-notes')).toHaveTextContent('Whistle brings stalkers.');
+  });
+});

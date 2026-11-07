@@ -110,7 +110,7 @@ describe('EncountersPage: named NPCs (ADR 0012)', () => {
     useCombatStore.setState({ encounterId: null, state: null, browsing: false, finished: null });
   });
 
-  it('splits one creature out of a group as an NPC, and offers NPCs that can fight', async () => {
+  it('splits one creature out of a group as an NPC, and offers NPCs not yet in it', async () => {
     render(<EncountersPage />);
     await userEvent.click(screen.getByRole('button', { name: 'Edit Bridge ambush' }));
     expect(screen.getAllByTestId('template-row')).toHaveLength(1);
@@ -126,6 +126,9 @@ describe('EncountersPage: named NPCs (ADR 0012)', () => {
     const rows = screen.getAllByTestId('template-row');
     expect(rows[0]).toHaveTextContent('Bandit');
     expect(rows[1]).toHaveTextContent('NPC');
+    // An NPC already in the encounter is not offered again; removing it offers it back.
+    expect(screen.queryByRole('button', { name: 'Add Bandit' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Remove Bandit' })[1]!);
     expect(screen.getByRole('button', { name: 'Add Bandit' })).toBeInTheDocument();
   });
 });

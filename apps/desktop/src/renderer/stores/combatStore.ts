@@ -143,6 +143,8 @@ interface CombatStoreState {
    * it on the encounter; a PC or NPC already fighting is left alone.
    */
   addToFight(template: CombatantTemplate): Promise<void>;
+  /** Edits the running encounter's DM notes, saved with the live state. */
+  setNotes(notes: string): void;
   /** Turns a creature into a named NPC whose HP carries between fights. */
   trackAsNpc(id: string): Promise<NPC | null>;
   remove(id: string): void;
@@ -224,14 +226,19 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     );
   };
 
-  /** Saves template edits made mid-fight with the live state, so nothing stale is written. */
-  const saveTemplates = (combatants: Encounter['combatants']) => {
+  /**
+   * Saves an encounter edit made mid-fight with the live state, so nothing stale is written. The
+   * store takes the edit at once, so a second edit before the save returns builds on this one.
+   */
+  const saveEncounterEdit = (patch: Partial<Pick<Encounter, 'combatants' | 'notes'>>) => {
     const encounter = currentEncounter();
     if (!encounter) return;
-    void useCampaignStore
-      .getState()
-      .saveEncounter({ ...encounter, combatants, state: get().state, updatedAt: nowIso() });
+    const next = { ...encounter, ...patch, state: get().state, updatedAt: nowIso() };
+    const campaign = useCampaignStore.getState();
+    campaign.putEncounter(next);
+    void campaign.saveEncounter(next);
   };
+  const saveTemplates = (combatants: Encounter['combatants']) => saveEncounterEdit({ combatants });
 
   const rememberLinks = (links: readonly TokenLink[]) => {
     const encounter = currentEncounter();
@@ -804,6 +811,12 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       // A newcomer may already have a token waiting on the map in play.
       const tokens = mapInPlay(encounter)?.tokens ?? [];
       if (tokens.length) applyLinks(autoLink(get().state?.combatants ?? [], tokens));
+    },
+
+    setNotes(notes) {
+      const encounter = currentEncounter();
+      if (!encounter || encounter.notes === notes) return;
+      saveEncounterEdit({ notes });
     },
 
     async trackAsNpc(id) {
