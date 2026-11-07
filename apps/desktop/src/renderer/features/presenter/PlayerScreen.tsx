@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { initialPresenterState, type PresenterState } from '@trifold/api';
 import { MapLayer } from './MapLayer';
 
+/**
+ * The `/player` route (ADR 0002): the second screen. It subscribes to the presenter state main
+ * broadcasts and draws it; nothing here writes state or reads the Library. `PlayerScreen`
+ * below has the detail; `Countdown` is the break screen's timer.
+ */
+
 function Countdown({ endsAt }: { endsAt: number }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {

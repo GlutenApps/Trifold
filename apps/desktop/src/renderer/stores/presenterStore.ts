@@ -13,6 +13,14 @@ import {
 import type { Scene } from '@trifold/schema';
 import { DEFAULT_GRID, cameraRect, mapSize } from '../features/presenter/mapMath';
 
+/**
+ * The authoritative presenter state (DESIGN.md §4.1, §6.5): what the TV shows. Every change
+ * goes through `commit`, which stamps the state and pushes it to main, and main broadcasts it
+ * to the player window; the player never writes back and never reads the Library. The undo
+ * history, the recent list and the stored scene behind the live one are session only and are
+ * not pushed. Only the console's features call these actions (Scenes, the TV tab, the strip,
+ * hotkeys and the combat mirror in AppShell).
+ */
 const HISTORY_LIMIT = 20;
 const RECENT_LIMIT = 8;
 
@@ -29,7 +37,12 @@ const DEFAULT_OPTIONS: LiveOptions = {
   tokenStyle: 'engraved',
 };
 
-/** Turns a stored scene into what the player window renders. Folders don't go live. */
+/**
+ * Turns a stored scene into what the player window renders. Folders don't go live, nor does a
+ * map or image scene without an image. Hidden tokens are left out, masked creatures get their
+ * masked label, media paths become URLs, and the player camera is framed for the display's
+ * aspect (following the active token when the camera mode asks for it).
+ */
 export function liveSceneFrom(
   scene: Scene,
   campaignSlug: string,
@@ -138,6 +151,11 @@ interface PresenterStore {
   setCombat(summary: CombatSummary | null): void;
 }
 
+/**
+ * The map token of the combatant whose turn it is, or null outside a fight or when that
+ * combatant has no token. It is what a `follow` camera centres on, so the live map is
+ * re-derived with it whenever the turn changes.
+ */
 function activeTokenOf(combat: CombatSummary | null): string | null {
   if (!combat?.activeId) return null;
   return combat.entries.find((e) => e.id === combat.activeId)?.tokenId ?? null;

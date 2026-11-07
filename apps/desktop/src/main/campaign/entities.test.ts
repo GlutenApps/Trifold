@@ -48,6 +48,43 @@ describe('CampaignEntities scenes', () => {
     expect(scene.backgrounds).toHaveLength(2);
     expect(scene.activeBackgroundId).toBe('b2');
   });
+
+  it('removing a folder lifts its scenes up to the folder’s parent', async () => {
+    const bundle = await repo.create('Mill');
+    const entities = new CampaignEntities(repo);
+    const now = '2026-09-28T00:00:00.000Z';
+    const scene = (title: string, kind: Scene['kind'], parentId: string | null, order: number) =>
+      ({
+        schemaVersion: 1,
+        id: '',
+        kind,
+        title,
+        subtitle: '',
+        showTitleOverride: null,
+        parentId,
+        order,
+        notes: '',
+        tokens: [],
+        entryMarkers: [],
+        playerCamera: { mode: 'fitMap', x: 0, y: 0, zoom: 1 },
+        createdAt: now,
+        updatedAt: now,
+      }) as Scene;
+    const act = await entities.saveScene(scene('Act one', 'folder', null, 0));
+    const after = await entities.saveScene(scene('Epilogue', 'title', null, 1));
+    const gate = await entities.saveScene(scene('Gate', 'title', act.id, 0));
+    const hall = await entities.saveScene(scene('Hall', 'title', act.id, 1));
+
+    await entities.removeScene(act.id);
+
+    const reopened = await repo.open(bundle.campaign.id);
+    expect(reopened.scenes.map((s) => [s.title, s.parentId, s.order])).toEqual([
+      ['Epilogue', null, after.order],
+      ['Gate', null, 2],
+      ['Hall', null, 3],
+    ]);
+    expect(reopened.scenes.map((s) => s.id)).toEqual([after.id, gate.id, hall.id]);
+  });
 });
 
 describe('CampaignEntities notes', () => {

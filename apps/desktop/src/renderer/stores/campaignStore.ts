@@ -18,6 +18,15 @@ import {
 import { childrenOf, descendantsOf, nextOrder, placeItem } from '@trifold/rules';
 import { cancelSave, encounterSlot } from './pendingSaves';
 
+/**
+ * The one owner of the open campaign: `current` is the CampaignBundle (campaign, notes, PCs,
+ * NPCs, scenes, encounters) that main loaded from the campaign's folder (DESIGN.md §4.2, §5.2).
+ * Every write goes straight to main through the bridge and the store keeps what main returns;
+ * the optimistic edits here (note moves and lifts) mirror main's own placement and are replaced
+ * by its answer. Features never mutate `current` directly: they call an action, or for
+ * autosaved objects (encounters) hand the saved copy back through `putEncounter`. Nothing is
+ * persisted from the renderer side; the bundle is in memory only.
+ */
 interface CampaignState {
   campaigns: CampaignSummary[];
   current: CampaignBundle | null;
@@ -110,12 +119,14 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
         await window.trifold.scenes.remove(sceneId);
         const current = get().current;
         if (current) {
+          // Children move up to the removed folder's parent, as main does on disk.
+          const parentId = current.scenes.find((x) => x.id === sceneId)?.parentId ?? null;
           set({
             current: {
               ...current,
               scenes: current.scenes
                 .filter((x) => x.id !== sceneId)
-                .map((x) => (x.parentId === sceneId ? { ...x, parentId: null } : x)),
+                .map((x) => (x.parentId === sceneId ? { ...x, parentId } : x)),
             },
           });
         }

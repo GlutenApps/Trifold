@@ -1,4 +1,3 @@
-import { useAppStore } from '../../stores/appStore';
 import { useMusicStore } from '../../stores/musicStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useShellStore, type LibraryPage } from '../../stores/shellStore';
@@ -9,6 +8,11 @@ import { CampaignsPage } from './CampaignsPage';
 import { CompendiumLibraryPage } from './CompendiumLibraryPage';
 import { hk } from '../../platform';
 
+/**
+ * The Library space (ADR 0004, Spaces): what every campaign shares, outside the console. A nav
+ * of four pages and the chosen page's content; `LibraryView` below reads the page from the
+ * shell store.
+ */
 const PAGES: Array<{ id: LibraryPage; label: string; icon: IconName }> = [
   { id: 'campaigns', label: 'Campaigns', icon: 'campaign' },
   { id: 'compendium', label: 'Compendium', icon: 'compendium' },
@@ -16,14 +20,12 @@ const PAGES: Array<{ id: LibraryPage; label: string; icon: IconName }> = [
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
-/** The Library space (ADR 0004 §1.1): what every campaign shares. No stage, no dock, no tabs. */
+/** The Library space (ADR 0004, Spaces): what every campaign shares. No stage, no dock, no tabs. */
 export function LibraryView() {
   const page = useShellStore((s) => s.libraryPage);
   const setPage = useShellStore((s) => s.setLibraryPage);
   const campaigns = useCampaignStore((s) => s.campaigns.length);
   const tracks = useMusicStore((s) => s.library?.tracks.length ?? 0);
-  const sources = useAppStore((s) => s.library?.settings?.disabledSourceIds.length ?? 0);
-  void sources;
 
   const counts: Partial<Record<LibraryPage, string>> = {
     campaigns: String(campaigns),

@@ -6,6 +6,10 @@ import { useCombatStore } from '../../stores/combatStore';
 import { Icon } from '../shell/icons';
 import { AddPanel } from './AddPanel';
 
+/**
+ * The tracker's add panel (DESIGN.md §6.4): the same AddPanel the builder uses, wired to the
+ * combat store's `addToFight` so a newcomer joins the running fight and its encounter.
+ */
 const NO_NPCS: NPC[] = [];
 
 /**

@@ -2,6 +2,12 @@ import { ipcMain } from 'electron';
 import { API_METHODS, channelName, type ApiNamespace, type TrifoldApi } from '@trifold/api';
 import { errorMessage, type Logger } from './log';
 
+/**
+ * Wires `TrifoldApi` to Electron IPC. The preload builds `window.trifold` from the same
+ * `API_METHODS` table, so both sides agree on channel names by construction (DESIGN.md §4.4).
+ * Every method gets one `ipcMain.handle`; a method the main process forgot to implement fails
+ * at startup rather than at the first call.
+ */
 type AnyMethod = (...args: unknown[]) => Promise<unknown>;
 
 /**

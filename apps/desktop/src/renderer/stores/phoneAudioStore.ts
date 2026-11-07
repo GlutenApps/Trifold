@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import type { PhoneAudioDevice, PhoneAudioStatus } from '@trifold/api';
 
+/**
+ * The phone audio receiver (ADR 0007) as the renderer sees it. Main owns the connection and the
+ * remembered phones; this store mirrors its `phoneAudioStatus` events and the answers to its
+ * calls, and holds the last device listing. Nothing persists from here; `load()` subscribes
+ * once per session and is safe to call from every mount.
+ */
 export type PhoneRow = PhoneAudioDevice & {
   /** Connected before, so it shows first and connects in one click. */
   remembered: boolean;

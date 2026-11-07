@@ -15,6 +15,12 @@ import {
   normalizeSpell,
 } from './others';
 
+/**
+ * Entry point of the compendium importer: the record stream, the per-kind normalizers and the
+ * warning policy meet in `createCompendiumImporter` below. Records are validated against the
+ * Zod schema before they leave this module, so a bad record is a warning and a skip, never a
+ * failed import (CLAUDE.md ground rule 5).
+ */
 /** Bump when normalization changes in a way that makes existing records.jsonl files stale. */
 export const IMPORTER_VERSION = 3;
 

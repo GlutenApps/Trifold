@@ -40,6 +40,7 @@ export interface AppInfo {
 /** OS settings pages the "Phone audio" guide opens (ADR 0007); see main/systemPages.ts. */
 export type SystemPage = 'bluetooth' | 'bluetoothReceiverStore' | 'airplay' | 'sound';
 
+/** A display from Electron's `screen`; `id` is what `LibrarySettings.playerDisplayId` stores. */
 export interface DisplayInfo {
   id: number;
   label: string;
@@ -49,6 +50,10 @@ export interface DisplayInfo {
   isInternal: boolean;
 }
 
+/**
+ * The search index's state: when `ok` is false, searches fail with `error` while the files still
+ * work.
+ */
 export interface IndexInfo {
   ok: boolean;
   version: number;
@@ -291,6 +296,10 @@ export interface IconCreditsInfo {
   icons: number;
 }
 
+/**
+ * A file inside `campaigns/<slug>/` (a scene image, token art), served by main from the open
+ * Library.
+ */
 export function mediaUrl(campaignSlug: string, relativePath: string): string {
   const parts = [`campaigns`, campaignSlug, ...relativePath.split('/')].map(encodeURIComponent);
   return `${MEDIA_SCHEME}://library/${parts.join('/')}`;
@@ -345,6 +354,10 @@ export interface AttributionEntry {
   permalink: string;
 }
 
+/**
+ * Compendium import phases, in order; `bytesRead` counts the hash pass, then starts over for
+ * parsing.
+ */
 export interface ImportProgress {
   phase: 'hashing' | 'copying' | 'parsing' | 'writing' | 'indexing' | 'done';
   records: number;
@@ -355,6 +368,10 @@ export interface ImportProgress {
 export interface ImportReport {
   sourceId: string;
   name: string;
+  /**
+   * `unchanged`: same file hash and current importer, nothing written. `updated`: an existing
+   * source re-parsed, with `diff`. `imported`: a new source.
+   */
   status: 'imported' | 'updated' | 'unchanged';
   counts: Partial<Record<RecordKind, number>>;
   warnings: string[];
@@ -490,6 +507,7 @@ export interface CampaignPackageResult {
 export interface CampaignImportReport {
   campaignId: string;
   name: string;
+  /** `new` created a campaign named after the file; `merge` added to the open campaign. */
   mode: 'new' | 'merge';
   counts: {
     pcs: number;
@@ -521,18 +539,31 @@ export interface TrifoldApi {
     /** Opens (creating the layout if needed) and switches the app to that Library. */
     open(path: string): Promise<LibraryInfo>;
     openInExplorer(): Promise<void>;
+    /**
+     * Shallow merge into `library.json`: a nested object such as `workspace` replaces the whole
+     * object.
+     */
     updateSettings(patch: Partial<LibrarySettings>): Promise<LibrarySettings>;
   };
   displays: {
     list(): Promise<DisplayInfo[]>;
   };
   player: {
+    /**
+     * Opens the TV window on `displayId`; undefined or null means the Library's saved display,
+     * then the first non-primary display, then the primary. An open window is moved instead.
+     */
     open(displayId?: number | null): Promise<void>;
     close(): Promise<void>;
     isOpen(): Promise<boolean>;
   };
   presenter: {
+    /**
+     * The console's state, relayed to the player; a push with an older `updatedAt` than the last is
+     * ignored.
+     */
     push(state: PresenterState): Promise<void>;
+    /** The last pushed state; the player window calls it on load so it starts live. */
     get(): Promise<PresenterState>;
   };
   sources: {
@@ -543,19 +574,38 @@ export interface TrifoldApi {
     importFile(path: string): Promise<ImportReport>;
     /** Re-parses a source from its stored original.xml with the current importer. */
     reimport(sourceId: string): Promise<ImportReport>;
+    /**
+     * Switches a source in or out of search; bundled sources are recorded in `disabledSourceIds`,
+     * imported ones in their `source.json`. Resolves to the updated source.
+     */
     setEnabled(sourceId: string, enabled: boolean): Promise<Source>;
+    /**
+     * Deletes `sources/<id>/` (original.xml and records) and its index rows; refuses bundled
+     * sources.
+     */
     remove(sourceId: string): Promise<void>;
+    /** Clears the index and re-reads every source's records from disk. */
     rebuildIndex(): Promise<IndexStats>;
     /** License statements for bundled content, always shown in About. */
     attribution(): Promise<AttributionEntry[]>;
   };
   campaigns: {
     list(): Promise<CampaignSummary[]>;
+    /**
+     * Creates `campaigns/<slug>/`, opens the campaign and resolves to its bundle. A blank name
+     * throws.
+     */
     create(name: string): Promise<CampaignBundle>;
+    /**
+     * Makes it the open campaign, remembered in `library.json` for next launch. Accepts an id or a
+     * slug.
+     */
     open(campaignId: string): Promise<CampaignBundle>;
     /** The campaign opened last time, reopened on start; null when none. */
     current(): Promise<CampaignBundle | null>;
+    /** Forgets the open campaign; nothing in its folder changes. */
     close(): Promise<void>;
+    /** Shallow patch of `campaign.json`; `id` and `slug` cannot change, `updatedAt` is set. */
     update(patch: Partial<Campaign>): Promise<Campaign>;
     /** Deletes the campaign folder for good, closing the campaign first if it is open. */
     remove(campaignId: string): Promise<void>;
@@ -563,6 +613,7 @@ export interface TrifoldApi {
     chooseXmlFile(): Promise<string | null>;
     /** Imports a Game Master campaign XML or a Fight Club GM export (DATA-FORMATS.md §3). */
     importXml(path: string, mode: 'new' | 'merge'): Promise<CampaignImportReport>;
+    /** Counts what an export with these options would carry, writing nothing. */
     exportPreview(
       campaignId: string,
       options: CampaignExportOptions,
@@ -571,6 +622,10 @@ export interface TrifoldApi {
     exportTo(campaignId: string, options: CampaignExportOptions): Promise<string | null>;
     /** Native picker for a `.trifold-campaign`; read but not imported. Null when cancelled. */
     choosePackage(): Promise<CampaignPackageInfo | null>;
+    /**
+     * Writes the package's campaign under `mode` (`replace` writes a safety backup first, `copy`
+     * gives everything new ids), adds homebrew the Library lacks and re-indexes when it did.
+     */
     importPackage(path: string, mode: CampaignPackageMode): Promise<CampaignPackageResult>;
   };
   notes: {
@@ -596,24 +651,43 @@ export interface TrifoldApi {
     remove(templateId: string): Promise<void>;
   };
   npcs: {
+    /** An id-less NPC is created; otherwise its file is replaced. `updatedAt` is set either way. */
     save(npc: NPC): Promise<NPC>;
     remove(npcId: string): Promise<void>;
   };
   pcs: {
+    /**
+     * An id-less card is created; otherwise its file is replaced. `updatedAt` is set either way.
+     */
     save(pc: PCCard): Promise<PCCard>;
     remove(pcId: string): Promise<void>;
     /** One PC per line: `Name, Player, Class L, HP, AC, Init, Speed, PP`. */
     quickAdd(text: string): Promise<PCCard[]>;
   };
   encounters: {
+    /**
+     * An id-less encounter is created; otherwise its file is replaced. `updatedAt` is set either
+     * way.
+     */
     save(encounter: Encounter): Promise<Encounter>;
     remove(encounterId: string): Promise<void>;
     /** Autosave of live combat; null clears it. */
     saveState(encounterId: string, state: CombatState | null): Promise<Encounter>;
+    /**
+     * Ends the fight: PC cards and named NPCs get their HP written back (ADR 0012), the live
+     * state is cleared and `result` is appended to the encounter's results.
+     */
     finish(encounterId: string, result: EncounterResult): Promise<Encounter>;
   };
   scenes: {
+    /**
+     * An id-less scene is created; otherwise its file is replaced. `updatedAt` is set either way.
+     */
     save(scene: Scene): Promise<Scene>;
+    /**
+     * Deletes the one scene file; a folder's children and the scene's image files are left as they
+     * are.
+     */
     remove(sceneId: string): Promise<void>;
     /** Native picker; copies the image into the campaign and makes a display-size copy. */
     importImage(): Promise<SceneImage | null>;
@@ -642,9 +716,18 @@ export interface TrifoldApi {
     addFolder(path: string): Promise<MusicLibraryView>;
     /** Forgets a folder and its tracks (files are never touched). */
     removeFolder(path: string): Promise<MusicLibraryView>;
+    /**
+     * Walks every folder again: new files added, moved files relinked, gone files dropped
+     * (DATA-FORMATS.md §5.5).
+     */
     rescan(): Promise<MusicLibraryView>;
+    /**
+     * Patches tags, kind, gain and trims; `id`, `path` and `addedAt` are ignored. Null for an
+     * unknown track.
+     */
     updateTrack(trackId: string, patch: Partial<Track>): Promise<TrackView | null>;
     listPlaylists(): Promise<Playlist[]>;
+    /** An id-less playlist is created; otherwise its file is replaced. */
     savePlaylist(playlist: Playlist): Promise<Playlist>;
     removePlaylist(playlistId: string): Promise<void>;
   };
@@ -655,7 +738,9 @@ export interface TrifoldApi {
     /** Brings up the Bluetooth link and the audio connection; status arrives as events. */
     connect(device: PhoneAudioDevice): Promise<PhoneAudioStatus>;
     disconnect(): Promise<PhoneAudioStatus>;
+    /** Drops a remembered phone, disconnecting first when it is the connected one. */
     forget(deviceId: string): Promise<PhoneAudioStatus>;
+    /** Records which player the table hears (per machine, in config.json); connects nothing. */
     setSource(source: AudioSource): Promise<PhoneAudioStatus>;
   };
   homebrew: {
@@ -670,15 +755,19 @@ export interface TrifoldApi {
     tables(): Promise<IconTables>;
     /** Names of every bundled glyph; empty when the icon set was not fetched. */
     available(): Promise<string[]>;
+    /** Null when the icon set was not fetched at build time (no credits.json). */
     credits(): Promise<IconCreditsInfo | null>;
     /** Records a creature the tables could not match, in Library/logs/icon-misses.txt. */
     reportMiss(kind: string, name: string): Promise<void>;
   };
   compendium: {
+    /** Rows from enabled sources unless `includeDisabled`; see `CompendiumQuery` for collapsing. */
     search(query: CompendiumQuery): Promise<CompendiumSearchResult>;
+    /** Any record by id, from an enabled or a disabled source; null when unknown. */
     get(recordId: string): Promise<CompendiumRecord | null>;
     /** Every edition of a record sharing one key, across enabled sources. */
     findByKey(kind: RecordKind, key: string): Promise<CompendiumRecord[]>;
+    /** Distinct types, sizes and environments of a kind across enabled sources. */
     facets(kind: RecordKind): Promise<CompendiumFacets>;
   };
 }

@@ -9,6 +9,12 @@ import { hk } from '../../platform';
 import { Icon, type IconName } from '../shell/icons';
 import { SearchHighlight } from './searchHighlight';
 
+/**
+ * The Tiptap editor behind every note and template body (ADR 0010): markdown in, markdown out,
+ * so note files stay readable in any editor. The SearchHighlight extension from
+ * searchHighlight.ts draws the notes panel's search hit; `NoteEditor` below has the toolbar and
+ * the rule that opening a note never writes it.
+ */
 export interface Highlight {
   phrase: string;
   /** Which occurrence to show, counting from 0 in reading order. */

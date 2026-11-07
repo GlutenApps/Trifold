@@ -8,6 +8,14 @@ import { itemTypeName } from './formatting';
 import { MonsterEditor } from './MonsterEditor';
 import { RecordDetail } from './RecordDetail';
 
+/**
+ * The Compendium browser (DESIGN.md §6.1): kind tabs, a filter bar that re-runs the search
+ * shortly after every change, the results list, and the open record or homebrew editor beside
+ * it. Duplicate editions collapse into one row with the open campaign's preferred edition in
+ * front (DESIGN.md §7.2), and the detail pane keeps a history so spell links can go back. Below
+ * 960 px the list and the record take turns (ADR 0014). The same component serves the console's
+ * Compendium tab and Library › Compendium.
+ */
 const KINDS: Array<{ id: RecordKind; label: string }> = [
   { id: 'monster', label: 'Monsters' },
   { id: 'spell', label: 'Spells' },
@@ -365,7 +373,7 @@ export function CompendiumPage() {
           {!loading && rows.length === 0 && (
             <p className="muted">
               {sources.length === 0
-                ? 'No sources yet. Import a compendium XML file in Settings → Sources.'
+                ? 'No sources yet. Import a compendium XML file on the Library’s Compendium page.'
                 : 'Nothing matches these filters.'}
             </p>
           )}

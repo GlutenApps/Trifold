@@ -5,8 +5,15 @@ import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
 import { InlineConfirm } from '../shell/InlineConfirm';
 
+/**
+ * The Campaign major (DESIGN.md §6.3). `CampaignPage` at the end of the file is the tab;
+ * before it come the PC card editor and the Party and NPCs sub-tabs, which show the HP carried
+ * between fights with Long rest and Restore (ADR 0012). The Notes sub-tab lives in
+ * CampaignNotes.tsx (ADR 0010).
+ */
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
+/** A number field's text as an integer, or `fallback` when it does not parse. */
 function num(value: string, fallback: number): number {
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) ? n : fallback;
@@ -150,6 +157,7 @@ function PcEditor({
   );
 }
 
+/** A new PC card with starting values and a blank id, which main fills in on save. */
 function blankPc(): PCCard {
   const now = new Date().toISOString();
   return {
@@ -416,7 +424,7 @@ export function CampaignPage() {
         <p className="muted" data-testid="campaign-import-report">
           {lastImport.mode === 'new' ? 'Imported' : 'Merged'} {lastImport.name}:{' '}
           {lastImport.counts.pcs} PCs, {lastImport.counts.npcs} NPCs, {lastImport.counts.notes}{' '}
-          notes, {lastImport.counts.adventures} adventures, {lastImport.counts.encounters}{' '}
+          notes, {lastImport.counts.adventures} adventure folders, {lastImport.counts.encounters}{' '}
           encounters
           {lastImport.counts.statBlocks
             ? `, ${lastImport.counts.statBlocks} inline stat blocks`

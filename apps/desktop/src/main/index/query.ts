@@ -27,6 +27,11 @@ export interface RecordColumns {
   json: string;
 }
 
+/**
+ * The `records` row for one record: the shared columns plus the filter columns its kind has
+ * (monsters: cr, type, size, environment, npc; spells: level, and school as `type`; items: type
+ * code and rarity). The whole record goes into `json` so lists never read from disk.
+ */
 export function recordColumns(record: CompendiumRecord): RecordColumns {
   const base: RecordColumns = {
     id: record.id,
@@ -146,6 +151,13 @@ export interface SearchSql {
 const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 2000;
 
+/**
+ * The search SQL for a `CompendiumQuery`: `sql` and `params` for the page of rows, `countSql`
+ * and `countParams` for the total. By default records sharing a key (the 2024 and legacy
+ * Goblin, or one monster from two sources) collapse to a single row headed by `preferEdition`,
+ * which needs a window function, and bm25() ranking only works in the inner query, never beside
+ * that window function; hence the nested shape. `collapse: false` returns every record.
+ */
 export function buildSearch(query: CompendiumQuery): SearchSql {
   const where: string[] = ['r.kind = ?'];
   const params: unknown[] = [query.kind];
@@ -255,6 +267,7 @@ export interface RawRow {
   editions?: string | null;
 }
 
+/** A `CompendiumRow` from a raw result row; `editions` is expanded from the GROUP_CONCAT column. */
 export function toRow(raw: RawRow): CompendiumRow {
   return {
     id: raw.id,

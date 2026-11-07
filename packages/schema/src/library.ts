@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { MusicSettings } from './music';
 
+/**
+ * The `library.json` settings schema (DESIGN.md §4.2): what one Library remembers between
+ * launches, from the open campaign and the player display to the workspace layouts, web tabs
+ * and backup settings. The shell types a layout is made of (majors, minors, stage, dock) live
+ * here too because a saved layout is part of this file. `LibrarySettings` is near the end.
+ */
 /** Majors: the stage's tabs (ADR 0004). One tab per kind, in at most two groups. */
 /** Encounters holds the combat tracker while a fight runs (ADR 0005). */
 export const MAJOR_KINDS = ['campaign', 'compendium', 'encounters', 'map'] as const;

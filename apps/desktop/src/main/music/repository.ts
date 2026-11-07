@@ -7,6 +7,13 @@ import { MusicLibrary, Playlist, Track, emptyMusicLibrary, nowIso } from '@trifo
 import type { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 
+/**
+ * The music library (DESIGN.md §6.6, DATA-FORMATS.md §5.5): `music/library.json` lists the
+ * folders the DM added and the tracks found in them by absolute path; playlists are one file
+ * each under `music/playlists/`. Audio files are never copied or moved; a rescan relinks a
+ * renamed or moved file to its track so tags, gain and playlist membership follow the file.
+ * `MusicRepository` below.
+ */
 const AUDIO_EXTENSIONS = new Set(['.mp3', '.ogg', '.flac', '.wav', '.m4a']);
 const LIBRARY_FILE = 'music/library.json';
 const PLAYLISTS_DIR = 'music/playlists';

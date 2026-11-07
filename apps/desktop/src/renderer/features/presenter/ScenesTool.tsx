@@ -13,11 +13,18 @@ import { createScene } from './createScene';
 import { SceneEditor } from './SceneEditor';
 import { firstChildOf, flattenTree, matchesQuery, parentOf, siblingAt } from './sceneTree';
 
+/**
+ * The Scenes dock tool (ADR 0004, amended by ADR 0008): the list. It is the only place scenes
+ * are added, edited, reordered or removed; the TV tab shows the selection. `ScenesTool` below
+ * has the detail.
+ */
+
 const isFolder = (scene: Scene) => scene.kind === 'folder';
 
 /**
- * The Scenes tool (ADR 0004 §3.5): tree, new-scene row, selected card and edit form.
- * Click selects and previews; Enter, double-click or ▶ sends to the TV (Decision 10).
+ * The Scenes tool (ADR 0004, Scenes minor): tree, new-scene row, selected card and edit form.
+ * Click selects and previews; Enter, double-click or ▶ sends to the TV (ADR 0004: click
+ * selects, Enter sends).
  */
 export function ScenesTool() {
   const current = useCampaignStore((s) => s.current);

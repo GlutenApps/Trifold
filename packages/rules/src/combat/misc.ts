@@ -114,6 +114,11 @@ export function parseQuickAddLine(line: string): QuickAddPc | null {
   return pc;
 }
 
+/**
+ * The quick-add text: one PC per line as `Name, Player, Class L, HP, AC, Init, Speed, PP` (see
+ * `parseQuickAddLine`). Blank lines and lines starting with `#` are skipped; a line without a
+ * name is dropped.
+ */
 export function parseQuickAdd(text: string): QuickAddPc[] {
   return text
     .split(/\r?\n/)

@@ -4,11 +4,18 @@ import { useRollLogStore } from '../../stores/rollLogStore';
 import { Icon } from '../shell/icons';
 import { DicePool } from './DicePool';
 
+/**
+ * The Dice tool (DESIGN.md §6.7), a pop-up above the strip's dice button (ADR 0009): the pool
+ * builder, a typed expression for anything the chips cannot say, and the shared roll log. The
+ * strip's chips are a mirror of this tool; the modifier, Adv/Dis, typed rolls and the log live
+ * only here. Rolling itself is the pool store's `rollAndLog`, re-exported for convenience.
+ */
+
 export { rollAndLog };
 
 interface DiceRollerProps {
   showLog?: boolean;
-  /** Accessible name of the typed-expression field; the tray uses a distinct one from the panel. */
+  /** Accessible name of the typed-expression field; a second home must pass a distinct one. */
   inputLabel?: string;
 }
 

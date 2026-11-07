@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { glyphForCreature, type IconTableSet } from '@trifold/rules';
 
+/**
+ * The token glyph lookup (DESIGN.md §6.8): the bundled mapping tables and the set of game-icons
+ * names the build actually ships, fetched once from main and kept in memory for the session.
+ * Nothing is written from here except a miss report, so the mapping can grow from real names.
+ * Read-only for features; `load()` is safe to call from every mount.
+ */
 const EMPTY: IconTableSet = {
   creatureType: {},
   ancestry: {},

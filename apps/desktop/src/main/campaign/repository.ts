@@ -19,6 +19,14 @@ import {
 import type { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 
+/**
+ * The campaign folder on disk (DESIGN.md §5.2, DATA-FORMATS.md §5.4): `campaigns/<slug>/` with
+ * `campaign.json` and one JSON file per PC card, encounter, adventure, note, NPC and scene.
+ * This module owns the folder, the open-campaign state, PC cards and encounters, including what
+ * a finished fight writes back to cards and NPCs (ADR 0012); `CampaignEntities` handles the
+ * other kinds through the helpers here. Reads validate and migrate; writes go through
+ * `LibraryStore`, so they are atomic.
+ */
 /** Sub-folders of every campaign (DATA-FORMATS.md §5.4). */
 export const CAMPAIGN_LAYOUT = [
   'adventures',
@@ -31,14 +39,19 @@ export const CAMPAIGN_LAYOUT = [
   'tokens',
 ];
 
+/**
+ * The folder name for a campaign: `normalizeKey(name)` with spaces as hyphens, or `campaign`
+ * when nothing survives. Uniqueness is `freeSlug`'s job (it appends `-2`, `-3` and so on).
+ */
 function slugify(name: string): string {
   const base = normalizeKey(name).replace(/\s+/g, '-');
   return base || 'campaign';
 }
 
 /**
- * `campaigns/<slug>/` on disk: campaign.json plus one JSON file per PC card and encounter.
- * Writes go through the LibraryStore (atomic); reads validate and migrate.
+ * One campaign is open at a time (`current`, remembered in `library.json`); any campaign can be
+ * read with `bundleOf`, which is what export uses. Entity lists come back sorted (PCs and NPCs
+ * by name, encounters newest first, adventures and scenes by `order`, notes in tree order).
  */
 export class CampaignRepository {
   private currentSlug: string | null = null;
@@ -240,6 +253,14 @@ export class CampaignRepository {
     return this.readNotes(
       slug,
       await this.readAll(this.dir(slug, 'adventures'), Adventure, 'adventure'),
+    );
+  }
+
+  /** The open campaign's scenes in tree order. */
+  async scenes(): Promise<Scene[]> {
+    const slug = this.requireSlug();
+    return (await this.readAll(this.dir(slug, 'scenes'), Scene, 'scene')).sort(
+      (a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt),
     );
   }
 

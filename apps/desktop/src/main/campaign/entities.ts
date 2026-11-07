@@ -125,7 +125,25 @@ export class CampaignEntities {
     return scene;
   }
 
+  /**
+   * Removes a scene. A folder's children move up to its parent (the same lift as notes), so
+   * no scene file is left pointing at a missing folder.
+   */
   async removeScene(id: string): Promise<void> {
+    const scenes = await this.repo.scenes();
+    const target = scenes.find((s) => s.id === id);
+    const children = scenes.filter((s) => s.parentId === id);
+    if (target && children.length) {
+      const parentId = target.parentId ?? null;
+      let order = Math.max(
+        -1,
+        ...scenes.filter((s) => (s.parentId ?? null) === parentId).map((s) => s.order),
+      );
+      await this.repo.writeEntities(
+        'scenes',
+        children.map((child) => ({ ...child, parentId, order: ++order, updatedAt: nowIso() })),
+      );
+    }
     await rm(this.repo.entityPath('scenes', id), { force: true });
     await this.repo.touch();
   }

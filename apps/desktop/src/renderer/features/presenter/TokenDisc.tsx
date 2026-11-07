@@ -1,6 +1,12 @@
 import type { LiveToken, TokenStyle } from '@trifold/api';
 import { initials } from './mapMath';
 
+/**
+ * One token drawn as a disc (DESIGN.md §6.8), shared by the map editor and the player's map
+ * (MapLayer) so a creature looks the same on both screens. `TokenDisc` below explains the art,
+ * glyph and initials fallbacks and the treatment styles.
+ */
+
 export interface TokenDiscProps {
   token: Pick<LiveToken, 'label' | 'role' | 'kind' | 'dead'> &
     Partial<Pick<LiveToken, 'artUrl' | 'glyphUrl' | 'color'>>;

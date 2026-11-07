@@ -7,6 +7,12 @@ import { AUTOSAVE_MS } from './autosave';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { NoteEditor } from './NoteEditor';
 
+/**
+ * The templates editor that the notes panel opens in its right pane (ADR 0010). Templates are
+ * Library-level files shared by every campaign, each a name and a markdown body edited with
+ * the same NoteEditor as a note and saved on the same timer through the pending-save registry.
+ */
+
 /** A template's name and body, saved shortly after the last change and on close. */
 function TemplateEditor({ template }: { template: NoteTemplate }) {
   const save = useNoteTemplateStore((s) => s.save);

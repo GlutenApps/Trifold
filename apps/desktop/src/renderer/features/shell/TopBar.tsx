@@ -7,7 +7,7 @@ import { Logo } from './Logo';
 import { hk } from '../../platform';
 
 /**
- * The frameless window's title bar (ADR 0004 §2.1): mark → Library, campaign breadcrumb →
+ * The frameless window's title bar (ADR 0004, top bar): mark → Library, campaign breadcrumb →
  * switcher, current layout, Hotkeys, Settings. Layouts and Hotkeys pop up from their buttons
  * (ADR 0009); the dock collapses from its own header, never from here. Windows draws the window controls over the right end, so the bar
  * leaves that space free.

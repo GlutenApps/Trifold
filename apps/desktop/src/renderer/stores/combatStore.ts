@@ -59,6 +59,16 @@ import { usePresenterStore } from './presenterStore';
 import { facesText, useRollLogStore } from './rollLogStore';
 import { useSceneStore } from './sceneStore';
 
+/**
+ * The live fight (DESIGN.md §6.4): one running encounter's CombatState plus the prompts around
+ * it (save calls, pending damage, concentration). Every change autosaves to the encounter's
+ * file through `encounters.saveState` after a short settle; the renderer never holds the only
+ * copy for long. `end()` flushes the notes, writes the final state, then asks main to finish,
+ * which carries PC and NPC HP over to their records (ADR 0012). During a fight the combatant's
+ * hidden and dead flags are the truth and write through to its map token via the scene store.
+ * Rolls made here land in the shared roll log with source `tracker`.
+ */
+
 /** A save call in progress: creature results auto-rolled, PC bonuses shown for the table. */
 export interface SaveCallView {
   id: string;
@@ -149,8 +159,7 @@ interface CombatStoreState {
    * it on the encounter; a PC or NPC already fighting is left alone.
    */
   addToFight(template: CombatantTemplate): Promise<void>;
-  /** Edits the running encounter's DM notes, saved with the live state. */
-  /** Resolves when the edit is written. */
+  /** Edits the running encounter's DM notes, saved with the live state; resolves when written. */
   setNotes(notes: string): Promise<void>;
   /** Turns a creature into a named NPC whose HP carries between fights. */
   trackAsNpc(id: string): Promise<NPC | null>;

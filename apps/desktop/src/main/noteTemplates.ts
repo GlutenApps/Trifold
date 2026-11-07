@@ -6,6 +6,11 @@ import type { LibraryStore } from './library/LibraryStore';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 
+/**
+ * Note templates (ADR 0010): Library-level starting bodies for new notes, one JSON file each
+ * under `templates/notes/` (DATA-FORMATS.md §5.4). This module holds the seeded "Session prep"
+ * template, the repository and the `noteTemplates` API namespace.
+ */
 const DIR = 'templates/notes';
 
 /** The one template every Library starts with: a session outline in our own words. */

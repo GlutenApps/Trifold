@@ -3,6 +3,10 @@ import { useCompendiumStore } from '../../stores/compendiumStore';
 import { CompendiumPage } from '../compendium/CompendiumPage';
 import { SourcesCard } from '../settings/SourcesCard';
 
+/**
+ * Library › Compendium (ADR 0004): the same browser as the console's Compendium tab, the
+ * Sources card, and a Homebrew view that is the browser narrowed to the homebrew source.
+ */
 type Segment = 'browse' | 'sources' | 'homebrew';
 
 /** Library › Compendium: Browse (the same search as the console tab), Sources, Homebrew. */

@@ -11,6 +11,13 @@ import type { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 import type { SourceRepository } from './repository';
 
+/**
+ * Importing a Lion's Den compendium XML into the Library (DESIGN.md §6.1, DATA-FORMATS.md §2):
+ * the file is hashed, copied to `sources/<id>/original.xml`, stream-parsed by
+ * `@trifold/importers`, written as `records.jsonl` plus `source.json` (DATA-FORMATS.md §5.1 and
+ * §5.2) and indexed. `importXmlSource` below has the details, including how record ids survive
+ * a re-import so campaign references keep working.
+ */
 export interface ImportContext {
   store: LibraryStore;
   sources: SourceRepository;

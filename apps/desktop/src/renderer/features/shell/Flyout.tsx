@@ -5,8 +5,9 @@ import { Icon } from './icons';
 import { MINOR_ICON, MinorBody } from './minors';
 
 /**
- * A minor opened while the dock shows icons only or is hidden (ADR 0004 §3.4): beside its icon,
- * or above the strip's section. One at a time; Escape closes it.
+ * A minor opened while the dock shows icons only (ADR 0004, dock; the dock is never hidden
+ * since ADR 0009): beside its icon, or above the strip's section. One at a time; Escape closes
+ * it.
  */
 export function Flyout() {
   const flyout = useShellStore((s) => s.flyout);

@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import type { ImportProgress, ImportReport, SourceSummary } from '@trifold/api';
 import { errorMessage } from '@trifold/schema';
 
+/**
+ * Compendium sources as the Library page lists them (DESIGN.md §6.1): the imported files, their
+ * enabled flags, and the progress and report of the import running now. Main owns the source
+ * files and the index; this store keeps main's answers and the progress events the page feeds
+ * it through `setProgress`. Nothing persists from here and the list is reloaded after every
+ * import, re-import or rebuild.
+ */
 interface SourcesState {
   sources: SourceSummary[];
   loading: boolean;

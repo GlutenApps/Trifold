@@ -17,6 +17,15 @@ import {
   type LoopMode,
 } from '../features/music/queue';
 
+/**
+ * The music controller (DESIGN.md §6.6): the scanned library and playlists as main reports
+ * them, the Library-wide settings (volumes, crossfade, output device), and the session's queue
+ * and transport. Settings persist through `library.updateSettings`; playlists, folders and
+ * track edits go to main's music store; the queue, position, mute and loop-track are session
+ * only and start empty. This module owns the one AudioEngine (one AudioContext, every change
+ * through a fade), so features drive playback through these actions and never touch the engine.
+ * With the phone chosen as the source (ADR 0007) the transport is inert.
+ */
 export interface OutputDevice {
   deviceId: string;
   label: string;

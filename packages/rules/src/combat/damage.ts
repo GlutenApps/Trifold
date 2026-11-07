@@ -74,6 +74,12 @@ export interface DamageOutcome {
   massive: boolean;
 }
 
+/**
+ * Applies `amount` times `multiplier` (0 immune, 0.5 resistant, 2 vulnerable, from
+ * `damageMultiplier`), rounded down after multiplying, temp HP first. `adjusted` is the damage
+ * after the multiplier, `absorbedByTemp` what temp HP took, `dealt` what came off current HP
+ * (which never goes below 0), and `massive` whether the excess past 0 reached max HP.
+ */
 export function applyDamage(hp: HitPoints, amount: number, multiplier: number = 1): DamageOutcome {
   const adjusted = Math.max(0, Math.floor(Math.max(0, amount) * multiplier));
   const absorbedByTemp = Math.min(hp.temp, adjusted);

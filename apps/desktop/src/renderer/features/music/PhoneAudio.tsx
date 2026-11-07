@@ -4,6 +4,13 @@ import { isMac } from '../../platform';
 import { mergePhones, usePhoneAudioStore, type PhoneRow } from '../../stores/phoneAudioStore';
 import { Icon } from '../shell/icons';
 
+/**
+ * The phone audio receiver page (ADR 0007): on Windows, the paired phones main lists, connect,
+ * disconnect and forget; on macOS, a guide to the OS's own way of doing it. It reads and acts
+ * through the phone audio store, which mirrors main's status; nothing here holds state of its
+ * own beyond what the current pane shows.
+ */
+
 /** Opens an OS settings page; says so when this OS has no such page. */
 function SystemButton({
   page,

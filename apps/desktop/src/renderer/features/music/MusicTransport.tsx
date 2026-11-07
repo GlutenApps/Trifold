@@ -4,13 +4,20 @@ import { Icon } from '../shell/icons';
 import { formatTime, loopMode, type LoopMode } from './queue';
 import { hk } from '../../platform';
 
+/**
+ * The Music tool's transport (DESIGN.md §6.6): now playing, play/pause, previous and next,
+ * seek, loop, the volume sliders and the output device, all driven through the music store so
+ * every change fades. Rendered only by MusicTool; the live strip mirrors the one-tap actions
+ * with its own buttons (ADR 0008) rather than reusing this.
+ */
+
 const LOOP_LABELS: Record<LoopMode, string> = {
   off: 'Loop off',
   playlist: 'Looping playlist',
   track: 'Looping track',
 };
 
-/** Now playing, transport, seek, volumes and output device. Used by the Music panel and the tray. */
+/** Now playing, transport, seek, volumes and output device. Rendered by MusicTool only. */
 export function MusicTransport() {
   const music = useMusicStore();
   const current = music.order[music.index];

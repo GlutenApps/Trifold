@@ -6,6 +6,13 @@ import { useCampaignStore } from '../../stores/campaignStore';
 import { flushPendingSaves } from '../../stores/pendingSaves';
 import { Icon } from '../shell/icons';
 
+/**
+ * The Backups card on Library › Settings (DESIGN.md §4.2 and §10 M1 item 8, ADR 0015): the
+ * daily backup switch and keep days, Back up now, the second copy location, the zips in the
+ * Library and restore from one of them or from any file. Pending saves are flushed before a
+ * backup or restore so the zip holds the last edit. `BackupsCard` below is the card; the
+ * helpers above it format sizes, dates and a picked zip's manifest.
+ */
 function size(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -60,7 +67,10 @@ function CopyStatusLine({ status }: { status: BackupCopyStatus }) {
   );
 }
 
-/** Backups card (DESIGN.md §4.2, §10 M1 §8, ADR 0015): schedule, second location, back up, restore. */
+/**
+ * Backups card (DESIGN.md §4.2 and §10 M1 item 8, ADR 0015): schedule, second location, back up,
+ * restore.
+ */
 export function BackupsCard() {
   const library = useAppStore((s) => s.library);
   const updateSettings = useAppStore((s) => s.updateSettings);

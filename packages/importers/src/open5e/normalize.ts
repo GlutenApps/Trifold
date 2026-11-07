@@ -33,6 +33,13 @@ import type {
   O5eSpell,
 } from './types';
 
+/**
+ * Open5e v2 JSON to Trifold records (DATA-FORMATS.md §4), used by the build-time SRD fetch and
+ * never at runtime. Open5e records are structured, so most fields map directly; action text is
+ * still run through the §2.5 attack and save patterns because the text is more reliable than
+ * the structured attack data, which only fills gaps. The output matches the compendium
+ * importer's shapes so both feed the same index.
+ */
 export interface Open5eContext {
   /** Trifold source id, e.g. `srd-2024`. */
   sourceId: string;
@@ -216,6 +223,11 @@ function sensesText(raw: O5eCreature): string {
   return parts.join(', ');
 }
 
+/**
+ * A creature to a monster record. Missing ability scores, CR or size warn and get defaults;
+ * actions are split by `action_type` into actions, bonus actions, reactions, legendary and
+ * lair; XP comes from Open5e when present, else from the CR table.
+ */
 export function normalizeCreature(raw: O5eCreature, ctx: Open5eContext): CompendiumRecord {
   const abilities = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
   for (const [name, key] of Object.entries(ABILITY_KEY)) {
@@ -652,7 +664,7 @@ export function normalizeClass(raw: O5eClass, ctx: Open5eContext): CompendiumRec
   return record;
 }
 
-/** Dispatches one raw Open5e record by endpoint kind. */
+/** Dispatches one raw Open5e record by endpoint kind; `raw` is cast, not validated. */
 export function normalizeOpen5e(kind: O5eKind, raw: O5eBase, ctx: Open5eContext): CompendiumRecord {
   switch (kind) {
     case 'creatures':

@@ -8,6 +8,11 @@ import { CompendiumRecord, type Feature, type Source } from '@trifold/schema';
 import type { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 
+/**
+ * The DM's own records (DESIGN.md §6.2, DATA-FORMATS.md §5.3): plain JSON files under
+ * `homebrew/`, presented to the index as one virtual source whose hash follows the files.
+ * `HomebrewRepository` below.
+ */
 export const HOMEBREW_SOURCE_ID = 'homebrew';
 const DIR = 'homebrew';
 const ID = /^[A-Za-z0-9:_-]+$/;

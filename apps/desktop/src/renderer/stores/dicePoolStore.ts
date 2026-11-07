@@ -98,8 +98,9 @@ interface DicePoolState extends DicePool {
 }
 
 /**
- * One pool for the whole app (DESIGN.md §6.7): the Dice panel, the tray drawer and the tray bar
- * all show and edit the same selection, so a die added anywhere rolls from anywhere.
+ * One pool for the whole app (DESIGN.md §6.7): the Dice pop-up (DiceRoller) and the live
+ * strip's compact DicePool (ADR 0009) show and edit the same selection, so a die added in one
+ * rolls from the other. Session only; rolls go to the shared roll log with source `pool`.
  */
 export const useDicePoolStore = create<DicePoolState>((set, get) => ({
   counts: { ...EMPTY_COUNTS },

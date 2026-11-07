@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import type { AppInfo, DisplayInfo, LibraryInfo } from '@trifold/api';
 import { errorMessage, type LibrarySettings } from '@trifold/schema';
 
+/**
+ * App-level state the console needs before any campaign is open: build info, the open Library
+ * and its settings, the displays, and whether the player window is up. Nothing here persists on
+ * its own: Library settings are written by main through `library.updateSettings` and the store
+ * keeps the copy main returns (DESIGN.md §4.2). Any feature may call its actions; the player
+ * window never does. The theme is applied here because it is a Library setting.
+ */
 interface AppState {
   info: AppInfo | null;
   library: LibraryInfo | null;

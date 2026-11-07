@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useShellStore } from '../../stores/shellStore';
 import { cancelClose, confirmClose } from './campaignFlow';
 
-/** The only modal in the app (ADR 0004, Decision 2). */
+/** The only modal in the app (ADR 0004, the close-campaign warning). */
 export function CloseCampaignPrompt() {
   const open = useShellStore((s) => s.closePrompt);
   const keep = useRef<HTMLButtonElement>(null);

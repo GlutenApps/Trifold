@@ -48,6 +48,12 @@ import { errorMessage, type Logger } from '../log';
 import { fileName as homebrewFile, type HomebrewRepository } from '../sources/homebrew';
 import { CAMPAIGN_LAYOUT, type CampaignRepository } from './repository';
 
+/**
+ * Campaign export and import as `.trifold-campaign` zips (ADR 0015). Export is selection
+ * (`prepareExport` in `@trifold/importers`) plus zipping; import validates and migrates every
+ * file and writes it through `LibraryStore`, adding homebrew the Library lacks without
+ * overwriting the DM's own copies. `CampaignPackager` below.
+ */
 const MANIFEST = 'manifest.json';
 const LAYOUT = 'layout.json';
 /** Inside the zip: the campaign folder, then homebrew records beside it. */

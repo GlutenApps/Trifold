@@ -2,6 +2,11 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, open, rename, unlink } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
+/**
+ * The atomic file write every Library file goes through (CLAUDE.md ground rule 2): temp file,
+ * fsync, rename. `writeFileAtomic` below explains the per-path locking and the Windows rename
+ * retry; `writeJsonAtomic` adds the JSON formatting from DATA-FORMATS.md §5.
+ */
 const RENAME_ATTEMPTS = 6;
 const RENAME_BACKOFF_MS = 50;
 

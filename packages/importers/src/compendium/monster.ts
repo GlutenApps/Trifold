@@ -18,6 +18,12 @@ import { makeHeader, requireName, splitSource, type NormalizeContext } from './c
 import { buildFeature } from './feature';
 import { children, collectExtra, text, textBlocks, type XmlNode } from '../xml/tree';
 
+/**
+ * `<monster>` to a `MonsterRecord` (DATA-FORMATS.md §2.2 to §2.6). Field formats are parsed by
+ * the pure helpers in `@trifold/rules`; features (uses, recharge, bonus actions, attack triples,
+ * text patterns) by `buildFeature`. Lenient throughout: a missing field warns and gets a
+ * default, and unknown child elements are kept verbatim in `data.extra`.
+ */
 const KNOWN = new Set([
   'name',
   'size',
@@ -73,6 +79,12 @@ const SIZE_WORDS: Record<string, Size> = {
 
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
+/**
+ * Returns null, with a warning, for a nameless record. Applies the §2.2 field formats and the
+ * Proficiency Bonus trait extraction, the §2.3 split into bonus actions, legendary header and
+ * lair, §2.6 spells and slots, the §2.9 Source line and §2.10 edition tagging (through
+ * `makeHeader`). Unknown children land in `data.extra`.
+ */
 export function normalizeMonster(node: XmlNode, ctx: NormalizeContext): MonsterRecord | null {
   const name = requireName(node);
   if (!name) {

@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-/** `<userData>/config.json` — app-level state that is not part of any Library (which Library is open, window bounds). */
+/**
+ * `<userData>/config.json`: app-level state that belongs to this computer rather than to any
+ * Library. Which Library is open and which were opened recently, where the console window was,
+ * the audio source and remembered phones (ADR 0007), and the second backup location (ADR 0015).
+ */
 export const APP_CONFIG_SCHEMA_VERSION = 1;
 
 export const WindowBounds = z.object({

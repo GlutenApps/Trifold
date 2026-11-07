@@ -8,9 +8,10 @@ import { Icon } from './icons';
 import { MINOR_ICON, MinorBody } from './minors';
 
 /**
- * The dock (ADR 0004 §3.4): minors as toggled sections on the right. Wide 400, narrow 300,
- * icons 44 (a tap opens a flyout), or hidden. The last open section takes the remaining height
- * and scrolls inside; headers never scroll away.
+ * The dock (ADR 0004, dock): minors as toggled sections on the right. Wide 400, narrow 360 or
+ * icons 44 (a tap opens a flyout), chosen from its own header and the drag edge; it is never
+ * hidden any more (ADR 0009), and a narrow window trims it to icons (ADR 0014). The last open
+ * section takes the remaining height and scrolls inside; headers never scroll away.
  */
 export function Dock() {
   const dock = useShellStore((s) => s.layout.dock);
@@ -25,8 +26,6 @@ export function Dock() {
   const effective = fit.dock;
   const expandDock = useShellStore((s) => s.expandDock);
   const trimmed = fit.dockTrimmed;
-
-  if (dock.state === 'hidden') return null;
 
   if (effective === 'icons') {
     return (

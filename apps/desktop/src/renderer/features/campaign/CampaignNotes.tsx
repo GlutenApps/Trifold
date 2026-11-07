@@ -12,6 +12,14 @@ import { InlineConfirm } from '../shell/InlineConfirm';
 import { NoteEditor, type Highlight } from './NoteEditor';
 import { TemplatesPane } from './TemplatesPane';
 
+/**
+ * The Notes sub-tab of the Campaign major (ADR 0010): a tree of notes and folders on the left
+ * with find, new note, new folder, collapse and drag-to-move, and the open note (or the
+ * templates editor) on the right, split by a drag edge. Search is a phrase search in memory;
+ * its hits replace the tree, and Enter and Shift+Enter step through every occurrence, which the
+ * editor highlights. The open note saves itself shortly after the last change and on close,
+ * through the pending-save registry so a backup can flush it first (ADR 0015).
+ */
 const TREE_MIN = 180;
 const TREE_MAX = 520;
 

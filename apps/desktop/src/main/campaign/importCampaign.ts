@@ -29,6 +29,12 @@ import type { SourceRepository } from '../sources/repository';
 import { CampaignEntities } from './entities';
 import type { CampaignRepository } from './repository';
 
+/**
+ * Importing a Lion's Den campaign XML (DATA-FORMATS.md §3) into the Library. The parser in
+ * `@trifold/importers` turns the file into plain lists; this module writes them as PC cards,
+ * NPCs, notes, adventures and encounters, matches combatants to records by key, and files
+ * inline stat blocks as a source of their own. `importCampaignXml` below.
+ */
 export interface CampaignImportContext {
   store: LibraryStore;
   sources: SourceRepository;

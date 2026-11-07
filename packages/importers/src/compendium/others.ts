@@ -25,6 +25,11 @@ import {
 } from './context';
 import { children, collectExtra, text, textBlocks, type XmlNode } from '../xml/tree';
 
+/**
+ * Normalizers for the non-monster kinds (DATA-FORMATS.md §2.7, §2.8 and §2.11 to §2.13): spell,
+ * item and equipment pack, feat, species (`<race>`), background and class. Each keeps the fields
+ * the document names, warns on what is missing and stores unknown children in `data.extra`.
+ */
 // ---------- spell (DATA-FORMATS.md §2.7) ----------
 
 const SPELL_KNOWN = new Set([

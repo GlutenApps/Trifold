@@ -9,6 +9,11 @@ import type { Edition, Modifier, Roll } from '@trifold/schema';
 import { RECORD_SCHEMA_VERSION } from '@trifold/schema';
 import { children, text, type XmlNode } from '../xml/tree';
 
+/**
+ * What every compendium normalizer shares: the per-record context (source, edition rules, id
+ * factory, warning sink), the record header (key, display name, edition, citation) and the
+ * readers for the `<roll>` and `<modifier>` children several kinds carry.
+ */
 export interface NormalizeContext {
   sourceId: string;
   defaultEdition: Edition;
@@ -71,6 +76,10 @@ export function splitSource(body: string): {
   return out;
 }
 
+/**
+ * `<roll description="…" level="N">dice</roll>` children (DATA-FORMATS.md §2.14), whitespace
+ * stripped from the dice; empty ones are dropped.
+ */
 export function readRolls(node: XmlNode): Roll[] {
   const out: Roll[] = [];
   for (const r of children(node, 'roll')) {
@@ -85,6 +94,10 @@ export function readRolls(node: XmlNode): Roll[] {
   return out;
 }
 
+/**
+ * `<modifier category="…">target ±N</modifier>` children (DATA-FORMATS.md §2.14); one without a
+ * signed number warns and is dropped.
+ */
 export function readModifiers(node: XmlNode, ctx: NormalizeContext): Modifier[] {
   const out: Modifier[] = [];
   for (const m of children(node, 'modifier')) {

@@ -5,9 +5,10 @@ import type { IconResources } from './icons';
 import type { LibrarySession } from './library/session';
 
 /**
- * `trifold-media://library/<library-relative path>` serves files from the open Library to the
- * renderer (scene images, later tokens and portraits). Paths that escape the Library are refused
- * by LibraryStore.resolvePath. Must be registered before `app.whenReady()`.
+ * `trifold-media://` serves local files to the renderer: `library/<Library-relative path>` for
+ * scene images and token art inside the open Library, `icons/<name>.svg` for bundled glyphs and
+ * `track/<id>` for music files wherever they live. Library paths that escape the root are
+ * refused by `LibraryStore.resolvePath`. Must be registered before `app.whenReady()`.
  */
 export function registerMediaScheme(): void {
   protocol.registerSchemesAsPrivileged([

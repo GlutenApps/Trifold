@@ -4,7 +4,7 @@ import { usePresenterStore } from '../../stores/presenterStore';
 import { useShellStore } from '../../stores/shellStore';
 
 /**
- * One campaign at a time (ADR 0004, Decision 2). Closing while a scene is on the TV or a fight
+ * One campaign at a time (ADR 0004, spaces). Closing while a scene is on the TV or a fight
  * is running asks first; "Stop sharing and close" blacks out the TV and leaves the fight.
  */
 

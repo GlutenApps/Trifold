@@ -9,6 +9,13 @@ import { useRollLogStore } from '../../stores/rollLogStore';
 import { Icon } from '../shell/icons';
 import { RollReveal, useRollReveal } from './RollReveal';
 
+/**
+ * The shared dice pool as chips and a Roll button (DESIGN.md §6.7). It has two homes with
+ * different accessible names (ADR 0009): the full version inside the Dice pop-up, and the
+ * compact version at the right end of the live strip. Both edit the one pool store, so a die
+ * added in either rolls from the other.
+ */
+
 interface DicePoolProps {
   /** The tray-bar form: die chips, Roll and the last total in one row. */
   compact?: boolean;
@@ -16,7 +23,7 @@ interface DicePoolProps {
 
 /**
  * Click dice to build a pool (each click adds one; right-click takes one away), set a modifier,
- * then Roll. The pool is shared app-wide, so the panel, the drawer and the tray bar agree.
+ * then Roll. The pool is shared app-wide, so the Dice pop-up and the strip's compact pool agree.
  */
 export function DicePool({ compact = false }: DicePoolProps) {
   const counts = useDicePoolStore((s) => s.counts);

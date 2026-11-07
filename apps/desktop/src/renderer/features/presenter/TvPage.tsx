@@ -13,6 +13,13 @@ import { MapEditor } from './MapEditor';
 import { MapPop } from './MapPop';
 import { flattenTree, showableAt } from './sceneTree';
 
+/**
+ * The TV tab, the stage major under the `map` key (ADR 0008): the one screen where the DM sees
+ * and shapes a scene and sends it. This file holds the page, its scene picker, the control bar
+ * and the preview for non-map scenes; `TvPage` below has the detail. Maps hand off to MapEditor.
+ */
+
+/** Every overlay toggle the TV offers, in the order the Overlays pop-up lists them. */
 const OVERLAY_LABELS: { [K in keyof PresenterOverlays]: string } = {
   sceneTitle: 'Scene title',
   initiativeStrip: 'Initiative strip',

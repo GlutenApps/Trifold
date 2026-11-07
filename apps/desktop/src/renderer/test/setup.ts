@@ -5,6 +5,14 @@ import { discardPendingSaves } from '../stores/pendingSaves';
 import { initialPresenterState, type PhoneAudioStatus, type TrifoldBridge } from '@trifold/api';
 import { defaultLibrarySettings, type CompendiumRecord, type Playlist } from '@trifold/schema';
 
+/**
+ * Vitest setup for the renderer. `installBridgeMock` builds a complete `window.trifold` of
+ * `vi.fn` stubs with harmless defaults (empty lists, settings as shipped, "not mocked" throws for
+ * writes a test must set up itself), so components and stores run under jsdom without Electron.
+ * The hooks below install it fresh before each test, clean up after, and polyfill the layout
+ * APIs jsdom lacks.
+ */
+
 function phoneStatus(state: PhoneAudioStatus['state']): PhoneAudioStatus {
   return { supported: true, state, device: null, detail: null, remembered: [], source: 'computer' };
 }

@@ -246,6 +246,12 @@ const ENCOUNTER_META = new Set([
   'uid',
 ]);
 
+/**
+ * A streaming parser: feed `write` chunks of the file, then `end` returns the `CampaignImport`.
+ * Inline stat blocks and nested spells go through the compendium normalizers under
+ * `options.statBlockSourceId` and are deduplicated by kind and key; what could not be read
+ * becomes a warning, and the root element is reported so main can refuse a non-campaign file.
+ */
 export function createCampaignParser(options: CampaignImportOptions) {
   const warnings: string[] = [];
   const statBlocks: CompendiumRecord[] = [];
@@ -480,6 +486,7 @@ export function createCampaignParser(options: CampaignImportOptions) {
   };
 }
 
+/** Whole-document convenience over `createCampaignParser`, for main and tests. */
 export function parseCampaignXml(xml: string, options: CampaignImportOptions): CampaignImport {
   const parser = createCampaignParser(options);
   parser.write(xml);

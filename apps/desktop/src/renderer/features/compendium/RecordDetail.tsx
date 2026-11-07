@@ -9,6 +9,13 @@ import { itemTypeName } from './formatting';
 import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
 
+/**
+ * One open compendium record (DESIGN.md §6.1): a bar with Back, the edition switch and the
+ * source citation, then either the record laid out by kind (monsters as the 2024 stat block)
+ * or its source text with any unknown elements the importer preserved. Rolls made from the
+ * record land in the shared log through compendiumRolls; the homebrew bar (DESIGN.md §6.2) is
+ * for monsters only in M1.
+ */
 interface Props {
   record: CompendiumRecord;
   editions: CompendiumRecord[];

@@ -3,6 +3,13 @@ import type { CombatSummary, MapScene } from '@trifold/api';
 import { TokenDisc } from './TokenDisc';
 import { viewTransform } from './mapMath';
 
+/**
+ * The map as the players see it (DESIGN.md §6.5): art, grid lines and token discs placed in map
+ * pixels, with the live camera letterboxed into the window. It is a pure view of the LiveScene
+ * main pushes, so the player window and the console's preview render the same thing; the
+ * console's editing lives in MapEditor, which borrows only `GridLines` from here.
+ */
+
 /** Grid lines as an SVG pattern over the map. */
 export function GridLines({
   width,

@@ -3,6 +3,13 @@ import type { Playlist, Scene } from '@trifold/schema';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
 
+/**
+ * The scene metadata form inside the Scenes tool (ADR 0008): the fields every scene kind
+ * shares. It edits the scene the tool hands it and reports each change up; the tool owns the
+ * draft, the autosave and the TV mirror. Map-only settings (grid, tokens, camera) live in the
+ * map editor, not here.
+ */
+
 /** The edit-scene form (title, subtitle, TV title rule, music on go-live, backdrop, notes). Folders are set by dragging in the tree. */
 export function SceneEditor({
   scene,
@@ -131,5 +138,3 @@ export function SceneEditor({
     </div>
   );
 }
-
-/** Scene tree and live controls for the player window (DESIGN.md §6.5). */

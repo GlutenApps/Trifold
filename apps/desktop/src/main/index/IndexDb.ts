@@ -8,6 +8,13 @@ import type {
 import { CompendiumRecord, type RecordKind, type Source } from '@trifold/schema';
 import { buildSearch, indexText, recordColumns, toRow, type RawRow } from './query';
 
+/**
+ * The SQLite index (DESIGN.md §4.3, DATA-FORMATS.md §5.6): a derived, rebuildable view of the
+ * records on disk, never the only copy of anything (CLAUDE.md ground rule 2). This class owns
+ * the connection, the table layout and every query; the SQL that needs no database lives in
+ * `query.ts` so it can be unit-tested. Rows are replaced one whole source at a time; `sync.ts`
+ * decides which sources need it from their file hash and enabled flag.
+ */
 /** Bump when the derived table layout changes; the tables are dropped and rebuilt from files. */
 export const INDEX_VERSION = 2;
 

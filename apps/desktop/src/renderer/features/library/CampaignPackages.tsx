@@ -13,6 +13,12 @@ import { flushPendingSaves } from '../../stores/pendingSaves';
 import { useShellStore } from '../../stores/shellStore';
 import { InlineConfirm } from '../shell/InlineConfirm';
 
+/**
+ * Campaign export and import (ADR 0015). `CampaignExportPanel` sits inline in a campaign's card;
+ * `useCampaignPackageImport` gives Library › Campaigns its Import campaign… button and the
+ * panel that shows what a picked file holds before anything is written, offering Replace or
+ * Import as a copy when the Library already has the campaign.
+ */
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /**

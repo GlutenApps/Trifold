@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import { Edition, RecordKind } from './common';
 
-/** One compendium entry. DESIGN.md §5.1. Kind-specific `data` shapes are added with the importers (M1). */
+/**
+ * One compendium entry (DESIGN.md §5.1): the header every kind shares. The kind-specific `data`
+ * shapes and the `CompendiumRecord` union live in `compendium.ts`.
+ */
 export const RECORD_SCHEMA_VERSION = 1;
 
 export const RecordRef = z.object({

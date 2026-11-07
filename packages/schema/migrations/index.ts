@@ -30,6 +30,11 @@ export interface Migration {
 export type MigrationRegistry = Record<FileKind, Migration[]>;
 export type VersionTable = Record<FileKind, number>;
 
+/**
+ * The version each file kind is written at. Bumping one means a migration from the old version
+ * in `MIGRATIONS` and the matching `schemaVersion` literal in the Zod schema; several tests
+ * hard-code these numbers, and the migration test's fixture table keeps its own.
+ */
 export const CURRENT_SCHEMA_VERSION: VersionTable = {
   appConfig: 1,
   library: 5,

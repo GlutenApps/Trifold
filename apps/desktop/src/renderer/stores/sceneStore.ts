@@ -8,7 +8,9 @@ import { useShellStore } from './shellStore';
 
 /**
  * The scene the DM is working on, shared by the Scenes tool (tree, edit form) and the TV
- * major (canvas and preview). Selecting never sends anything to the TV (ADR 0004, Decision 10).
+ * major (canvas and preview). Selecting never sends anything to the TV (ADR 0004: click
+ * selects, Enter sends). The draft autosaves to the campaign through the campaign store, and
+ * while it is the live scene every edit mirrors to the TV; nothing else persists from here.
  */
 interface SceneState {
   selectedId: string | null;

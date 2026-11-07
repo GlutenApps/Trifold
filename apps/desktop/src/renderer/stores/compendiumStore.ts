@@ -3,6 +3,13 @@ import type { CompendiumFacets, CompendiumQuery, CompendiumRow } from '@trifold/
 import { errorMessage, type CompendiumRecord, type RecordKind } from '@trifold/schema';
 import { useCampaignStore } from './campaignStore';
 
+/**
+ * The Compendium tab's browsing state (DESIGN.md §6.1): kind, filters, the current result page,
+ * facets, the selected record with its other editions, and a back history for links followed
+ * inside a record. All of it is in memory and session only; searches go to main's SQLite index
+ * and homebrew edits go to main, which owns the files. A stale search answer is dropped by
+ * sequence number so a slow query never overwrites a newer one.
+ */
 export type Filters = Omit<CompendiumQuery, 'kind' | 'limit' | 'offset'>;
 
 interface CompendiumState {
@@ -77,7 +84,7 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
     const seq = (searchSeq += 1);
     set({ loading: true });
     try {
-      // Rows sharing a key collapse to one; the campaign's preferred edition heads it (§7.2).
+      // Rows sharing a key collapse to one; the campaign's preferred edition heads it (DESIGN.md §7.2).
       const preferred = useCampaignStore.getState().current?.campaign.preferredEdition;
       const result = await window.trifold.compendium.search({
         kind: get().kind,

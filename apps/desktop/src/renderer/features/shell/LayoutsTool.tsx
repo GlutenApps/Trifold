@@ -6,8 +6,9 @@ import { Icon } from './icons';
 import { hk } from '../../platform';
 
 /**
- * The DM's layouts (ADR 0004 §6): apply, overwrite with the screen as it is now, rename,
- * reorder, delete, save the current arrangement as a new one. Nothing is locked.
+ * The DM's layouts (ADR 0004, layouts are app-wide; a pop-up since ADR 0009): apply, overwrite
+ * with the screen as it is now, rename, reorder, delete, save the current arrangement as a new
+ * one. Nothing is locked.
  */
 export function LayoutsTool() {
   const layout = useShellStore((s) => s.layout);

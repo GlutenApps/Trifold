@@ -1,3 +1,9 @@
+/**
+ * The chrome's icon set: `IconName` names every glyph the shell and the features may use, and
+ * `Icon` renders one as an inline SVG at the size its button sets (UI guidelines). The paths
+ * are our own 24 px strokes rather than an icon library, so the package stays small and the
+ * set is deliberately short; add a name here before using it anywhere.
+ */
 export type IconName =
   | 'campaign'
   | 'compendium'

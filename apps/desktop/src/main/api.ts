@@ -19,6 +19,12 @@ import { isWebUrl } from './webTabs';
 import type { SaveFlush } from './saveFlush';
 import { WindowManager } from './windows';
 
+/**
+ * Where `TrifoldApi` (packages/api) is implemented for the main process. Each namespace maps
+ * onto a repository or service held by `ApiContext`; the campaign, note-template, music and
+ * phone-audio namespaces are built in their own modules and spread in. `registerIpc` turns the
+ * result into IPC handlers. See `createApi` below.
+ */
 export interface ApiContext {
   config: AppConfigStore;
   session: LibrarySession;

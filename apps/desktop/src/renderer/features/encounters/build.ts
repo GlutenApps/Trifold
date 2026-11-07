@@ -19,7 +19,13 @@ import type {
   RechargeState,
 } from '@trifold/schema';
 
-/** Builds the initial combatant list from an encounter (DESIGN.md §6.4 "Starting combat"). */
+/**
+ * Builds the initial combatant list from an encounter (DESIGN.md §6.4 "Starting combat"): each
+ * template becomes one combatant per unit of quantity, numbered, carrying its own token link
+ * when one was placed (ADR 0005). PCs start from the HP on their card and named NPCs from their
+ * carried HP (ADR 0012); a record that cannot be found becomes a custom combatant built from
+ * the template's cached values.
+ */
 
 export interface BuildOptions {
   initiativeMode: 'perGroup' | 'perCreature';
@@ -43,6 +49,7 @@ const RESETS: Record<string, Counter['resets']> = {
   rest: 'shortRest',
 };
 
+/** Legendary action, limited-use, recharge and spell slot trackers from a monster's features. */
 export function countersFromMonster(record: MonsterRecord): {
   counters: Counter[];
   recharges: RechargeState[];

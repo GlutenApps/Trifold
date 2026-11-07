@@ -2,6 +2,14 @@ import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process';
 import type { PhoneAudioDevice, PhoneAudioState } from '@trifold/api';
 import { errorMessage, type Logger } from '../log';
 
+/**
+ * The phone audio receiver (ADR 0007): on Windows, Trifold itself becomes the Bluetooth audio
+ * sink for the DM's phone, so music from the phone's own apps plays through the laptop and the
+ * table speakers. The WinRT calls happen in a PowerShell helper script; this module launches
+ * it, reads the JSON lines it prints and turns them into status updates. macOS reports
+ * unsupported (the guide points at AirPlay Receiver instead). No network is involved
+ * (CLAUDE.md ground rule 1).
+ */
 /** What the helper reports, minus the remembered list the API layer adds. */
 export interface ReceiverStatus {
   supported: boolean;

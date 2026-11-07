@@ -39,6 +39,15 @@ import {
   type Fit,
 } from './shellLayout';
 
+/**
+ * The console shell (ADR 0004): which space is showing, the campaign whose console is loaded,
+ * its stage and dock layout, the DM's saved layouts, the Library's web tabs (ADR 0011), and the
+ * transient chrome (flyout, pop-up, tab drag, close prompt, window fit). Layouts, each
+ * campaign's console and the web tabs persist as `settings.workspace` in the Library's
+ * `library.json` through `persist`, one write per settle; the store is hydrated once per
+ * Library path. The layout math itself lives in shellLayout.ts; this store only applies it,
+ * keeps the result and saves it. Features change the shell through these actions only.
+ */
 export type Space = 'library' | 'console';
 /** Tools that pop up from their own button rather than living in the dock (ADR 0009). */
 export type PopKind = 'dice' | 'hotkeys' | 'layouts';
@@ -56,7 +65,7 @@ interface ShellState {
   consoles: Record<string, ShellLayout>;
   /** The Library's saved web tabs (ADR 0011); a layout names them by `web:<id>`. */
   webTabs: WebTab[];
-  /** A minor shown as a flyout (dock icons-only or hidden). One at a time. */
+  /** A minor shown as a flyout while the dock shows icons only (ADR 0009). One at a time. */
   flyout: MinorKind | null;
   /** A tool popped up from its own button (ADR 0009): Dice from the strip, Hotkeys and Layouts
    *  from the top bar. One at a time; not part of a layout. */
@@ -141,7 +150,10 @@ function persist(get: () => ShellState): void {
   );
 }
 
-/** A new web tab's first title: the site's host, until the page reports its own. */
+/**
+ * A new web tab's first title: the site's host without a leading `www.`, until the page reports
+ * its own. An address that does not parse gets the generic label rather than an error.
+ */
 function hostOf(url: string): string {
   try {
     const host = new URL(url).hostname.replace(/^www\./, '');
@@ -151,6 +163,11 @@ function hostOf(url: string): string {
   }
 }
 
+/**
+ * A layout name no other preset uses: the trimmed name (or "Layout"), with " 2", " 3" and so on
+ * appended while it clashes. `skip` is the preset being renamed, so keeping its own name is
+ * never a clash.
+ */
 function uniqueName(name: string, presets: WorkspacePreset[], skip = -1): string {
   const base = name.trim() || 'Layout';
   let candidate = base;

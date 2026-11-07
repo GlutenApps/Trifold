@@ -4,6 +4,13 @@ import { useSceneStore } from '../../stores/sceneStore';
 import { DEFAULT_BLANK, DEFAULT_GRID } from './mapMath';
 import { nextOrder } from './sceneTree';
 
+/**
+ * Making a new scene of any kind from the Scenes tool or the TV tab's empty state: the defaults
+ * each kind needs (grid, blank size, parchment backdrop), the image import for image and map
+ * scenes, the save through the campaign store, and selecting the result. Nothing is sent to
+ * the TV.
+ */
+
 const DEFAULT_TITLES: Record<Scene['kind'], string> = {
   folder: 'New folder',
   title: 'New title card',

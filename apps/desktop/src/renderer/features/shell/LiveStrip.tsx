@@ -10,7 +10,7 @@ import { Icon } from './icons';
 import { hk } from '../../platform';
 
 /**
- * The live strip (ADR 0004 §2.2): table-time state and the one-tap actions, nothing else.
+ * The live strip (ADR 0004, live strip): table-time state and the one-tap actions, nothing else.
  * Sections: TV, Combat, Music, then Dice at the right end. Clicking a section's text opens its
  * tool or tab; the dice button pops the Dice tool up from the strip (ADR 0009).
  */

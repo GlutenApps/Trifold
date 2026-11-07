@@ -5,6 +5,11 @@ import type { IconCreditsInfo } from '@trifold/api';
 import { IconCredits, IconTables } from '@trifold/schema';
 import type { Logger } from './log';
 
+/**
+ * Main-process access to the bundled game-icons set (DESIGN.md §6.8): the mapping tables, which
+ * glyphs exist, their SVG paths for the media handler, and the credits for the About page.
+ * `IconResources` below.
+ */
 const NAME = /^[a-z0-9-]+$/;
 
 /**

@@ -93,6 +93,10 @@ export function normalizeCr(cr: string | number | null | undefined): ChallengeRa
   return isCr(int) ? int : null;
 }
 
+/**
+ * CR as a number for sorting and range filters (`1/8` is 0.125). Null for anything
+ * `normalizeCr` rejects.
+ */
 export function crToNumber(cr: string | number | null | undefined): number | null {
   const norm = normalizeCr(cr);
   if (norm === null) return null;
@@ -176,6 +180,11 @@ export function partyBudget(levels: number[]): Budget {
 
 export type DifficultyBand = 'trivial' | 'low' | 'moderate' | 'high';
 
+/**
+ * Where an encounter's total XP falls against the party budget. Thresholds are strict: a total
+ * exactly on `budget.low` is `low` and one on `budget.high` is `high`. `trivial`, below the low
+ * budget, is Trifold's own band; the 2024 rules name only low, moderate and high.
+ */
 export function difficultyBand(totalXp: number, budget: Budget): DifficultyBand {
   if (totalXp < budget.low) return 'trivial';
   if (totalXp < budget.moderate) return 'low';

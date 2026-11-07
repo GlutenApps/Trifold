@@ -12,6 +12,12 @@ import { AddPanel } from './AddPanel';
 import { CombatView } from './CombatView';
 import { retargetToNpc } from './templates';
 
+/**
+ * The Encounters major (DESIGN.md §6.4, ADR 0005): the encounter list and builder while no
+ * fight runs, the combat tracker while one does. `EncountersPage` at the end of the file is the
+ * tab; `Builder` and `TemplateRow` above it edit one encounter's templates, with the 2024 budget
+ * band, Track as NPC (ADR 0012) and an autosave that writes only while it is safe to.
+ */
 const NO_NPCS: NPC[] = [];
 const NO_PCS: PCCard[] = [];
 
@@ -30,7 +36,10 @@ function newEncounter(name: string): Encounter {
   };
 }
 
-/** One combatant in the builder: a single line, with the label behind a pencil (ADR 0013 §8). */
+/**
+ * One combatant in the builder: a single line, with the label behind a pencil (UI-GUIDELINES.md
+ * §8, ADR 0013).
+ */
 function TemplateRow({
   t,
   onChange,

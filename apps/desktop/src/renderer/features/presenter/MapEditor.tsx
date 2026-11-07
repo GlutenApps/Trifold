@@ -56,6 +56,13 @@ import {
   type Point,
 } from './mapMath';
 
+/**
+ * The console side of a map or blank-grid scene (DESIGN.md §6.5), shown inside the TV tab
+ * (ADR 0008): the DM camera, grid alignment, backgrounds, token placement and drag, the player
+ * camera, and the links between tokens and a running fight (ADR 0012). The types and constants
+ * here belong to the editor's modes and pop-ups; `MapEditor` further down has the detail.
+ */
+
 type Mode = 'select' | 'align' | 'party' | 'place';
 
 type Pending =

@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { IsoDateTime } from './common';
 
+/**
+ * Schema for `templates/notes/<id>.json`, the Library-level note templates of ADR 0010. The file
+ * is versioned like every other stored object; `NoteTemplate` below describes it.
+ */
 export const NOTE_TEMPLATE_SCHEMA_VERSION = 1;
 
 /**

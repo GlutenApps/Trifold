@@ -3,7 +3,12 @@ import { APP_CONFIG_SCHEMA_VERSION, AppConfig, defaultAppConfig, migrate } from 
 import { writeJsonAtomic } from './library/atomicWrite';
 import { errorMessage, type Logger } from './log';
 
-/** `<userData>/config.json`: which Library is open and where the console window was. */
+/**
+ * `<userData>/config.json`: app-level state that belongs to this computer, not to any Library.
+ * Which Library is open and which were opened recently, where the console window was, the
+ * audio source and remembered phones (ADR 0007), and the second backup location (ADR 0015).
+ * `update` is a shallow merge.
+ */
 export class AppConfigStore {
   private constructor(
     private readonly file: string,

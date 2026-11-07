@@ -66,6 +66,10 @@ function tokenize(expression: string): string[] {
   return tokens;
 }
 
+/**
+ * Parses an expression into terms, throwing `DiceError` for anything outside the grammar or
+ * past the limits (1000 dice, 1000 sides, multiplier 1000).
+ */
 export function parseDice(expression: string): Term[] {
   const tokens = tokenize(expression);
   let pos = 0;
@@ -185,6 +189,10 @@ function rollTerms(terms: Term[], rng: Rng, out: DiceRoll[]): number {
   return sum;
 }
 
+/**
+ * Rolls an expression (parse errors throw `DiceError`). Every die's face is kept in `dice`,
+ * with the kept subset under `kh`/`kl`, so the log can show the roll and not only the total.
+ */
 export function roll(expression: string, rng: Rng = Math.random): RollResult {
   const dice: DiceRoll[] = [];
   const total = rollTerms(parseDice(expression), rng, dice);

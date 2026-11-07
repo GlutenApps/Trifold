@@ -47,6 +47,11 @@ export const MINOR_TITLES: Record<MinorKind, string> = {
   scenes: 'Scenes',
 };
 
+/**
+ * The dock's width in each mode (ADR 0004, dock; ADR 0014). Wide and narrow are the presets a
+ * dragged edge snaps to; icons is the tab column alone. `hidden` is kept only so old layouts
+ * parse: `normalize` turns it into icons (ADR 0009), so nothing is ever drawn at 0.
+ */
 const DOCK_WIDTH: Record<DockMode, number> = {
   wide: 400,
   narrow: 360,
@@ -55,8 +60,9 @@ const DOCK_WIDTH: Record<DockMode, number> = {
 };
 
 /**
- * The panel floor (ADR 0014): no stage group is ever narrower than this, and no dock with
- * sections narrower than DOCK_MIN. Features are built to work from these widths up.
+ * The panel floor (ADR 0014): no stage group is ever narrower than PANEL_MIN, and no dock with
+ * sections narrower than DOCK_MIN (the narrow preset, so dock tools are built for 360 px).
+ * DOCK_MAX caps a dragged dock. Features are built to work from these widths up.
  */
 const PANEL_MIN = 480;
 const DOCK_MIN = 360;
@@ -416,11 +422,10 @@ export function describeLayout(layout: ShellLayout, webTabs: readonly WebTab[] =
     .map((g) => g.tabs.map((t) => tabTitle(t, webTabs)).join(' / '))
     .join(' ⧉ ');
   const open = layout.dock.sections.filter((s) => s.open).map((s) => MINOR_TITLES[s.tool]);
+  // A layout saved as hidden shows as icons (normalize folds it), so describe it that way.
   const dock =
-    layout.dock.state === 'hidden'
-      ? 'dock hidden'
-      : layout.dock.state === 'icons'
-        ? 'dock icons'
-        : `dock ${layout.dock.state}${open.length ? ': ' + open.join(', ') : ''}`;
+    layout.dock.state === 'icons' || layout.dock.state === 'hidden'
+      ? 'dock icons'
+      : `dock ${layout.dock.state}${open.length ? ': ' + open.join(', ') : ''}`;
   return `${groups} · ${dock}${layout.stage.maximized !== null ? ' · maximized' : ''}`;
 }

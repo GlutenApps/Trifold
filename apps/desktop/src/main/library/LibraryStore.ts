@@ -10,6 +10,12 @@ import {
 } from '@trifold/schema';
 import { writeFileAtomic, writeJsonAtomic } from './atomicWrite';
 
+/**
+ * The Library folder (DESIGN.md §4.2): the files are the truth and this class is their only
+ * writer (CLAUDE.md ground rule 2). It owns `library.json`, creates the folder layout, resolves
+ * Library-relative paths without letting one escape the root, and gives every repository its
+ * atomic JSON writes and its schema-checked, migrated reads.
+ */
 /** Folders created inside every Library (DESIGN.md §4.2). */
 export const LIBRARY_LAYOUT = [
   'sources',

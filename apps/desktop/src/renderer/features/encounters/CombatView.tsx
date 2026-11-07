@@ -17,6 +17,13 @@ import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useShellStore } from '../../stores/shellStore';
 import { hk } from '../../platform';
 
+/**
+ * The combat tracker (DESIGN.md §6.4), which the Encounters tab shows while a fight runs
+ * (ADR 0005). `CombatView` near the end of the file is the panel; before it come the combatant
+ * row and drawer, the damage popup and the hook that turns a stat block roll into a damage
+ * request. Rows link to tokens on the map in play by identity, and a combatant's hidden and
+ * dead flags write through to its token (ADR 0012).
+ */
 const NO_SCENES: Scene[] = [];
 
 /** The map the running fight is compared against, if any (ADR 0012). */

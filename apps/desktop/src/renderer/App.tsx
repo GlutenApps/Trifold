@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { PlayerScreen } from './features/presenter/PlayerScreen';
 import { AppShell } from './features/shell/AppShell';
 
+/**
+ * The router, and the whole of it (ADR 0002): one renderer bundle serves two windows, and the
+ * hash decides which. `#/player` mounts the player screen, a pure view of pushed state; anything
+ * else mounts the console shell. The window title follows the route.
+ */
+
 export type Route = 'console' | 'player';
 
 /** `#/player` → player window; anything else → console (ADR 0002). */

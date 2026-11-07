@@ -29,6 +29,13 @@ import { MAJOR_ICON, MajorBody } from './majors';
 import { WebTabIconPicker, WebTabPage } from './WebTabPage';
 import { hk } from '../../platform';
 
+/**
+ * The stage (ADR 0004): one or two tab groups of majors and web tabs, each with its own tab
+ * strip, plus the divider, the + menu, split and maximize, and tab drag and drop between and
+ * within groups. The layout itself is decided in shellLayout.ts; this file draws it and turns
+ * pointer and keyboard gestures into shell store actions. `Stage` below has the detail.
+ */
+
 /** The web tab behind a stage key, or null when the Library no longer has it. */
 function webTabOf(kind: TabKey, webTabs: readonly WebTab[]): WebTab | null {
   if (!isWebTabKey(kind)) return null;
@@ -50,7 +57,7 @@ const STRIP_CHROME = 82;
 type DropSpot = { group: number; index: number } | { split: true } | null;
 
 /**
- * The stage (ADR 0004 §3): one or two tab groups. Every major stays mounted, active or not,
+ * The stage (ADR 0004, stage): one or two tab groups. Every major stays mounted, active or not,
  * so nothing loses its place; closed majors live in a hidden holder. When two groups do not
  * fit side by side (ADR 0014) they fold into one stack: both stay mounted, the focused one is
  * shown under a strip of every tab, and widening the window brings the saved split back.

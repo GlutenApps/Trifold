@@ -5,6 +5,13 @@ import { HotkeysTool } from './HotkeysTool';
 import { Icon, type IconName } from './icons';
 import { LayoutsTool } from './LayoutsTool';
 
+/**
+ * Pop-up tools (ADR 0009): Dice, Hotkeys and Layouts are anchored to the button that opens
+ * them instead of taking a dock section. This file maps each kind to its body, title and icon
+ * and places the one open pop-up; `Pop` below explains the anchoring.
+ */
+
+/** The heading each pop-up shows; the kinds are the shell store's `PopKind`. */
 const POP_TITLES: Record<PopKind, string> = {
   dice: 'Dice',
   hotkeys: 'Hotkeys',

@@ -5,6 +5,14 @@ import { useAppStore } from '../../stores/appStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { Icon } from '../shell/icons';
 
+/**
+ * The Sources card, shown under Library › Compendium › Sources (DESIGN.md §6.1): every bundled
+ * and imported source with its enabled flag, record counts and import warnings, the XML import
+ * and index rebuild, and the list of books whose records count as 2024 rules without a [5.5e]
+ * suffix (DATA-FORMATS.md §2.10). Importing runs in main and reports progress over the
+ * `importProgress` event; a source whose parser has moved on since it was imported is marked
+ * stale and can be re-parsed.
+ */
 function counts(source: SourceSummary): string {
   const entries = Object.entries(source.recordCounts).filter(([, n]) => (n ?? 0) > 0);
   if (entries.length === 0) return 'no records';

@@ -86,7 +86,7 @@ export function linkifySpells(
   return out;
 }
 
-/** Lion's Den item type codes (DATA-FORMATS.md §2.7) as the words the DM reads. */
+/** Lion's Den item type codes (DATA-FORMATS.md §2.8) as the words the DM reads. */
 const ITEM_TYPE_NAMES: Record<string, string> = {
   LA: 'Light armor',
   MA: 'Medium armor',

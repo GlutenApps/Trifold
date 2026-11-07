@@ -13,6 +13,10 @@ export interface D20Roll {
   mode: RollMode;
 }
 
+/**
+ * One d20 test. Under advantage or disadvantage two faces are rolled and `natural` is the
+ * higher or the lower one; otherwise it is the single face. `total` is `natural + modifier`.
+ */
 export function rollD20(
   modifier: number,
   mode: RollMode = 'normal',

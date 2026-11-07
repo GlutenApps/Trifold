@@ -10,6 +10,11 @@ import {
   webTabUserAgent,
 } from './webTabs';
 
+/**
+ * Creates and routes the console and player (TV) windows. Both load the same renderer bundle
+ * under different hash routes (ADR 0002); only the console hosts web tabs (ADR 0011). The class
+ * is `WindowManager` below.
+ */
 // The dark theme's --bg, --bg-rail and --text-muted from renderer/styles/global.css, so a window
 // shows the right colour before the renderer paints. The light theme repaints on load.
 const WINDOW_BG = '#14181d';

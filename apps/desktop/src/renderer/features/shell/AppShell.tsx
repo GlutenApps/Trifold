@@ -1,3 +1,10 @@
+/**
+ * The console root (ADR 0004): top bar, then the Library or the console's stage and dock, then
+ * the live strip, with the flyout, pop-ups and the close-campaign prompt over it. It is also
+ * where the app is wired together: Library load and shell hydration, campaign lifecycle, music
+ * settings, player framing, the combat-to-TV mirror, main's events, and the global hotkeys.
+ * Nothing here renders a feature; it only puts them in their homes.
+ */
 import { useEffect } from 'react';
 import { handleKeydown, installHotkeys, registerHotkey } from '../../hotkeys';
 import { useAppStore } from '../../stores/appStore';
@@ -76,7 +83,7 @@ export function AppShell() {
     if (library?.ok) hydrate(library.path, library.settings?.workspace);
   }, [library, hydrate]);
 
-  // The console exists only while a campaign is open (Decision 2).
+  // The console exists only while a campaign is open (ADR 0004, one campaign at a time).
   useEffect(
     () =>
       useCampaignStore.subscribe((s, prev) => {
@@ -87,7 +94,7 @@ export function AppShell() {
     [],
   );
 
-  // The dock trims itself for narrow windows (ADR 0004 §4).
+  // The dock trims itself for narrow windows (fitLayout, ADR 0014).
   useEffect(() => {
     const onResize = () => useShellStore.getState().setViewportWidth(window.innerWidth);
     window.addEventListener('resize', onResize);

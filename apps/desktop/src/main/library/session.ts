@@ -12,6 +12,12 @@ import { HomebrewRepository } from '../sources/homebrew';
 import { SourceRepository } from '../sources/repository';
 import { LibraryStore } from './LibraryStore';
 
+/**
+ * Everything that exists while a Library is open: the store, the source repositories and
+ * catalog, the index, and the campaign, music and backup services. Opening a different Library
+ * tears all of it down and builds it again (`LibrarySession` below). A Library that fails to
+ * open leaves the session empty and reports why through `LibraryInfo` instead of throwing.
+ */
 export interface OpenSession {
   store: LibraryStore;
   sources: SourceRepository;

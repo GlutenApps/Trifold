@@ -13,6 +13,13 @@ import {
 } from './formatting';
 
 /**
+ * The monster stat block in the 2024 layout whatever the record's edition (DESIGN.md §6.1 and
+ * §7.2), shared by the compendium and the combat tracker. `StatBlock` near the end of the file
+ * is the block; the components above it are its roll badges (d20 rolls with their advantage
+ * buttons, plain badges, feature lists) that become buttons when a handler is supplied.
+ */
+
+/**
  * Roll handlers: the combat tracker supplies all four, the compendium everything but saves
  * (there is nobody to call a save against outside a fight). Without a handler a badge is inert.
  */

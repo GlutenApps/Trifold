@@ -5,6 +5,13 @@ import { deleteCampaign, switchCampaign } from '../shell/campaignFlow';
 import { Icon } from '../shell/icons';
 import { CampaignExportPanel, useCampaignPackageImport } from './CampaignPackages';
 
+/**
+ * Library › Campaigns: create a campaign, import one from campaign XML or a campaign package,
+ * and a card per campaign with Open (Back to console for the open one), Import into this
+ * campaign, Export campaign inline in the card (ADR 0015) and a typed-DELETE removal. Opening a
+ * campaign leaves the Library for the console (ADR 0004).
+ */
+
 /** Inline confirm on a campaign card: the DM types DELETE before the folder goes. */
 function DeleteCampaignConfirm({
   campaign,
@@ -24,8 +31,8 @@ function DeleteCampaignConfirm({
       }}
     >
       <p className="small">
-        Delete <strong>{campaign.name}</strong> and everything in it: party, adventures, NPCs,
-        notes, encounters, scenes and images. Type DELETE to confirm.
+        Delete <strong>{campaign.name}</strong> and everything in it: party, NPCs, notes,
+        encounters, scenes and images. Type DELETE to confirm.
       </p>
       <div className="row">
         <input
@@ -93,7 +100,7 @@ export function CampaignsPage() {
         <p className="muted" data-testid="campaign-import-report">
           {lastImport.mode === 'new' ? 'Imported' : 'Merged'} {lastImport.name}:{' '}
           {lastImport.counts.pcs} PCs, {lastImport.counts.npcs} NPCs, {lastImport.counts.notes}{' '}
-          notes, {lastImport.counts.adventures} adventures, {lastImport.counts.encounters}{' '}
+          notes, {lastImport.counts.adventures} adventure folders, {lastImport.counts.encounters}{' '}
           encounters
           {lastImport.warnings.length
             ? ` · ${lastImport.warnings.length} warnings: ${lastImport.warnings.join('; ')}`
@@ -193,9 +200,9 @@ export function CampaignsPage() {
         </div>
       )}
       <p className="muted small">
-        A campaign holds its party, adventures, NPCs, notes, encounters, scenes and playlists.
-        Opening one enters the console with its tabs, dock and layouts as you left them; the Library
-        stays a click away on the mark.
+        A campaign holds its party, NPCs, notes, encounters, scenes and playlists. Opening one
+        enters the console with its tabs, dock and layouts as you left them; the Library stays a
+        click away on the mark.
       </p>
     </section>
   );

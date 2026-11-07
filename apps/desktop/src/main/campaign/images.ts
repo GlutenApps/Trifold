@@ -5,6 +5,11 @@ import { ulid } from 'ulid';
 import type { SceneImage } from '@trifold/schema';
 import type { LibraryStore } from '../library/LibraryStore';
 
+/**
+ * Scene image import (DESIGN.md §6.5): the original is copied into the campaign folder so the
+ * campaign stays portable, and a display-size copy is written beside it for the TV. Both files
+ * go through a temp name and a rename so a half-written image never shows up in a scene.
+ */
 /** Long edge of the copy the player window shows (DESIGN.md §6.5). */
 export const DISPLAY_LONG_EDGE = 4096;
 const ALLOWED = new Set(['.png', '.jpg', '.jpeg', '.webp']);

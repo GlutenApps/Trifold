@@ -8,7 +8,10 @@ import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 
-/** Campaign, PC card, encounter, note, NPC and scene namespaces, backed by CampaignRepository. */
+/**
+ * Campaign, PC card, encounter, note, NPC and scene namespaces, backed by `CampaignRepository`,
+ * `CampaignEntities`, `CampaignPackager` and the campaign XML importer.
+ */
 export function createCampaignApi(
   session: LibrarySession,
   logger: Logger,

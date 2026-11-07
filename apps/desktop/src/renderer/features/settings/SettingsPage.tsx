@@ -3,6 +3,12 @@ import type { AttributionEntry, IconCreditsInfo } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
 import { BackupsCard } from './BackupsCard';
 
+/**
+ * Library › Settings: the Library folder, the display the TV opens on, the theme, the Backups
+ * card and About. About carries the SRD and game-icons attribution the content policy requires
+ * (DESIGN.md §6.1 and §8); the statements and license texts come from main, never from this
+ * file. The Sources card lives under Library › Compendium, not here.
+ */
 export function SettingsPage() {
   const info = useAppStore((s) => s.info);
   const library = useAppStore((s) => s.library);
