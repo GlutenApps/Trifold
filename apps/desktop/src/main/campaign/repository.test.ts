@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
+import type { Combatant } from '@trifold/schema';
+import { CampaignEntities } from './entities';
 import { CampaignRepository } from './repository';
 
 const logger: Logger = { log: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
@@ -137,5 +139,100 @@ describe('CampaignRepository', () => {
     expect(store.getSettings().lastOpenCampaignSlug).toBe('open');
     expect((await repo.list()).map((c) => c.id)).toEqual([open.campaign.id]);
     await expect(repo.remove(other.campaign.id)).rejects.toThrow(/not found/);
+  });
+});
+
+describe('what a fight leaves behind (ADR 0012)', () => {
+  it('carries HP to PC cards and tracked NPCs when the encounter finishes', async () => {
+    await repo.create('Carry');
+    const [thora] = await repo.quickAdd('Thora, Sam, Fighter 4, 30, 17, +1, 30, 11');
+    const grak = await new CampaignEntities(repo).saveNpc({
+      schemaVersion: 1,
+      id: '',
+      name: 'Grak',
+      role: '',
+      location: '',
+      notes: '',
+      isAlive: true,
+      createdAt: '',
+      updatedAt: '',
+    });
+    const e = await repo.saveEncounter({
+      schemaVersion: 1,
+      id: '',
+      name: 'Ambush',
+      combatants: [],
+      notes: '',
+      state: null,
+      results: [],
+      createdAt: '',
+      updatedAt: '',
+    });
+    const fighter = (
+      id: string,
+      ref: Combatant['ref'],
+      hp: Combatant['hp'],
+      dead = false,
+    ): Combatant => ({
+      id,
+      name: ref.name,
+      maskedName: ref.name,
+      revealed: true,
+      ref,
+      role: 'enemy',
+      initiative: 10,
+      initiativeBonus: 0,
+      dexterity: 10,
+      hp,
+      saves: {},
+      damageVulnerabilities: [],
+      damageResistances: [],
+      damageImmunities: [],
+      conditionImmunities: [],
+      conditions: [],
+      concentrating: null,
+      counters: [],
+      recharges: [],
+      deathSaves: null,
+      dead,
+      hidden: false,
+      held: false,
+      isLair: false,
+    });
+    await repo.saveCombatState(e.id, {
+      round: 3,
+      turnIndex: 0,
+      combatants: [
+        fighter(
+          'a',
+          { kind: 'pc', pcId: thora!.id, name: 'Thora' },
+          { current: 12, max: 30, temp: 2 },
+        ),
+        fighter(
+          'b',
+          { kind: 'npc', npcId: grak.id, name: 'Grak' },
+          { current: 0, max: 20, temp: 0 },
+          true,
+        ),
+        fighter('c', { kind: 'pc', pcId: 'gone', name: 'Nobody' }, { current: 1, max: 1, temp: 0 }),
+      ],
+      log: [],
+      startedAt: '2026-09-27T00:00:00.000Z',
+    });
+    await repo.finishEncounter(e.id, {
+      endedAt: '2026-09-27T01:00:00.000Z',
+      rounds: 3,
+      xpEarned: 0,
+      casualties: [],
+      log: [],
+    });
+    const bundle = await repo.bundle();
+    expect(bundle.pcs[0]).toMatchObject({ name: 'Thora', maxHp: 30, currentHp: 12, tempHp: 2 });
+    expect(bundle.npcs[0]).toMatchObject({
+      name: 'Grak',
+      isAlive: false,
+      hp: { current: 0, max: 20, temp: 0 },
+    });
+    expect(bundle.encounters[0]!.state).toBeNull();
   });
 });

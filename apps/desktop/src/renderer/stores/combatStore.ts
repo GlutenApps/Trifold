@@ -1,6 +1,7 @@
 import { ulid } from 'ulid';
 import { create } from 'zustand';
 import {
+  abilityModifier,
   advanceTurn,
   applyDamage,
   applyDeathSave,
@@ -28,13 +29,26 @@ import type {
   Encounter,
   Feature,
   LogEntry,
+  NPC,
   PCCard,
   RollButton,
   SaveCall,
+  Token,
 } from '@trifold/schema';
 import { nowIso } from '@trifold/schema';
-import { buildCombatants } from '../features/encounters/build';
+import {
+  buildCombatants,
+  combatantFromMonster,
+  combatantFromNpc,
+  combatantFromPc,
+  customCombatant,
+} from '../features/encounters/build';
+import { retargetToNpc, withTokenLink } from '../features/encounters/templates';
+import { autoLink, sceneInPlay, type TokenLink } from '../features/presenter/tokenLinks';
+import { useCampaignStore } from './campaignStore';
+import { usePresenterStore } from './presenterStore';
 import { facesText, useRollLogStore } from './rollLogStore';
+import { useSceneStore } from './sceneStore';
 
 /** A save call in progress: creature results auto-rolled, PC bonuses shown for the table. */
 export interface SaveCallView {
@@ -111,9 +125,18 @@ interface CombatStoreState {
   dismissSavePrompt(index: number): void;
   deathSave(id: string): void;
   toggleHeld(id: string): void;
+  /** Hidden and dead also reach the combatant's map token, so both views agree (ADR 0012). */
   toggleHidden(id: string): void;
   reveal(id: string): void;
   markDead(id: string, dead: boolean): void;
+  /** Ties a combatant to a map token (null unties); the fight's hidden and dead flags win. */
+  linkToken(id: string, tokenId: string | null): void;
+  /** Makes every link that needs no judgement between the fight and these tokens. */
+  relinkTokens(tokens: readonly Token[]): void;
+  /** Adds a fighter for a map token that matches no one in the fight, in initiative order. */
+  addFromToken(token: Token): Promise<void>;
+  /** Turns a creature into a named NPC whose HP carries between fights. */
+  trackAsNpc(id: string): Promise<NPC | null>;
   remove(id: string): void;
   move(id: string, direction: -1 | 1): void;
   useCounter(id: string, counterId: string, delta: number): void;
@@ -158,8 +181,104 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     persist();
   };
 
-  const patchCombatant = (id: string, fn: (c: Combatant) => Combatant) =>
-    update((s) => ({ ...s, combatants: s.combatants.map((c) => (c.id === id ? fn(c) : c)) }));
+  /** The fight drives the map: a token follows its combatant's hidden and dead flags. */
+  const syncToken = (c: Combatant) => {
+    if (c.tokenId)
+      useSceneStore.getState().patchTokenAnywhere(c.tokenId, { hidden: c.hidden, dead: c.dead });
+  };
+
+  const patchCombatant = (id: string, fn: (c: Combatant) => Combatant) => {
+    let changed: Combatant | null = null;
+    update((s) => ({
+      ...s,
+      combatants: s.combatants.map((c) => {
+        if (c.id !== id) return c;
+        const next = fn(c);
+        if (next.tokenId && (next.hidden !== c.hidden || next.dead !== c.dead)) changed = next;
+        return next;
+      }),
+    }));
+    if (changed) syncToken(changed);
+  };
+
+  /** Where the running fight's tokens live: the live map, else the map the encounter sits on. */
+  const mapInPlay = (encounter: Pick<Encounter, 'sceneId'> | null) =>
+    sceneInPlay(
+      useCampaignStore.getState().current?.scenes ?? [],
+      usePresenterStore.getState().state.scene?.id ?? null,
+      encounter,
+    );
+
+  const currentEncounter = (): Encounter | null => {
+    const { encounterId } = get();
+    return (
+      useCampaignStore.getState().current?.encounters.find((e) => e.id === encounterId) ?? null
+    );
+  };
+
+  /** Saves template edits made mid-fight with the live state, so nothing stale is written. */
+  const saveTemplates = (combatants: Encounter['combatants']) => {
+    const encounter = currentEncounter();
+    if (!encounter) return;
+    void useCampaignStore
+      .getState()
+      .saveEncounter({ ...encounter, combatants, state: get().state, updatedAt: nowIso() });
+  };
+
+  const rememberLinks = (links: readonly TokenLink[]) => {
+    const encounter = currentEncounter();
+    const combatants = get().state?.combatants ?? [];
+    if (!encounter || links.length === 0) return;
+    let templates = encounter.combatants;
+    for (const link of links) {
+      const c = combatants.find((x) => x.id === link.combatantId);
+      if (c) templates = withTokenLink(templates, c, link.tokenId);
+    }
+    saveTemplates(templates);
+  };
+
+  const applyLinks = (links: readonly TokenLink[]) => {
+    if (links.length === 0) return;
+    const byCombatant = new Map(links.map((l) => [l.combatantId, l.tokenId]));
+    const taken = new Set(links.map((l) => l.tokenId));
+    update((s) => ({
+      ...s,
+      combatants: s.combatants.map((c) => {
+        const tokenId = byCombatant.get(c.id);
+        if (tokenId) return { ...c, tokenId };
+        if (c.tokenId && taken.has(c.tokenId)) {
+          const { tokenId: _moved, ...rest } = c;
+          return rest;
+        }
+        return c;
+      }),
+    }));
+    for (const c of get().state?.combatants ?? []) if (byCombatant.has(c.id)) syncToken(c);
+    rememberLinks(links);
+  };
+
+  /** Puts a newcomer where its initiative belongs without reordering anyone else. */
+  const insertCombatant = (c: Combatant) => {
+    update((s) => {
+      const key = (x: Combatant, order: number) => ({
+        initiative: x.initiative,
+        dexterity: x.dexterity,
+        order,
+        isLair: x.isLair,
+      });
+      let at = s.combatants.length;
+      if (c.initiative !== null) {
+        const found = s.combatants.findIndex(
+          (x, i) => compareInitiative(key(c, s.combatants.length), key(x, i)) < 0,
+        );
+        if (found !== -1) at = found;
+      }
+      const combatants = [...s.combatants];
+      combatants.splice(at, 0, c);
+      const turnIndex = s.turnIndex >= 0 && at <= s.turnIndex ? s.turnIndex + 1 : s.turnIndex;
+      return { ...s, combatants, turnIndex };
+    });
+  };
 
   const find = (id: string): Combatant | undefined =>
     get().state?.combatants.find((c) => c.id === id);
@@ -189,7 +308,15 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
 
   const loadRecords = async (state: CombatState | null, encounter: Encounter) => {
     const ids = new Set<string>();
-    for (const t of encounter.combatants) if (t.ref.kind === 'record') ids.add(t.ref.ref.recordId);
+    const npcs = useCampaignStore.getState().current?.npcs ?? [];
+    for (const t of encounter.combatants) {
+      if (t.ref.kind === 'record') ids.add(t.ref.ref.recordId);
+      if (t.ref.kind === 'npc') {
+        const npcId = t.ref.npcId;
+        const recordId = npcs.find((n) => n.id === npcId)?.recordRef?.recordId;
+        if (recordId) ids.add(recordId);
+      }
+    }
     for (const c of state?.combatants ?? []) if (c.recordId) ids.add(c.recordId);
     const records: Record<string, CompendiumRecord> = {};
     await Promise.all(
@@ -237,7 +364,19 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     async begin(encounter, pcs, initiativeMode) {
       const records = await loadRecords(null, encounter);
       const map = new Map(Object.entries(records));
-      const built = buildCombatants(encounter, pcs, map, { initiativeMode });
+      const npcs = useCampaignStore.getState().current?.npcs ?? [];
+      const built = buildCombatants(encounter, pcs, map, { initiativeMode, npcs });
+      // Tokens already on the map in play are the players' view at this moment: tie the fight
+      // to them and start from what they show (ADR 0012). From here on the fight drives them.
+      const tokens = mapInPlay(encounter)?.tokens ?? [];
+      const links = autoLink(built.combatants, tokens);
+      const linked = new Map(links.map((l) => [l.combatantId, l.tokenId]));
+      built.combatants = built.combatants.map((c) => {
+        const tokenId = linked.get(c.id) ?? c.tokenId;
+        const token = tokenId ? tokens.find((t) => t.id === tokenId) : undefined;
+        if (!token) return c;
+        return { ...c, tokenId: token.id, hidden: token.hidden, dead: c.dead || token.dead };
+      });
       const state: CombatState = {
         round: 0,
         turnIndex: -1,
@@ -276,6 +415,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         finished: null,
       });
       log('note', `Combat prepared: ${state.combatants.length} combatants`);
+      rememberLinks(links);
     },
 
     async resume(encounter) {
@@ -543,6 +683,104 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       if (c) log('death', `${c.name} marked ${dead ? 'dead' : 'alive'}`, id);
     },
 
+    linkToken(id, tokenId) {
+      const c = find(id);
+      if (!c) return;
+      if (tokenId) {
+        applyLinks([{ combatantId: id, tokenId }]);
+        return;
+      }
+      if (!c.tokenId) return;
+      update((s) => ({
+        ...s,
+        combatants: s.combatants.map((x) => {
+          if (x.id !== id) return x;
+          const { tokenId: _gone, ...rest } = x;
+          return rest;
+        }),
+      }));
+      const encounter = currentEncounter();
+      if (encounter) saveTemplates(withTokenLink(encounter.combatants, c, null));
+    },
+
+    relinkTokens(tokens) {
+      const s = get().state;
+      if (!s) return;
+      applyLinks(autoLink(s.combatants, tokens));
+    },
+
+    async addFromToken(token) {
+      if (!get().state || token.kind === 'marker') return;
+      const campaign = useCampaignStore.getState().current;
+      const template = {
+        id: ulid(),
+        ref: token.ref,
+        label: token.label,
+        quantity: 1,
+        role: token.role,
+        hidden: token.hidden,
+        tokenId: token.id,
+      };
+      let c: Combatant | null = null;
+      if (token.ref.kind === 'pc') {
+        const pcId = token.ref.pcId;
+        const pc = campaign?.pcs.find((p) => p.id === pcId);
+        if (pc) c = combatantFromPc(pc, template);
+      } else if (token.ref.kind === 'npc') {
+        const npcId = token.ref.npcId;
+        const npc = campaign?.npcs.find((n) => n.id === npcId);
+        if (npc) {
+          const found = npc.recordRef
+            ? await window.trifold.compendium.get(npc.recordRef.recordId).catch(() => null)
+            : null;
+          const record = found?.kind === 'monster' ? found : undefined;
+          if (record) set({ records: { ...get().records, [record.id]: record } });
+          const bonus = record
+            ? (record.data.initiativeBonus ?? abilityModifier(record.data.abilities.dex))
+            : 0;
+          c = combatantFromNpc(npc, record, template, rollInitiative(bonus, 'normal'));
+        }
+      } else if (token.ref.kind === 'record') {
+        const found = await window.trifold.compendium.get(token.ref.ref.recordId).catch(() => null);
+        if (found?.kind === 'monster') {
+          set({ records: { ...get().records, [found.id]: found } });
+          const bonus = found.data.initiativeBonus ?? abilityModifier(found.data.abilities.dex);
+          c = combatantFromMonster(found, template, token.label, rollInitiative(bonus, 'normal'));
+        }
+      }
+      if (!c) c = customCombatant(template, token.label);
+      c = { ...c, hidden: token.hidden, dead: c.dead || token.dead };
+      insertCombatant(c);
+      log('note', `${c.name} joins the fight`, c.id);
+      const encounter = currentEncounter();
+      if (encounter) saveTemplates([...encounter.combatants, template]);
+    },
+
+    async trackAsNpc(id) {
+      const c = find(id);
+      if (!c || c.isLair || c.ref.kind === 'pc' || c.ref.kind === 'npc') return null;
+      const npc = await useCampaignStore.getState().saveNpc({
+        schemaVersion: 1,
+        id: '',
+        name: c.name,
+        ...(c.ref.kind === 'record' ? { recordRef: c.ref.ref } : {}),
+        role: '',
+        location: '',
+        notes: '',
+        isAlive: !c.dead,
+        hp: { current: c.hp.current, max: c.hp.max, temp: c.hp.temp },
+        createdAt: '',
+        updatedAt: '',
+      });
+      if (!npc) return null;
+      patchCombatant(id, (x) => ({ ...x, ref: { kind: 'npc', npcId: npc.id, name: npc.name } }));
+      log('note', `${c.name} is now tracked as an NPC; HP carries to the next fight`, id);
+      const encounter = currentEncounter();
+      if (encounter)
+        saveTemplates(retargetToNpc(encounter.combatants, c.templateId, npc, c.tokenId));
+      return npc;
+    },
+
     remove(id) {
       update((s) => {
         const index = s.combatants.findIndex((c) => c.id === id);
@@ -794,7 +1032,10 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     async end() {
       const { encounterId, state, enemyXp } = get();
       if (!encounterId || !state) return null;
-      if (saveTimer) window.clearTimeout(saveTimer);
+      if (saveTimer) {
+        window.clearTimeout(saveTimer);
+        saveTimer = null;
+      }
       const casualties = state.combatants
         .filter((c) => c.ref.kind === 'pc' && c.dead)
         .map((c) => c.name);
@@ -806,6 +1047,8 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         log: state.log,
       };
       try {
+        // The final state goes down first: finishing carries HP from it to PC cards and NPCs.
+        await window.trifold.encounters.saveState(encounterId, state);
         await window.trifold.encounters.finish(encounterId, result);
       } catch (err) {
         set({ error: err instanceof Error ? err.message : String(err) });

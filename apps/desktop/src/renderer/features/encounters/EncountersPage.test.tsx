@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CampaignBundle } from '@trifold/api';
@@ -102,5 +102,34 @@ describe('EncountersPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss result' }));
     expect(screen.queryByTestId('fight-result')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('encounter-row')).toHaveLength(2);
+  });
+});
+
+describe('EncountersPage: named NPCs (ADR 0012)', () => {
+  beforeEach(() => {
+    const b = bundle();
+    const bandits = b.encounters[0]!.combatants[0]!;
+    bandits.cache = { xp: 25, cr: '1/8', type: 'humanoid', hp: 11, ac: 12 };
+    useCampaignStore.setState({ current: b });
+    useCombatStore.setState({ encounterId: null, state: null, browsing: false, finished: null });
+  });
+
+  it('splits one creature out of a group as an NPC, and offers NPCs that can fight', async () => {
+    render(<EncountersPage />);
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Bridge ambush' }));
+    expect(screen.getAllByTestId('template-row')).toHaveLength(1);
+    await userEvent.click(screen.getByRole('button', { name: 'Track Bandit as NPC' }));
+    await waitFor(() => expect(screen.getAllByTestId('template-row')).toHaveLength(2));
+    expect(window.trifold.npcs.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Bandit',
+        isAlive: true,
+        hp: { current: 11, max: 11, temp: 0 },
+      }),
+    );
+    const rows = screen.getAllByTestId('template-row');
+    expect(rows[0]).toHaveTextContent('Bandit');
+    expect(rows[1]).toHaveTextContent('NPC');
+    expect(screen.getByRole('button', { name: '+ Bandit' })).toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Scene } from '@trifold/schema';
+import type { Scene, Token } from '@trifold/schema';
 import { useCampaignStore } from './campaignStore';
 import { useMusicStore } from './musicStore';
 import { usePresenterStore } from './presenterStore';
@@ -20,6 +20,14 @@ interface SceneState {
   setDraft(scene: Scene): void;
   /** Sends a scene to the TV (Enter, double-click, ▶, Send to TV) and starts its playlist. */
   send(scene: Scene): void;
+  /**
+   * Changes a saved scene wherever it is: the draft when it is the selected one (so the editor
+   * and, when live, the TV follow at once), else the campaign's copy. The combat tracker uses
+   * this to keep its tokens' hidden and dead flags in step (ADR 0012).
+   */
+  patchScene(sceneId: string, fn: (scene: Scene) => Scene): void;
+  /** Patches one token in whichever scene holds it. */
+  patchTokenAnywhere(tokenId: string, patch: Partial<Token>): void;
   /** Called when the campaign changes so nothing points at another campaign's scenes. */
   reset(): void;
 }
@@ -65,6 +73,34 @@ export const useSceneStore = create<SceneState>((set, get) => ({
       // Scene-linked music (DESIGN.md §6.6): crossfade only when the playlist changes.
       void useMusicStore.getState().playPlaylist(scene.audio.playlistId, { ifDifferent: true });
     }
+  },
+
+  patchScene(sceneId, fn) {
+    const { draft } = get();
+    if (draft?.id === sceneId) {
+      get().setDraft(fn(draft));
+      return;
+    }
+    const scene = useCampaignStore.getState().current?.scenes.find((s) => s.id === sceneId);
+    if (!scene) return;
+    const next = fn(scene);
+    const liveId = usePresenterStore.getState().state.scene?.id ?? null;
+    if (next.id === liveId) usePresenterStore.getState().syncLiveScene(next);
+    void useCampaignStore.getState().saveScene(next);
+  },
+
+  patchTokenAnywhere(tokenId, patch) {
+    const { draft } = get();
+    const scene =
+      (draft?.tokens.some((t) => t.id === tokenId) ? draft : undefined) ??
+      useCampaignStore
+        .getState()
+        .current?.scenes.find((s) => s.tokens.some((t) => t.id === tokenId));
+    if (!scene) return;
+    get().patchScene(scene.id, (s) => ({
+      ...s,
+      tokens: s.tokens.map((t) => (t.id === tokenId ? { ...t, ...patch } : t)),
+    }));
   },
 
   reset() {

@@ -5,7 +5,7 @@ import type {
   CampaignSummary,
   NoteFolderContents,
 } from '@trifold/api';
-import type { Campaign, Encounter, Note, PCCard, Scene, SceneImage } from '@trifold/schema';
+import type { Campaign, Encounter, Note, NPC, PCCard, Scene, SceneImage } from '@trifold/schema';
 import { childrenOf, descendantsOf, nextOrder, placeItem } from '@trifold/rules';
 
 interface CampaignState {
@@ -24,6 +24,8 @@ interface CampaignState {
   removeNote(noteId: string, contents?: NoteFolderContents): Promise<void>;
   /** Puts a note (or folder) under `parentId` (null for the root) at `index` there. */
   moveNote(noteId: string, parentId: string | null, index: number): Promise<void>;
+  /** Saves an NPC; a new one (no id) is created. */
+  saveNpc(npc: NPC): Promise<NPC | null>;
   removeNpc(npcId: string): Promise<void>;
   removeAdventure(adventureId: string): Promise<void>;
   saveScene(scene: Scene): Promise<Scene | null>;
@@ -172,6 +174,21 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
         }
         set({ current: { ...current, notes } });
       });
+    },
+
+    async saveNpc(npc) {
+      const saved = await guard(() => window.trifold.npcs.save(npc));
+      const current = get().current;
+      if (saved && current) {
+        const others = current.npcs.filter((n) => n.id !== saved.id);
+        set({
+          current: {
+            ...current,
+            npcs: [...others, saved].sort((a, b) => a.name.localeCompare(b.name)),
+          },
+        });
+      }
+      return saved;
     },
 
     async removeNpc(npcId) {

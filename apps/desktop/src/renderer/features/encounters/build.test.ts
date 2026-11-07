@@ -221,3 +221,55 @@ describe('buildCombatants', () => {
     expect(countersFromMonster(monster('Goblin Warrior [5.5e]')).counters).toEqual([]);
   });
 });
+
+describe('what carries between fights (ADR 0012)', () => {
+  it('starts a PC from the card’s current and temp HP, clamped to max', () => {
+    const e = encounter({ combatants: [encounter().combatants[0]!] });
+    const hurt = buildCombatants(e, [{ ...pc, currentHp: 12, tempHp: 3 }], byId, {
+      initiativeMode: 'perGroup',
+    });
+    expect(hurt.combatants[0]!.hp).toEqual({ current: 12, max: 44, temp: 3 });
+    const over = buildCombatants(e, [{ ...pc, currentHp: 90 }], byId, {
+      initiativeMode: 'perGroup',
+    });
+    expect(over.combatants[0]!.hp).toEqual({ current: 44, max: 44, temp: 0 });
+  });
+
+  it('fights a named NPC as its stat block with the HP it was left with', () => {
+    const goblin = monster('Goblin Warrior [5.5e]');
+    const npc = {
+      schemaVersion: 1 as const,
+      id: 'npc1',
+      name: 'Grak',
+      recordRef: { recordId: goblin.id, sourceId: 'src', key: goblin.key, edition: goblin.edition },
+      role: '',
+      location: '',
+      notes: '',
+      isAlive: true,
+      hp: { current: 3, max: 7, temp: 0 },
+      createdAt: '2026-09-27T00:00:00.000Z',
+      updatedAt: '2026-09-27T00:00:00.000Z',
+    };
+    const grakRef = { kind: 'npc', npcId: 'npc1', name: 'Grak' } as const;
+    const peteRef = { kind: 'npc', npcId: 'missing', name: 'Old Pete' } as const;
+    const e = encounter({
+      combatants: [
+        { id: 'n', ref: grakRef, quantity: 1, role: 'enemy', hidden: false, tokenId: 'tok' },
+        { id: 'gone', ref: peteRef, quantity: 1, role: 'neutral', hidden: false },
+      ],
+    });
+    const result = buildCombatants(e, [], byId, { initiativeMode: 'perGroup', npcs: [npc] });
+    const [grak, pete] = result.combatants;
+    expect(grak).toMatchObject({
+      name: 'Grak',
+      ref: { kind: 'npc', npcId: 'npc1' },
+      hp: { current: 3, max: 7, temp: 0 },
+      recordId: goblin.id,
+      tokenId: 'tok',
+      dead: false,
+    });
+    expect(grak!.initiative).not.toBeNull();
+    expect(pete).toMatchObject({ name: 'Old Pete', hp: { max: 1 } });
+    expect(result.missing).toEqual(['Old Pete']);
+  });
+});

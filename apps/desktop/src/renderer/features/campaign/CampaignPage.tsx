@@ -51,6 +51,22 @@ function PcEditor({
         {field('Class', 'classText')}
         {field('Level', 'level', 'number')}
         {field('Max HP', 'maxHp', 'number')}
+        <label className="field">
+          Current HP
+          <input
+            type="number"
+            placeholder="full"
+            value={draft.currentHp ?? ''}
+            onChange={(e) => {
+              const { currentHp: _was, ...rest } = draft;
+              setDraft(
+                e.target.value === ''
+                  ? rest
+                  : { ...rest, currentHp: Math.max(0, num(e.target.value, 0)) },
+              );
+            }}
+          />
+        </label>
         {field('AC', 'ac', 'number')}
         {field('Initiative bonus', 'initiativeBonus', 'number')}
         {field('Speed', 'speed', 'number')}
@@ -164,9 +180,30 @@ function PartyTab() {
   const [quick, setQuick] = useState('');
   const [editing, setEditing] = useState<PCCard | null>(null);
   if (!current) return null;
+  const wounded = current.pcs.filter(
+    (pc) => (pc.currentHp !== undefined && pc.currentHp < pc.maxHp) || (pc.tempHp ?? 0) > 0,
+  );
+  const longRest = async () => {
+    for (const pc of wounded) {
+      const { currentHp: _spent, ...rested } = pc;
+      await savePc({ ...rested, tempHp: 0 });
+    }
+  };
   return (
     <div className="card">
-      <h2>Party</h2>
+      <div className="row">
+        <h2>Party</h2>
+        <span className="spacer" />
+        <button
+          type="button"
+          className="btn"
+          disabled={wounded.length === 0}
+          title="Everyone back to full HP, temp HP gone"
+          onClick={() => void longRest()}
+        >
+          Long rest
+        </button>
+      </div>
       {current.pcs.length === 0 && <p className="muted">No PC cards yet.</p>}
       {current.pcs.map((pc) =>
         editing?.id === pc.id ? (
@@ -184,7 +221,8 @@ function PartyTab() {
             <strong>{pc.name}</strong>
             <span className="muted">
               {pc.playerName ? `${pc.playerName} · ` : ''}
-              {pc.classText} {pc.level} · HP {pc.maxHp} · AC {pc.ac} · Init{' '}
+              {pc.classText} {pc.level} · HP {pc.currentHp ?? pc.maxHp}/{pc.maxHp}
+              {(pc.tempHp ?? 0) > 0 ? ` +${pc.tempHp}` : ''} · AC {pc.ac} · Init{' '}
               {pc.initiativeBonus >= 0 ? '+' : ''}
               {pc.initiativeBonus} · PP {pc.passives.perception}
             </span>
@@ -255,6 +293,7 @@ function PartyTab() {
 function NpcsTab() {
   const current = useCampaignStore((s) => s.current);
   const removeNpc = useCampaignStore((s) => s.removeNpc);
+  const saveNpc = useCampaignStore((s) => s.saveNpc);
   if (!current) return null;
   return (
     <div className="card">
@@ -267,8 +306,30 @@ function NpcsTab() {
             {n.role && <span className="muted">{n.role}</span>}
             {n.location && <span className="muted">· {n.location}</span>}
             {n.recordRef && <span className="badge">stat block</span>}
+            {n.hp && (
+              <span className="muted" title="HP carried from the last fight">
+                HP {n.hp.current}/{n.hp.max}
+                {n.hp.temp > 0 ? ` +${n.hp.temp}` : ''}
+              </span>
+            )}
             {!n.isAlive && <span className="badge">dead</span>}
             <span className="spacer" />
+            {n.hp && (n.hp.current < n.hp.max || n.hp.temp > 0 || !n.isAlive) && (
+              <button
+                type="button"
+                className="btn tiny"
+                title="Back to full HP and alive"
+                onClick={() =>
+                  void saveNpc({
+                    ...n,
+                    hp: { current: n.hp!.max, max: n.hp!.max, temp: 0 },
+                    isAlive: true,
+                  })
+                }
+              >
+                Restore
+              </button>
+            )}
             <button type="button" className="btn tiny" onClick={() => void removeNpc(n.id)}>
               Remove
             </button>

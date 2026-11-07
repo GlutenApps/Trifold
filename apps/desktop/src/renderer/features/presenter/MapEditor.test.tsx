@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CampaignBundle } from '@trifold/api';
-import type { Encounter, PCCard, Scene, Token } from '@trifold/schema';
+import type { Combatant, Encounter, PCCard, Scene, Token } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { MapEditor } from './MapEditor';
@@ -248,5 +248,107 @@ describe('MapEditor: replacing a background', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Replace Original image' }));
     await waitFor(() => expect(latest.image).toEqual(dusk));
     expect(latest.backgrounds).toEqual([{ id: 'original', name: 'Original', image: dusk }]);
+  });
+});
+
+describe('MapEditor: the fight on the map (ADR 0012)', () => {
+  const fighter = (id: string, name: string, extra: Partial<Combatant> = {}): Combatant => ({
+    id,
+    name,
+    maskedName: name,
+    revealed: true,
+    ref: { kind: 'custom', name },
+    role: 'enemy',
+    initiative: 10,
+    initiativeBonus: 0,
+    dexterity: 10,
+    hp: { current: 10, max: 10, temp: 0 },
+    saves: {},
+    damageVulnerabilities: [],
+    damageResistances: [],
+    damageImmunities: [],
+    conditionImmunities: [],
+    conditions: [],
+    concentrating: null,
+    counters: [],
+    recharges: [],
+    deathSaves: null,
+    dead: false,
+    hidden: false,
+    held: false,
+    isLair: false,
+    ...extra,
+  });
+  const goblin: Token = {
+    ...wolf,
+    id: 'gob',
+    ref: { kind: 'custom', name: 'Goblin' },
+    label: 'Goblin',
+    x: 4,
+  };
+  const withGoblin: Scene = { ...blank, tokens: [wolf, goblin] };
+
+  beforeEach(() => {
+    latest = withGoblin;
+    useCampaignStore.setState({
+      current: {
+        campaign: { settings: { initiativeMode: 'perGroup' } },
+        pcs: [],
+        npcs: [],
+        encounters: [{ ...ambush, sceneId: 's1' }],
+        scenes: [withGoblin],
+      } as unknown as CampaignBundle,
+    });
+    useCombatStore.setState({
+      encounterId: 'e1',
+      state: {
+        round: 1,
+        turnIndex: 0,
+        combatants: [fighter('b', 'Bandit 1', { tokenId: 'elsewhere' }), fighter('w', 'Wolf')],
+        log: [],
+        startedAt: now,
+      },
+    });
+  });
+
+  it('ties the matching token on its own, numbers it, and lets a stranger join', async () => {
+    render(<Harness initial={withGoblin} />);
+    // Wolf finds its token without being asked; the goblin has no one to be.
+    await waitFor(() =>
+      expect(useCombatStore.getState().state!.combatants[1]!.tokenId).toBe('wolf'),
+    );
+    expect(screen.getByTestId('token-order')).toHaveTextContent('2');
+    expect(screen.queryByRole('button', { name: 'Add Wolf to the fight' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Add Goblin to the fight' }));
+    await waitFor(() =>
+      expect(useCombatStore.getState().state!.combatants.map((c) => c.name)).toEqual([
+        'Bandit 1',
+        'Wolf',
+        'Goblin',
+      ]),
+    );
+    expect(useCombatStore.getState().state!.combatants[2]!.tokenId).toBe('gob');
+  });
+
+  it('hides and kills a token in the fight through its combatant', async () => {
+    render(<Harness initial={withGoblin} />);
+    await waitFor(() =>
+      expect(useCombatStore.getState().state!.combatants[1]!.tokenId).toBe('wolf'),
+    );
+    const tokens = screen.getAllByTestId('console-token');
+    fireEvent.contextMenu(tokens[0]!);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Hide from players' }));
+    expect(useCombatStore.getState().state!.combatants[1]!.hidden).toBe(true);
+    fireEvent.contextMenu(tokens[0]!);
+    expect(screen.getByRole('menuitem', { name: 'Unlink from Wolf' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Mark dead' }));
+    expect(useCombatStore.getState().state!.combatants[1]!.dead).toBe(true);
+    // The map's own copy of the token followed.
+    await waitFor(() =>
+      expect(useCampaignStore.getState().current!.scenes[0]!.tokens[0]).toMatchObject({
+        hidden: true,
+        dead: true,
+      }),
+    );
   });
 });

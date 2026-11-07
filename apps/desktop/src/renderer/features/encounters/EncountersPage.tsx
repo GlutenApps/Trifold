@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { ulid } from 'ulid';
 import type { CompendiumRow } from '@trifold/api';
 import { difficultyBand, partyBudget } from '@trifold/rules';
-import type { CombatantTemplate, Encounter } from '@trifold/schema';
+import type { CombatantTemplate, Encounter, NPC } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { Icon } from '../shell/icons';
 import { CombatView } from './CombatView';
 import { formatResultLog, logFileName } from './logExport';
+import { retargetToNpc } from './templates';
+
+const NO_NPCS: NPC[] = [];
 
 function newEncounter(name: string): Encounter {
   const now = new Date().toISOString();
@@ -36,6 +39,8 @@ function Builder({
   fightRunning: boolean;
 }) {
   const pcs = useCampaignStore((s) => s.current?.pcs ?? []);
+  const npcs = useCampaignStore((s) => s.current?.npcs ?? NO_NPCS);
+  const saveNpc = useCampaignStore((s) => s.saveNpc);
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState<CompendiumRow[]>([]);
   const debounce = useRef<number | null>(null);
@@ -74,6 +79,58 @@ function Builder({
         hidden: false,
       }));
     if (added.length) set({ combatants: [...encounter.combatants, ...added] });
+  };
+
+  /** NPCs that can fight: those with a stat block, or HP left over from a fight. */
+  const fightingNpcs = npcs.filter((n) => n.recordRef || n.hp);
+
+  const addNpc = async (npc: NPC) => {
+    if (encounter.combatants.some((t) => t.ref.kind === 'npc' && t.ref.npcId === npc.id)) return;
+    const record = npc.recordRef
+      ? await window.trifold.compendium.get(npc.recordRef.recordId).catch(() => null)
+      : null;
+    const cache =
+      record?.kind === 'monster'
+        ? {
+            xp: record.data.xp,
+            cr: record.data.cr,
+            type: record.data.type,
+            hp: npc.hp?.max ?? record.data.hp?.average ?? 0,
+            ac: record.data.ac?.value ?? 10,
+          }
+        : { xp: 0, cr: '', type: '', hp: npc.hp?.max ?? 0, ac: 10 };
+    set({
+      combatants: [
+        ...encounter.combatants,
+        {
+          id: ulid(),
+          ref: { kind: 'npc', npcId: npc.id, name: npc.name },
+          quantity: 1,
+          role: 'enemy',
+          hidden: false,
+          cache,
+        },
+      ],
+    });
+  };
+
+  /** A creature becomes a named NPC whose HP carries between fights (ADR 0012). */
+  const trackAsNpc = async (t: CombatantTemplate) => {
+    const max = t.hpOverride ?? t.cache?.hp;
+    const npc = await saveNpc({
+      schemaVersion: 1,
+      id: '',
+      name: t.label || t.ref.name,
+      ...(t.ref.kind === 'record' ? { recordRef: t.ref.ref } : {}),
+      role: '',
+      location: '',
+      notes: '',
+      isAlive: true,
+      ...(max ? { hp: { current: max, max, temp: 0 } } : {}),
+      createdAt: '',
+      updatedAt: '',
+    });
+    if (npc) set({ combatants: retargetToNpc(encounter.combatants, t.id, npc) });
   };
 
   const addCreature = async (row: CompendiumRow) => {
@@ -150,12 +207,17 @@ function Builder({
       {encounter.combatants.map((t) => (
         <div key={t.id} className="row template-row" data-testid="template-row">
           <strong>{t.ref.name}</strong>
+          {t.ref.kind === 'npc' && (
+            <span className="badge" title="A named NPC: HP carries between fights">
+              NPC
+            </span>
+          )}
           {t.cache && (
             <span className="muted">
               CR {t.cache.cr} · {t.cache.xp} XP
             </span>
           )}
-          {t.ref.kind !== 'pc' && (
+          {(t.ref.kind === 'record' || t.ref.kind === 'custom') && (
             <label className="field inline">
               ×
               <input
@@ -197,6 +259,17 @@ function Builder({
             hidden
           </label>
           <span className="spacer" />
+          {(t.ref.kind === 'record' || t.ref.kind === 'custom') && (
+            <button
+              type="button"
+              className="chrome-btn xs"
+              aria-label={`Track ${t.label || t.ref.name} as NPC`}
+              title="Make this a named NPC whose HP carries to the next fight"
+              onClick={() => void trackAsNpc(t)}
+            >
+              <Icon name="person" size={13} />
+            </button>
+          )}
           <button
             type="button"
             className="btn"
@@ -222,6 +295,22 @@ function Builder({
           </button>
         ))}
       </div>
+      {fightingNpcs.length > 0 && (
+        <div className="row">
+          <span className="muted">NPCs</span>
+          {fightingNpcs.map((n) => (
+            <button
+              key={n.id}
+              type="button"
+              className="btn"
+              title={n.hp ? `HP ${n.hp.current}/${n.hp.max} from the last fight` : undefined}
+              onClick={() => void addNpc(n)}
+            >
+              + {n.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="row">
         <input
           type="text"

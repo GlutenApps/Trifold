@@ -1,7 +1,9 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Combatant } from '@trifold/schema';
+import type { CampaignBundle } from '@trifold/api';
+import type { Combatant, Scene, Token } from '@trifold/schema';
+import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { CombatView } from './CombatView';
 
@@ -206,5 +208,64 @@ describe('CombatView', () => {
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(useCombatStore.getState().pendingDamage).toEqual([]);
+  });
+});
+
+describe('CombatView: the row toolbar and the map (ADR 0012)', () => {
+  const now = '2026-09-28T00:00:00.000Z';
+  const wolfToken: Token = {
+    id: 'w1',
+    kind: 'creature',
+    ref: { kind: 'custom', name: 'Wolf' },
+    label: 'Wolf',
+    x: 1,
+    y: 1,
+    footprint: 1,
+    role: 'enemy',
+    hidden: false,
+    nameMasked: true,
+    dead: false,
+  };
+  const cave = {
+    schemaVersion: 1,
+    id: 's1',
+    kind: 'blankGrid',
+    title: 'Cave',
+    tokens: [wolfToken],
+    blank: { cols: 10, rows: 10 },
+    createdAt: now,
+    updatedAt: now,
+  } as unknown as Scene;
+
+  it('ends with a red text button, has no hold button, and offers to track a creature as an NPC', () => {
+    useCampaignStore.setState({ current: null });
+    render(<CombatView />);
+    const end = screen.getByRole('button', { name: 'End combat' });
+    expect(end).toHaveClass('btn', 'danger');
+    expect(end).toHaveTextContent('End combat');
+    expect(screen.queryByRole('button', { name: /hold/i })).not.toBeInTheDocument();
+    const wolf = screen.getByRole('region', { name: 'Wolf controls' });
+    expect(within(wolf).getByRole('button', { name: 'Mark dead' })).toBeInTheDocument();
+    expect(within(wolf).getByRole('button', { name: 'Hide from players' })).toBeInTheDocument();
+    expect(within(wolf).getByRole('button', { name: 'Track as NPC' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Place on map' })).not.toBeInTheDocument();
+  });
+
+  it('places a combatant on the map in play by tying it to the matching free token', async () => {
+    useCampaignStore.setState({
+      current: {
+        campaign: { id: 'c1', slug: 'cave' },
+        pcs: [],
+        npcs: [],
+        scenes: [cave],
+        encounters: [{ id: 'enc', sceneId: 's1', combatants: [] }],
+      } as unknown as CampaignBundle,
+    });
+    render(<CombatView />);
+    const wolf = screen.getByRole('region', { name: 'Wolf controls' });
+    await userEvent.click(within(wolf).getByRole('button', { name: 'Place on map' }));
+    expect(useCombatStore.getState().state!.combatants[0]!.tokenId).toBe('w1');
+    expect(screen.getAllByTestId('combatant-row')[0]).toHaveTextContent('map');
+    expect(within(wolf).queryByRole('button', { name: 'Place on map' })).not.toBeInTheDocument();
   });
 });

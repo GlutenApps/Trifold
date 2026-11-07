@@ -14,6 +14,7 @@ import type {
   Encounter,
   Feature,
   MonsterRecord,
+  NPC,
   PCCard,
   RechargeState,
 } from '@trifold/schema';
@@ -23,6 +24,8 @@ import type {
 export interface BuildOptions {
   initiativeMode: 'perGroup' | 'perCreature';
   rng?: Rng;
+  /** The campaign's NPCs, for templates that point at one; they bring their own HP (ADR 0012). */
+  npcs?: readonly NPC[];
 }
 
 export interface BuildResult {
@@ -98,7 +101,10 @@ export function countersFromMonster(record: MonsterRecord): {
   return { counters, recharges };
 }
 
+/** A PC starts where the last fight left them: current and temp HP come from the card. */
 export function combatantFromPc(pc: PCCard, template?: CombatantTemplate): Combatant {
+  const max = template?.hpOverride ?? pc.maxHp;
+  const current = Math.min(pc.currentHp ?? max, max);
   return {
     id: ulid(),
     ...(template ? { templateId: template.id } : {}),
@@ -110,11 +116,7 @@ export function combatantFromPc(pc: PCCard, template?: CombatantTemplate): Comba
     initiative: null,
     initiativeBonus: pc.initiativeBonus,
     dexterity: 10 + pc.initiativeBonus * 2,
-    hp: {
-      current: template?.hpOverride ?? pc.maxHp,
-      max: template?.hpOverride ?? pc.maxHp,
-      temp: 0,
-    },
+    hp: { current, max, temp: pc.tempHp ?? 0 },
     ac: pc.ac,
     saves: pc.saves,
     damageVulnerabilities: [],
@@ -175,7 +177,7 @@ export function combatantFromMonster(
   };
 }
 
-function customCombatant(template: CombatantTemplate, name: string): Combatant {
+export function customCombatant(template: CombatantTemplate, name: string): Combatant {
   const max = template.hpOverride ?? template.cache?.hp ?? 1;
   return {
     id: ulid(),
@@ -237,6 +239,30 @@ export function lairCombatant(): Combatant {
   };
 }
 
+/**
+ * A named NPC fights as its stat block (or its cached values) but keeps the HP and the alive
+ * flag it was left with, so a recurring villain carries wounds from fight to fight.
+ */
+export function combatantFromNpc(
+  npc: NPC,
+  record: MonsterRecord | undefined,
+  template: CombatantTemplate,
+  initiative: number | null,
+): Combatant {
+  const name = template.label || npc.name;
+  const base = record
+    ? combatantFromMonster(record, template, name, initiative)
+    : customCombatant(template, name);
+  const max = template.hpOverride ?? npc.hp?.max ?? base.hp.max;
+  const current = npc.hp ? Math.min(npc.hp.current, max) : max;
+  return {
+    ...base,
+    ref: { kind: 'npc', npcId: npc.id, name: npc.name },
+    hp: { current, max, temp: npc.hp?.temp ?? 0 },
+    dead: !npc.isAlive,
+  };
+}
+
 /** The template as seen by its i-th creature: that creature's own token when one was placed. */
 function forToken(template: CombatantTemplate, i: number): CombatantTemplate {
   const tokenId = template.tokenIds?.[i] ?? template.tokenId;
@@ -265,6 +291,24 @@ export function buildCombatants(
       const pc = pcs.find((p) => p.id === ref.pcId);
       if (pc) combatants.push(combatantFromPc(pc, template));
       else missing.push(ref.name);
+      continue;
+    }
+    if (ref.kind === 'npc') {
+      const npc = options.npcs?.find((n) => n.id === ref.npcId);
+      if (!npc) {
+        missing.push(ref.name);
+        combatants.push(customCombatant(forToken(template, 0), template.label || ref.name));
+        continue;
+      }
+      const found = npc.recordRef ? records.get(npc.recordRef.recordId) : undefined;
+      const record = found?.kind === 'monster' ? found : undefined;
+      if (record && record.data.lair.length > 0) hasLair = true;
+      const bonus = record
+        ? (record.data.initiativeBonus ?? abilityModifier(record.data.abilities.dex))
+        : 0;
+      combatants.push(
+        combatantFromNpc(npc, record, forToken(template, 0), rollInitiative(bonus, 'normal', rng)),
+      );
       continue;
     }
     const base = template.label || ref.name;

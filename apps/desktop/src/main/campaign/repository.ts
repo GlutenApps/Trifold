@@ -383,6 +383,55 @@ export class CampaignRepository {
 
   async finishEncounter(encounterId: string, result: EncounterResult): Promise<Encounter> {
     const current = await this.getEncounter(encounterId);
+    if (current.state) await this.carryOver(current.state.combatants);
     return this.saveEncounter({ ...current, state: null, results: [...current.results, result] });
+  }
+
+  /**
+   * What a fight leaves behind (ADR 0012): PC cards keep their current and temp HP, named NPCs
+   * keep HP and whether they are alive. A card or NPC that no longer exists is skipped.
+   */
+  private async carryOver(combatants: CombatState['combatants']): Promise<void> {
+    const slug = this.requireSlug();
+    for (const c of combatants) {
+      if (c.ref.kind === 'pc') {
+        const pc = await this.readOptional(
+          this.dir(slug, 'pcs', `${c.ref.pcId}.json`),
+          PCCard,
+          'pc',
+        );
+        if (pc) await this.savePc({ ...pc, currentHp: c.hp.current, tempHp: c.hp.temp });
+      } else if (c.ref.kind === 'npc') {
+        const npc = await this.readOptional(
+          this.dir(slug, 'npcs', `${c.ref.npcId}.json`),
+          NPC,
+          'npc',
+        );
+        if (npc) {
+          await this.writeEntity(
+            'npcs',
+            npc.id,
+            NPC.parse({
+              ...npc,
+              hp: { current: c.hp.current, max: c.hp.max, temp: c.hp.temp },
+              isAlive: !c.dead,
+              updatedAt: nowIso(),
+            }),
+          );
+        }
+      }
+    }
+  }
+
+  private async readOptional<T>(
+    relative: string,
+    schema: ZodType<T>,
+    kind: 'pc' | 'npc',
+  ): Promise<T | null> {
+    try {
+      return await this.store.readJson(relative, schema, kind);
+    } catch {
+      return null;
+    }
   }
 }

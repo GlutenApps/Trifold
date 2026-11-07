@@ -57,7 +57,7 @@ Settled decisions, in one place. Rationale is in the sections that follow.
 | Copyright posture | Lion's Den model: ship SRD only; import anything the user supplies; export flags records derived from non-SRD content. |
 | Native module pins | `electron` and `better-sqlite3` are pinned together to versions with prebuilt binaries (currently Electron 42 / better-sqlite3 12.11.1); no compiler on install. Window routes use the URL hash. See ADR 0001 and ADR 0002. |
 | Console layout | Library space plus a console per open campaign: a tabbed stage (one or two groups) for the majors, a right dock for the minor tools, a live strip for table state. Palette "Slate and bone", type Outfit + IBM Plex Mono (bundled, OFL). See ADR 0004 (supersedes 0003). The presenter is two pieces: Scenes (the list, dock) and TV (the screen, stage); the live strip mirrors one-tap actions and is never a control's only home. See ADR 0008. Dice, Hotkeys and Layouts pop up from their own buttons (strip, top bar) and the dock keeps the tall tools, Music and Scenes. See ADR 0009. |
-| Encounters and combat | One Encounters tab: the list and builder, replaced by the combat tracker while a fight runs (the list stays a click away). A built encounter can be placed on a map as hidden tokens, positioned, then started. See ADR 0005. |
+| Encounters and combat | One Encounters tab: the list and builder, replaced by the combat tracker while a fight runs (the list stays a click away). A built encounter can be placed on a map as hidden tokens, positioned, then started. See ADR 0005. HP carries between fights for PCs and named NPCs; during a fight the tracker owns hidden and dead and the map follows; combatants and tokens on the map in play are tied by identity, with turn-order badges on linked tokens and a plus on unlinked ones. See ADR 0012. |
 | Campaign notes | A tree of folders (the scene tree's helpers) beside the open note, which saves itself as it is edited; Party, NPCs and Notes are sub-tabs of the Campaign tab. Folders replace Adventures in the UI; the record stays for imports. Phrase search with snippets and note templates follow in the same series. See ADR 0010. |
 | Web tabs | The stage `+` menu adds a web tab: an address the DM typed, hosted in a sandboxed Electron webview in one persistent session, so a hosted document or sheet sits beside the console as a tab and reopens where it was left at the next launch. Library-wide list stored with the layouts; close parks, remove forgets; modifier hotkeys reach through the page; every tab has Open in system browser. See ADR 0011. |
 
@@ -171,9 +171,9 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Note** — `{ id, kind: "note"|"folder", title, body (markdown), tags, links: EntityRef[], parentId?, order }` (a tree like scenes: `parentId` is the folder, `order` the place among siblings; new notes go last in their folder; ADR 0010)
 
-**NPC** — `{ id, name, recordRef?: RecordRef (stat block), portrait?, role, location?, notes, isAlive }`
+**NPC** — `{ id, name, recordRef?: RecordRef (stat block), portrait?, role, location?, notes, isAlive, hp?: { current, max, temp } }` (`hp` is what the last fight left, ADR 0012)
 
-**PCCard** — `{ id, name, playerName, classText, level, maxHp, ac, initiativeBonus, speed, passives: { perception, insight, investigation }, spellSaveDc?, saves: Record<Ability, number>, portrait?, dndBeyondUrl?, notes, tokenStyleOverride? }`
+**PCCard** — `{ id, name, playerName, classText, level, maxHp, currentHp?, tempHp?, ac, initiativeBonus, speed, passives: { perception, insight, investigation }, spellSaveDc?, saves: Record<Ability, number>, portrait?, dndBeyondUrl?, notes, tokenStyleOverride? }` (`currentHp` absent means full; both carried between fights, ADR 0012)
 
 **Encounter** — `{ id, name, sceneId?, combatants: CombatantTemplate[], notes, difficultyCache?, state?: CombatState }`
 `CombatantTemplate` — `{ ref: PCRef|RecordRef|NPCRef, label?, quantity, role: "ally"|"enemy"|"neutral", hpOverride?, hidden: boolean, tokenId? }`
@@ -226,8 +226,8 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 ### 6.3 Campaign management
 
 - Campaign list on launch; one open at a time. The Campaign tab is three sub-tabs: Party, NPCs, Notes. Notes are a tree of folders beside the open note (ADR 0010): find in notes (a phrase, with context snippets that open the note at that hit), new note, new folder, collapse, drag to reorder or into a folder (scenes drag the same way); the open note is formatted text stored as markdown and saves itself as it is edited; a narrow panel shows the list or the note, not both. Folders took the place of Adventures in the UI; the adventure record stays in the schema and the importer so old campaigns and campaign XML load, and an imported adventure's notes land in a folder named after it. Notes are markdown with `[[links]]` to NPCs, scenes, encounters and compendium records (autocomplete). Backlinks are shown on the target.
-- NPC records can wrap a stat block (any monster record, including the 1,237 `npc`-flagged entries in community files) and carry a portrait, role, location and notes.
-- **PC cards**: form with the fields in §5.2. Import from a Fight Club GM export fills what the stat block provides (AC, HP, saves, skills, passives, spells). A "quick add" text box accepts one line per PC: `Name, Player, Class L, HP, AC, Init, Speed, PP`. Unofficial D&D Beyond pre-fill is out of scope for v1 (tracked as a later convenience; unsupported endpoint).
+- NPC records can wrap a stat block (any monster record, including the 1,237 `npc`-flagged entries in community files) and carry a portrait, role, location and notes. A named NPC carries HP and the alive flag from fight to fight; any creature in an encounter or a running fight can be turned into one with Track as NPC, and the NPCs tab shows carried HP with Restore (ADR 0012).
+- **PC cards**: form with the fields in §5.2, including current HP, which a fight starts from and writes back when it ends; Long rest on the Party tab heals everyone (ADR 0012). Import from a Fight Club GM export fills what the stat block provides (AC, HP, saves, skills, passives, spells). A "quick add" text box accepts one line per PC: `Name, Player, Class L, HP, AC, Init, Speed, PP`. Unofficial D&D Beyond pre-fill is out of scope for v1 (tracked as a later convenience; unsupported endpoint).
 - Session log: encounter results (XP earned, rounds, casualties) append to a campaign log automatically; DM can add free-text session notes.
 
 ### 6.4 Encounters and combat tracker
@@ -236,7 +236,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Starting combat.** Roll initiative per creature or per group (setting); PCs prompt for their rolled initiative (or roll from the card's bonus). Surprise flag = disadvantage on that combatant's initiative roll (2024). Lair actions insert a "Lair" entry at initiative 20 when any combatant has lair actions. Ties: Dex, then DM drag.
 
-**Turn loop.** Active combatant highlighted; Next/Previous; round counter; per-turn automation at start of turn: roll recharge for `recharge` abilities (d6 ≥ min), reset the legendary action pool, expire conditions with `untilStartOfTurn`, prompt for "save at end of turn" conditions at end of turn. Delay/ready: drag to reorder; "hold" marks a combatant to act later.
+**Turn loop.** Active combatant highlighted; Next/Previous; round counter; per-turn automation at start of turn: roll recharge for `recharge` abilities (d6 ≥ min), reset the legendary action pool, expire conditions with `untilStartOfTurn`, prompt for "save at end of turn" conditions at end of turn. Delay/ready: drag to reorder (the hold button was removed, ADR 0012; the `held` field remains for saved fights).
 
 **Stat block panel.** The active combatant's full stat block with buttons:
 - **Attack**: rolls to-hit (advantage/disadvantage toggle, crit detection) and damage (rolls the expression; doubles dice on crit) from the attack triple; blank to-hit means damage-only.
@@ -244,6 +244,8 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 - **Save call**: from parsed `SaveCall`s: pick targets → auto-roll for creatures (with their save bonus), show DC and each PC's bonus from the card so the DM can read results straight off; apply half/none on success.
 - **Spell**: click a spell name to open its record; slot tracker for creatures with `slots`.
 - Counters: legendary actions (per turn), Legendary Resistance, N/day uses, custom counters.
+
+**Carrying over.** When a fight ends, each PC's current and temp HP go back to the card and each named NPC keeps its HP and whether it lives; compendium creatures start fresh every time (ADR 0012). The active row's toolbar: hide from the players (strip and map together), mark dead (skull), track as NPC, place on map, remove.
 
 **Damage and healing.** Apply damage with an optional damage type; the tracker halves for resistances, zeroes for immunities, doubles for vulnerabilities, and shows what it did. Temp HP absorbed first. Concentration check prompt when a concentrating combatant takes damage (DC 10 or half damage, whichever is higher). Massive damage / instant death rule shown as a hint. PCs at 0 HP switch to death saves (three successes/failures; nat 20 regains 1 HP; nat 1 counts as two failures). Creatures at 0 HP are marked dead and grayed on the map.
 
@@ -270,7 +272,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Grid.** Square cells, 5 ft each. Per-scene `cellPx`, `offsetX/Y`, color, opacity, `showToPlayers`. Alignment: numeric entry, or a two-click tool (click opposite corners of one cell) that derives cellPx and offset. Snap-to-grid for tokens; hold Alt to place freely.
 
-**Tokens.** PC tokens from cards, creature tokens from compendium/encounter, markers. Footprint from size (T/S/M = 1, L = 2, H = 3, G = 4). Drag on the console; the TV mirrors within a frame. Per-token flags: `hidden` (DM-only), `nameMasked` (TV shows creature type), HP display, condition icons, active-turn ring, dead marker. Right-click menu: reveal, mask/unmask, mark dead, remove, set art.
+**Tokens.** PC tokens from cards, creature tokens from compendium/encounter, markers. Footprint from size (T/S/M = 1, L = 2, H = 3, G = 4). Drag on the console; the TV mirrors within a frame. Per-token flags: `hidden` (DM-only), `nameMasked` (TV shows creature type), HP display, condition icons, active-turn ring, dead marker. Right-click menu: reveal, mask/unmask, mark dead, remove, set art. During a fight, on the map in play (the live map, else the encounter's map): a token tied to a combatant wears its turn-order number and follows the combatant's hidden and dead flags (the menu's hide and dead act on the combatant); an unlinked PC or creature token wears a plus that ties it to the one matching combatant, offers a choice of several, or adds it as a newcomer; the menu can link, add or unlink. Matching is by identity (same card, NPC, record or custom name), never a name alone (ADR 0012).
 
 **Party placement.** When a map is live, the party is not placed until the DM clicks anywhere on the map (entry markers were built and removed as not useful, ADR 0008; the field stays in the scene file and is ignored); the PC tokens land as a compact cluster around that point (formation: 2-wide column) and can be nudged. No automatic carry-over between scenes. The scene remembers last positions and offers "restore previous positions" when reopened.
 

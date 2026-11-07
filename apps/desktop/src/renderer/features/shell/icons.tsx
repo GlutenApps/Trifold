@@ -75,7 +75,9 @@ export type IconName =
   | 'skull'
   | 'gem'
   | 'star'
-  | 'minus';
+  | 'minus'
+  | 'eye'
+  | 'eyeOff';
 
 /** Hand-drawn 24 px stroke glyphs; no icon dependency, so the chrome stays small and ours. */
 const PATHS: Record<IconName, string> = {
@@ -113,6 +115,10 @@ const PATHS: Record<IconName, string> = {
   layout: 'M3 4h18v16H3zM3 12h18M12 12v8',
   play: 'M7 5l12 7-12 7z',
   pause: 'M7 5h4v14H7zM13 5h4v14h-4z',
+  // Seen by the players, or not: the tracker's and the map's shared hidden flag.
+  eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  eyeOff:
+    'M3 3l18 18M10.5 5.2A11 11 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.6 6.6C3.8 8.6 2 12 2 12s4 7 10 7c1.5 0 2.9-.3 4.1-.8M9.9 9.9a3 3 0 0 0 4.2 4.2',
   prev: 'M18 5L8 12l10 7zM5 5v14',
   next: 'M6 5l10 7-10 7zM19 5v14',
   stop: 'M6 6h12v12H6z',

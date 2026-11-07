@@ -12,7 +12,7 @@ import {
   webTabId,
   webTabKey,
 } from './library';
-import { Scene } from './campaign';
+import { NPC, PCCard, Scene } from './campaign';
 import { Source } from './source';
 
 describe('LibrarySettings', () => {
@@ -177,5 +177,29 @@ describe('web URLs', () => {
   it('refuses blanks and non-web schemes', () => {
     expect(normalizeWebUrl('')).toBeNull();
     expect(normalizeWebUrl('file:///tmp/x')).toBeNull();
+  });
+});
+
+describe('what a fight leaves behind (ADR 0012)', () => {
+  const now = '2026-09-27T00:00:00.000Z';
+
+  it('reads a PC card saved before current HP existed, and keeps one with it', () => {
+    const base = { schemaVersion: 1, id: 'p', name: 'Thora', createdAt: now, updatedAt: now };
+    expect(PCCard.parse(base)).toMatchObject({ maxHp: 10 });
+    expect(PCCard.parse(base).currentHp).toBeUndefined();
+    expect(PCCard.parse({ ...base, currentHp: 4, tempHp: 2 })).toMatchObject({
+      currentHp: 4,
+      tempHp: 2,
+    });
+  });
+
+  it('keeps an NPC’s HP block only once it has fought', () => {
+    const base = { schemaVersion: 1, id: 'n', name: 'Grak', createdAt: now, updatedAt: now };
+    expect(NPC.parse(base).hp).toBeUndefined();
+    expect(NPC.parse({ ...base, hp: { current: 3, max: 7 } }).hp).toEqual({
+      current: 3,
+      max: 7,
+      temp: 0,
+    });
   });
 });

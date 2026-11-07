@@ -48,6 +48,9 @@ export const PCCard = z.object({
   classText: z.string().default(''),
   level: int.min(1).max(20).default(1),
   maxHp: int.min(1).default(10),
+  /** HP at the end of the last fight; absent means full. Carried into the next one (ADR 0012). */
+  currentHp: int.min(0).optional(),
+  tempHp: int.min(0).optional(),
   ac: int.default(10),
   initiativeBonus: int.default(0),
   speed: int.default(30),
@@ -296,6 +299,8 @@ export const NPC = z.object({
   location: z.string().default(''),
   notes: z.string().default(''),
   isAlive: z.boolean().default(true),
+  /** HP at the end of the last fight this NPC was in; absent until then (ADR 0012). */
+  hp: z.object({ current: int.min(0), max: int.min(0), temp: int.min(0).default(0) }).optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });

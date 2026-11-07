@@ -1,14 +1,33 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Combatant, ConditionDuration } from '@trifold/schema';
+import { ulid } from 'ulid';
+import type { Combatant, ConditionDuration, Scene, Token } from '@trifold/schema';
 import { registerHotkey } from '../../hotkeys';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore, type DamageTarget } from '../../stores/combatStore';
+import { useIconStore } from '../../stores/iconStore';
+import { usePresenterStore } from '../../stores/presenterStore';
+import { useSceneStore } from '../../stores/sceneStore';
 import { formatCombatLog, logFileName } from './logExport';
 import { StatBlock } from '../compendium/StatBlock';
+import { DEFAULT_GRID, footprintForSize, mapSize, pixelToGrid } from '../presenter/mapMath';
+import { sceneInPlay, tokenCandidates } from '../presenter/tokenLinks';
 import { Icon } from '../shell/icons';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useShellStore } from '../../stores/shellStore';
 import { hk } from '../../platform';
+
+const NO_SCENES: Scene[] = [];
+
+/** The map the running fight is compared against, if any (ADR 0012). */
+function useMapInPlay(): Scene | null {
+  const scenes = useCampaignStore((s) => s.current?.scenes ?? NO_SCENES);
+  const encounterId = useCombatStore((s) => s.encounterId);
+  const encounter = useCampaignStore(
+    (s) => s.current?.encounters.find((e) => e.id === encounterId) ?? null,
+  );
+  const liveSceneId = usePresenterStore((s) => s.state.scene?.id ?? null);
+  return sceneInPlay(scenes, liveSceneId, encounter);
+}
 
 const CONDITIONS = [
   'Blinded',
@@ -62,12 +81,15 @@ function CombatantRow({
   active,
   selected,
   open,
+  onMap,
   onToggle,
 }: {
   c: Combatant;
   active: boolean;
   selected: boolean;
   open: boolean;
+  /** Tied to a token on the map in play. */
+  onMap: boolean;
   onToggle(): void;
 }) {
   const setInitiative = useCombatStore((s) => s.setInitiative);
@@ -113,6 +135,11 @@ function CombatantRow({
       <span className="name">
         {c.name}
         {c.hidden && <span className="badge">hidden</span>}
+        {onMap && (
+          <span className="badge" title="On the map in play">
+            map
+          </span>
+        )}
         {!c.revealed && c.ref.kind !== 'pc' && !c.isLair && (
           <span className="badge" title="Players see this name">
             {c.maskedName}
@@ -176,8 +203,53 @@ function CombatantDrawer({
   onAssign(amount: number, type: string): void;
 }) {
   const store = useCombatStore();
+  const map = useMapInPlay();
+  const glyphFor = useIconStore((s) => s.glyphForCreature);
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('');
+  /** Free tokens the DM must choose between when more than one could be this combatant. */
+  const [tokenChoices, setTokenChoices] = useState<Token[] | null>(null);
+  const onMap = !!map && !!c.tokenId && map.tokens.some((t) => t.id === c.tokenId);
+
+  /** Ties the combatant to the one matching free token, asks when there are several, else
+   * drops a new token for it in the middle of the map. */
+  const placeOnMap = () => {
+    if (!map || !store.state) return;
+    const candidates = tokenCandidates(c, store.state.combatants, map.tokens);
+    if (candidates.length === 1) {
+      store.linkToken(c.id, candidates[0]!.id);
+      return;
+    }
+    if (candidates.length > 1) {
+      setTokenChoices(candidates);
+      return;
+    }
+    const record = c.recordId ? store.records[c.recordId] : undefined;
+    const size = mapSize(map);
+    const cell = pixelToGrid(size.width / 2, size.height / 2, map.grid ?? DEFAULT_GRID);
+    const type = record?.kind === 'monster' ? record.data.type : undefined;
+    const glyph =
+      c.ref.kind === 'pc'
+        ? null
+        : glyphFor({ name: c.name, ...(type ? { type } : {}) }, 'creature');
+    const token: Token = {
+      id: ulid(),
+      kind: c.ref.kind === 'pc' ? 'pc' : 'creature',
+      ref: c.ref,
+      label: c.name,
+      maskedLabel: c.maskedName,
+      x: Math.round(cell.x),
+      y: Math.round(cell.y),
+      footprint: footprintForSize(record?.kind === 'monster' ? record.data.size : undefined),
+      role: c.role,
+      hidden: c.hidden,
+      nameMasked: c.ref.kind !== 'pc' && !c.revealed,
+      dead: c.dead,
+      ...(glyph ? { glyph } : {}),
+    };
+    useSceneStore.getState().patchScene(map.id, (s) => ({ ...s, tokens: [...s.tokens, token] }));
+    store.linkToken(c.id, token.id);
+  };
   const [condition, setCondition] = useState('Frightened');
   const [durationKind, setDurationKind] = useState<
     'none' | 'rounds' | 'untilStartOfTurn' | 'untilEndOfTurn' | 'untilSave'
@@ -233,33 +305,51 @@ function CombatantDrawer({
             <button
               type="button"
               className={`chrome-btn${c.hidden ? ' on' : ''}`}
-              aria-label={c.hidden ? 'Unhide' : 'Hide'}
+              aria-label={c.hidden ? 'Show to players' : 'Hide from players'}
               aria-pressed={c.hidden}
-              title={c.hidden ? 'Unhide' : 'Hide from the players'}
+              title={
+                c.hidden
+                  ? 'Show to the players (initiative strip and map)'
+                  : 'Hide from the players (initiative strip and map)'
+              }
               onClick={() => store.toggleHidden(c.id)}
             >
-              <Icon name="image" size={15} />
+              <Icon name={c.hidden ? 'eyeOff' : 'eye'} size={15} />
             </button>
-            <button
-              type="button"
-              className={`chrome-btn${c.held ? ' on' : ''}`}
-              aria-label={c.held ? 'Release' : 'Hold'}
-              aria-pressed={c.held}
-              title={c.held ? 'Release the held turn' : 'Hold the turn'}
-              onClick={() => store.toggleHeld(c.id)}
-            >
-              <Icon name="pause" size={15} />
-            </button>
-            <button
-              type="button"
-              className={`chrome-btn${c.dead ? ' on' : ''}`}
-              aria-label={c.dead ? 'Revive' : 'Mark dead'}
-              aria-pressed={c.dead}
-              title={c.dead ? 'Revive' : 'Mark dead'}
-              onClick={() => store.markDead(c.id, !c.dead)}
-            >
-              <Icon name="combat" size={15} />
-            </button>
+            {!c.isLair && (
+              <button
+                type="button"
+                className={`chrome-btn${c.dead ? ' on' : ''}`}
+                aria-label={c.dead ? 'Revive' : 'Mark dead'}
+                aria-pressed={c.dead}
+                title={c.dead ? 'Revive' : 'Mark dead'}
+                onClick={() => store.markDead(c.id, !c.dead)}
+              >
+                <Icon name="skull" size={15} />
+              </button>
+            )}
+            {(c.ref.kind === 'record' || c.ref.kind === 'custom') && !c.isLair && (
+              <button
+                type="button"
+                className="chrome-btn"
+                aria-label="Track as NPC"
+                title="Make this a named NPC whose HP carries to the next fight"
+                onClick={() => void store.trackAsNpc(c.id)}
+              >
+                <Icon name="person" size={15} />
+              </button>
+            )}
+            {map && !c.isLair && !onMap && (
+              <button
+                type="button"
+                className="chrome-btn"
+                aria-label="Place on map"
+                title="Tie to a token on the map in play, or drop one there"
+                onClick={placeOnMap}
+              >
+                <Icon name="map" size={15} />
+              </button>
+            )}
             <button
               type="button"
               className="chrome-btn danger"
@@ -271,6 +361,27 @@ function CombatantDrawer({
             </button>
           </span>
         </div>
+        {tokenChoices && (
+          <div className="row" role="group" aria-label="Which token">
+            <span className="muted">Which token is {c.name}?</span>
+            {tokenChoices.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className="btn tiny"
+                onClick={() => {
+                  store.linkToken(c.id, t.id);
+                  setTokenChoices(null);
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+            <button type="button" className="btn tiny" onClick={() => setTokenChoices(null)}>
+              Cancel
+            </button>
+          </div>
+        )}
 
         {!c.isLair && (
           <div className="row">
@@ -848,7 +959,9 @@ export function CombatView() {
   const concentration = useCombatStore((s) => s.concentrationPrompt);
   const error = useCombatStore((s) => s.error);
   const store = useCombatStore();
-  const putEncounter = useCampaignStore((s) => s.putEncounter);
+  const reload = useCampaignStore((s) => s.load);
+  const map = useMapInPlay();
+  const mapTokenIds = new Set(map?.tokens.map((t) => t.id) ?? []);
   const openByKey = useCompendiumStore((s) => s.openByKey);
   const openMajor = useShellStore((s) => s.openMajor);
   const [showLog, setShowLog] = useState(true);
@@ -872,14 +985,8 @@ export function CombatView() {
 
   const endCombat = async () => {
     const result = await store.end();
-    if (result) {
-      const enc = await window.trifold.campaigns.current();
-      if (enc)
-        putEncounter(
-          enc.encounters.find((e) => e.results.some((r) => r.endedAt === result.endedAt)) ??
-            enc.encounters[0]!,
-        );
-    }
+    // Finishing wrote HP back to PC cards and NPCs (ADR 0012): take the whole bundle again.
+    if (result) await reload();
   };
 
   return (
@@ -941,12 +1048,11 @@ export function CombatView() {
         )}
         <button
           type="button"
-          className="chrome-btn"
-          aria-label="End combat"
-          title="End combat"
+          className="btn danger"
+          title="End the fight: HP carries to PC cards and tracked NPCs"
           onClick={() => void endCombat()}
         >
-          <Icon name="close" size={15} />
+          End combat
         </button>
       </div>
 
@@ -1015,6 +1121,7 @@ export function CombatView() {
                   active={i === state.turnIndex}
                   selected={isSelected}
                   open={open}
+                  onMap={!!c.tokenId && mapTokenIds.has(c.tokenId)}
                   onToggle={() => {
                     if (isSelected) setDrawerOpen((v) => !v);
                     else store.select(c.id);

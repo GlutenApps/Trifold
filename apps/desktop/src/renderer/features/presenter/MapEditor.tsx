@@ -8,7 +8,14 @@ import {
 import { ulid } from 'ulid';
 import { mediaUrl, type CompendiumRow } from '@trifold/api';
 import { numberedNames } from '@trifold/rules';
-import type { CombatantTemplate, Encounter, PCCard, Scene, Token } from '@trifold/schema';
+import type {
+  Combatant,
+  CombatantTemplate,
+  Encounter,
+  PCCard,
+  Scene,
+  Token,
+} from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
@@ -18,6 +25,12 @@ import { Icon } from '../shell/icons';
 import { GridLines } from './MapLayer';
 import { MapPop } from './MapPop';
 import { TokenDisc } from './TokenDisc';
+import {
+  combatantCandidates,
+  sceneInPlay,
+  turnOrderByToken,
+  unlinkedCombatants,
+} from './tokenLinks';
 import {
   DEFAULT_BLANK,
   DEFAULT_GRID,
@@ -59,6 +72,8 @@ interface DmCamera {
 
 const ZOOM_MIN = 0.05;
 const ZOOM_MAX = 8;
+const NO_SCENES: Scene[] = [];
+const NO_COMBATANTS: Combatant[] = [];
 
 function nowIso() {
   return new Date().toISOString();
@@ -89,6 +104,13 @@ export function MapEditor({
   const combatEncounterId = useCombatStore((s) => s.encounterId);
   const begin = useCombatStore((s) => s.begin);
   const resume = useCombatStore((s) => s.resume);
+  const linkToken = useCombatStore((s) => s.linkToken);
+  const relinkTokens = useCombatStore((s) => s.relinkTokens);
+  const addFromToken = useCombatStore((s) => s.addFromToken);
+  const toggleHidden = useCombatStore((s) => s.toggleHidden);
+  const markDead = useCombatStore((s) => s.markDead);
+  const scenes = useCampaignStore((s) => s.current?.scenes ?? NO_SCENES);
+  const liveSceneId = usePresenterStore((s) => s.state.scene?.id ?? null);
   const openMajor = useShellStore((s) => s.openMajor);
   const glyphFor = useIconStore((s) => s.glyphForCreature);
   const loadIcons = useIconStore((s) => s.load);
@@ -120,6 +142,46 @@ export function MapEditor({
   const deadTokens = new Set(
     combatState?.combatants.filter((c) => c.dead && c.tokenId).map((c) => c.tokenId) ?? [],
   );
+  // The fight on this map (ADR 0012): only the map in play compares itself with the tracker.
+  const fightEncounter = encounters.find((e) => e.id === combatEncounterId) ?? null;
+  const fighters = combatState?.combatants ?? NO_COMBATANTS;
+  const inPlay = !!combatState && sceneInPlay(scenes, liveSceneId, fightEncounter)?.id === scene.id;
+  const turnOrder = inPlay ? turnOrderByToken(fighters) : new Map<string, number>();
+  const fighterByToken = new Map(
+    inPlay ? fighters.filter((c) => c.tokenId).map((c) => [c.tokenId!, c] as const) : [],
+  );
+  const tokensRef = useRef(scene.tokens);
+  tokensRef.current = scene.tokens;
+  const unlinkedKey = inPlay
+    ? unlinkedCombatants(fighters, scene.tokens)
+        .map((c) => c.id)
+        .join(',')
+    : '';
+  const tokensKey = scene.tokens.map((t) => t.id).join(',');
+  useEffect(() => {
+    if (inPlay && unlinkedKey) relinkTokens(tokensRef.current);
+  }, [inPlay, unlinkedKey, tokensKey, relinkTokens]);
+
+  /** The plus on an unlinked token: the one match, a choice of several, or a newcomer. */
+  const joinFight = (token: Token, at: { x: number; y: number }) => {
+    const candidates = combatantCandidates(token, fighters, scene.tokens);
+    if (candidates.length === 1) linkToken(candidates[0]!.id, token.id);
+    else if (candidates.length === 0) void addFromToken(token);
+    else setMenu({ tokenId: token.id, ...at });
+  };
+
+  /** Hidden and dead on a token in the fight belong to its combatant; the token follows. */
+  const setTokenHidden = (t: Token, hidden: boolean) => {
+    const fighter = fighterByToken.get(t.id);
+    if (fighter) {
+      if (fighter.hidden !== hidden) toggleHidden(fighter.id);
+    } else patchToken(t.id, { hidden });
+  };
+  const setTokenDead = (t: Token, dead: boolean) => {
+    const fighter = fighterByToken.get(t.id);
+    if (fighter) markDead(fighter.id, dead);
+    else patchToken(t.id, { dead });
+  };
   const viewportRect = cameraRect(
     scene.playerCamera,
     size,
@@ -1101,6 +1163,34 @@ export function MapEditor({
                   selected={token.id === selectedTokenId}
                   hidden={token.hidden}
                 />
+                {turnOrder.has(token.id) && (
+                  <span
+                    className="token-order"
+                    data-testid="token-order"
+                    title="Place in the turn order"
+                  >
+                    {turnOrder.get(token.id)}
+                  </span>
+                )}
+                {inPlay && !turnOrder.has(token.id) && token.kind !== 'marker' && (
+                  <button
+                    type="button"
+                    className="chrome-btn xs token-add"
+                    aria-label={`Add ${token.label} to the fight`}
+                    title="Add to the fight"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const rect = containerRef.current?.getBoundingClientRect();
+                      joinFight(token, {
+                        x: e.clientX - (rect?.left ?? 0),
+                        y: e.clientY - (rect?.top ?? 0),
+                      });
+                    }}
+                  >
+                    <Icon name="plus" size={12} />
+                  </button>
+                )}
               </div>
             );
           })}
@@ -1116,8 +1206,50 @@ export function MapEditor({
             {(() => {
               const t = scene.tokens.find((x) => x.id === menu.tokenId);
               if (!t) return null;
+              const fighter = fighterByToken.get(t.id);
+              const candidates =
+                inPlay && !fighter ? combatantCandidates(t, fighters, scene.tokens) : [];
               return (
                 <>
+                  {inPlay && !fighter && t.kind !== 'marker' && (
+                    <>
+                      {candidates.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            linkToken(c.id, t.id);
+                            setMenu(null);
+                          }}
+                        >
+                          Link to {c.name}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          void addFromToken(t);
+                          setMenu(null);
+                        }}
+                      >
+                        {candidates.length ? 'Add to fight as a newcomer' : 'Add to fight'}
+                      </button>
+                    </>
+                  )}
+                  {fighter && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        linkToken(fighter.id, null);
+                        setMenu(null);
+                      }}
+                    >
+                      Unlink from {fighter.name}
+                    </button>
+                  )}
                   {t.kind === 'creature' && (
                     <button
                       type="button"
@@ -1134,7 +1266,7 @@ export function MapEditor({
                     type="button"
                     role="menuitem"
                     onClick={() => {
-                      patchToken(t.id, { hidden: !t.hidden });
+                      setTokenHidden(t, !t.hidden);
                       setMenu(null);
                     }}
                   >
@@ -1144,7 +1276,7 @@ export function MapEditor({
                     type="button"
                     role="menuitem"
                     onClick={() => {
-                      patchToken(t.id, { dead: !t.dead });
+                      setTokenDead(t, !t.dead);
                       setMenu(null);
                     }}
                   >
@@ -1244,13 +1376,20 @@ export function MapEditor({
             type="button"
             className="btn small"
             title="Show every hidden creature token to the players"
-            onClick={() =>
+            onClick={() => {
               patch({
                 tokens: scene.tokens.map((t) =>
-                  t.kind === 'creature' && t.hidden ? { ...t, hidden: false } : t,
+                  t.kind === 'creature' && t.hidden && !fighterByToken.has(t.id)
+                    ? { ...t, hidden: false }
+                    : t,
                 ),
-              })
-            }
+              });
+              // Tokens in the fight follow their combatants, so those unhide through the tracker.
+              for (const t of hiddenCreatures) {
+                const fighter = fighterByToken.get(t.id);
+                if (fighter?.hidden) toggleHidden(fighter.id);
+              }
+            }}
           >
             Reveal creatures ({hiddenCreatures.length})
           </button>
@@ -1331,7 +1470,7 @@ export function MapEditor({
               <input
                 type="checkbox"
                 checked={selectedToken.hidden}
-                onChange={(e) => patchToken(selectedToken.id, { hidden: e.target.checked })}
+                onChange={(e) => setTokenHidden(selectedToken, e.target.checked)}
               />
               Hidden from players
             </label>
@@ -1339,7 +1478,7 @@ export function MapEditor({
               <input
                 type="checkbox"
                 checked={selectedToken.dead}
-                onChange={(e) => patchToken(selectedToken.id, { dead: e.target.checked })}
+                onChange={(e) => setTokenDead(selectedToken, e.target.checked)}
               />
               Dead
             </label>
