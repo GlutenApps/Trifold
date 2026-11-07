@@ -25,7 +25,11 @@ describe('NoteEditor', () => {
     // The toolbar keeps the caret where it was, so typing lands in the new heading.
     await userEvent.click(screen.getByRole('button', { name: 'Heading 2' }));
     await userEvent.keyboard('Secrets');
-    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('## Secrets'));
+    // The first keystrokes also pay for the editor's setup; a loaded CI runner needs more than
+    // the 3 s default (the macOS job failed at 3.1 s once).
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('## Secrets'), {
+      timeout: 10_000,
+    });
     expect(screen.getByRole('button', { name: 'Heading 2' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -34,8 +38,9 @@ describe('NoteEditor', () => {
     await userEvent.keyboard('{Enter}');
     await userEvent.click(screen.getByRole('button', { name: 'Bulleted list' }));
     await userEvent.keyboard('The warden owes the guild');
-    await waitFor(() =>
-      expect(onChange).toHaveBeenLastCalledWith('## Secrets\n\n- The warden owes the guild'),
+    await waitFor(
+      () => expect(onChange).toHaveBeenLastCalledWith('## Secrets\n\n- The warden owes the guild'),
+      { timeout: 10_000 },
     );
   });
 
