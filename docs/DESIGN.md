@@ -264,7 +264,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Windows.** Console + player window. Settings → Displays picks the target display; the player window opens fullscreen there on "Open player window" and remembers the choice. Blackout and undo-last-scene are console hotkeys (`hotkeys.ts`), not OS-level global shortcuts.
 
-**Scene tree.** One tree per campaign; folders allowed; drag to reorder/reparent; duplicate with subtree. Hovering a scene shows its thumbnail and notes in a side panel. **Clicking a scene selects it and previews it on the TV tab; Enter, double-click or ▶ sends it** (ADR 0004). Hotkeys: Alt+Arrow keys move through the tree in the Scenes tool, and Ctrl+Alt+Up/Down step to the previous or next scene from the TV tab (Ctrl+K is the compendium search). Recent scenes list.
+**Scene tree.** One tree per campaign; folders allowed; drag to reorder/reparent; duplicate with subtree. Hovering a scene shows its thumbnail and notes in a side panel. **Clicking a scene selects it and previews it on the TV tab; Enter, double-click or ▶ sends it** (ADR 0004). Hotkeys: Alt+Down/Up/Left/Right send the next, previous, parent or first child scene straight to the TV; Ctrl+Alt+Up/Down select the previous or next scene on the TV tab without sending (Ctrl+K is the compendium search). Recent scenes list.
 
 **Scene kinds.**
 - *Title card:* text on a backdrop, optional subtitle, optional image.
