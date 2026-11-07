@@ -12,7 +12,7 @@ How a commit on `main` becomes the installers people download. Builds are unsign
 
 Each platform packages itself for its own architecture (ADR 0006): `scripts/rebuild-native.mjs` fetches the prebuilt `better-sqlite3` for the host, so a universal macOS binary is not attempted. The `.blockmap` and `builder-debug.yml` that electron-builder also writes are not part of a release.
 
-Inside every package: the app, the SRD snapshot and game-icons set under `resources/`, the icon licence, and the font licences under `resources/licenses/`. Attribution is shown on the About page.
+Inside every package: the app, the SRD snapshot and game-icons set under `resources/`, the icon licence, and the font licences under `resources/licenses/`. Attribution is shown on the About page. The installer shows the MIT licence (`apps/desktop/build/license.txt`, a copy of the root `LICENSE`; keep them identical).
 
 ## Before tagging
 
@@ -72,4 +72,3 @@ If a terminal exports `ELECTRON_RUN_AS_NODE=1` (some editor terminals do), the p
 
 - **Code signing.** A Windows certificate and an Apple Developer ID would remove the SmartScreen and Gatekeeper steps. When they exist: set `win.certificateFile`/`CSC_LINK` and `mac.identity` with `hardenedRuntime: true` and notarisation in `electron-builder.yml`, and drop `CSC_IDENTITY_AUTO_DISCOVERY=false` from the workflow.
 - **Update check.** The settings schema reserves `checkForUpdates`, nothing implements it, and electron-builder has no `publish` configuration on purpose. If it is ever built it must stay opt-in (CLAUDE.md ground rule 1).
-- **Project licence.** There is no `LICENSE` file yet, so the installer shows no licence page. Add one at the repo root (and `build/license.txt` for the NSIS page) once the licence is chosen.

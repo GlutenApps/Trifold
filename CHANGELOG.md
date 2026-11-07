@@ -4,9 +4,13 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
-Everything since the 0.2.0 install pass. The next release should be tagged `v0.3.0` (see `docs/RELEASING.md`).
+## [0.3.0] - 2026-11-07
+
+Everything since the 0.2.0 install pass; the first release built by the release workflow.
 
 ### Added
+
+- MIT licence for the code (`LICENSE`, shown by the installer).
 
 - Shell: Library space plus a per-campaign console with a tabbed stage, dock, live strip and saved layouts (ADR 0004); pop-up Dice, Hotkeys and Layouts (ADR 0009); one control scale and UI guidelines (ADR 0013); panel floors and folding (ADR 0014); layouts decide which tabs are open, with new starters.
 - TV tab that shows the selected scene and holds every screen control (ADR 0008).

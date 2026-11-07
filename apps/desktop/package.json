@@ -1,7 +1,8 @@
 {
   "name": "@trifold/desktop",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
+  "license": "MIT",
   "description": "Trifold desktop app: a local DM console for 5e-compatible games.",
   "productName": "Trifold",
   "author": "Trifold contributors",
