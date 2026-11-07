@@ -66,9 +66,10 @@ test('a web tab hosts a page, follows its title and survives in the Library', as
     expect(title).not.toMatch(/electron|trifold|chrome/i);
 
     // A modifier combo typed inside the page reaches the console's hotkeys (Ctrl+/ = sheet).
+    // "Ctrl" in a combo is the Command key on macOS (ADR 0006), so press that one there.
     const guest = console_.locator('webview');
     await guest.click();
-    await console_.keyboard.press('Control+/');
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+/' : 'Control+/');
     await expect(console_.getByRole('dialog', { name: 'Hotkeys' })).toBeVisible({
       timeout: 10_000,
     });
