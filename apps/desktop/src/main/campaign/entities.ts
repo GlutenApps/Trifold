@@ -1,5 +1,7 @@
 import { rm } from 'node:fs/promises';
 import { ulid } from 'ulid';
+import type { NoteFolderContents } from '@trifold/api';
+import { placeItem } from '@trifold/rules';
 import { Adventure, CAMPAIGN_SCHEMA_VERSION, Note, NPC, nowIso, Scene } from '@trifold/schema';
 import type { CampaignRepository } from './repository';
 
@@ -28,15 +30,22 @@ export class CampaignEntities {
     await this.repo.touch();
   }
 
-  /** Saves a note; a new one (no id) goes to the end of the list. */
+  /** Saves a note; a new one (no id) goes last among its siblings (ADR 0010). */
   async saveNote(input: Note): Promise<Note> {
+    const parentId = input.parentId ?? null;
     const order = input.id
       ? input.order
-      : Math.max(-1, ...(await this.repo.notes()).map((n) => n.order)) + 1;
+      : Math.max(
+          -1,
+          ...(await this.repo.notes())
+            .filter((n) => (n.parentId ?? null) === parentId)
+            .map((n) => n.order),
+        ) + 1;
     const note = Note.parse({
       ...input,
       schemaVersion: CAMPAIGN_SCHEMA_VERSION,
       id: input.id || ulid(),
+      parentId,
       order,
       createdAt: input.createdAt || nowIso(),
       updatedAt: nowIso(),
@@ -46,23 +55,43 @@ export class CampaignEntities {
   }
 
   /**
-   * Puts the notes in the order of `noteIds` and returns the whole list. Every note is renumbered
-   * so notes that shared an `order` can't stick; ids not given keep their relative order after.
+   * Puts a note (or folder) under `parentId` at `index` among the notes there and renumbers
+   * that folder from 0 (so notes that shared an `order` can't stick). A folder never goes into
+   * itself. Returns the whole list in tree order.
    */
-  async reorderNotes(noteIds: readonly string[]): Promise<Note[]> {
+  async moveNote(id: string, parentId: string | null, index: number): Promise<Note[]> {
     const notes = await this.repo.notes();
-    const rank = new Map(noteIds.map((id, i) => [id, i]));
-    const sorted = [...notes].sort(
-      (a, b) =>
-        (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
-    );
-    const next = sorted.map((n, order) => ({ ...n, order }));
-    const changed = next.filter((n, i) => notes.find((o) => o.id === n.id)?.order !== i);
+    const changed = placeItem(notes, id, parentId, index).map((n) => ({
+      ...n,
+      updatedAt: nowIso(),
+    }));
     if (changed.length) await this.repo.writeEntities('notes', changed);
-    return next;
+    return changed.length ? this.repo.notes() : notes;
   }
 
-  async removeNote(id: string): Promise<void> {
+  /**
+   * Removes a note. A folder's contents move up a level (`lift`, the default) or go with it
+   * (`delete`); either way nothing is left pointing at a missing folder.
+   */
+  async removeNote(id: string, contents: NoteFolderContents = 'lift'): Promise<void> {
+    const notes = await this.repo.notes();
+    const target = notes.find((n) => n.id === id);
+    const children = notes.filter((n) => n.parentId === id);
+    if (target && children.length) {
+      if (contents === 'delete') {
+        for (const child of children) await this.removeNote(child.id, 'delete');
+      } else {
+        const parentId = target.parentId ?? null;
+        let order = Math.max(
+          -1,
+          ...notes.filter((n) => (n.parentId ?? null) === parentId).map((n) => n.order),
+        );
+        await this.repo.writeEntities(
+          'notes',
+          children.map((child) => ({ ...child, parentId, order: ++order, updatedAt: nowIso() })),
+        );
+      }
+    }
     await rm(this.repo.entityPath('notes', id), { force: true });
     await this.repo.touch();
   }

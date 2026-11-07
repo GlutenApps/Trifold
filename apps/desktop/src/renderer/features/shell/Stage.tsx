@@ -3,23 +3,48 @@ import {
   useEffect,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { MAJOR_KINDS, type MajorKind, type StageGroup } from '@trifold/schema';
-import { MAJOR_TITLES } from '../../stores/shellLayout';
+import {
+  isWebTabKey,
+  MAJOR_KINDS,
+  normalizeWebUrl,
+  webTabId,
+  webTabKey,
+  type StageGroup,
+  type TabKey,
+  type WebTab,
+  type WebTabIcon,
+} from '@trifold/schema';
+import { tabTitle } from '../../stores/shellLayout';
 import { useShellStore } from '../../stores/shellStore';
+import { useAppStore } from '../../stores/appStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useSceneStore } from '../../stores/sceneStore';
-import { Icon } from './icons';
+import { Icon, type IconName } from './icons';
 import { MAJOR_ICON, MajorBody } from './majors';
+import { WebTabIconPicker, WebTabPage } from './WebTabPage';
+import { hk } from '../../platform';
+
+/** The web tab behind a stage key, or null when the Library no longer has it. */
+function webTabOf(kind: TabKey, webTabs: readonly WebTab[]): WebTab | null {
+  if (!isWebTabKey(kind)) return null;
+  const id = webTabId(kind);
+  return webTabs.find((t) => t.id === id) ?? null;
+}
+
+function tabIcon(kind: TabKey, webTabs: readonly WebTab[]): IconName {
+  return isWebTabKey(kind) ? (webTabOf(kind, webTabs)?.icon ?? 'globe') : MAJOR_ICON[kind];
+}
 
 const DRAG_THRESHOLD = 6;
 /** Room a tab needs with its label, and as an icon only. */
 const TAB_FULL = 104;
 const TAB_ICON = 34;
-/** The strip's end buttons (+ ⧉ ⤢) and padding. */
-const STRIP_CHROME = 112;
+/** The strip's end buttons (+ ⤢) and padding. */
+const STRIP_CHROME = 82;
 
 type DropSpot = { group: number; index: number } | { split: true } | null;
 
@@ -35,6 +60,7 @@ export function Stage() {
   const moveTab = useShellStore((s) => s.moveTab);
   const draggingTab = useShellStore((s) => s.draggingTab);
   const setDraggingTab = useShellStore((s) => s.setDraggingTab);
+  const webTabs = useShellStore((s) => s.webTabs);
   const stageRef = useRef<HTMLDivElement>(null);
   const [drop, setDrop] = useState<DropSpot>(null);
   const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
@@ -84,7 +110,7 @@ export function Stage() {
     return null;
   };
 
-  const beginTabDrag = (kind: MajorKind) => (e: ReactPointerEvent<HTMLElement>) => {
+  const beginTabDrag = (kind: TabKey) => (e: ReactPointerEvent<HTMLElement>) => {
     if (e.button !== 0) return;
     const startX = e.clientX;
     const startY = e.clientY;
@@ -151,23 +177,41 @@ export function Stage() {
               <TabStrip
                 group={i}
                 data={g}
-                twoGroups={groups.length === 2}
                 dropIndex={drop && 'group' in drop && drop.group === i ? drop.index : null}
                 onTabPointerDown={beginTabDrag}
               />
               <div className="grp-content">
-                {g.tabs.map((kind) => (
-                  <div
-                    key={kind}
-                    className="grp-body"
-                    hidden={g.active !== kind}
-                    data-major={kind}
-                    role="tabpanel"
-                    aria-label={MAJOR_TITLES[kind]}
-                  >
-                    <MajorBody kind={kind} />
-                  </div>
-                ))}
+                {g.tabs.map((kind) => {
+                  const web = webTabOf(kind, webTabs);
+                  if (isWebTabKey(kind)) {
+                    // A web tab stays mounted while hidden (visibility, not display) so the
+                    // page keeps its place; it unloads only when closed (ADR 0011).
+                    return web ? (
+                      <div
+                        key={kind}
+                        className="grp-body web"
+                        hidden={g.active !== kind}
+                        data-web={web.id}
+                        role="tabpanel"
+                        aria-label={web.title}
+                      >
+                        <WebTabPage tab={web} />
+                      </div>
+                    ) : null;
+                  }
+                  return (
+                    <div
+                      key={kind}
+                      className="grp-body"
+                      hidden={g.active !== kind}
+                      data-major={kind}
+                      role="tabpanel"
+                      aria-label={tabTitle(kind, webTabs)}
+                    >
+                      <MajorBody kind={kind} />
+                    </div>
+                  );
+                })}
               </div>
             </section>
           </Fragment>
@@ -176,7 +220,7 @@ export function Stage() {
       {drop && 'split' in drop && <div className="split-zone">Split right</div>}
       {ghost && draggingTab && (
         <div className="drag-ghost" style={{ left: ghost.x + 14, top: ghost.y + 14 }}>
-          {MAJOR_TITLES[draggingTab]}
+          {tabTitle(draggingTab, webTabs)}
         </div>
       )}
       <div className="stage-parked" hidden aria-hidden="true">
@@ -193,29 +237,34 @@ export function Stage() {
 function TabStrip({
   group,
   data,
-  twoGroups,
   dropIndex,
   onTabPointerDown,
 }: {
   group: number;
   data: StageGroup;
-  twoGroups: boolean;
   dropIndex: number | null;
-  onTabPointerDown: (kind: MajorKind) => (e: ReactPointerEvent<HTMLElement>) => void;
+  onTabPointerDown: (kind: TabKey) => (e: ReactPointerEvent<HTMLElement>) => void;
 }) {
   const layout = useShellStore((s) => s.layout);
+  const webTabs = useShellStore((s) => s.webTabs);
   const openMajor = useShellStore((s) => s.openMajor);
   const closeTab = useShellStore((s) => s.closeTab);
   const moveTab = useShellStore((s) => s.moveTab);
-  const splitRight = useShellStore((s) => s.splitRight);
+  const addWebTab = useShellStore((s) => s.addWebTab);
   const toggleMaximize = useShellStore((s) => s.toggleMaximize);
   const combatLive = useCombatStore((s) => !!s.state);
   const liveSceneId = usePresenterStore((s) => (s.state.blackout ? null : s.state.scene?.id));
   const selectedSceneId = useSceneStore((s) => s.selectedId);
+  const playerOpen = useAppStore((s) => s.playerOpen);
   const unsavedHomebrew = false;
   const stripRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const [menu, setMenu] = useState<'add' | 'more' | null>(null);
+  const [menu, setMenu] = useState<'add' | 'addweb' | 'more' | null>(null);
+  const [newTab, setNewTab] = useState<{ title: string; url: string; icon: WebTabIcon }>({
+    title: '',
+    url: '',
+    icon: 'globe',
+  });
   const menuRef = useRef<HTMLDivElement>(null);
   const maximized = layout.stage.maximized === group;
 
@@ -237,10 +286,10 @@ function TabStrip({
     return () => document.removeEventListener('mousedown', onDown);
   }, [menu]);
 
-  const isLive = (kind: MajorKind) =>
+  const isLive = (kind: TabKey) =>
     (kind === 'encounters' && combatLive) ||
     (kind === 'map' && !!liveSceneId && liveSceneId === selectedSceneId);
-  const keepsLabel = (kind: MajorKind) => kind === data.active || isLive(kind);
+  const keepsLabel = (kind: TabKey) => kind === data.active || isLive(kind);
 
   // Too many tabs: labels drop from the others first, then the rest fold into ⋯.
   const available = Math.max(0, width - STRIP_CHROME);
@@ -257,10 +306,31 @@ function TabStrip({
     : data.tabs;
   const folded = data.tabs.filter((t) => !shown.includes(t));
   // A major open in either group is not offered again; dragging its tab moves it.
-  const addable = MAJOR_KINDS.filter((k) => !layout.stage.groups.some((g) => g.tabs.includes(k)));
+  const isOpen = (k: TabKey) => layout.stage.groups.some((g) => g.tabs.includes(k));
+  const addable: TabKey[] = [
+    ...MAJOR_KINDS.filter((k) => !isOpen(k)),
+    ...webTabs.map((t) => webTabKey(t.id)).filter((k) => !isOpen(k)),
+  ];
+  const submitNewTab = () => {
+    const url = normalizeWebUrl(newTab.url);
+    if (!url) return;
+    setMenu(null);
+    setNewTab({ title: '', url: '', icon: 'globe' });
+    addWebTab({ url, title: newTab.title, icon: newTab.icon }, group as 0 | 1);
+  };
+  const onNewTabKey = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') submitNewTab();
+    if (e.key === 'Escape') setMenu(null);
+  };
 
   return (
-    <div className="tabs" ref={stripRef} data-strip={group} role="tablist">
+    <div
+      className="tabs"
+      ref={stripRef}
+      data-strip={group}
+      role="tablist"
+      aria-label={`Stage group ${group + 1} tabs`}
+    >
       {shown.map((kind, i) => {
         const active = data.active === kind;
         const iconOnly = iconify && !keepsLabel(kind);
@@ -271,8 +341,8 @@ function TabStrip({
               className={`tab${active ? ' active' : ''}${iconOnly ? ' icon-only' : ''}${isLive(kind) ? ' live' : ''}`}
               role="tab"
               aria-selected={active}
-              aria-label={MAJOR_TITLES[kind]}
-              title={iconOnly ? MAJOR_TITLES[kind] : undefined}
+              aria-label={tabTitle(kind, webTabs)}
+              title={iconOnly ? tabTitle(kind, webTabs) : undefined}
               data-tab={kind}
               tabIndex={active ? 0 : -1}
               onPointerDown={onTabPointerDown(kind)}
@@ -282,14 +352,16 @@ function TabStrip({
                 if (e.key === 'Delete') closeTab(kind);
               }}
             >
-              {isLive(kind) && <span className="pip" />}
-              <Icon name={MAJOR_ICON[kind]} size={14} />
-              {!iconOnly && <span className="tab-label">{MAJOR_TITLES[kind]}</span>}
+              {isLive(kind) && (
+                <span className={`pip${kind === 'map' && playerOpen ? ' tally' : ''}`} />
+              )}
+              <Icon name={tabIcon(kind, webTabs)} size={14} />
+              {!iconOnly && <span className="tab-label">{tabTitle(kind, webTabs)}</span>}
               {unsavedHomebrew && kind === 'compendium' && <span className="ring" />}
               <button
                 type="button"
                 className="tab-close"
-                aria-label={`Close ${MAJOR_TITLES[kind]} tab`}
+                aria-label={`Close ${tabTitle(kind, webTabs)} tab`}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -329,7 +401,7 @@ function TabStrip({
                     openMajor(kind);
                   }}
                 >
-                  <Icon name={MAJOR_ICON[kind]} size={14} /> {MAJOR_TITLES[kind]}
+                  <Icon name={tabIcon(kind, webTabs)} size={14} /> {tabTitle(kind, webTabs)}
                 </button>
               ))}
             </div>
@@ -338,21 +410,20 @@ function TabStrip({
       )}
       <span className="spacer" />
       <div className="tabend">
-        <div className="tab-menu" ref={menu === 'add' ? menuRef : undefined}>
+        <div className="tab-menu" ref={menu === 'add' || menu === 'addweb' ? menuRef : undefined}>
           <button
             type="button"
             className="chrome-btn"
             aria-label={`Add a tab to group ${group + 1}`}
-            title="Open a major here"
+            title="Open a tab here"
             aria-haspopup="menu"
-            aria-expanded={menu === 'add'}
-            disabled={addable.length === 0}
-            onClick={() => setMenu(menu === 'add' ? null : 'add')}
+            aria-expanded={menu === 'add' || menu === 'addweb'}
+            onClick={() => setMenu(menu === 'add' || menu === 'addweb' ? null : 'add')}
           >
             <Icon name="plus" size={15} />
           </button>
           {menu === 'add' && (
-            <div className="menu" role="menu" aria-label="Majors">
+            <div className="menu" role="menu" aria-label="Tabs">
               {addable.map((kind) => (
                 <button
                   key={kind}
@@ -363,34 +434,66 @@ function TabStrip({
                     moveTab(kind, group as 0 | 1);
                   }}
                 >
-                  <Icon name={MAJOR_ICON[kind]} size={14} />
-                  <span className="grow">{MAJOR_TITLES[kind]}</span>
+                  <Icon name={tabIcon(kind, webTabs)} size={14} />
+                  <span className="grow">{tabTitle(kind, webTabs)}</span>
                 </button>
               ))}
+              {addable.length > 0 && <div className="menu-sep" />}
+              <button type="button" role="menuitem" onClick={() => setMenu('addweb')}>
+                <Icon name="globe" size={14} />
+                <span className="grow">New web tab…</span>
+              </button>
+            </div>
+          )}
+          {menu === 'addweb' && (
+            <div className="menu web-new" role="group" aria-label="New web tab">
+              <input
+                type="text"
+                aria-label="Tab name"
+                placeholder="Name (follows the page title when empty)"
+                autoFocus
+                value={newTab.title}
+                onChange={(e) => setNewTab({ ...newTab, title: e.target.value })}
+                onKeyDown={onNewTabKey}
+              />
+              <input
+                type="text"
+                aria-label="Web address"
+                placeholder="https://…"
+                spellCheck={false}
+                value={newTab.url}
+                onChange={(e) => setNewTab({ ...newTab, url: e.target.value })}
+                onKeyDown={onNewTabKey}
+              />
+              <div className="row">
+                <WebTabIconPicker
+                  value={newTab.icon}
+                  onChange={(icon) => setNewTab({ ...newTab, icon })}
+                />
+                <button
+                  type="button"
+                  className="chrome-btn primary"
+                  aria-label="Add web tab"
+                  title="Add web tab"
+                  disabled={!normalizeWebUrl(newTab.url)}
+                  onClick={submitNewTab}
+                >
+                  <Icon name="plus" size={14} />
+                </button>
+              </div>
             </div>
           )}
         </div>
         <button
           type="button"
           className="chrome-btn"
-          aria-label="Split right"
-          title={twoGroups && group === 1 ? 'Already the right group' : 'Split right'}
-          disabled={!data.active || (twoGroups && group === 1) || maximized}
-          onClick={() => data.active && splitRight(data.active)}
-        >
-          <Icon name="split" size={14} />
-        </button>
-        <button
-          type="button"
-          className="chrome-btn"
           aria-label={maximized ? 'Restore groups' : 'Maximize group'}
           aria-pressed={maximized}
-          title={`${maximized ? 'Restore' : 'Maximize'} (Ctrl+Shift+M)`}
+          title={`${maximized ? 'Restore' : 'Maximize'} (${hk('Ctrl+Shift+M')})`}
           onClick={() => toggleMaximize(group)}
         >
           <Icon name={maximized ? 'restore' : 'maximize'} size={14} />
         </button>
-        {group === 1 && !twoGroups ? null : null}
       </div>
     </div>
   );

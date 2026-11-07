@@ -54,10 +54,12 @@ describe('CampaignEntities notes', () => {
   const note = (id: string, title: string, createdAt: string) => ({
     schemaVersion: 1 as const,
     id,
+    kind: 'note' as const,
     title,
     body: '',
     tags: [],
     links: [],
+    parentId: null,
     order: 0,
     createdAt,
     updatedAt: createdAt,
@@ -123,22 +125,84 @@ describe('CampaignEntities notes', () => {
     ]);
   });
 
-  it('reorders notes, renumbering ones that shared an order, and keeps it on reopen', async () => {
+  it('moves a note to a place in a folder, renumbering notes that shared an order, and keeps it on reopen', async () => {
     const bundle = await repo.create('Chronicle');
     const entities = new CampaignEntities(repo);
     await entities.saveNote(note('n1', 'One', '2026-09-01T10:00:00.000Z'));
     await entities.saveNote(note('n2', 'Two', '2026-09-01T10:00:01.000Z'));
     await entities.saveNote(note('n3', 'Three', '2026-09-01T10:00:02.000Z'));
+    const folder = await entities.saveNote({ ...note('', 'Act one', ''), kind: 'folder' });
 
-    const listed = await entities.reorderNotes(['n3', 'n1']);
+    const listed = await entities.moveNote('n3', null, 0);
     expect(listed.map((n) => [n.id, n.order])).toEqual([
       ['n3', 0],
       ['n1', 1],
-      // Not named, so it keeps its place after the named ones.
       ['n2', 2],
+      [folder.id, 3],
     ]);
+    const inside = await entities.moveNote('n1', folder.id, 0);
+    expect(inside.find((n) => n.id === 'n1')).toMatchObject({ parentId: folder.id, order: 0 });
+    // A folder can't go into itself: nothing changes.
+    expect(await entities.moveNote(folder.id, folder.id, 0)).toEqual(inside);
+
+    // The list is read by order, then creation time, across folders.
+    const reopened = await repo.open(bundle.campaign.id);
+    expect(reopened.notes.map((n) => [n.id, n.parentId, n.order])).toEqual([
+      ['n1', folder.id, 0],
+      ['n3', null, 0],
+      ['n2', null, 2],
+      [folder.id, null, 3],
+    ]);
+  });
+
+  it('numbers a new note after its siblings in the folder, not the whole list', async () => {
+    const bundle = await repo.create('Chronicle');
+    const entities = new CampaignEntities(repo);
+    await entities.saveNote({ ...note('', 'Root one', ''), order: 0 });
+    await entities.saveNote({ ...note('', 'Root two', ''), order: 0 });
+    const folder = await entities.saveNote({ ...note('', 'Act one', ''), kind: 'folder' });
+    const inside = await entities.saveNote({ ...note('', 'Gate', ''), parentId: folder.id });
+    expect(folder.order).toBe(2);
+    expect(inside).toMatchObject({ parentId: folder.id, order: 0 });
 
     const reopened = await repo.open(bundle.campaign.id);
-    expect(reopened.notes.map((n) => n.id)).toEqual(['n3', 'n1', 'n2']);
+    expect(reopened.notes.find((n) => n.id === inside.id)?.parentId).toBe(folder.id);
+  });
+
+  it('removing a folder lifts its contents up a level by default', async () => {
+    const bundle = await repo.create('Chronicle');
+    const entities = new CampaignEntities(repo);
+    const folder = await entities.saveNote({ ...note('', 'Act one', ''), kind: 'folder' });
+    const after = await entities.saveNote(note('', 'Epilogue', ''));
+    const gate = await entities.saveNote({ ...note('', 'Gate', ''), parentId: folder.id });
+    const hall = await entities.saveNote({ ...note('', 'Hall', ''), parentId: folder.id });
+
+    await entities.removeNote(folder.id);
+
+    const reopened = await repo.open(bundle.campaign.id);
+    expect(reopened.notes.map((n) => [n.title, n.parentId, n.order])).toEqual([
+      ['Epilogue', null, after.order],
+      ['Gate', null, 2],
+      ['Hall', null, 3],
+    ]);
+    expect(reopened.notes.map((n) => n.id)).toEqual([after.id, gate.id, hall.id]);
+  });
+
+  it('removing a folder with its contents takes nested folders too', async () => {
+    const bundle = await repo.create('Chronicle');
+    const entities = new CampaignEntities(repo);
+    const folder = await entities.saveNote({ ...note('', 'Act one', ''), kind: 'folder' });
+    const sub = await entities.saveNote({
+      ...note('', 'Keep', ''),
+      kind: 'folder',
+      parentId: folder.id,
+    });
+    await entities.saveNote({ ...note('', 'Gate', ''), parentId: sub.id });
+    await entities.saveNote(note('', 'Epilogue', ''));
+
+    await entities.removeNote(folder.id, 'delete');
+
+    const reopened = await repo.open(bundle.campaign.id);
+    expect(reopened.notes.map((n) => n.title)).toEqual(['Epilogue']);
   });
 });

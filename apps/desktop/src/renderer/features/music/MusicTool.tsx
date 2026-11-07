@@ -5,6 +5,7 @@ import { newPlaylist, useMusicStore } from '../../stores/musicStore';
 import { formatTime } from './queue';
 import { MusicTransport } from './MusicTransport';
 import { ScanStatus } from './MusicFolders';
+import { PhoneAudio } from './PhoneAudio';
 import { SUGGESTED_TAGS, displayTags, withTags, withoutTag } from './tags';
 import { Icon } from '../shell/icons';
 
@@ -390,6 +391,8 @@ export function MusicTool() {
   /** 'all', 'unsorted' (in no playlist), or a tag. */
   const [filter, setFilter] = useState('all');
   const [tab, setTab] = useState<'tracks' | 'playlists'>('tracks');
+  const source = useMusicStore((s) => s.source);
+  const setSource = useMusicStore((s) => s.setSource);
   const [openPlaylists, setOpenPlaylists] = useState<ReadonlySet<string>>(new Set());
 
   // Always refresh on open: folders can change while the page is away (scans, other sections).
@@ -434,113 +437,139 @@ export function MusicTool() {
           </button>
         </div>
       )}
-      <MusicTransport />
-      <div className="music-tabbar">
-        <div className="music-tablist" role="tablist" aria-label="Music view">
-          {(
-            [
-              ['tracks', `Tracks (${library?.tracks.length ?? 0})`],
-              ['playlists', `Playlists (${playlists.length})`],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              className={`music-tab${tab === id ? ' active' : ''}`}
-              aria-selected={tab === id}
-              onClick={() => setTab(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <span className="spacer" />
-        {tab === 'tracks' && (
-          <>
-            <ScanStatus />
-            <button
-              type="button"
-              className="chrome-btn"
-              onClick={() => void rescan()}
-              disabled={!library?.folders.length || scanning}
-              title="Rescan music folders: picks up new, renamed and deleted files"
-              aria-label="Rescan music folders"
-            >
-              <Icon name="refresh" />
-            </button>
-          </>
-        )}
+      <div className="audio-source" role="group" aria-label="Audio source">
+        {(
+          [
+            ['computer', 'laptop', 'This computer'],
+            ['phone', 'phone', 'Phone'],
+          ] as const
+        ).map(([id, icon, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={`audio-source-option${source === id ? ' on' : ''}`}
+            aria-pressed={source === id}
+            aria-label={label}
+            onClick={() => void setSource(id)}
+          >
+            <Icon name={icon} size={16} />
+            <span className="audio-source-label">{label}</span>
+          </button>
+        ))}
       </div>
-      {tab === 'playlists' ? (
-        <div role="tabpanel" aria-label="Playlists" className="music-tabpanel">
-          <PlaylistsTab open={openPlaylists} setOpen={setOpenPlaylists} />
-        </div>
+      {source === 'phone' ? (
+        <PhoneAudio />
       ) : (
-        <div role="tabpanel" aria-label="Tracks" className="music-tabpanel card wide-card">
-          <div className="row">
-            <input
-              type="text"
-              aria-label="Find track"
-              placeholder="Find by title, artist or tag"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <select
-              aria-label="Show tracks"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            >
-              <option value="all">All tracks</option>
-              <option value="unsorted">Not in a playlist</option>
-              {tagsInUse.map((tag) => (
-                <option key={tag} value={tag}>
-                  Tagged {tag}
-                </option>
+        <>
+          <MusicTransport />
+          <div className="music-tabbar">
+            <div className="music-tablist" role="tablist" aria-label="Music view">
+              {(
+                [
+                  ['tracks', `Tracks (${library?.tracks.length ?? 0})`],
+                  ['playlists', `Playlists (${playlists.length})`],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  className={`music-tab${tab === id ? ' active' : ''}`}
+                  aria-selected={tab === id}
+                  onClick={() => setTab(id)}
+                >
+                  {label}
+                </button>
               ))}
-            </select>
-            <span className="muted small">
-              {rows.length} of {library?.tracks.length ?? 0}
-            </span>
+            </div>
+            <span className="spacer" />
+            {tab === 'tracks' && (
+              <>
+                <ScanStatus />
+                <button
+                  type="button"
+                  className="chrome-btn"
+                  onClick={() => void rescan()}
+                  disabled={!library?.folders.length || scanning}
+                  title="Rescan music folders: picks up new, renamed and deleted files"
+                  aria-label="Rescan music folders"
+                >
+                  <Icon name="refresh" />
+                </button>
+              </>
+            )}
           </div>
-          <datalist id={TAG_LIST_ID}>
-            {[...new Set([...tagsInUse, ...SUGGESTED_TAGS])].map((tag) => (
-              <option key={tag} value={tag} />
-            ))}
-          </datalist>
-          {rows.length === 0 ? (
-            <p className="muted">
-              {library?.tracks.length
-                ? 'No tracks match.'
-                : 'No tracks. Add a folder of MP3, OGG, FLAC, WAV or M4A files.'}
-            </p>
+          {tab === 'playlists' ? (
+            <div role="tabpanel" aria-label="Playlists" className="music-tabpanel">
+              <PlaylistsTab open={openPlaylists} setOpen={setOpenPlaylists} />
+            </div>
           ) : (
-            <div className="track-table-wrap">
-              <table className="track-table">
-                <thead>
-                  <tr>
-                    <th />
-                    <th>Title</th>
-                    <th>Length</th>
-                    <th>Tags</th>
-                    <th>Playlists</th>
-                    <th>Gain</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((t) => (
-                    <TrackRow
-                      key={t.id}
-                      track={t}
-                      playlists={playlists}
-                      onPlay={() => void playTrack(t.id)}
-                    />
+            <div role="tabpanel" aria-label="Tracks" className="music-tabpanel card wide-card">
+              <div className="row">
+                <input
+                  type="text"
+                  aria-label="Find track"
+                  placeholder="Find by title, artist or tag"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                <select
+                  aria-label="Show tracks"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                >
+                  <option value="all">All tracks</option>
+                  <option value="unsorted">Not in a playlist</option>
+                  {tagsInUse.map((tag) => (
+                    <option key={tag} value={tag}>
+                      Tagged {tag}
+                    </option>
                   ))}
-                </tbody>
-              </table>
+                </select>
+                <span className="muted small">
+                  {rows.length} of {library?.tracks.length ?? 0}
+                </span>
+              </div>
+              <datalist id={TAG_LIST_ID}>
+                {[...new Set([...tagsInUse, ...SUGGESTED_TAGS])].map((tag) => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
+              {rows.length === 0 ? (
+                <p className="muted">
+                  {library?.tracks.length
+                    ? 'No tracks match.'
+                    : 'No tracks. Add a folder of MP3, OGG, FLAC, WAV or M4A files.'}
+                </p>
+              ) : (
+                <div className="track-table-wrap">
+                  <table className="track-table">
+                    <thead>
+                      <tr>
+                        <th />
+                        <th>Title</th>
+                        <th>Length</th>
+                        <th>Tags</th>
+                        <th>Playlists</th>
+                        <th>Gain</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((t) => (
+                        <TrackRow
+                          key={t.id}
+                          track={t}
+                          playlists={playlists}
+                          onPlay={() => void playTrack(t.id)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

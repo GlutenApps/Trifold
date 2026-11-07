@@ -259,15 +259,26 @@ export const Adventure = z.object({
 });
 export type Adventure = z.infer<typeof Adventure>;
 
+export const NoteKind = z.enum(['note', 'folder']);
+export type NoteKind = z.infer<typeof NoteKind>;
+
+/**
+ * A note or a folder of notes (ADR 0010). Notes form a tree like scenes do: `parentId` names the
+ * folder, `order` the place among siblings. Both fields default so notes written before folders
+ * existed parse unchanged at the root.
+ */
 export const Note = z.object({
   schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
   id: z.string().min(1),
+  kind: NoteKind.default('note'),
   title: z.string().min(1),
-  /** Markdown. */
+  /** Markdown. Empty on folders. */
   body: z.string().default(''),
   tags: z.array(z.string()).default([]),
   links: z.array(EntityLink).default([]),
-  /** Place in the campaign's note list. Notes written before reordering existed share 0. */
+  /** The folder this sits in; null at the root. */
+  parentId: z.string().nullable().default(null),
+  /** Place among siblings. Notes written before reordering existed share 0. */
   order: int.default(0),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,

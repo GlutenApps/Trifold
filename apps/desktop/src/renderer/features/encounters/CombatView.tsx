@@ -8,6 +8,7 @@ import { StatBlock } from '../compendium/StatBlock';
 import { Icon } from '../shell/icons';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useShellStore } from '../../stores/shellStore';
+import { hk } from '../../platform';
 
 const CONDITIONS = [
   'Blinded',
@@ -747,7 +748,7 @@ function DamagePopup({ request, queued }: { request: DamageRequest; queued: numb
           type="button"
           className="btn primary"
           disabled={!canApply}
-          title="Apply (Ctrl+Enter)"
+          title={`Apply (${hk('Ctrl+Enter')})`}
           onClick={apply}
         >
           Apply

@@ -4,19 +4,11 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
-  type ReactNode,
 } from 'react';
 import { ulid } from 'ulid';
 import { mediaUrl, type CompendiumRow } from '@trifold/api';
 import { numberedNames } from '@trifold/rules';
-import type {
-  CombatantTemplate,
-  Encounter,
-  EntryMarker,
-  PCCard,
-  Scene,
-  Token,
-} from '@trifold/schema';
+import type { CombatantTemplate, Encounter, PCCard, Scene, Token } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
@@ -24,6 +16,7 @@ import { useIconStore } from '../../stores/iconStore';
 import { useShellStore } from '../../stores/shellStore';
 import { Icon } from '../shell/icons';
 import { GridLines } from './MapLayer';
+import { MapPop } from './MapPop';
 import { TokenDisc } from './TokenDisc';
 import {
   DEFAULT_BLANK,
@@ -47,13 +40,13 @@ import {
   type Point,
 } from './mapMath';
 
-type Mode = 'select' | 'align' | 'marker' | 'party' | 'place';
+type Mode = 'select' | 'align' | 'party' | 'place';
 
 type Pending =
   { kind: 'creature'; row: CompendiumRow } | { kind: 'marker' } | { kind: 'pc'; pc: PCCard };
 
 /** What the panel under the map is showing options for. */
-type Selection = { kind: 'token'; id: string } | { kind: 'entry'; id: string } | null;
+type Selection = { kind: 'token'; id: string } | null;
 
 /** The tool strip's and action bar's pop-ups; one open at a time. */
 type Pop = 'grid' | 'backgrounds' | 'camera' | 'party' | 'creature' | 'encounter';
@@ -73,7 +66,7 @@ function nowIso() {
 
 /**
  * The console side of a map or blank-grid scene (DESIGN.md §6.5): DM camera, grid alignment,
- * tokens with snap-to-grid drag, entry markers and party placement, the player camera and its
+ * tokens with snap-to-grid drag and party placement, the player camera and its
  * viewport rectangle, and "start combat" from the placed creatures.
  */
 export function MapEditor({
@@ -137,10 +130,6 @@ export function MapEditor({
   );
   const selectedTokenId = selection?.kind === 'token' ? selection.id : null;
   const selectedToken = scene.tokens.find((t) => t.id === selectedTokenId) ?? null;
-  const selectedEntry =
-    selection?.kind === 'entry'
-      ? (scene.entryMarkers.find((m) => m.id === selection.id) ?? null)
-      : null;
   const selectToken = (id: string) => setSelection({ kind: 'token', id });
   const togglePop = (p: Pop) => setPop(pop === p ? null : p);
   const closePop = () => setPop(null);
@@ -176,7 +165,7 @@ export function MapEditor({
     }
     debounce.current = window.setTimeout(() => {
       window.trifold.compendium
-        .search({ kind: 'monster', text: query, limit: 8 })
+        .search({ kind: 'monster', text: query, limit: 8, collapse: false })
         .then((r) => setRows(r.rows))
         .catch(() => setRows([]));
     }, 150);
@@ -204,17 +193,6 @@ export function MapEditor({
     if (selectedTokenId === id) setSelection(null);
     setMenu(null);
   };
-  const patchEntry = (id: string, p: Partial<EntryMarker>) =>
-    patch({ entryMarkers: scene.entryMarkers.map((m) => (m.id === id ? { ...m, ...p } : m)) });
-  const removeEntry = (id: string) => {
-    patch({ entryMarkers: scene.entryMarkers.filter((m) => m.id !== id) });
-    setSelection(null);
-  };
-  const entryPoint = (m: EntryMarker): Point => ({
-    x: grid.offsetX + m.x * grid.cellPx,
-    y: grid.offsetY + m.y * grid.cellPx,
-  });
-
   const mapPoint = (e: { clientX: number; clientY: number }): Point => {
     const rect = containerRef.current?.getBoundingClientRect();
     return {
@@ -305,7 +283,7 @@ export function MapEditor({
     selectToken(token.id);
   };
 
-  /** A click on the map (or an entry marker) while a placing mode is on. */
+  /** A click on the map while a placing mode is on. */
   const placeAt = (at: Point, keepPlacing: boolean) => {
     if (mode === 'party') {
       placeParty(at);
@@ -331,19 +309,6 @@ export function MapEditor({
       const derived = alignFromClicks(alignFirst, at);
       if (derived) patchGrid(derived);
       setAlignFirst(null);
-      setMode('select');
-      return;
-    }
-    if (mode === 'marker') {
-      const cell = pixelToGrid(at.x, at.y, grid);
-      const marker: EntryMarker = {
-        id: ulid(),
-        name: `Entry ${scene.entryMarkers.length + 1}`,
-        x: Math.round(cell.x * 2) / 2,
-        y: Math.round(cell.y * 2) / 2,
-      };
-      patch({ entryMarkers: [...scene.entryMarkers, marker] });
-      setSelection({ kind: 'entry', id: marker.id });
       setMode('select');
       return;
     }
@@ -621,14 +586,12 @@ export function MapEditor({
         ? 'Now click the opposite corner of that cell'
         : 'Click one corner of a cell'
       : mode === 'party'
-        ? 'Click the map or an entry marker to place the party'
-        : mode === 'marker'
-          ? 'Click the map to drop an entry marker'
-          : mode === 'place'
-            ? pending?.kind === 'pc'
-              ? `Click to place ${pending.pc.name}`
-              : `Click to place ${pending?.kind === 'creature' ? pending.row.displayName : 'a marker'} (Shift keeps placing)`
-            : null;
+        ? 'Click the map to place the party'
+        : mode === 'place'
+          ? pending?.kind === 'pc'
+            ? `Click to place ${pending.pc.name}`
+            : `Click to place ${pending?.kind === 'creature' ? pending.row.displayName : 'a marker'} (Shift keeps placing)`
+          : null;
 
   const cancelMode = () => {
     setMode('select');
@@ -881,9 +844,7 @@ export function MapEditor({
             <button type="button" className="btn small" onClick={() => void addBackgroundFile()}>
               Add background…
             </button>
-            <p className="muted small">
-              Tokens, grid and entry markers stay put; the TV crossfades.
-            </p>
+            <p className="muted small">Tokens and grid stay put; the TV crossfades.</p>
           </MapPop>
         )}
 
@@ -961,7 +922,7 @@ export function MapEditor({
             type="button"
             className="btn small primary"
             disabled={pcs.length === 0}
-            title="Click the map or an entry marker to drop the party there"
+            title="Click the map to drop the party there"
             onClick={() => beginPlacing('party')}
           >
             Place whole party
@@ -1049,21 +1010,6 @@ export function MapEditor({
             Place marker token
           </button>
         </MapPop>
-
-        <button
-          type="button"
-          className={`chrome-btn${mode === 'marker' ? ' on' : ''}`}
-          aria-pressed={mode === 'marker'}
-          aria-label="Add entry marker"
-          title="Add entry marker: click the map to drop one"
-          onClick={() => {
-            closePop();
-            if (mode === 'marker') cancelMode();
-            else beginPlacing('marker');
-          }}
-        >
-          <Icon name="door" size={16} />
-        </button>
       </div>
 
       <div
@@ -1084,7 +1030,6 @@ export function MapEditor({
             setMenu(null);
           }
           if (e.key === 'Delete' && selectedTokenId) removeToken(selectedTokenId);
-          if (e.key === 'Delete' && selectedEntry) removeEntry(selectedEntry.id);
         }}
       >
         <div
@@ -1125,29 +1070,6 @@ export function MapEditor({
               borderWidth: Math.max(2, 3 / cam.zoom),
             }}
           />
-          {scene.entryMarkers.map((m) => {
-            const placing = mode === 'party' || mode === 'place';
-            return (
-              <button
-                type="button"
-                key={m.id}
-                className={`entry-marker${selectedEntry?.id === m.id ? ' selected' : ''}`}
-                data-testid="entry-marker"
-                aria-pressed={selectedEntry?.id === m.id}
-                title={placing ? `Place here: ${m.name}` : `${m.name}: select to edit`}
-                style={{ ...pointStyle(entryPoint(m)), fontSize: grid.cellPx * 0.3 }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenu(null);
-                  if (placing) placeAt(entryPoint(m), e.shiftKey);
-                  else setSelection({ kind: 'entry', id: m.id });
-                }}
-              >
-                {m.name}
-              </button>
-            );
-          })}
           {scene.tokens.map((token) => {
             const px = token.footprint * grid.cellPx;
             return (
@@ -1441,40 +1363,10 @@ export function MapEditor({
               <Icon name="trash" size={15} />
             </button>
           </div>
-        ) : selectedEntry ? (
-          <div className="map-inspector" data-testid="entry-inspector">
-            <h3>Entry marker</h3>
-            <label className="field inline">
-              Name
-              <input
-                type="text"
-                value={selectedEntry.name}
-                onChange={(e) => patchEntry(selectedEntry.id, { name: e.target.value })}
-              />
-            </label>
-            <button
-              type="button"
-              className="btn small"
-              disabled={pcs.length === 0}
-              onClick={() => placeParty(entryPoint(selectedEntry))}
-            >
-              Place party here
-            </button>
-            <span className="spacer" />
-            <button
-              type="button"
-              className="chrome-btn danger"
-              aria-label="Remove entry marker"
-              title="Remove entry marker (Delete)"
-              onClick={() => removeEntry(selectedEntry.id)}
-            >
-              <Icon name="trash" size={15} />
-            </button>
-          </div>
         ) : (
           <p className="muted small">
-            Select a token or entry marker to edit it. Drag tokens (Alt for free placement), drag
-            the map to pan, wheel to zoom.
+            Select a token to edit it. Drag tokens (Alt for free placement), drag the map to pan,
+            wheel to zoom.
           </p>
         )}
       </div>
@@ -1487,57 +1379,6 @@ const TOKEN_KIND_LABEL: Record<Token['kind'], string> = {
   creature: 'Creature',
   marker: 'Marker',
 };
-
-function pointStyle(p: Point) {
-  return { left: p.x, top: p.y };
-}
-
-/**
- * A pop-up anchored to its trigger: beside the tool strip or above the action bar. Not modal;
- * a click elsewhere or Escape closes it.
- */
-function MapPop({
-  open,
-  onClose,
-  label,
-  side,
-  trigger,
-  children,
-}: {
-  open: boolean;
-  onClose(): void;
-  label: string;
-  side: 'right' | 'up';
-  trigger: ReactNode;
-  children: ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onClose();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('pointerdown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open, onClose]);
-  return (
-    <div className="map-pop-anchor" ref={ref}>
-      {trigger}
-      {open && (
-        <div className={`map-pop ${side}`} role="dialog" aria-label={label}>
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function capitalize(s: string): string {
   return s.length ? s[0]!.toUpperCase() + s.slice(1) : s;

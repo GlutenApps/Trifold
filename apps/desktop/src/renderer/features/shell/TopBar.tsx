@@ -4,20 +4,21 @@ import { useShellStore } from '../../stores/shellStore';
 import { closeCampaign, switchCampaign } from './campaignFlow';
 import { Icon } from './icons';
 import { Logo } from './Logo';
+import { hk } from '../../platform';
 
 /**
  * The frameless window's title bar (ADR 0004 §2.1): mark → Library, campaign breadcrumb →
- * switcher, current layout, Hotkeys, Settings, dock toggle. Windows draws the window controls
- * over the right end, so the bar leaves that space free.
+ * switcher, current layout, Hotkeys, Settings. Layouts and Hotkeys pop up from their buttons
+ * (ADR 0009); the dock collapses from its own header, never from here. Windows draws the window controls over the right end, so the bar
+ * leaves that space free.
  */
 export function TopBar() {
   const space = useShellStore((s) => s.space);
   const campaignSlug = useShellStore((s) => s.campaignSlug);
   const enterLibrary = useShellStore((s) => s.enterLibrary);
   const enterConsole = useShellStore((s) => s.enterConsole);
-  const openTool = useShellStore((s) => s.openTool);
-  const toggleDock = useShellStore((s) => s.toggleDock);
-  const dockState = useShellStore((s) => s.layout.dock.state);
+  const pop = useShellStore((s) => s.pop);
+  const togglePop = useShellStore((s) => s.togglePop);
   const presets = useShellStore((s) => s.presets);
   const layout = useShellStore((s) => s.layout);
   const currentIndex = useShellStore((s) => s.currentPresetIndex)();
@@ -148,20 +149,28 @@ export function TopBar() {
         <>
           <button
             type="button"
-            className="btn small ghost"
+            className={`btn small ghost${pop === 'layouts' ? ' on' : ''}`}
             aria-label="Layouts"
+            aria-haspopup="dialog"
+            aria-expanded={pop === 'layouts'}
+            data-pop="layouts"
             title="Layouts"
-            onClick={() => openTool('layouts')}
+            onClick={() => togglePop('layouts')}
           >
             <Icon name="layout" size={14} />
             <span>{preset ? preset.name : 'No layout'}</span>
-            {preset && currentIndex < 9 && <kbd className="kbd">Ctrl+{currentIndex + 1}</kbd>}
+            {preset && currentIndex < 9 && (
+              <kbd className="kbd">{hk(`Ctrl+${currentIndex + 1}`)}</kbd>
+            )}
           </button>
           <button
             type="button"
-            className="btn small ghost"
-            title="Hotkeys (Ctrl+/)"
-            onClick={() => openTool('hotkeys')}
+            className={`btn small ghost${pop === 'hotkeys' ? ' on' : ''}`}
+            aria-haspopup="dialog"
+            aria-expanded={pop === 'hotkeys'}
+            data-pop="hotkeys"
+            title={`Hotkeys (${hk('Ctrl+/')})`}
+            onClick={() => togglePop('hotkeys')}
           >
             <Icon name="keys" size={14} />
             <span>Hotkeys</span>
@@ -170,20 +179,10 @@ export function TopBar() {
             type="button"
             className="chrome-btn"
             aria-label="Settings"
-            title="Settings, in the Library (Ctrl+,)"
+            title={`Settings, in the Library (${hk('Ctrl+,')})`}
             onClick={() => enterLibrary('settings')}
           >
             <Icon name="settings" size={16} />
-          </button>
-          <button
-            type="button"
-            className={`chrome-btn${dockState !== 'hidden' ? ' on' : ''}`}
-            aria-label={dockState === 'hidden' ? 'Show dock' : 'Hide dock'}
-            aria-pressed={dockState !== 'hidden'}
-            title={dockState === 'hidden' ? 'Show dock' : 'Hide dock'}
-            onClick={toggleDock}
-          >
-            <Icon name="split" size={16} />
           </button>
         </>
       ) : (

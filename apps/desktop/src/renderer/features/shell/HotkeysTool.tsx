@@ -1,4 +1,5 @@
 import { listHotkeys } from '../../hotkeys';
+import { hk } from '../../platform';
 
 /** The fixed hotkey table, kbd chips in mono. */
 export function HotkeysTool() {
@@ -9,7 +10,7 @@ export function HotkeysTool() {
         {keys.map((k) => (
           <tr key={k.id}>
             <td>
-              <kbd className="kbd">{k.combo}</kbd>
+              <kbd className="kbd">{hk(k.combo)}</kbd>
             </td>
             <td>{k.description}</td>
           </tr>

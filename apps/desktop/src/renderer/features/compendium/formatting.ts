@@ -85,3 +85,29 @@ export function linkifySpells(
   if (last < text.length) out.push({ text: text.slice(last) });
   return out;
 }
+
+/** Lion's Den item type codes (DATA-FORMATS.md §2.7) as the words the DM reads. */
+export const ITEM_TYPE_NAMES: Record<string, string> = {
+  LA: 'Light armor',
+  MA: 'Medium armor',
+  HA: 'Heavy armor',
+  S: 'Shield',
+  M: 'Melee weapon',
+  R: 'Ranged weapon',
+  A: 'Ammunition',
+  P: 'Potion',
+  SC: 'Scroll',
+  W: 'Wondrous item',
+  ST: 'Staff',
+  RD: 'Rod',
+  WD: 'Wand',
+  RG: 'Ring',
+  G: 'Adventuring gear',
+  $: 'Treasure',
+};
+
+/** The type name for a code, or the code itself when a file uses one we do not know. */
+export function itemTypeName(code: string | null | undefined): string {
+  if (!code) return '';
+  return ITEM_TYPE_NAMES[code.toUpperCase()] ?? code;
+}

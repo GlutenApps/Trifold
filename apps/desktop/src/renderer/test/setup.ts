@@ -1,8 +1,12 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
-import { initialPresenterState, type TrifoldBridge } from '@trifold/api';
+import { initialPresenterState, type PhoneAudioStatus, type TrifoldBridge } from '@trifold/api';
 import { defaultLibrarySettings, type CompendiumRecord, type Playlist } from '@trifold/schema';
+
+function phoneStatus(state: PhoneAudioStatus['state']): PhoneAudioStatus {
+  return { supported: true, state, device: null, detail: null, remembered: [], source: 'computer' };
+}
 
 /** A fully mocked `window.trifold` so renderer tests never touch Electron. */
 export function installBridgeMock(): TrifoldBridge {
@@ -17,7 +21,9 @@ export function installBridgeMock(): TrifoldBridge {
         platform: 'win32',
         userDataPath: 'C:\\test',
       })),
+      openSystemPage: vi.fn(async () => true),
       saveTextFile: vi.fn(async () => null),
+      openExternal: vi.fn(async () => true),
     },
     library: {
       getInfo: vi.fn(async () => ({
@@ -73,6 +79,14 @@ export function installBridgeMock(): TrifoldBridge {
       listPlaylists: vi.fn(async () => []),
       savePlaylist: vi.fn(async (p: Playlist) => p),
       removePlaylist: vi.fn(async () => undefined),
+    },
+    phoneAudio: {
+      status: vi.fn(async () => phoneStatus('off')),
+      listDevices: vi.fn(async () => []),
+      connect: vi.fn(async (device) => ({ ...phoneStatus('connecting'), device })),
+      disconnect: vi.fn(async () => phoneStatus('off')),
+      forget: vi.fn(async () => phoneStatus('off')),
+      setSource: vi.fn(async (source) => ({ ...phoneStatus('off'), source })),
     },
     homebrew: {
       duplicate: vi.fn(async () => {
@@ -146,7 +160,12 @@ export function installBridgeMock(): TrifoldBridge {
     notes: {
       save: vi.fn(async (n) => n),
       remove: vi.fn(async () => undefined),
-      reorder: vi.fn(async () => []),
+      move: vi.fn(async () => []),
+    },
+    noteTemplates: {
+      list: vi.fn(async () => []),
+      save: vi.fn(async (t) => t),
+      remove: vi.fn(async () => undefined),
     },
     npcs: {
       save: vi.fn(async (n) => n),
@@ -191,3 +210,33 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
 });
+
+// ProseMirror (the note editor) measures ranges and elements; jsdom has no layout, so give it
+// empty boxes and a no-op scroll instead of crashes.
+const emptyRect = (): DOMRect =>
+  ({
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+    toJSON: () => ({}),
+  }) as DOMRect;
+if (typeof Range !== 'undefined') {
+  Range.prototype.getBoundingClientRect ??= emptyRect;
+  Range.prototype.getClientRects ??= () =>
+    ({
+      length: 0,
+      item: () => null,
+      [Symbol.iterator]: [][Symbol.iterator],
+    }) as unknown as DOMRectList;
+}
+if (typeof Element !== 'undefined') {
+  Element.prototype.scrollIntoView ??= () => undefined;
+}
+if (typeof document !== 'undefined') {
+  document.elementFromPoint ??= () => null;
+}

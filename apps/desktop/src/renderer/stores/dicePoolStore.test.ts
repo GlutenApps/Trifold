@@ -1,5 +1,7 @@
+import type { RollResult } from '@trifold/rules';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  d20Outcome,
   EMPTY_COUNTS,
   poolExpression,
   poolIsSingleD20,
@@ -75,5 +77,34 @@ describe('useDicePoolStore', () => {
     pool.add(6);
     pool.roll();
     expect(useRollLogStore.getState().entries[0]!.label).toBe('1d20+1d6');
+  });
+});
+
+describe('d20Outcome', () => {
+  const d20 = (natural: number, modifier = 0): RollResult => ({
+    expression: `1d20+${modifier}`,
+    total: natural + modifier,
+    dice: [
+      {
+        term: { kind: 'dice', sign: 1, count: 1, sides: 20 },
+        rolls: [natural],
+        kept: [natural],
+        subtotal: natural,
+      },
+    ],
+  });
+
+  it('marks a natural 20 or 1 on a lone d20 and nothing else', () => {
+    expect(d20Outcome(d20(20, 5))).toBe('crit');
+    expect(d20Outcome(d20(1))).toBe('fumble');
+    expect(d20Outcome(d20(12))).toBeUndefined();
+    expect(
+      d20Outcome({
+        ...d20(20),
+        d20: { faces: [20, 3], natural: 20, modifier: 0, total: 20, mode: 'advantage' },
+      }),
+    ).toBe('crit');
+    const twoDice = { ...d20(20), dice: [d20(20).dice[0]!, d20(20).dice[0]!] };
+    expect(d20Outcome(twoDice)).toBeUndefined();
   });
 });

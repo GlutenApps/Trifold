@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { CR_ORDER, crToNumber } from '@trifold/rules';
-import type { RecordKind } from '@trifold/schema';
+import { Edition, type RecordKind } from '@trifold/schema';
+import { useCampaignStore } from '../../stores/campaignStore';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
+import { itemTypeName } from './formatting';
 import { MonsterEditor } from './MonsterEditor';
 import { RecordDetail } from './RecordDetail';
 
@@ -15,6 +17,17 @@ const KINDS: Array<{ id: RecordKind; label: string }> = [
   { id: 'background', label: 'Backgrounds' },
   { id: 'class', label: 'Classes' },
 ];
+
+/**
+ * Every known ruleset gets a chip column of its own, in the schema's order (newest first); a
+ * record tagged with anything else gets an extra chip after them. Adding an edition to the
+ * schema adds a column here without further changes.
+ */
+const EDITION_SLOTS: readonly string[] = Edition.options.filter((e) => e !== 'unknown');
+
+function editionLabel(edition: string): string {
+  return edition === '2014' ? 'legacy' : edition;
+}
 
 const SIZE_LABEL: Record<string, string> = {
   T: 'Tiny',
@@ -55,6 +68,8 @@ export function CompendiumPage() {
   const removeHomebrew = useCompendiumStore((s) => s.removeHomebrew);
   const sources = useSourcesStore((s) => s.sources);
   const loadSources = useSourcesStore((s) => s.load);
+  // The open campaign's preferred edition heads each collapsed row; a change re-runs the search.
+  const preferredEdition = useCampaignStore((s) => s.current?.campaign.preferredEdition);
 
   const debounce = useRef<number | null>(null);
 
@@ -70,7 +85,7 @@ export function CompendiumPage() {
     return () => {
       if (debounce.current) window.clearTimeout(debounce.current);
     };
-  }, [filters, search]);
+  }, [filters, preferredEdition, search]);
 
   const update = (patch: Parameters<typeof setFilters>[0]) => setFilters(patch);
   const sourceId = filters.sourceIds?.[0] ?? '';
@@ -86,20 +101,21 @@ export function CompendiumPage() {
         </div>
       )}
 
-      <div className="row tabs" role="tablist" aria-label="Record kind">
-        {KINDS.map((k) => (
-          <button
-            key={k.id}
-            type="button"
-            role="tab"
-            className="btn"
-            aria-selected={k.id === kind}
-            aria-pressed={k.id === kind}
-            onClick={() => void setKind(k.id)}
-          >
-            {k.label}
-          </button>
-        ))}
+      <div className="subtabbar">
+        <div className="subtablist" role="tablist" aria-label="Record kind">
+          {KINDS.map((k) => (
+            <button
+              key={k.id}
+              type="button"
+              role="tab"
+              className={`subtab${k.id === kind ? ' active' : ''}`}
+              aria-selected={k.id === kind}
+              onClick={() => void setKind(k.id)}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="row filters">
@@ -240,30 +256,56 @@ export function CompendiumPage() {
               type="button"
               role="option"
               aria-selected={selected?.id === r.id}
-              className="list-row"
+              className="list-row columns"
+              data-kind={kind}
               onClick={() => void select(r.id)}
             >
+              {/* One grid cell per fact, always rendered (empty when unknown), so every column
+                  keeps its place and a value lines up with the same value on the rows around it. */}
               <span className="list-name">{r.displayName}</span>
-              <span className="list-meta">
-                {kind === 'monster' && (
-                  <>
-                    {r.cr !== null && <span>CR {r.cr}</span>}
-                    {r.type && <span>{r.type}</span>}
-                    {r.size && <span>{SIZE_LABEL[r.size] ?? r.size}</span>}
-                    {r.isNpc && <span className="badge">NPC</span>}
-                  </>
-                )}
-                {kind === 'spell' && r.level !== null && (
-                  <span>{r.level === 0 ? 'Cantrip' : `Level ${r.level}`}</span>
-                )}
-                {kind === 'item' && (
-                  <>
-                    {r.typeCode && <span>{r.typeCode}</span>}
-                    {r.rarity && <span>{r.rarity}</span>}
-                  </>
-                )}
-                <span className="badge">{r.edition === '2014' ? 'legacy' : r.edition}</span>
-                <span className="badge source">{r.sourceName}</span>
+              {kind === 'monster' && (
+                <>
+                  <span className="cell cr">{r.cr !== null ? `CR ${r.cr}` : ''}</span>
+                  <span className="cell type" title={r.type ?? undefined}>
+                    {r.type ?? ''}
+                  </span>
+                  <span className="cell size">{r.size ? (SIZE_LABEL[r.size] ?? r.size) : ''}</span>
+                  <span className="cell npc">{r.isNpc && <span className="badge">NPC</span>}</span>
+                </>
+              )}
+              {kind === 'spell' && (
+                <span className="cell level">
+                  {r.level === null ? '' : r.level === 0 ? 'Cantrip' : `Level ${r.level}`}
+                </span>
+              )}
+              {kind === 'item' && (
+                <>
+                  <span className="cell type" title={itemTypeName(r.typeCode) || undefined}>
+                    {itemTypeName(r.typeCode)}
+                  </span>
+                  <span className="cell rarity">{r.rarity ?? ''}</span>
+                </>
+              )}
+              <span className="cell list-editions">
+                {EDITION_SLOTS.map((e) => (
+                  <span key={e} className="edition-slot">
+                    {r.editions.includes(e) && (
+                      <span
+                        className={`badge${e === r.edition ? '' : ' alt-edition'}`}
+                        title={e === r.edition ? undefined : `Also in the ${editionLabel(e)} rules`}
+                      >
+                        {editionLabel(e)}
+                      </span>
+                    )}
+                  </span>
+                ))}
+                {r.editions
+                  .filter((e) => !EDITION_SLOTS.includes(e))
+                  .map((e) => (
+                    <span key={e} className="badge">
+                      {editionLabel(e)}
+                    </span>
+                  ))}
               </span>
             </button>
           ))}

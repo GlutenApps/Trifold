@@ -6,9 +6,45 @@
   min-height: 0;
 }
 
-.tabs .btn[aria-pressed='true'] {
-  background: var(--accent);
-  color: var(--accent-contrast);
+.compendium > .subtabbar {
+  margin-top: 0;
+}
+
+/* A list row that stands for more than one edition: the alternates sit dimmer beside its own. */
+.badge.alt-edition {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+/* Spell, item, feat and trait rolls as a row of pills above the text. */
+.roll-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 4px 0 8px;
+}
+
+/* The newest roll made from the open record, above its block. */
+.detail-last-roll {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+}
+
+.last-roll-total {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--accent);
+  min-width: 2ch;
+  text-align: center;
 }
 
 .filters input[type='text'] {
@@ -71,6 +107,70 @@
   white-space: nowrap;
 }
 
+/* Compendium rows are a grid with one fixed column per fact, set per kind, so a CR, level,
+   type or NPC mark sits on the same vertical line as the one on the rows around it. Cells
+   are always rendered, empty when the record lacks the fact, so nothing shifts. */
+.list-row.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--meta-cols, auto);
+  column-gap: 8px;
+  align-items: baseline;
+}
+
+.list-row.columns[data-kind='monster'] {
+  --meta-cols: 46px minmax(0, 84px) 68px 32px auto;
+}
+
+.list-row.columns[data-kind='spell'] {
+  --meta-cols: 52px auto;
+}
+
+.list-row.columns[data-kind='item'] {
+  --meta-cols: minmax(0, 104px) 76px auto;
+}
+
+.list-row.columns .list-name,
+.list-row.columns .cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-row.columns .cell {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Edition chips: one column per known ruleset, empty when a row lacks it. */
+.list-editions {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.edition-slot {
+  display: inline-flex;
+  justify-content: center;
+  width: 58px;
+}
+
+/* In a narrow panel the type and size columns go before the name does. */
+@container panel (max-width: 620px) {
+  .list-row.columns[data-kind='monster'] {
+    --meta-cols: 46px 32px auto;
+  }
+
+  .list-row.columns[data-kind='item'] {
+    --meta-cols: 76px auto;
+  }
+
+  .list-row.columns .cell.type,
+  .list-row.columns .cell.size {
+    display: none;
+  }
+}
+
 .inspector {
   overflow: auto;
   min-height: 0;
@@ -120,6 +220,18 @@
 .badge.roll {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* On the TV right now: solid, so it is never missed in a list or a header. */
+.badge.live {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
 }
 
 .badge.save {
@@ -1117,6 +1229,123 @@ input.narrow-text {
   border-top-right-radius: 0;
 }
 
+/* Audio source (ADR 0007): the choice above the Music tool's body, the first thing seen;
+   the chosen side is filled with the accent. Class names are prefixed: .source-* belongs to
+   the compendium's source list. */
+.audio-source {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 10px;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-rail);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.audio-source-option {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.audio-source-option:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.audio-source-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.audio-source-option.on {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.audio-source-option svg {
+  flex-shrink: 0;
+}
+
+.audio-source-label {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-audio h3 {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.phone-audio p,
+.phone-audio ol,
+.phone-audio ul {
+  margin: 4px 0;
+}
+
+.phone-audio .steps,
+.phone-audio .notes {
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.phone-audio .steps .btn,
+.phone-audio .notes .btn {
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.phone-audio .row h3 {
+  margin: 0;
+}
+
+.phone-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.phone-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.phone-row.active {
+  border-color: var(--accent);
+}
+
+.phone-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
 /* Playlists tab: one bordered row per playlist; any number expand to settings and tracks. */
 .playlist-list {
   list-style: none;
@@ -1398,4 +1627,639 @@ input[type='range'].wide {
 .monster-editor textarea {
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Sub-tabs inside a panel (Campaign: Party, NPCs, Notes; Compendium: record kinds): the music
+   tool's tab look, one bar under the header. */
+.subtabbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 0;
+  /* Room below the bar, so a card's top border never sits on the bar line or the active tab. */
+  margin: 8px 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.subtablist {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+  padding-left: 4px;
+}
+
+.subtab {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.subtab:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.subtab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.subtab.active {
+  background: var(--bg-panel);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: inset 0 2px 0 var(--accent);
+  height: 29px;
+  margin-bottom: -1px;
+}
+
+/* Notes (ADR 0010): the tree on the left, the open note on the right, the whole panel tall. */
+/* Always a flex column, so switching to Notes (which fills the height) does not change how
+   the header margins collapse and nudge the sub-tabs. */
+.campaign {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.campaign.fill {
+  height: 100%;
+}
+
+.notes-view {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px 8px minmax(0, 1fr);
+}
+
+.notes-tree-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.notes-toolbar {
+  flex-shrink: 0;
+}
+
+.notes-toolbar .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.notes-tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  padding: 4px;
+  margin-top: 8px;
+}
+
+.notes-edge {
+  cursor: col-resize;
+  border-radius: 2px;
+  margin: 8px 0 0;
+}
+
+.notes-edge:hover {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.notes-pane {
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 0 10px;
+  overflow: auto;
+}
+
+.notes-pane.notes-empty {
+  justify-content: center;
+  align-items: center;
+}
+
+.note-head {
+  flex-shrink: 0;
+}
+
+.note-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.note-status {
+  white-space: nowrap;
+}
+
+.note-meta {
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.note-meta .field.inline.grow {
+  flex: 1;
+  min-width: 160px;
+}
+
+.note-meta .field.inline.grow input {
+  width: 100%;
+}
+
+.note-body {
+  flex: 1;
+  min-height: 200px;
+  resize: none;
+  font: inherit;
+  line-height: 1.5;
+}
+
+/* Tree rows (notes): the same shape as scene rows, with a toggle on folders. */
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tree-row:hover {
+  background: var(--bg-hover);
+}
+
+.tree-row.selected {
+  background: var(--bg-active);
+}
+
+.tree-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.tree-title .icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.tree-toggle {
+  flex-shrink: 0;
+}
+
+.tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-row.kind-folder .tree-name {
+  font-weight: 600;
+}
+
+.tree-actions {
+  display: inline-flex;
+  gap: 0;
+  visibility: hidden;
+}
+
+.tree-row:hover .tree-actions,
+.tree-row.selected .tree-actions,
+.tree-row:focus-within .tree-actions {
+  visibility: visible;
+}
+
+/* Notes: the tree pane's width is a variable so the narrow layout below can override it. */
+.notes-view {
+  grid-template-columns: var(--notes-tree, 260px) 8px minmax(0, 1fr);
+}
+
+.notes-toolbar .match-count {
+  white-space: nowrap;
+  align-self: center;
+  padding: 0 4px;
+}
+
+.notes-back {
+  display: none;
+}
+
+/* A narrow Campaign panel shows the list or the open note, not both; Back returns to the list. */
+@container panel (max-width: 640px) {
+  .notes-view {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .notes-edge {
+    display: none;
+  }
+  .notes-view.has-selection .notes-tree-pane,
+  .notes-view:not(.has-selection) .notes-pane {
+    display: none;
+  }
+  .notes-back {
+    display: inline-flex;
+  }
+  .notes-pane {
+    padding-left: 0;
+  }
+}
+
+/* Search results: a note's title and folder path, then each hit with its context. */
+.notes-results .result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.notes-results .result:last-child {
+  border-bottom: none;
+}
+
+.result-title {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.result-title:hover,
+.result-snippet:hover {
+  background: var(--bg-hover);
+}
+
+.result-title:focus-visible,
+.result-snippet:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.result-title .icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.result.selected .result-title {
+  background: var(--bg-active);
+}
+
+.result-path,
+.result-more {
+  padding-left: 24px;
+}
+
+.result-snippet {
+  all: unset;
+  display: block;
+  margin-left: 20px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-snippet mark,
+.search-hit {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--text);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.result-snippet.active {
+  background: var(--bg-active);
+  color: var(--text);
+}
+
+.search-hit.active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* Drag and drop in the scene and note trees. */
+.scene-row[draggable],
+.tree-row[draggable] {
+  cursor: grab;
+}
+
+.scene-row.dragging,
+.tree-row.dragging {
+  opacity: 0.4;
+}
+
+.scene-row.drop-before,
+.tree-row.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.scene-row.drop-after,
+.tree-row.drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.scene-row.drop-inside,
+.tree-row.drop-inside {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.scene-tree.drop-root,
+.notes-tree.drop-root {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+/* The note editor: a toolbar over formatted text that is stored as markdown. */
+.note-editor {
+  flex: 1;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.note-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.note-toolbar .toolbar-gap {
+  width: 6px;
+}
+
+.note-toolbar .toolbar-text {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.note-editor-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.note-editor-body .ProseMirror {
+  min-height: 100%;
+  padding: 10px 14px 24px;
+  outline: none;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.note-editor-body .ProseMirror > * + * {
+  margin-top: 0.6em;
+}
+
+.note-editor-body .ProseMirror p {
+  margin: 0;
+}
+
+.note-editor-body .ProseMirror h1,
+.note-editor-body .ProseMirror h2,
+.note-editor-body .ProseMirror h3 {
+  margin: 0;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.25;
+}
+
+.note-editor-body .ProseMirror h1 {
+  font-size: 20px;
+}
+
+.note-editor-body .ProseMirror h2 {
+  font-size: 17px;
+}
+
+.note-editor-body .ProseMirror h3 {
+  font-size: 15px;
+}
+
+.note-editor-body .ProseMirror > * + h1,
+.note-editor-body .ProseMirror > * + h2,
+.note-editor-body .ProseMirror > * + h3 {
+  margin-top: 1em;
+}
+
+.note-editor-body .ProseMirror ul,
+.note-editor-body .ProseMirror ol {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.note-editor-body .ProseMirror li > p {
+  margin: 0;
+}
+
+.note-editor-body .ProseMirror li + li {
+  margin-top: 2px;
+}
+
+.note-editor-body .ProseMirror ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 2px;
+}
+
+.note-editor-body .ProseMirror ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.note-editor-body .ProseMirror ul[data-type='taskList'] li > label {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.note-editor-body .ProseMirror ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.note-editor-body .ProseMirror li[data-checked='true'] > div {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.note-editor-body .ProseMirror blockquote {
+  margin: 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--accent);
+  color: var(--text-muted);
+}
+
+.note-editor-body .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.8em 0;
+}
+
+.note-editor-body .ProseMirror code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-hover);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+.note-editor-body .ProseMirror a {
+  color: var(--accent);
+}
+
+.note-editor-body .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  float: left;
+  pointer-events: none;
+  height: 0;
+}
+
+.note-editor-body .ProseMirror .tableWrapper {
+  overflow-x: auto;
+}
+
+.note-editor-body .ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+}
+
+.note-editor-body .ProseMirror th,
+.note-editor-body .ProseMirror td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  vertical-align: top;
+  text-align: left;
+  min-width: 60px;
+}
+
+.note-editor-body .ProseMirror th {
+  background: var(--bg-hover);
+  font-weight: 600;
+}
+
+.note-editor-body .ProseMirror .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  pointer-events: none;
+}
+
+.note-editor-body .ProseMirror td,
+.note-editor-body .ProseMirror th {
+  position: relative;
+}
+
+.note-editor-body .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+
+.note-editor-body .ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+}
+
+/* The template menu under its toolbar button, and the templates pane. */
+.menu-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 4px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-item {
+  all: unset;
+  display: block;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.menu-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.menu-note {
+  padding: 6px 10px;
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+
+.template-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }

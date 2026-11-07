@@ -9,3 +9,5 @@ export * from './statblock/attacks';
 export * from './statblock/modifier';
 export * from './combat/index';
 export * from './art/glyph';
+export * from './tree';
+export * from './noteSearch';

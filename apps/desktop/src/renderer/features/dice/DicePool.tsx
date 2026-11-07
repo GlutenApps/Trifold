@@ -6,6 +6,7 @@ import {
   useDicePoolStore,
 } from '../../stores/dicePoolStore';
 import { useRollLogStore } from '../../stores/rollLogStore';
+import { RollReveal, useRollReveal } from './RollReveal';
 
 interface DicePoolProps {
   /** The tray-bar form: die chips, Roll and the last total in one row. */
@@ -28,6 +29,7 @@ export function DicePool({ compact = false }: DicePoolProps) {
   const clear = useDicePoolStore((s) => s.clear);
   const roll = useDicePoolStore((s) => s.roll);
   const last = useRollLogStore((s) => s.entries[0] ?? null);
+  const reveal = useRollReveal(last);
   const pool = { counts, modifier, mode };
   const empty = poolIsEmpty(pool);
   const label = poolLabel(pool);
@@ -56,9 +58,25 @@ export function DicePool({ compact = false }: DicePoolProps) {
   ));
 
   if (compact) {
+    // Right end of the strip: last total, the chips, Clear, then Roll next to the Dice button.
     return (
       <div className="dice-pool compact" data-testid="dice-pool-compact">
+        <output className="tray-result" aria-label="Last roll" title={last?.label}>
+          <RollReveal entry={last} reveal={reveal} />
+        </output>
         {dice}
+        {/* Always in the row so the chips never shift when it appears; hidden while empty. */}
+        <button
+          type="button"
+          className="chrome-btn tray-clear"
+          aria-label="Clear the pool (tray)"
+          disabled={empty}
+          aria-hidden={empty}
+          onClick={clear}
+          title="Clear"
+        >
+          ×
+        </button>
         <button
           type="button"
           className="btn small primary"
@@ -69,20 +87,6 @@ export function DicePool({ compact = false }: DicePoolProps) {
         >
           Roll
         </button>
-        {!empty && (
-          <button
-            type="button"
-            className="chrome-btn"
-            aria-label="Clear the pool (tray)"
-            onClick={clear}
-            title="Clear"
-          >
-            ×
-          </button>
-        )}
-        <output className="tray-result" aria-label="Last roll" title={last?.label}>
-          {last ? last.total : '–'}
-        </output>
       </div>
     );
   }
@@ -135,22 +139,23 @@ export function DicePool({ compact = false }: DicePoolProps) {
         <button type="button" className="btn" disabled={empty} onClick={clear}>
           Clear
         </button>
-        <button
-          type="button"
-          className="btn primary roll-btn"
-          aria-label="Roll the pool"
-          disabled={empty}
-          onClick={() => roll()}
-        >
-          Roll {label ? <span className="pool-label">{label}</span> : null}
-        </button>
       </div>
+      <button
+        type="button"
+        className="btn primary roll-btn"
+        aria-label="Roll the pool"
+        disabled={empty}
+        onClick={() => roll()}
+      >
+        Roll {label ? <span className="pool-label">{label}</span> : null}
+      </button>
       <div className="pool-result" aria-live="polite">
         {last ? (
           <>
-            <span className="pool-total">{last.total}</span>
-            <span className="muted">
-              {last.label} · {last.faces}
+            <RollReveal entry={last} reveal={reveal} className="pool-total" />
+            <span className={`muted reveal-detail${reveal.settled ? ' settled' : ''}`}>
+              {last.label}
+              {reveal.settled ? ` · ${last.faces}` : ''}
             </span>
           </>
         ) : (

@@ -1,6 +1,6 @@
 # Trifold console: feature and control inventory
 
-Everything the console does today, grouped by what it is. "Major" is a candidate for the stage, "minor" for the dock, "global" for a toolbar or status strip. Names are the ones in the app; keep them unless a shorter one is clearly better.
+Everything the console does today, grouped by what it is. "Major" is a candidate for the stage, "minor" for the dock, "pop-up" for a panel that opens from its own button (strip or top bar, ADR 0009), "global" for a toolbar or status strip. Names are the ones in the app; keep them unless a shorter one is clearly better.
 
 Placeholder content for mockups: campaign "Sunken Keep", PCs Aria (Sam, Wizard 5, HP 28, AC 13) and Brannoc (Kim, Fighter 5, HP 44, AC 18), creatures Goblin Minion, Goblin Warrior, Worg, Mage (all SRD), scenes "The Sunken Keep" (title card) and "Silt Springs Map" (map), playlist "Tavern Night".
 
@@ -22,10 +22,10 @@ Hotkeys (fixed):
 | Ctrl+Alt+P | Play or pause music |
 | Ctrl+Alt+→ / ← | Next / previous track |
 | Ctrl+Alt+M | Panic mute all audio |
-| Ctrl+D | Dice |
+| Ctrl+D | Dice pop-up |
 | Ctrl+M | Music transport |
-| Ctrl+T | TV controls |
-| Ctrl+/ | Hotkey sheet |
+| Ctrl+T | VTT tab |
+| Ctrl+/ | Hotkey sheet pop-up |
 | Ctrl+, | Settings |
 | Ctrl+Shift+M | Maximize or restore the focused panel |
 | Ctrl+1 … Ctrl+9 | Apply layout 1 … 9 |
@@ -35,7 +35,8 @@ Hotkeys (fixed):
 
 - Campaign list: new campaign (name field + Create campaign), Import campaign XML…, open one, Close campaign. Header shows the name and a "2024 rules" badge; Import into this campaign…
 - Party: PC cards (name, player, class and level, HP, AC, initiative bonus, passive perception) with Edit and Remove; New PC card; Quick add (one PC per line: Name, Player, Class L, HP, AC, Init, Speed, PP) + Add PCs.
-- Adventures (list), NPCs (list), Notes (markdown notes list). Each has a "No … yet" empty state and an add action.
+- Sub-tabs: Party (above), NPCs (list with Remove), Notes. Each list has a "No … yet" empty state.
+- Notes (ADR 0010): a tree pane on the left with Find in notes, New note, New folder (named "New notes folder" for assistive tech, since the Scenes tool has a New folder too) and New note from template, a menu listing the Library's templates plus "Save open note as template" and "Manage templates…" (the right pane becomes the templates editor: a row of template names, Template name, the same editor, New template, Delete template with a second click, Done); folder rows collapse and expand; rows drag to reorder, onto a folder's middle to go inside, or onto the empty space to go last at the root; a drag edge between the panes. While a phrase is typed the tree becomes results: each note's title, folder path and up to three snippets with the hit marked; a snippet opens the note at that hit; "n of m" with Previous match / Next match (Enter, Shift+Enter) steps through every hit across notes. The open note on the right: title, Saved / Unsaved, Remove, Tags, then the editor with a formatting toolbar (Bold, Italic, Strikethrough, H1–H3, Bulleted list, Numbered list, Checklist, Quote, Divider) over formatted text stored as markdown; tables and images in a note survive a round trip. A selected folder shows its name, contents count, and Remove folder keeping or deleting the contents (the latter asks once more). Under 640 px the panel shows the list or the open note with a Back to notes arrow.
 
 ## Major: Compendium
 
@@ -45,6 +46,14 @@ Hotkeys (fixed):
 - Record detail: stat block in 2024 layout (abilities, saves, skills, senses, traits, actions, bonus actions, reactions, legendary actions, lair). Spell names inside are clickable and open the spell; Back returns. "Switch edition" toggle when a 2024 and a legacy version both exist.
 - Homebrew: Duplicate to homebrew → editor (name, CR, abilities, features), Save, Changes from original, Delete… (with confirm).
 - Clicking a spell name from the combat tracker also opens the compendium at that spell.
+
+## Major: Web tab (the DM makes these; ADR 0011)
+
+- From any group's + menu: closed web tabs are listed under the majors, then "New web tab…" opens a small form: Tab name (blank follows the page title), Web address, an icon row (Globe, Book, Person, Scroll, Quill, Crown, Potion, Coin, Compass, Skull, Gem, Star) and Add web tab (Enter works in either field).
+- Bar over the page: Back, Forward, Reload / Stop loading, Home (back to the saved address; disabled while there), Zoom out / a percentage readout that resets / Zoom in (saved per tab; Ctrl+-, Ctrl+0, Ctrl+= also work, even typed inside the page), the address (Enter navigates; browsing never changes the saved address), Open in system browser, Edit tab, Remove web tab (click twice). The tab's × closes it (parks it in the + menu); Remove forgets it everywhere, including saved layouts.
+- Edit tab opens a panel under the bar: Name, Saved address with "Use current page", the icon row, Save and Cancel. Saving a new address loads it.
+- A page that fails to load shows "This page did not load" with Try again and Open in system browser.
+- Ctrl/Alt/Cmd combos pressed inside the page also fire the console's hotkeys; plain keys stay with the page. "Log in with…" pop-ups open as a child window of the console in the same session.
 
 ## Major: Encounters (builder)
 
@@ -63,10 +72,10 @@ Hotkeys (fixed):
 
 ## Major: Presenter (scenes)
 
-- Scene tree: search ("Find scene"), nested folders, rows with kind icon, title, "live" badge, per-row edit / move up / move down. Click a row to send it to the TV; hover shows a preview.
+- Scene tree: search ("Find scene"), nested folders, rows with kind icon, title, "live" badge, per-row send / edit. Rows drag to reorder, into a folder, or to the empty space for the root (ADR 0010). Click a row to send it to the TV; hover shows a preview.
 - New scene toolbar: title field + New title card, New image scene…, New map…, New blank grid, New folder. "Recent:" links to the last scenes shown.
 - Selected scene: preview card ("Selected: The Sunken Keep", Send to TV).
-- Edit scene: title, subtitle, folder, Show title on TV (follow overlay setting / always / never), Music on go-live (keep current audio / a playlist), backdrop, DM notes, Remove scene.
+- Edit scene: title, subtitle, Show title on TV (follow overlay setting / always / never), Music on go-live (keep current audio / a playlist), backdrop, DM notes, Remove scene.
 - Map editor (for map and blank-grid scenes): canvas with zoom and pan; grid alignment (click two opposite corners of one cell); Place party (click the map or an entry marker); entry markers (name field, add, remove); creature tokens (Find creature to place, count); token states hidden / masked / dead; drag tokens (mirrored to the TV); "Show the players what you see now" (player camera); camera presets; linked encounter: start or resume combat from the tokens, or forget the link.
 
 ## Major: Music (library)
@@ -85,10 +94,10 @@ Hotkeys (fixed):
 - Backups: enabled, keep days, Back up now, list of backups with Restore, Open backups folder.
 - About: version, SRD attribution text with licence disclosures, icon credits (game-icons.net), font credits.
 
-## Minor: Dice
+## Pop-up: Dice (from the strip's dice button)
 
 - Pool chips d100, d20, d12, d10, d8, d6, d4 (click adds one, right-click takes one away, count badge); modifier stepper (−, value, +); Normal / Adv / Dis (Adv and Dis only for a lone d20); Clear; Roll showing the expression ("Roll 1d20 + 2d6 + 3"); result total large with faces; "Or type" field for expressions like 4d6kh3; roll log (total, label, faces, time, Clear).
-- The same pool is shared wherever dice appear; today a compact strip of the chips, Roll and the last total also sits in the status bar.
+- The same pool is shared wherever dice appear. The status strip's right end carries, left to right: last total, the chips, Clear, Roll, then the Dice button that opens this pop-up above it.
 
 ## Minor: TV controls
 
@@ -105,11 +114,11 @@ Hotkeys (fixed):
 
 - Title · artist · playlist or "Nothing playing"; ⏮ Play/Pause ⏭ Stop; Panic mute / Unmute; position slider with time; Master, Music volumes; crossfade seconds; output device select; "Measuring loudness: n tracks left".
 
-## Minor: Hotkey sheet
+## Pop-up: Hotkey sheet (from the top bar)
 
 - Table of every registered hotkey and its description.
 
-## Minor: Layouts
+## Pop-up: Layouts (from the top bar)
 
 - Save current as new (name field); list rows: hotkey label (Ctrl+1…), name and a summary of what it contains, current-layout highlight, Overwrite, Rename, move up/down, Delete; Bring back the starter layouts. Starter set: Prep, Table, Combat.
 

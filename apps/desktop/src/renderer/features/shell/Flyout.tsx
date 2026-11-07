@@ -35,7 +35,14 @@ export function Flyout() {
       : { right: 12, bottom: 42 + 10 };
 
   return (
-    <div className="fly" ref={ref} style={style} role="dialog" aria-label={MINOR_TITLES[flyout]}>
+    <div
+      className="fly"
+      ref={ref}
+      style={style}
+      role="dialog"
+      aria-label={MINOR_TITLES[flyout]}
+      data-tool={flyout}
+    >
       <header className="fly-head">
         <Icon name={MINOR_ICON[flyout]} size={14} />
         <span className="dh-name">{MINOR_TITLES[flyout]}</span>

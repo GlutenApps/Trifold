@@ -16,7 +16,8 @@ export type FileKind =
   | 'npc'
   | 'scene'
   | 'musicLibrary'
-  | 'playlist';
+  | 'playlist'
+  | 'noteTemplate';
 
 export type JsonObject = Record<string, unknown>;
 
@@ -31,7 +32,7 @@ export type VersionTable = Record<FileKind, number>;
 
 export const CURRENT_SCHEMA_VERSION: VersionTable = {
   appConfig: 1,
-  library: 3,
+  library: 5,
   source: 1,
   record: 1,
   campaign: 1,
@@ -43,6 +44,7 @@ export const CURRENT_SCHEMA_VERSION: VersionTable = {
   scene: 1,
   musicLibrary: 1,
   playlist: 1,
+  noteTemplate: 1,
 };
 
 /** Registered migrations, oldest first. Add an entry whenever a schema version is bumped. */
@@ -56,10 +58,28 @@ export const MIGRATIONS: MigrationRegistry = {
       migrate: (doc) => ({ ...doc, workspace: { presets: [], seeded: false, consoles: {} } }),
     },
     {
+      from: 3,
+      to: 4,
+      // ADR 0008: the TV controls tool folded into the TV tab; saved layouts drop its dock section.
+      migrate: (doc) => ({ ...doc, workspace: dropDockTool(doc['workspace'], 'tv') }),
+    },
+    {
       from: 2,
       to: 3,
       // ADR 0005: the Combat tab folded into Encounters; layouts and starters are reset.
       migrate: (doc) => ({ ...doc, workspace: { presets: [], seeded: false, consoles: {} } }),
+    },
+    {
+      from: 4,
+      to: 5,
+      // ADR 0009: Dice, Hotkeys and Layouts became pop-ups; saved layouts drop their dock sections.
+      migrate: (doc) => ({
+        ...doc,
+        workspace: ['dice', 'hotkeys', 'layouts'].reduce(
+          (ws, tool) => dropDockTool(ws, tool),
+          doc['workspace'],
+        ),
+      }),
     },
   ],
   source: [],
@@ -73,7 +93,28 @@ export const MIGRATIONS: MigrationRegistry = {
   scene: [],
   musicLibrary: [],
   playlist: [],
+  noteTemplate: [],
 };
+
+/** Removes one minor tool from every saved layout's dock (presets and per-campaign consoles). */
+function dropDockTool(workspace: unknown, tool: string): unknown {
+  if (!isJsonObject(workspace)) return workspace;
+  const strip = (layout: unknown): unknown => {
+    if (!isJsonObject(layout) || !isJsonObject(layout['dock'])) return layout;
+    const dock = layout['dock'];
+    const sections = Array.isArray(dock['sections'])
+      ? dock['sections'].filter((s) => !(isJsonObject(s) && s['tool'] === tool))
+      : dock['sections'];
+    return { ...layout, dock: { ...dock, sections } };
+  };
+  const presets = Array.isArray(workspace['presets'])
+    ? workspace['presets'].map((p) => (isJsonObject(p) ? { ...p, layout: strip(p['layout']) } : p))
+    : workspace['presets'];
+  const consoles = isJsonObject(workspace['consoles'])
+    ? Object.fromEntries(Object.entries(workspace['consoles']).map(([k, v]) => [k, strip(v)]))
+    : workspace['consoles'];
+  return { ...workspace, presets, consoles };
+}
 
 export class MigrationError extends Error {
   override name = 'MigrationError';

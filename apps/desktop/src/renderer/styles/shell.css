@@ -94,6 +94,15 @@
   flex-shrink: 0;
 }
 
+/* macOS draws the traffic lights over the left end instead (ADR 0006). */
+:root[data-platform='mac'] .topbar {
+  padding-left: 78px;
+}
+
+:root[data-platform='mac'] .window-controls-space {
+  width: 8px;
+}
+
 .btn.ghost {
   border-color: transparent;
   gap: 6px;
@@ -105,6 +114,12 @@
   border-color: var(--border);
 }
 
+/* A ghost button whose pop-up is showing (ADR 0009). */
+.btn.ghost.on {
+  color: var(--accent);
+  border-color: var(--border);
+}
+
 .pip {
   display: inline-block;
   width: 7px;
@@ -112,6 +127,11 @@
   border-radius: 50%;
   background: var(--accent);
   flex-shrink: 0;
+}
+
+.pip.tally {
+  background: var(--tally);
+  box-shadow: 0 0 5px var(--tally);
 }
 
 .grow {
@@ -511,6 +531,8 @@ body.resizing {
   align-items: center;
   gap: 6px;
   height: 34px;
+  /* A flex column squeezes the header when the body overflows; the header keeps its height. */
+  flex-shrink: 0;
   padding: 0 4px 0 12px;
   border-bottom: 1px solid var(--border);
   color: var(--text-muted);
@@ -520,6 +542,20 @@ body.resizing {
   overflow: auto;
   padding: 8px 12px;
   container: panel / inline-size;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* The Music flyout keeps one height: its body swaps between the player and the phone panel,
+   and a flyout that resized with its content would jump, most visibly when it opens upward
+   from the live strip. */
+.fly[data-tool='music'] {
+  height: 70vh;
+}
+
+/* Pop-ups (ADR 0009) sit by their button and are a little wider than a flyout. */
+.fly.pop {
+  width: 440px;
 }
 
 .fly.preview {
@@ -588,6 +624,13 @@ body.resizing {
 
 [data-strip='tv'] .strip-text {
   max-width: 170px;
+}
+
+/* The dice keep to the strip's right end: last total, chips, Roll, then the Dice button. */
+[data-strip='dice'] {
+  margin-left: auto;
+  padding-right: 0;
+  flex-shrink: 0;
 }
 
 .tray-result {
@@ -755,6 +798,16 @@ body.resizing {
   color: var(--danger);
 }
 
+.chrome-btn.tally {
+  background: var(--tally);
+  color: var(--tally-contrast);
+}
+
+.chrome-btn.tally:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tally) 85%, white);
+  color: var(--tally-contrast);
+}
+
 .chrome-btn.xs {
   width: 22px;
   height: 22px;
@@ -910,12 +963,17 @@ body.resizing {
   gap: 4px;
 }
 
-/* Dice pool: click to add, right-click to take away */
+/* Dice pool: click to add, right-click to take away. The seven chips share one row. */
 .die-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 10px;
+}
+
+.die-row .die-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 4px;
 }
 
 .die-chip {
@@ -970,7 +1028,8 @@ body.resizing {
 }
 
 .pool-controls {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
+  flex-wrap: nowrap;
 }
 
 .pool-modifier {
@@ -988,9 +1047,14 @@ body.resizing {
   font-size: 18px;
 }
 
+/* Roll takes its own full-width line so the expression has room and nothing wraps around it. */
 .roll-btn {
-  min-height: 32px;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  min-height: 36px;
   padding: 0 14px;
+  margin-bottom: 8px;
 }
 
 .pool-label {
@@ -1017,12 +1081,133 @@ body.resizing {
   color: var(--accent);
 }
 
+/* The roll reveal (DESIGN.md §6.7): the number tumbles for ~600 ms and settles with a pop; a
+   natural 20 glows, a natural 1 shudders. The dice are rolled and logged at once, only the
+   showing is stretched; clicking the number settles it early. */
+.roll-reveal {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+.roll-reveal.tumbling {
+  opacity: 0.75;
+  cursor: pointer;
+}
+
+.roll-reveal.settled.popped {
+  animation: roll-settle 220ms ease-out;
+}
+
+.roll-reveal.settled.crit {
+  color: var(--accent);
+  text-shadow: 0 0 10px var(--accent);
+  animation:
+    roll-settle 220ms ease-out,
+    roll-glow 900ms ease-out;
+}
+
+.roll-reveal.settled.fumble {
+  color: var(--text-muted);
+  animation:
+    roll-settle 220ms ease-out,
+    roll-shake 360ms ease-in-out;
+}
+
+/* The faces and label of a roll appear once the number has settled, so they never spoil it. */
+.reveal-detail {
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+
+.reveal-detail.settled {
+  opacity: 1;
+}
+
+@keyframes roll-settle {
+  from {
+    transform: scale(1.3);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes roll-glow {
+  from {
+    text-shadow: 0 0 18px var(--accent);
+  }
+  to {
+    text-shadow: 0 0 10px var(--accent);
+  }
+}
+
+@keyframes roll-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roll-reveal,
+  .roll-reveal.settled.crit,
+  .roll-reveal.settled.fumble {
+    animation: none;
+  }
+
+  .reveal-detail {
+    transition: none;
+  }
+}
+
 .typed-roll {
   margin: 4px 0 12px;
 }
 
 .typed-roll input[type='text'] {
-  min-width: 200px;
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+/* The roll log lives in the Dice pop-up: a two-line row per roll, the total down the left. */
+.dice-roller .roll-entry {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'total label time'
+    'total faces faces';
+  gap: 2px 10px;
+  padding: 6px 4px;
+}
+
+.dice-roller .roll-total {
+  grid-area: total;
+  font-size: 18px;
+  align-self: start;
+}
+
+.dice-roller .roll-label {
+  grid-area: label;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dice-roller .roll-faces {
+  grid-area: faces;
+}
+
+.dice-roller .roll-time {
+  grid-area: time;
+  white-space: nowrap;
 }
 
 .dice-pool.compact {
@@ -1037,6 +1222,11 @@ body.resizing {
   padding: 0 5px;
   font-size: 11px;
   border-radius: var(--radius-sm);
+}
+
+/* The Clear slot keeps its width while empty so a quick second click lands on the same chip. */
+.dice-pool.compact .tray-clear:disabled {
+  visibility: hidden;
 }
 
 .dice-pool.compact .die-count {
@@ -1103,10 +1293,284 @@ body.resizing {
   margin: 4px 0 10px;
 }
 
-.tv-controls .live-card {
-  margin-bottom: 8px;
+/* TV major: the header holds every screen control; a title card or image previews in a frame */
+.tv-head {
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
 
-.tv-controls .live-card.live {
-  border-color: var(--accent);
+.tv-show {
+  gap: 4px;
+  margin-left: 10px;
+}
+
+.tv-power {
+  min-width: 84px;
+  justify-content: center;
+}
+
+/* One 30 px line: small buttons, and icon toolbars with no inner padding (28 px + border). */
+.tv-head .icon-toolbar {
+  margin-left: 10px;
+  padding: 0;
+  box-sizing: border-box;
+  height: 30px;
+  align-items: center;
+}
+
+.tv-head .scene-picker .icon-toolbar {
+  margin-left: 0;
+}
+
+.tv-head .btn.small {
+  box-sizing: border-box;
+  height: 30px;
+}
+
+.tv-preview {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.tv-preview-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.tv-preview-title strong {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.tv-preview-title span {
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+.tv-preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* TV tab: step through the prepared scenes or jump to one, without leaving the tab */
+.scene-picker {
+  gap: 2px;
+}
+
+.scene-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.scene-pick strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.scene-pick-list {
+  align-self: stretch;
+  max-height: min(50vh, 400px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.scene-pick-folder {
+  padding: 6px 8px 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.scene-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.scene-pick-row:hover,
+.scene-pick-row:focus-visible {
+  background: var(--bg-hover);
+  outline: none;
+}
+
+.scene-pick-row[aria-selected='true'] {
+  background: var(--bg-active);
+}
+
+.scene-pick-row .scene-pick-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Web tabs (ADR 0011): a thin bar over the guest page. The body is flush: the page draws
+   its own chrome. Hidden web bodies keep their guest mounted (visibility, not display). */
+.grp-body.web {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.grp-body.web[hidden] {
+  display: flex;
+  visibility: hidden;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.web-tab {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.web-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 34px;
+  padding: 0 4px;
+  background: var(--bg-rail);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.web-bar .web-address {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  margin: 0 4px;
+  font-family: var(--mono, inherit);
+  font-size: 12px;
+}
+.web-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  background: var(--bg-rail);
+}
+.web-view {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+.web-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+  background: var(--bg-panel);
+}
+.web-error .row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Web tab edit panel and the new-tab form: name, saved address, icon. */
+.web-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-rail);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.web-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.web-field > span {
+  width: 96px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.web-field input[type='text'] {
+  flex: 1;
+  min-width: 0;
+}
+.web-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.web-icons .chrome-btn.on {
+  background: var(--bg-active);
+}
+.menu.web-new {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 360px;
+  padding: 8px;
+}
+.menu.web-new input[type='text'] {
+  width: 100%;
+}
+.menu.web-new .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* A tab's icon never gives way to a long label; the label ellipsizes instead. */
+.tab > .icon {
+  flex-shrink: 0;
+}
+.tab-label {
+  min-width: 0;
+}
+
+/* Web tab zoom readout: a narrow text button between the zoom buttons. */
+.web-bar .web-zoom {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 40px;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  font-family: var(--mono, inherit);
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.web-bar .web-zoom:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.web-bar .web-zoom:disabled {
+  cursor: default;
 }

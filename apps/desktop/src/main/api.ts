@@ -6,12 +6,17 @@ import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
 import { createCampaignApi } from './campaignApi';
 import { createMusicApi } from './musicApi';
+import { createNoteTemplatesApi } from './noteTemplates';
+import { createPhoneAudioApi } from './phoneAudio/phoneAudioApi';
+import type { PhoneAudioReceiver } from './phoneAudio/receiver';
 import type { IconResources } from './icons';
 import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 import type { PresenterHub } from './presenter';
 import { importXmlSource, isStale, reimportSource } from './sources/importXml';
+import { systemPageUrl } from './systemPages';
+import { isWebUrl } from './webTabs';
 import { WindowManager } from './windows';
 
 export interface ApiContext {
@@ -21,6 +26,7 @@ export interface ApiContext {
   presenter: PresenterHub;
   logger: Logger;
   icons: IconResources;
+  phoneAudio: PhoneAudioReceiver;
 }
 
 /** The main-process implementation of `TrifoldApi`. Registered by `registerIpc`. */
@@ -48,6 +54,17 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           platform: process.platform,
           userDataPath: app.getPath('userData'),
         };
+      },
+      async openSystemPage(page) {
+        const url = systemPageUrl(page, process.platform);
+        if (!url) return false;
+        await shell.openExternal(url);
+        return true;
+      },
+      async openExternal(url) {
+        if (!isWebUrl(url)) return false;
+        await shell.openExternal(url);
+        return true;
       },
       async saveTextFile({ title, defaultName, text }) {
         const result = await dialog.showSaveDialog({
@@ -213,7 +230,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     },
 
     ...createCampaignApi(ctx.session, ctx.logger),
+    ...createNoteTemplatesApi(ctx.session, ctx.logger),
     ...createMusicApi(ctx.session, ctx.windows),
+    ...createPhoneAudioApi(ctx.phoneAudio, ctx.config, ctx.logger),
 
     homebrew: {
       async duplicate(recordId) {

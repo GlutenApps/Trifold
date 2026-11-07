@@ -17,6 +17,7 @@ import {
   type CompendiumRecord,
   type Encounter,
   type MonsterRecord,
+  type Note,
   type NPC,
   type PCCard,
   type Source,
@@ -302,14 +303,21 @@ export async function importCampaignXml(
     });
   };
 
-  const saveNote = (title: string, body: string) =>
+  const saveNote = (
+    title: string,
+    body: string,
+    parentId: string | null = null,
+    kind: Note['kind'] = 'note',
+  ) =>
     entities.saveNote({
       schemaVersion: CAMPAIGN_SCHEMA_VERSION,
       id: '',
+      kind,
       title,
       body,
       tags: [],
       links: [],
+      parentId,
       order: 0,
       createdAt: '',
       updatedAt: '',
@@ -327,9 +335,12 @@ export async function importCampaignXml(
   }
   let order = bundle.adventures.length;
   for (const a of parsed.adventures) {
+    // An adventure's notes land in a folder named after it (ADR 0010); the adventure record is
+    // still written so its encounter and note links survive.
+    const folder = a.notes.length ? await saveNote(a.name, '', null, 'folder') : null;
     const noteIds: string[] = [];
     for (const n of a.notes) {
-      noteIds.push((await saveNote(n.title, n.body)).id);
+      noteIds.push((await saveNote(n.title, n.body, folder?.id ?? null)).id);
       noteCount += 1;
     }
     const encounterIds: string[] = [];

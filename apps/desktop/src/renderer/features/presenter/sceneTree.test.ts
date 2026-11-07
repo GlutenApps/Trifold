@@ -1,6 +1,14 @@
 import type { Scene } from '@trifold/schema';
 import { describe, expect, it } from 'vitest';
-import { firstChildOf, flattenTree, nextOrder, parentOf, reorder, siblingAt } from './sceneTree';
+import {
+  firstChildOf,
+  flattenTree,
+  nextOrder,
+  parentOf,
+  reorder,
+  showableAt,
+  siblingAt,
+} from './sceneTree';
 
 function scene(
   id: string,
@@ -67,5 +75,27 @@ describe('scene tree', () => {
       ['gate', 1],
     ]);
     expect(reorder(scenes, scenes[2]!, -1)).toBeNull();
+  });
+
+  it('steps through showable scenes in tree order, skipping folders, without wrapping', () => {
+    const [intro, act1, gate, hall, orphan, end] = scenes as [
+      Scene,
+      Scene,
+      Scene,
+      Scene,
+      Scene,
+      Scene,
+    ];
+    expect(showableAt(scenes, intro, 1)?.id).toBe('gate');
+    expect(showableAt(scenes, gate, 1)?.id).toBe('hall');
+    expect(showableAt(scenes, hall, 1)?.id).toBe('end');
+    expect(showableAt(scenes, end, 1)?.id).toBe('orphan');
+    expect(showableAt(scenes, orphan, 1)).toBeNull();
+    expect(showableAt(scenes, gate, -1)?.id).toBe('intro');
+    expect(showableAt(scenes, intro, -1)).toBeNull();
+    expect(showableAt(scenes, null, 1)?.id).toBe('intro');
+    expect(showableAt(scenes, null, -1)?.id).toBe('orphan');
+    expect(showableAt(scenes, act1, 1)).toBeNull();
+    expect(showableAt([], null, 1)).toBeNull();
   });
 });

@@ -1,17 +1,33 @@
 import { useEffect } from 'react';
-import { installHotkeys, registerHotkey } from '../../hotkeys';
+import { handleKeydown, installHotkeys, registerHotkey } from '../../hotkeys';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { useMusicStore } from '../../stores/musicStore';
+import { usePhoneAudioStore } from '../../stores/phoneAudioStore';
 import { usePresenterStore } from '../../stores/presenterStore';
+import { useSceneStore } from '../../stores/sceneStore';
 import { useShellStore } from '../../stores/shellStore';
 import { LibraryView } from '../library/LibraryView';
 import { summarizeCombat } from '../presenter/combatSummary';
+import { showableAt } from '../presenter/sceneTree';
+
+/** Selects the previous or next showable scene (from the selected one, else the live one). */
+function stepScene(step: 1 | -1): void {
+  const scenes = useCampaignStore.getState().current?.scenes ?? [];
+  const sceneState = useSceneStore.getState();
+  const fromId = sceneState.selectedId ?? usePresenterStore.getState().state.scene?.id ?? null;
+  const from = scenes.find((s) => s.id === fromId) ?? null;
+  const target = showableAt(scenes, from, step);
+  if (!target) return;
+  sceneState.select(target.id);
+  useShellStore.getState().openMajor('map', { avoid: 'encounters' });
+}
 import { CloseCampaignPrompt } from './CloseCampaignPrompt';
 import { Dock } from './Dock';
 import { Flyout } from './Flyout';
 import { LiveStrip } from './LiveStrip';
+import { Pop } from './Pop';
 import { Stage } from './Stage';
 import { TopBar } from './TopBar';
 
@@ -34,6 +50,24 @@ export function AppShell() {
     void load();
     return window.trifold.on('playerWindowChanged', ({ open }) => setPlayerOpen(open));
   }, [load, setPlayerOpen]);
+
+  // A modifier combo pressed inside a web tab's page reaches the hotkeys as if typed here
+  // (ADR 0011). The page keeps its copy; only combos the console knows do anything.
+  useEffect(
+    () =>
+      window.trifold.on('webTabInput', ({ key, control, alt, shift, meta }) => {
+        handleKeydown(
+          new KeyboardEvent('keydown', {
+            key,
+            ctrlKey: control,
+            altKey: alt,
+            shiftKey: shift,
+            metaKey: meta,
+          }),
+        );
+      }),
+    [],
+  );
 
   // Layouts and each campaign's console belong to the Library; a Library switch loads its own.
   useEffect(() => {
@@ -66,6 +100,7 @@ export function AppShell() {
   }, [musicSettings]);
   useEffect(() => {
     void useMusicStore.getState().load();
+    void usePhoneAudioStore.getState().load();
     void useCampaignStore.getState().load();
   }, []);
 
@@ -121,7 +156,7 @@ export function AppShell() {
       registerHotkey({
         id: 'presenter.blackout',
         combo: 'Ctrl+Shift+B',
-        description: 'Toggle blackout on the player window',
+        description: 'Toggle blackout on the TV',
         run: () => usePresenterStore.getState().toggleBlackout(),
       }),
       registerHotkey({
@@ -133,11 +168,23 @@ export function AppShell() {
       registerHotkey({
         id: 'player.toggle',
         combo: 'Ctrl+Shift+P',
-        description: 'Open or close the player window',
+        description: 'Open or close the TV',
         run: () => {
           const app = useAppStore.getState();
           void (app.playerOpen ? app.closePlayer() : app.openPlayer());
         },
+      }),
+      registerHotkey({
+        id: 'scene.selectPrevious',
+        combo: 'Ctrl+Alt+ArrowUp',
+        description: 'Select the previous scene on the TV tab (does not send)',
+        run: () => stepScene(-1),
+      }),
+      registerHotkey({
+        id: 'scene.selectNext',
+        combo: 'Ctrl+Alt+ArrowDown',
+        description: 'Select the next scene on the TV tab (does not send)',
+        run: () => stepScene(1),
       }),
       registerHotkey({
         id: 'nav.compendium',
@@ -207,7 +254,7 @@ export function AppShell() {
         id: 'tool.dice',
         combo: 'Ctrl+D',
         description: 'Dice',
-        run: () => shell().openTool('dice'),
+        run: () => shell().togglePop('dice'),
       }),
       registerHotkey({
         id: 'tool.music',
@@ -218,20 +265,23 @@ export function AppShell() {
       registerHotkey({
         id: 'tool.tv',
         combo: 'Ctrl+T',
-        description: 'TV controls',
-        run: () => shell().openTool('tv'),
+        description: 'VTT: the scene on the TV',
+        run: () => shell().openMajor('map', { avoid: 'encounters' }),
       }),
       registerHotkey({
         id: 'tool.keys',
         combo: 'Ctrl+/',
         description: 'Hotkey sheet',
-        run: () => shell().openTool('hotkeys'),
+        run: () => shell().togglePop('hotkeys'),
       }),
       registerHotkey({
         id: 'flyout.close',
         combo: 'Escape',
-        description: 'Close the open flyout',
-        run: () => shell().closeFlyout(),
+        description: 'Close the open pop-up or flyout',
+        run: () => {
+          if (shell().pop) shell().closePop();
+          else shell().closeFlyout();
+        },
       }),
       registerHotkey({
         id: 'nav.settings',
@@ -288,6 +338,7 @@ export function AppShell() {
       )}
       {campaignOpen && <LiveStrip />}
       <Flyout />
+      <Pop />
       <CloseCampaignPrompt />
     </div>
   );

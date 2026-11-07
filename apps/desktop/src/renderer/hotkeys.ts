@@ -3,6 +3,8 @@
  * hotkeys.ts). Features register on mount and unregister on unmount; `listHotkeys` feeds the
  * cheat sheet.
  */
+import { isMac } from './platform';
+
 export interface Hotkey {
   id: string;
   /** `Ctrl+Shift+B` style; see `comboFromEvent`. */
@@ -26,12 +28,20 @@ export function listHotkeys(): Hotkey[] {
 
 const MODIFIER_KEYS = new Set(['Control', 'Alt', 'Shift', 'Meta']);
 
-export function comboFromEvent(e: KeyboardEvent): string {
+/**
+ * Combos are written once, Windows-style. `Ctrl` is the primary modifier: the Control key on
+ * Windows and the Command key on macOS, where Control is the rarely used extra (`Meta`), so a
+ * feature registers `Ctrl+K` and gets Cmd+K on a Mac for free. `hk()` in platform.ts renders a
+ * combo for display.
+ */
+export function comboFromEvent(e: KeyboardEvent, mac: boolean = isMac): string {
   const parts: string[] = [];
-  if (e.ctrlKey) parts.push('Ctrl');
+  const primary = mac ? e.metaKey : e.ctrlKey;
+  const secondary = mac ? e.ctrlKey : e.metaKey;
+  if (primary) parts.push('Ctrl');
   if (e.altKey) parts.push('Alt');
   if (e.shiftKey) parts.push('Shift');
-  if (e.metaKey) parts.push('Meta');
+  if (secondary) parts.push('Meta');
   if (!MODIFIER_KEYS.has(e.key)) {
     parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
   }

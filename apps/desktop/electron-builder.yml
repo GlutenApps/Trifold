@@ -25,5 +25,19 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
+# macOS: a dmg and a zip for the build machine's architecture (ADR 0006). better-sqlite3 is
+# fetched for that one architecture by scripts/rebuild-native.mjs, so a universal build needs
+# both prebuilds and is not attempted. Builds are unsigned until a Developer ID exists; the
+# first launch is right-click → Open.
+mac:
+  category: public.app-category.utilities
+  target:
+    - dmg
+    - zip
+  identity: null
+  hardenedRuntime: false
+  darkModeSupport: true
+dmg:
+  writeUpdateInfo: false
 # Native modules are prepared by scripts/rebuild-native.mjs (ADR 0001).
 npmRebuild: false

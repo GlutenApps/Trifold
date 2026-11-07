@@ -1,7 +1,14 @@
-import { BrowserWindow, screen, shell, type Display } from 'electron';
+import { BrowserWindow, screen, session, shell, type Display } from 'electron';
 import { join } from 'node:path';
-import type { DisplayInfo } from '@trifold/api';
+import { EVENT_CHANNELS, type DisplayInfo } from '@trifold/api';
 import type { WindowBounds } from '@trifold/schema';
+import {
+  forwardableInput,
+  isWebUrl,
+  planWindowOpen,
+  WEB_TAB_PARTITION,
+  webTabUserAgent,
+} from './webTabs';
 
 export type Route = 'console' | 'player';
 
@@ -35,12 +42,76 @@ export class WindowManager {
 
   constructor(private readonly hooks: WindowHooks) {}
 
-  private static webPreferences(): Electron.WebPreferences {
+  private static webPreferences(route: Route): Electron.WebPreferences {
     return {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
+      // Only the console hosts web tabs (ADR 0011); the player stays a pure view.
+      webviewTag: route === 'console',
+    };
+  }
+
+  /**
+   * Web tabs (ADR 0011). Every guest page is an ordinary sandboxed web page in one persistent
+   * session: no preload, no node, http(s) only, links that want a new window go to the system
+   * browser, and modifier combos pressed inside a page are echoed to the console so hotkeys
+   * keep working while a document has focus.
+   */
+  private static hostWebTabs(win: BrowserWindow): void {
+    const web = session.fromPartition(WEB_TAB_PARTITION);
+    web.setUserAgent(webTabUserAgent(process.platform));
+    win.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+      delete webPreferences.preload;
+      webPreferences.nodeIntegration = false;
+      webPreferences.contextIsolation = true;
+      webPreferences.sandbox = true;
+      const src = typeof params['src'] === 'string' ? params['src'] : '';
+      if (params['partition'] !== WEB_TAB_PARTITION || !isWebUrl(src)) event.preventDefault();
+    });
+    win.webContents.on('did-attach-webview', (_event, guest) => {
+      WindowManager.guardGuest(win, guest);
+    });
+  }
+
+  /** The same rules for a web tab's page and for any pop-up window it opens. */
+  private static guardGuest(win: BrowserWindow, guest: Electron.WebContents): void {
+    guest.setWindowOpenHandler(({ url, disposition }) => {
+      const plan = planWindowOpen(url, disposition);
+      if (plan === 'popup') {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            parent: win,
+            width: 560,
+            height: 720,
+            autoHideMenuBar: true,
+            backgroundColor: '#14181d',
+            webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+          },
+        };
+      }
+      if (plan === 'external') void shell.openExternal(url);
+      return { action: 'deny' };
+    });
+    guest.on('did-create-window', (child) => WindowManager.guardGuest(win, child.webContents));
+    guest.on('will-navigate', (event, url) => {
+      if (!isWebUrl(url)) event.preventDefault();
+    });
+    guest.on('before-input-event', (_e, input) => {
+      const echo = forwardableInput(input);
+      if (echo && !win.isDestroyed()) win.webContents.send(EVENT_CHANNELS.webTabInput, echo);
+    });
+  }
+
+  private static titleBarOptions(): Electron.BrowserWindowConstructorOptions {
+    if (process.platform === 'darwin') {
+      return { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 9 } };
+    }
+    return {
+      titleBarStyle: 'hidden',
+      titleBarOverlay: { color: '#11151a', symbolColor: '#9aa3ad', height: 34 },
     };
   }
 
@@ -73,12 +144,13 @@ export class WindowManager {
       backgroundColor: '#14181d',
       show: false,
       autoHideMenuBar: true,
-      // The renderer draws the title bar (ADR 0004 §2.1); Windows draws the window controls
-      // over its right end so snap layouts and double-click keep working.
-      titleBarStyle: 'hidden',
-      titleBarOverlay: { color: '#11151a', symbolColor: '#9aa3ad', height: 34 },
-      webPreferences: WindowManager.webPreferences(),
+      // The renderer draws the title bar (ADR 0004 §2.1). Windows draws the window controls
+      // over its right end so snap layouts and double-click keep working; macOS draws the
+      // traffic lights over its left end (ADR 0006). The renderer leaves both spaces free.
+      ...WindowManager.titleBarOptions(),
+      webPreferences: WindowManager.webPreferences('console'),
     });
+    WindowManager.hostWebTabs(win);
     win.once('ready-to-show', () => {
       if (bounds?.maximized) win.maximize();
       win.show();
@@ -110,12 +182,14 @@ export class WindowManager {
       width,
       height,
       frame: false,
-      fullscreen: true,
+      // macOS `fullscreen` moves the window to its own Space with an animation and steals focus;
+      // simpleFullscreen just covers the display, which is all the TV window needs.
+      ...(process.platform === 'darwin' ? { simpleFullscreen: true } : { fullscreen: true }),
       show: false,
       title: 'Trifold player',
       backgroundColor: '#000000',
       autoHideMenuBar: true,
-      webPreferences: WindowManager.webPreferences(),
+      webPreferences: WindowManager.webPreferences('player'),
     });
     win.once('ready-to-show', () => {
       win.showInactive();

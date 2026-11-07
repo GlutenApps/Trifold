@@ -1,15 +1,13 @@
 import type { Playlist, Scene } from '@trifold/schema';
 
-/** The edit-scene form (title, subtitle, folder, TV title rule, music on go-live, backdrop, notes). */
+/** The edit-scene form (title, subtitle, TV title rule, music on go-live, backdrop, notes). Folders are set by dragging in the tree. */
 export function SceneEditor({
   scene,
-  folders,
   playlists,
   onChange,
   onRemove,
 }: {
   scene: Scene;
-  folders: Scene[];
   playlists: Playlist[];
   onChange(s: Scene): void;
   onRemove(): void;
@@ -36,22 +34,6 @@ export function SceneEditor({
             />
           </label>
         )}
-        <label className="field">
-          Folder
-          <select
-            value={scene.parentId ?? ''}
-            onChange={(e) => onChange({ ...scene, parentId: e.target.value || null })}
-          >
-            <option value="">(top level)</option>
-            {folders
-              .filter((f) => f.id !== scene.id)
-              .map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.title}
-                </option>
-              ))}
-          </select>
-        </label>
         {scene.kind !== 'folder' && (
           <label className="field">
             Show title on TV

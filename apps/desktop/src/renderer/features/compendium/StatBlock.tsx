@@ -12,11 +12,14 @@ import {
   usesText,
 } from './formatting';
 
-/** Roll handlers supplied by the combat tracker; without them badges are inert. */
+/**
+ * Roll handlers: the combat tracker supplies all four, the compendium everything but saves
+ * (there is nobody to call a save against outside a fight). Without a handler a badge is inert.
+ */
 export interface StatBlockActions {
   onAttack(feature: Feature, attack: Attack, mode: RollMode): void;
   onRoll(feature: Feature, roll: RollButton): void;
-  onSave(feature: Feature, save: SaveCall): void;
+  onSave?(feature: Feature, save: SaveCall): void;
   onMultiattack(feature: Feature, mode: RollMode): void;
 }
 
@@ -227,7 +230,7 @@ function FeatureList({
               <Badge
                 key={`s${j}`}
                 className="badge save"
-                onClick={actions ? () => actions.onSave(f, s) : undefined}
+                onClick={actions?.onSave ? () => actions.onSave?.(f, s) : undefined}
               >
                 DC {s.dc} {s.ability.toUpperCase()}
                 {s.halfOnSuccess ? ' · half' : ''}

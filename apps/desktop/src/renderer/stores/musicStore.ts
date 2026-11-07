@@ -3,6 +3,7 @@ import {
   trackUrl,
   type MusicLibraryView,
   type MusicScanProgress,
+  type AudioSource,
   type TrackView,
 } from '@trifold/api';
 import type { MusicSettings, Playlist, Track } from '@trifold/schema';
@@ -21,7 +22,7 @@ export interface OutputDevice {
   label: string;
 }
 
-interface MusicState {
+export interface MusicState {
   library: MusicLibraryView | null;
   playlists: Playlist[];
   scan: MusicScanProgress | null;
@@ -40,6 +41,11 @@ interface MusicState {
   position: { current: number; duration: number };
   /** Loudness pass: track being measured now, and how many remain. */
   measuring: { trackId: string; remaining: number } | null;
+  /**
+   * Where the table's music comes from (ADR 0007). With the phone chosen, Trifold's player is
+   * paused and every transport action, hotkey and scene link is inert.
+   */
+  source: AudioSource;
 
   load(): Promise<void>;
   applySettings(settings: MusicSettings): void;
@@ -68,6 +74,7 @@ interface MusicState {
   cycleLoop(): Promise<void>;
   measureLoudness(): Promise<void>;
   clearError(): void;
+  setSource(source: AudioSource): Promise<void>;
 }
 
 const engine = new AudioEngine();
@@ -183,15 +190,17 @@ export const useMusicStore = create<MusicState>((set, get) => {
     loopTrack: false,
     position: { current: 0, duration: 0 },
     measuring: null,
+    source: 'computer',
 
     async load() {
       listenForScans();
       try {
-        const [library, playlists] = await Promise.all([
+        const [library, playlists, phone] = await Promise.all([
           window.trifold.music.library(),
           window.trifold.music.listPlaylists(),
+          window.trifold.phoneAudio.status(),
         ]);
-        set({ library, playlists, error: null });
+        set({ library, playlists, source: phone.source, error: null });
         void get().measureLoudness();
       } catch (err) {
         fail(err);
@@ -338,6 +347,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
     },
 
     async playPlaylist(playlistId, options) {
+      if (get().source === 'phone') return;
       const playlist = get().playlists.find((p) => p.id === playlistId);
       if (!playlist || playlist.trackIds.length === 0) return;
       if (options?.ifDifferent && get().playlistId === playlistId && get().playing) return;
@@ -349,6 +359,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
     },
 
     async playTrack(trackId, playlistId = null) {
+      if (get().source === 'phone') return;
       const playlist = playlistId ? get().playlists.find((p) => p.id === playlistId) : undefined;
       const order = playlist ? buildOrder(playlist.trackIds, playlist.shuffle, trackId) : [trackId];
       set({ playlistId: playlist?.id ?? null, order });
@@ -356,6 +367,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
     },
 
     async togglePlay() {
+      if (get().source === 'phone') return;
       const { playing, order, index, playlistId } = get();
       const fade = Math.min(1, fadeFor(playlistId));
       if (playing) {
@@ -374,12 +386,14 @@ export const useMusicStore = create<MusicState>((set, get) => {
     },
 
     async next() {
+      if (get().source === 'phone') return;
       const { order, index } = get();
       const following = nextIndex({ order, index, loop: true });
       if (following !== null) await startAt(following);
     },
 
     async previous() {
+      if (get().source === 'phone') return;
       const { order, index } = get();
       if (engine.position().current > 5) {
         engine.seek(0);
@@ -404,10 +418,12 @@ export const useMusicStore = create<MusicState>((set, get) => {
     },
 
     toggleMuted() {
+      if (get().source === 'phone') return;
       get().setMuted(!get().muted);
     },
 
     async cycleLoop() {
+      if (get().source === 'phone') return;
       const { loopTrack, playlistId, playlists } = get();
       const playlist = playlists.find((p) => p.id === playlistId) ?? null;
       const next: LoopMode = nextLoopMode(
@@ -454,6 +470,21 @@ export const useMusicStore = create<MusicState>((set, get) => {
 
     clearError() {
       set({ error: null });
+    },
+
+    async setSource(source) {
+      if (get().source === source) return;
+      if (source === 'phone' && get().playing) {
+        engine.pause(Math.min(1, fadeFor(get().playlistId)));
+        set({ playing: false });
+      }
+      set({ source });
+      try {
+        await window.trifold.phoneAudio.setSource(source);
+        if (source === 'computer') await window.trifold.phoneAudio.disconnect();
+      } catch (err) {
+        fail(err);
+      }
     },
   };
 });

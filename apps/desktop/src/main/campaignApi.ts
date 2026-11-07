@@ -98,11 +98,11 @@ export function createCampaignApi(
       async save(note) {
         return entities().saveNote(note);
       },
-      async remove(id) {
-        await entities().removeNote(id);
+      async remove(id, contents) {
+        await entities().removeNote(id, contents);
       },
-      async reorder(noteIds) {
-        return entities().reorderNotes(noteIds);
+      async move(noteId, parentId, index) {
+        return entities().moveNote(noteId, parentId, index);
       },
     },
     npcs: {

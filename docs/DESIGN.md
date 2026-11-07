@@ -7,7 +7,7 @@
 
 ## 1. What Trifold is
 
-Trifold is a local Windows desktop application for a Dungeon Master running D&D 5e (2024 rules) campaigns and one-shots at a physical table. It replaces two apps the DM currently uses (Lion's Den *Game Master 5th Edition* and *Fight Club 5th Edition*) and adds what they lack: a presenter mode for a second screen and a music controller.
+Trifold is a local desktop application (Windows and macOS) for a Dungeon Master running D&D 5e (2024 rules) campaigns and one-shots at a physical table. It replaces two apps the DM currently uses (Lion's Den *Game Master 5th Edition* and *Fight Club 5th Edition*) and adds what they lack: a presenter mode for a second screen and a music controller.
 
 The app is a **DM console**. Players are not users. They build characters wherever they like (D&D Beyond, Fight Club, paper) and hand the DM a few numbers.
 
@@ -23,7 +23,7 @@ The app is a **DM console**. Players are not users. They build characters wherev
 ### 1.2 Non-goals (explicit)
 
 - No character builder or player-facing character sheets.
-- No accounts, no cloud backend, no sync between users, no web client (v1).
+- No accounts, no cloud backend, no sync between users, no web client (v1). The app never phones home; the only pages it loads from the network are the web tabs the DM opens (ADR 0011).
 - No virtual tabletop features beyond what §6.5 specifies (no dynamic lighting, no line-of-sight, no rulers in v1).
 - No bundled non-SRD content, ever. No links to community repositories baked into the app.
 - No map making. Maps are images the DM supplies.
@@ -40,7 +40,7 @@ Settled decisions, in one place. Rationale is in the sections that follow.
 
 | Area | Decision |
 |---|---|
-| Platform | Windows-only Electron app. Web-tech UI (React + TypeScript). |
+| Platform | Electron app for Windows and macOS from one codebase, platform-specific code limited to build, menu, title bar and the primary modifier key (ADR 0006). Web-tech UI (React + TypeScript). |
 | Backend | None. Fully local. No accounts. |
 | Storage | Files-first Library folder (JSON + media). SQLite is a rebuildable index only. |
 | Rules edition | 2024 rules are native. 2014 content is "legacy", allowed per campaign, with light automatic conversion. |
@@ -48,15 +48,18 @@ Settled decisions, in one place. Rationale is in the sections that follow.
 | User content | Lion's Den compendium XML import (neutral importer, lenient parser). Game Master campaign XML import. Fight Club "GM export" import. Nothing is hosted or shared. |
 | Players | Represented by PC cards (name, HP, AC, saves, passives, portrait…). No sheets. |
 | Homebrew | New-from-scratch or Duplicate-then-edit for monsters, items, spells, feats, species, backgrounds. Classes/subclasses later. Duplicate is a universal verb (encounters, scenes, NPCs, PC cards, playlists). |
-| Presenter | Second Electron window on a chosen display. Scene tree of any depth. Tree click goes straight to the TV (no preview step); hover shows a thumbnail; undo-last-scene hotkey. Party placed by clicking an entry point each time. Player-window overlays (scene title, initiative strip, PC health bars, round counter) are individually toggleable; scene title is a global toggle with per-scene override. |
+| Presenter | Second Electron window on a chosen display. Scene tree of any depth. Tree click selects; Enter, double-click or ▶ sends (ADR 0004); hover shows a thumbnail; undo-last-scene hotkey. The TV tab shows the selected scene of any kind and holds every screen control; the live strip only mirrors the one-tap ones (ADR 0008). Party placed by clicking an entry point each time. Player-window overlays (scene title, initiative strip, PC health bars, round counter) are individually toggleable; scene title is a global toggle with per-scene override. |
 | Token art | game-icons.net (CC BY 3.0) silhouettes rendered as generated tokens; "engraved" treatment default, "flat" alternative. Custom art per record by drag-drop; bulk folder match by filename. |
 | Music | Local files only (MP3/OGG/FLAC/WAV/M4A). Three layers: music (crossfade), ambience (seamless loops), effects (one-shot, ducking). Per-track loudness normalization. Output device selection. Scene-linked playback. |
+| Phone audio | On Windows, Trifold is the Bluetooth audio receiver (the OS's AudioPlaybackConnection API driven by a bundled PowerShell helper, no native module): paired phones are listed, remembered once used, and connect in one click, never automatically. On macOS the Phone tab is an AirPlay Receiver guide with deep links. Both state what Trifold cannot control from there. An "Audio source" toggle on the Music tool and the live strip switches between Trifold's player and the phone. See ADR 0007. |
 | Name | Trifold. No WotC trademarks in name, UI, or marketing. Described as "5e-compatible". |
 | Fog of war | Phase 2. |
 | Copyright posture | Lion's Den model: ship SRD only; import anything the user supplies; export flags records derived from non-SRD content. |
 | Native module pins | `electron` and `better-sqlite3` are pinned together to versions with prebuilt binaries (currently Electron 42 / better-sqlite3 12.11.1); no compiler on install. Window routes use the URL hash. See ADR 0001 and ADR 0002. |
-| Console layout | Library space plus a console per open campaign: a tabbed stage (one or two groups) for the majors, a right dock for the minor tools, a live strip for table state. Palette "Slate and bone", type Outfit + IBM Plex Mono (bundled, OFL). See ADR 0004 (supersedes 0003). |
+| Console layout | Library space plus a console per open campaign: a tabbed stage (one or two groups) for the majors, a right dock for the minor tools, a live strip for table state. Palette "Slate and bone", type Outfit + IBM Plex Mono (bundled, OFL). See ADR 0004 (supersedes 0003). The presenter is two pieces: Scenes (the list, dock) and TV (the screen, stage); the live strip mirrors one-tap actions and is never a control's only home. See ADR 0008. Dice, Hotkeys and Layouts pop up from their own buttons (strip, top bar) and the dock keeps the tall tools, Music and Scenes. See ADR 0009. |
 | Encounters and combat | One Encounters tab: the list and builder, replaced by the combat tracker while a fight runs (the list stays a click away). A built encounter can be placed on a map as hidden tokens, positioned, then started. See ADR 0005. |
+| Campaign notes | A tree of folders (the scene tree's helpers) beside the open note, which saves itself as it is edited; Party, NPCs and Notes are sub-tabs of the Campaign tab. Folders replace Adventures in the UI; the record stays for imports. Phrase search with snippets and note templates follow in the same series. See ADR 0010. |
+| Web tabs | The stage `+` menu adds a web tab: an address the DM typed, hosted in a sandboxed Electron webview in one persistent session, so a hosted document or sheet sits beside the console as a tab and reopens where it was left at the next launch. Library-wide list stored with the layouts; close parks, remove forgets; modifier hotkeys reach through the page; every tab has Open in system browser. See ADR 0011. |
 
 ---
 
@@ -64,7 +67,7 @@ Settled decisions, in one place. Rationale is in the sections that follow.
 
 There is one user: the DM, on one Windows PC with a second display (TV or monitor) at the table.
 
-**Prep (days before):** import content → build the campaign (adventures, NPCs, notes) → enter PC cards from what players sent → build encounters from the compendium → build the scene tree (title cards, maps with grid alignment, pre-placed creatures and entry markers) → tag music, build playlists, link them to scenes.
+**Prep (days before):** import content → build the campaign (adventures, NPCs, notes) → enter PC cards from what players sent → build encounters from the compendium → build the scene tree (title cards, maps with grid alignment, pre-placed creatures) → tag music, build playlists, link them to scenes.
 
 **At the table:** open campaign → open player window on the TV (blackout) → click scenes as the party moves → click an entry point to drop the party on a map → start combat from the scene → run initiative, roll attacks and saves from stat blocks, apply damage, track conditions → music crossfades with scene changes and combat → end combat, tokens gray out, back to exploration.
 
@@ -111,6 +114,8 @@ Trifold Library/
       scenes/<id>.json
       images/                  scene images (copied in) + generated display-size versions
       tokens/                  custom token art for this campaign's PCs/NPCs
+  templates/
+    notes/<id>.json            note templates (name + markdown body), shared by every campaign
   music/
     library.json               scanned folders, per-track tags and gain, loop trims
     playlists/<id>.json
@@ -164,7 +169,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Adventure** — `{ id, name, summary, sceneIds: string[], encounterIds: string[], noteIds: string[], order }`
 
-**Note** — `{ id, title, body (markdown), tags, links: EntityRef[], order }` (list order within the campaign; new notes go last)
+**Note** — `{ id, kind: "note"|"folder", title, body (markdown), tags, links: EntityRef[], parentId?, order }` (a tree like scenes: `parentId` is the folder, `order` the place among siblings; new notes go last in their folder; ADR 0010)
 
 **NPC** — `{ id, name, recordRef?: RecordRef (stat block), portrait?, role, location?, notes, isAlive }`
 
@@ -220,7 +225,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 ### 6.3 Campaign management
 
-- Campaign list on launch; one open at a time. Campaign → Adventures (ordered) → linked scenes, encounters, notes. Notes are markdown with `[[links]]` to NPCs, scenes, encounters and compendium records (autocomplete). Backlinks are shown on the target.
+- Campaign list on launch; one open at a time. The Campaign tab is three sub-tabs: Party, NPCs, Notes. Notes are a tree of folders beside the open note (ADR 0010): find in notes (a phrase, with context snippets that open the note at that hit), new note, new folder, collapse, drag to reorder or into a folder (scenes drag the same way); the open note is formatted text stored as markdown and saves itself as it is edited; a narrow panel shows the list or the note, not both. Folders took the place of Adventures in the UI; the adventure record stays in the schema and the importer so old campaigns and campaign XML load, and an imported adventure's notes land in a folder named after it. Notes are markdown with `[[links]]` to NPCs, scenes, encounters and compendium records (autocomplete). Backlinks are shown on the target.
 - NPC records can wrap a stat block (any monster record, including the 1,237 `npc`-flagged entries in community files) and carry a portrait, role, location and notes.
 - **PC cards**: form with the fields in §5.2. Import from a Fight Club GM export fills what the stat block provides (AC, HP, saves, skills, passives, spells). A "quick add" text box accepts one line per PC: `Name, Player, Class L, HP, AC, Init, Speed, PP`. Unofficial D&D Beyond pre-fill is out of scope for v1 (tracked as a later convenience; unsupported endpoint).
 - Session log: encounter results (XP earned, rounds, casualties) append to a campaign log automatically; DM can add free-text session notes.
@@ -252,12 +257,12 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Windows.** Console + player window. Settings → Displays picks the target display; the player window opens fullscreen there on "Open player window" and remembers the choice. Blackout is a global hotkey. Undo-last-scene is a hotkey.
 
-**Scene tree.** One tree per campaign; folders allowed; drag to reorder/reparent; duplicate with subtree. Hovering a scene shows its thumbnail and notes in a side panel. **Clicking a scene sends it to the TV immediately.** Hotkeys: next/previous sibling, parent, first child, quick search (Ctrl+K) to jump by name. Recent scenes list.
+**Scene tree.** One tree per campaign; folders allowed; drag to reorder/reparent; duplicate with subtree. Hovering a scene shows its thumbnail and notes in a side panel. **Clicking a scene selects it and previews it on the TV tab; Enter, double-click or ▶ sends it** (ADR 0004, Decision 10). Hotkeys: next/previous sibling, parent, first child, quick search (Ctrl+K) to jump by name. Recent scenes list.
 
 **Scene kinds.**
 - *Title card:* text on a backdrop, optional subtitle, optional image.
 - *Image:* full-bleed illustration; no grid or tokens; player camera fits the image.
-- *Map:* image + grid + tokens + entry markers.
+- *Map:* image + grid + tokens.
 - *Blank grid:* generated backdrop (parchment / stone / dark) + grid; tokens; for improvised combat.
 - Any scene can have DM notes, linked audio, and a linked encounter.
 
@@ -267,11 +272,11 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Tokens.** PC tokens from cards, creature tokens from compendium/encounter, markers. Footprint from size (T/S/M = 1, L = 2, H = 3, G = 4). Drag on the console; the TV mirrors within a frame. Per-token flags: `hidden` (DM-only), `nameMasked` (TV shows creature type), HP display, condition icons, active-turn ring, dead marker. Right-click menu: reveal, mask/unmask, mark dead, remove, set art.
 
-**Entry markers and party placement.** During prep the DM drops named entry markers. When a map is live, the party is not placed until the DM clicks an entry marker or anywhere on the map; the PC tokens land as a compact cluster around that point (formation: 2-wide column) and can be nudged. No automatic carry-over between scenes. The scene remembers last positions and offers "restore previous positions" when reopened.
+**Party placement.** When a map is live, the party is not placed until the DM clicks anywhere on the map (entry markers were built and removed as not useful, ADR 0008; the field stays in the scene file and is ignored); the PC tokens land as a compact cluster around that point (formation: 2-wide column) and can be nudged. No automatic carry-over between scenes. The scene remembers last positions and offers "restore previous positions" when reopened.
 
 **Cameras.** DM camera (free pan/zoom, mouse wheel and drag) and player camera (controlled from the console: fit map, fit tokens, follow active combatant, manual pan/zoom). The console draws the player viewport rectangle over the map. Aspect ratio of the target display is respected; letterboxing uses the scene backdrop color.
 
-**Overlays on the TV.** Scene title (global toggle, per-scene override), initiative strip (top or side), PC health bars, round counter, handout (image or text card that overlays the live scene and dismisses with a key), break screen (title + optional countdown; music continues), blackout.
+**Overlays on the TV.** Scene title (global toggle, per-scene override), initiative strip (top or side), PC health bars, round counter, handout (image or text card that overlays the live scene; rendered by the player but with no console control yet, ADR 0008), break screen (title + optional countdown; music continues), blackout.
 
 **Transitions.** Crossfade 400 ms default; "cut" setting.
 
@@ -287,6 +292,8 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 - *Music:* playlist queue, play/pause, next/previous, shuffle, loop. **Every transition crossfades** (equal-power curve) over the configured duration (default 4 s, range 1–10 s), including "stop" (fade out) and "start" (fade in). The next track is pre-decoded so a crossfade starts on the keypress.
 - *Ambience:* multiple concurrent seamless loops. Loop at the sample level using `AudioBufferSourceNode.loop` with `loopStart/loopEnd` from the track's trim; auto-trim leading/trailing silence on import.
 - *Effects:* one-shot buttons and hotkeys (F-keys configurable); optional ducking (music −8 dB for the effect's duration + 500 ms release). **Stinger** = an effect with ducking on by default.
+
+**Phone audio** (ADR 0007). The Music tool's Phone tab makes this computer the phone's speaker, so Spotify, a soundscape app or anything else on the phone plays through the table speakers. On Windows 11 Trifold is the receiver itself: the tab lists the paired phones, the ones used before first, and one click on a phone brings up the Bluetooth link and the audio together (never automatically at launch); a hidden helper keeps the connection open and reconnects when the phone wanders. Pairing a new phone is a button into Bluetooth settings. On macOS the tab is a two-step AirPlay Receiver guide (iPhone and iPad) with a button into the right settings pane. The OS carries the audio to its default output, so it bypasses Trifold's output choice and panic mute; the tab says so and points at the system sound settings. An **Audio source** toggle at the top of the Music tool chooses between "This computer" (Trifold's player, tabs and transport) and "Phone" (only the phone panel); choosing Phone pauses Trifold's player and makes its transport, hotkeys and scene links inert, and the live strip shows the phone's name, state and one Connect or Disconnect button instead of the player controls. The choice is remembered per machine; the phone still connects only by a click.
 - Output device selection (list from `enumerateDevices`), remembered.
 
 **Scene linking.** A scene may set a playlist and ambience set. On scene change: if the playlist differs, crossfade to it; ambience loops not in the new set fade out, new ones fade in. Encounters may set a combat playlist: starting combat crossfades to it and remembers what was playing; ending combat crossfades back. All automatic changes can be disabled per scene ("keep current audio").
@@ -369,7 +376,7 @@ This section is binding for the codebase.
 
 ## 9. UX notes
 
-- Dark theme default; light theme available. Two spaces (ADR 0004): the **Library** (campaigns, compendium sources and homebrew, music folders, settings) and the **console**, the inside of exactly one open campaign. The console is a frameless window with a 34 px top bar (mark → Library, campaign breadcrumb → switcher, current layout, Hotkeys, Settings, dock toggle), a **stage** of one or two tab groups holding the majors (Campaign, Compendium, Encounters, Map; Encounters becomes the combat tracker while a fight runs; every tab keeps its place when switched or closed; two groups is how combat sits beside the map), a right-hand **dock** of minor tools (Dice, TV controls, Music, Scenes, Hotkeys, Layouts) that is wide, narrow, icons-only with flyouts, or hidden, and a 42 px **live strip** with table state only: what is on the TV with blackout and the player window, round and turn with next/previous, music and mute, the shared dice pool. Layouts capture the chrome (tabs, groups, dock) and are the DM's to save, overwrite, rename, reorder and delete; Prep, Table and Combat are copied in as starters.
+- Dark theme default; light theme available. Two spaces (ADR 0004): the **Library** (campaigns, compendium sources and homebrew, music folders, settings) and the **console**, the inside of exactly one open campaign. The console is a frameless window with a 34 px top bar (mark → Library, campaign breadcrumb → switcher, current layout, Hotkeys, Settings), a **stage** of one or two tab groups holding the majors (Campaign, Compendium, Encounters, TV; Encounters becomes the combat tracker while a fight runs; every tab keeps its place when switched or closed; two groups is how combat sits beside the map; TV shows the selected scene and carries every control for the screen, ADR 0008), a right-hand **dock** of the tall minor tools (Music, Scenes) that is wide, narrow, or icons-only with flyouts (never hidden since ADR 0009), pop-ups for Dice (from the strip), Hotkeys and Layouts (from the top bar) that anchor to their buttons (ADR 0009), and a 42 px **live strip** with table state only: what is on the TV with blackout and the player window, round and turn with next/previous, music and mute, and at its right end the shared dice pool with the Dice button. Layouts capture the chrome (tabs, groups, dock) and are the DM's to save, overwrite, rename, reorder and delete; Prep, Table and Combat are copied in as starters.
 - Look: "Slate and bone" palette (near-monochrome slate, warm bone accent; ally, enemy, healthy, bloodied and down carry the colour). Outfit for UI text, IBM Plex Mono for numbers. Compact: 13 px base, 30 px buttons, 28 px icon buttons, row actions revealed on hover.
 - Keyboard-first: every table-time action has a hotkey; a cheat sheet is one key away.
 - Never lose work: autosave on every change; daily backup zip; "restore backup" in settings.
@@ -388,7 +395,7 @@ The hard cut line for the one-shot. Everything listed here must work end to end;
 1. **Compendium:** bundled SRD 2024 + 2014 (Open5e snapshot); XML compendium import with the lenient parser and all conventions in `DATA-FORMATS.md` §2; source enable/disable; monster/spell/item browse and search with source and edition filters; stat block view in 2024 layout with clickable spells.
 2. **Campaign:** create campaign; adventures; notes (markdown, links); NPCs; PC cards with quick add and Fight Club GM export import.
 3. **Encounters & combat:** builder with 2024 budget; initiative (per creature/group, PC prompt); turn loop with recharge and legendary pools; conditions with durations; damage with type math, temp HP, concentration prompt; death saves; attack/multiattack/save-call buttons; roll log.
-4. **Presenter:** player window on chosen display; scene tree with click-to-live, hover preview, hotkeys, undo; title card / image / map / blank grid scenes; image import with display-size generation; grid with two-click alignment; tokens with generated art (engraved + flat), drag mirroring, hidden/masked/dead states; entry markers and party placement; player camera presets and viewport rectangle; overlays (scene title, initiative strip, PC health bars, round counter), blackout, handout, break screen; start combat from scene.
+4. **Presenter:** player window on chosen display; scene tree with click-to-live, hover preview, hotkeys, undo; title card / image / map / blank grid scenes; image import with display-size generation; grid with two-click alignment; tokens with generated art (engraved + flat), drag mirroring, hidden/masked/dead states; party placement by clicking the map; player camera presets and viewport rectangle; overlays (scene title, initiative strip, PC health bars, round counter), blackout, handout, break screen; start combat from scene.
 5. **Music:** folder scan, tags, playlists; music layer with crossfade on every transition; per-track normalization (may finish in background); output device selection; panic mute. Ambience and effects layers and scene linking if time allows; otherwise M2.
 6. **Dice:** roller with log.
 7. **Homebrew:** Duplicate + edit for monsters only.
@@ -400,7 +407,7 @@ Acceptance test: import the DM's 31 MB compendium file in under 60 s; build a 6-
 Homebrew editors for all kinds + CR scaler + replace-references; item/spell/feat browse polish; random encounters; ambience/effects/stingers/ducking and full scene-linked audio; bulk art matching; rules reference pages; campaign log; XML export; edition switch UI; optional open third-party content; portable exe; README with install and SmartScreen notes.
 
 ### M3 — Later
-Fog of war; movement ruler; hex grids; class/subclass editors; unofficial D&D Beyond pre-fill; LAN/web client behind the existing API seam; code signing.
+Fog of war; movement ruler; hex grids; class/subclass editors; unofficial D&D Beyond pre-fill; LAN/web client behind the existing API seam; code signing and macOS notarization.
 
 ---
 
@@ -411,4 +418,4 @@ Fog of war; movement ruler; hex grids; class/subclass editors; unofficial D&D Be
 - Fight Club GM export: the exact set of `<pc>` fields — verify with a real export file (see `DATA-FORMATS.md` §3.3).
 - Loudness measurement library choice (pure JS EBU R128 vs. WASM). Any choice must not add a native dependency beyond better-sqlite3.
 - `setSinkId` availability for Web Audio in the current Electron; fall back to routing through an `<audio>` element sink if needed.
-- Windows display DPI scaling across mixed-DPI displays for the player window — test early on real hardware.
+- Windows display DPI scaling across mixed-DPI displays for the player window — test early on real hardware. The same check is still owed on macOS (ADR 0006).

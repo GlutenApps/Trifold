@@ -156,26 +156,6 @@ describe('MapEditor: tools and selection', () => {
     expect(screen.getByRole('button', { name: 'Remove party' })).toBeDisabled();
   });
 
-  it('selects an entry marker to rename it and place the party there', async () => {
-    render(<Harness />);
-    await userEvent.click(screen.getByRole('button', { name: 'Add entry marker' }));
-    await userEvent.click(screen.getByTestId('map-canvas'));
-    expect(latest.entryMarkers).toHaveLength(1);
-
-    const inspector = screen.getByTestId('entry-inspector');
-    const name = within(inspector).getByRole('textbox');
-    await userEvent.clear(name);
-    await userEvent.type(name, 'Gate');
-    expect(latest.entryMarkers[0]!.name).toBe('Gate');
-
-    await userEvent.click(within(inspector).getByRole('button', { name: 'Place party here' }));
-    expect(latest.tokens.filter((t) => t.kind === 'pc')).toHaveLength(2);
-
-    await userEvent.click(within(inspector).getByRole('button', { name: 'Remove entry marker' }));
-    expect(latest.entryMarkers).toHaveLength(0);
-    expect(screen.queryByTestId('entry-inspector')).toBeNull();
-  });
-
   it('keeps grid settings in the grid pop-up, which closes on Escape', async () => {
     render(<Harness />);
     expect(screen.queryByLabelText('Cell px')).toBeNull();

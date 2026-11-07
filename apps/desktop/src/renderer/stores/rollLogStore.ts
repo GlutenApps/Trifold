@@ -13,8 +13,10 @@ export interface RollLogEntry {
   faces: string;
   actor?: string;
   note?: string;
-  /** Where the roll came from (ADR 0004, Decision 9): the pool, the tracker, or a save call. */
-  source: 'pool' | 'tracker' | 'save';
+  /** A natural 20 or natural 1 on the d20, for the reveal's flourish. */
+  outcome?: 'crit' | 'fumble';
+  /** Where the roll came from (ADR 0004, Decision 9): the pool, the tracker, a save call, or a stat block read outside a fight. */
+  source: 'pool' | 'tracker' | 'save' | 'compendium';
   /** The fight the roll belongs to, when it came from the tracker. */
   encounterId?: string;
 }

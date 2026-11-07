@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMusicStore } from '../../stores/musicStore';
 import { Icon } from '../shell/icons';
 import { formatTime, loopMode, type LoopMode } from './queue';
+import { hk } from '../../platform';
 
 const LOOP_LABELS: Record<LoopMode, string> = {
   off: 'Loop off',
@@ -44,7 +45,7 @@ export function MusicTransport() {
             aria-label="Previous"
             onClick={() => void music.previous()}
             disabled={!track}
-            title="Previous (Ctrl+Alt+Left)"
+            title={`Previous (${hk('Ctrl+Alt+Left')})`}
           >
             <Icon name="prev" />
           </button>
@@ -54,7 +55,7 @@ export function MusicTransport() {
             aria-label={music.playing ? 'Pause' : 'Play'}
             onClick={() => void music.togglePlay()}
             disabled={!track && music.order.length === 0}
-            title={`${music.playing ? 'Pause' : 'Play'} (Ctrl+Alt+P)`}
+            title={`${music.playing ? 'Pause' : 'Play'} (${hk('Ctrl+Alt+P')})`}
           >
             <Icon name={music.playing ? 'pause' : 'play'} />
           </button>
@@ -64,7 +65,7 @@ export function MusicTransport() {
             aria-label="Next"
             onClick={() => void music.next()}
             disabled={!track}
-            title="Next (Ctrl+Alt+Right)"
+            title={`Next (${hk('Ctrl+Alt+Right')})`}
           >
             <Icon name="next" />
           </button>
@@ -83,7 +84,7 @@ export function MusicTransport() {
             className={`chrome-btn loop-btn${loop === 'off' ? '' : ' on'}`}
             aria-label={LOOP_LABELS[loop]}
             onClick={() => void music.cycleLoop()}
-            title={`${LOOP_LABELS[loop]} (Ctrl+Alt+L)`}
+            title={`${LOOP_LABELS[loop]} (${hk('Ctrl+Alt+L')})`}
           >
             <Icon name="loop" />
             {loop === 'track' && <span className="loop-badge">1</span>}
@@ -94,7 +95,7 @@ export function MusicTransport() {
           className={`btn small${music.muted ? ' danger' : ''}`}
           aria-pressed={music.muted}
           onClick={music.toggleMuted}
-          title="Ctrl+Alt+M"
+          title={hk('Ctrl+Alt+M')}
         >
           {music.muted ? 'Unmute' : 'Panic mute'}
         </button>

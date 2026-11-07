@@ -17,6 +17,18 @@ export const AppConfig = z.object({
   libraryPath: z.string().nullable().default(null),
   recentLibraries: z.array(z.string()).default([]),
   consoleWindow: WindowBounds.nullable().default(null),
+  /** Where the table's music comes from (ADR 0007); the phone still connects by a click. */
+  audioSource: z.enum(['computer', 'phone']).default('computer'),
+  /** Phones connected through the audio receiver before (ADR 0007), most recent first. */
+  phoneAudioDevices: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        lastConnectedAt: z.string(),
+      }),
+    )
+    .default([]),
 });
 export type AppConfig = z.infer<typeof AppConfig>;
 

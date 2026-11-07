@@ -3,6 +3,10 @@ import {
   MINOR_KINDS,
   type DockMode,
   type MajorKind,
+  type TabKey,
+  type WebTab,
+  isWebTabKey,
+  webTabId,
   type MinorKind,
   type ShellLayout,
   type StageGroup,
@@ -19,16 +23,29 @@ export const MAJOR_TITLES: Record<MajorKind, string> = {
   campaign: 'Campaign',
   compendium: 'Compendium',
   encounters: 'Encounters',
-  map: 'Map',
+  map: 'VTT',
 };
 
+/** A tab's label: a major's fixed title, or the web tab's own (ADR 0011). */
+export function tabTitle(kind: TabKey, webTabs: readonly WebTab[]): string {
+  if (!isWebTabKey(kind)) return MAJOR_TITLES[kind];
+  const id = webTabId(kind);
+  return webTabs.find((t) => t.id === id)?.title ?? 'Web tab';
+}
+
+/** Drops web tabs the Library no longer has (a layout saved before one was removed). */
+export function pruneTabs(layout: ShellLayout, webTabs: readonly WebTab[]): ShellLayout {
+  const ids = new Set(webTabs.map((t) => t.id));
+  const keep = (k: TabKey) => !isWebTabKey(k) || ids.has(webTabId(k));
+  if (layout.stage.groups.every((g) => g.tabs.every(keep))) return layout;
+  const next = cloneLayout(layout);
+  for (const g of next.stage.groups) g.tabs = g.tabs.filter(keep);
+  return normalize(next);
+}
+
 export const MINOR_TITLES: Record<MinorKind, string> = {
-  dice: 'Dice',
-  tv: 'TV controls',
   music: 'Music',
   scenes: 'Scenes',
-  hotkeys: 'Hotkeys',
-  layouts: 'Layouts',
 };
 
 export const DOCK_WIDTH: Record<DockMode, number> = {
@@ -42,7 +59,7 @@ function sections(open: MinorKind[]): ShellLayout['dock']['sections'] {
   return MINOR_KINDS.map((tool) => ({ tool, open: open.includes(tool) }));
 }
 
-/** A fresh campaign: every major in one group, the dock wide with Dice open. */
+/** A fresh campaign: every major in one group, the dock wide with Scenes open. */
 export function defaultLayout(): ShellLayout {
   return {
     stage: {
@@ -50,7 +67,7 @@ export function defaultLayout(): ShellLayout {
       split: 0.5,
       maximized: null,
     },
-    dock: { state: 'wide', width: 400, sections: sections(['dice']) },
+    dock: { state: 'wide', width: 400, sections: sections(['scenes']) },
   };
 }
 
@@ -66,7 +83,7 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
         split: 0.66,
         maximized: null,
       },
-      dock: { state: 'wide', width: 400, sections: sections(['dice', 'hotkeys']) },
+      dock: { state: 'wide', width: 400, sections: sections(['scenes']) },
     },
   },
   {
@@ -80,7 +97,7 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
         split: 0.5,
         maximized: null,
       },
-      dock: { state: 'narrow', width: 300, sections: sections(['tv', 'scenes']) },
+      dock: { state: 'narrow', width: 300, sections: sections(['scenes']) },
     },
   },
   {
@@ -94,7 +111,7 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
         split: 0.5,
         maximized: 1,
       },
-      dock: { state: 'icons', width: 300, sections: sections(['tv']) },
+      dock: { state: 'icons', width: 300, sections: sections(['scenes']) },
     },
   },
 ];
@@ -115,16 +132,16 @@ export function cloneLayout(layout: ShellLayout): ShellLayout {
 }
 
 /** Which group holds a tab, or null when it is closed. */
-export function groupOf(layout: ShellLayout, kind: MajorKind): number | null {
+export function groupOf(layout: ShellLayout, kind: TabKey): number | null {
   const i = layout.stage.groups.findIndex((g) => g.tabs.includes(kind));
   return i < 0 ? null : i;
 }
 
-export function isOpen(layout: ShellLayout, kind: MajorKind): boolean {
+export function isOpen(layout: ShellLayout, kind: TabKey): boolean {
   return groupOf(layout, kind) !== null;
 }
 
-export function activeTabs(layout: ShellLayout): Array<MajorKind | null> {
+export function activeTabs(layout: ShellLayout): Array<TabKey | null> {
   return layout.stage.groups.map((g) => g.active);
 }
 
@@ -154,11 +171,13 @@ export function normalize(layout: ShellLayout): ShellLayout {
   }
   next.dock.sections = ordered;
   next.dock.width = Math.min(800, Math.max(200, next.dock.width));
+  // Nothing hides the dock any more (ADR 0009); a layout saved hidden shows as icons.
+  if (next.dock.state === 'hidden') next.dock.state = 'icons';
   return next;
 }
 
 /** Makes `kind` the active tab of its group, opening it in `group` (default the first) if closed. */
-export function openMajor(layout: ShellLayout, kind: MajorKind, group?: number): ShellLayout {
+export function openMajor(layout: ShellLayout, kind: TabKey, group?: number): ShellLayout {
   const next = cloneLayout(layout);
   const at = groupOf(next, kind);
   if (at !== null) {
@@ -173,7 +192,7 @@ export function openMajor(layout: ShellLayout, kind: MajorKind, group?: number):
 }
 
 /** Closes a tab; its state lives on in the feature's store. A group that empties is dropped. */
-export function closeTab(layout: ShellLayout, kind: MajorKind): ShellLayout {
+export function closeTab(layout: ShellLayout, kind: TabKey): ShellLayout {
   const next = cloneLayout(layout);
   for (const g of next.stage.groups) {
     const i = g.tabs.indexOf(kind);
@@ -187,7 +206,7 @@ export function closeTab(layout: ShellLayout, kind: MajorKind): ShellLayout {
 /** Moves a tab to another group, creating the second group when needed. Never duplicates. */
 export function moveTab(
   layout: ShellLayout,
-  kind: MajorKind,
+  kind: TabKey,
   toGroup: 0 | 1,
   index?: number,
 ): ShellLayout {
@@ -208,7 +227,7 @@ export function moveTab(
 }
 
 /** Gives a tab its own group on the right (the ⧉ button). No-op when it is already alone there. */
-export function splitRight(layout: ShellLayout, kind: MajorKind): ShellLayout {
+export function splitRight(layout: ShellLayout, kind: TabKey): ShellLayout {
   const at = groupOf(layout, kind);
   if (at === null) return layout;
   if (at === 1 && layout.stage.groups[1]!.tabs.length === 1) return layout;
@@ -218,7 +237,7 @@ export function splitRight(layout: ShellLayout, kind: MajorKind): ShellLayout {
 }
 
 /** Reorders a tab within its group. */
-export function reorderTab(layout: ShellLayout, kind: MajorKind, index: number): ShellLayout {
+export function reorderTab(layout: ShellLayout, kind: TabKey, index: number): ShellLayout {
   const at = groupOf(layout, kind);
   if (at === null) return layout;
   return moveTab(layout, kind, at as 0 | 1, index);
@@ -314,9 +333,9 @@ export function matchesPreset(current: ShellLayout, preset: ShellLayout): boolea
 }
 
 /** A short "Map / Campaign ⧉ Combat · dock narrow" line for the layouts list. */
-export function describeLayout(layout: ShellLayout): string {
+export function describeLayout(layout: ShellLayout, webTabs: readonly WebTab[] = []): string {
   const groups = layout.stage.groups
-    .map((g) => g.tabs.map((t) => MAJOR_TITLES[t]).join(' / '))
+    .map((g) => g.tabs.map((t) => tabTitle(t, webTabs)).join(' / '))
     .join(' ⧉ ');
   const open = layout.dock.sections.filter((s) => s.open).map((s) => MINOR_TITLES[s.tool]);
   const dock =

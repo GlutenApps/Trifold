@@ -36,6 +36,9 @@
   --accent-contrast: #14181d;
   --danger: #e0685e;
   --warn: #e0b252;
+  /* The on-air tally: the TV is open and the players can see it. Not the danger red. */
+  --tally: #d9453a;
+  --tally-contrast: #fff6f4;
   --ok: #6fb08a;
   --ally: #6fa4e0;
   --enemy: #e0685e;
@@ -64,6 +67,8 @@
   --accent-contrast: #fff8e6;
   --danger: #c2483f;
   --warn: #a87a18;
+  --tally: #c2362c;
+  --tally-contrast: #fff6f4;
   --ok: #3f8a5e;
   --ally: #3b75b8;
   --enemy: #c2483f;
@@ -176,6 +181,29 @@ button.btn.primary {
 
 button.btn.primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 88%, white);
+}
+
+/* On-air tally: a lit red button while the TV window is open. */
+button.btn.tally,
+button.btn.tally[aria-pressed='true'] {
+  background: var(--tally);
+  color: var(--tally-contrast);
+  border-color: var(--tally);
+}
+
+button.btn.tally:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tally) 85%, white);
+}
+
+.tally-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+  vertical-align: 1px;
 }
 
 button.btn[aria-pressed='true'] {

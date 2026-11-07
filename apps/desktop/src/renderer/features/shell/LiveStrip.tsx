@@ -1,14 +1,18 @@
 import { useAppStore } from '../../stores/appStore';
 import { useCombatStore } from '../../stores/combatStore';
+import type { PhoneAudioStatus } from '@trifold/api';
 import { useMusicStore } from '../../stores/musicStore';
+import { usePhoneAudioStore } from '../../stores/phoneAudioStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useShellStore } from '../../stores/shellStore';
 import { DicePool } from '../dice/DicePool';
 import { Icon } from './icons';
+import { hk } from '../../platform';
 
 /**
  * The live strip (ADR 0004 §2.2): table-time state and the one-tap actions, nothing else.
- * Sections: TV, Combat, Music, Dice. Clicking a section's text opens its tool or tab.
+ * Sections: TV, Combat, Music, then Dice at the right end. Clicking a section's text opens its
+ * tool or tab; the dice button pops the Dice tool up from the strip (ADR 0009).
  */
 export function LiveStrip() {
   return (
@@ -30,49 +34,51 @@ function TvSection() {
   const playerOpen = useAppStore((s) => s.playerOpen);
   const openPlayer = useAppStore((s) => s.openPlayer);
   const closePlayer = useAppStore((s) => s.closePlayer);
-  const openTool = useShellStore((s) => s.openTool);
+  const openMajor = useShellStore((s) => s.openMajor);
   return (
     <div className="strip-sec" data-strip="tv">
       <Icon name="tv" size={15} />
       <button
         type="button"
         className="strip-text"
-        onClick={() => openTool('tv')}
-        title="TV controls (Ctrl+T)"
+        onClick={() => openMajor('map', { avoid: 'encounters' })}
+        title={`VTT: the scene on the TV (${hk('Ctrl+T')})`}
       >
-        {blackout ? (
+        {!scene ? (
+          <span className="muted">Nothing live</span>
+        ) : blackout ? (
           <span className="warn-text">Blackout</span>
-        ) : scene ? (
+        ) : (
           <>
             <span className="pip" /> <span data-testid="live-status">Live: {scene.title}</span>
           </>
-        ) : (
-          <span className="muted">Nothing live</span>
         )}
       </button>
       <button
         type="button"
-        className={`btn small${blackout ? ' primary' : ''}`}
-        aria-pressed={blackout}
+        className={`btn small${blackout && scene ? ' primary' : ''}`}
+        aria-pressed={blackout && !!scene}
+        disabled={!scene}
         onClick={toggleBlackout}
-        title="Blackout (Ctrl+Shift+B)"
+        title={scene ? `Blackout (${hk('Ctrl+Shift+B')})` : 'Nothing is on the TV to black out'}
       >
         Blackout
       </button>
       <button
         type="button"
-        className={`chrome-btn${playerOpen ? ' on' : ''}`}
-        aria-label={playerOpen ? 'Close player window' : 'Open player window'}
-        title={`${playerOpen ? 'Close' : 'Open'} player window (Ctrl+Shift+P)`}
+        className={`chrome-btn${playerOpen ? ' tally' : ''}`}
+        aria-label={playerOpen ? 'Close TV (tray)' : 'Open TV (tray)'}
+        aria-pressed={playerOpen}
+        title={`${playerOpen ? 'TV on: the players can see it. Click to close it' : 'Open the TV on the second display'} (${hk('Ctrl+Shift+P')})`}
         onClick={() => void (playerOpen ? closePlayer() : openPlayer())}
       >
-        <Icon name="tv" size={15} />
+        <Icon name="window" size={15} />
       </button>
       <button
         type="button"
         className="chrome-btn"
         aria-label="Undo last scene"
-        title="Undo last scene (Ctrl+Shift+Z)"
+        title={`Undo last scene (${hk('Ctrl+Shift+Z')})`}
         disabled={history === 0}
         onClick={undo}
       >
@@ -137,7 +143,66 @@ function CombatSection() {
   );
 }
 
+const PHONE_STATE: Record<PhoneAudioStatus['state'], string> = {
+  off: 'not connected',
+  connecting: 'connecting…',
+  connected: 'playing through this computer',
+  reconnecting: 'reconnecting…',
+  failed: 'could not connect',
+};
+
+/** Phone as the source (ADR 0007): what is connected and one button, no player controls. */
+function PhoneSection() {
+  const status = usePhoneAudioStore((s) => s.status);
+  const connect = usePhoneAudioStore((s) => s.connect);
+  const disconnect = usePhoneAudioStore((s) => s.disconnect);
+  const openTool = useShellStore((s) => s.openTool);
+  const active = status.state !== 'off';
+  const last = status.remembered[0] ?? null;
+  const text = !status.supported
+    ? 'Phone audio via AirPlay'
+    : active && status.device
+      ? `${status.device.name} · ${PHONE_STATE[status.state]}`
+      : last
+        ? `${last.name} · not connected`
+        : 'No phone connected';
+  return (
+    <div className="strip-sec" data-strip="phone">
+      <Icon name="music" size={15} />
+      <button
+        type="button"
+        className="strip-text"
+        onClick={() => openTool('music')}
+        title={`Phone audio (${hk('Ctrl+M')})`}
+      >
+        {status.state === 'failed' ? <span className="warn-text">{text}</span> : text}
+      </button>
+      {status.supported &&
+        (active && status.state !== 'failed' ? (
+          <button type="button" className="btn small" onClick={() => void disconnect()}>
+            Disconnect
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn small primary"
+            onClick={() =>
+              last ? void connect({ id: last.id, name: last.name }) : openTool('music')
+            }
+          >
+            {last ? (active ? 'Try again' : 'Connect') : 'Choose phone'}
+          </button>
+        ))}
+    </div>
+  );
+}
+
 function MusicSection() {
+  const source = useMusicStore((s) => s.source);
+  return source === 'phone' ? <PhoneSection /> : <PlayerSection />;
+}
+
+function PlayerSection() {
   const nowPlayingId = useMusicStore((s) => s.order[s.index] ?? null);
   const title = useMusicStore(
     (s) => s.library?.tracks.find((t) => t.id === nowPlayingId)?.title ?? null,
@@ -160,7 +225,7 @@ function MusicSection() {
         type="button"
         className="strip-text"
         onClick={() => openTool('music')}
-        title="Music (Ctrl+M)"
+        title={`Music (${hk('Ctrl+M')})`}
       >
         {muted ? (
           <span className="warn-text">Muted</span>
@@ -179,7 +244,7 @@ function MusicSection() {
         aria-label="Previous track"
         disabled={!hasQueue}
         onClick={() => void previous()}
-        title="Previous track (Ctrl+Alt+Left)"
+        title={`Previous track (${hk('Ctrl+Alt+Left')})`}
       >
         <Icon name="prev" size={15} />
       </button>
@@ -189,7 +254,7 @@ function MusicSection() {
         aria-label={playing ? 'Pause music' : 'Play music'}
         disabled={!hasQueue}
         onClick={() => void togglePlay()}
-        title="Play or pause (Ctrl+Alt+P)"
+        title={`Play or pause (${hk('Ctrl+Alt+P')})`}
       >
         <Icon name={playing ? 'pause' : 'play'} size={15} />
       </button>
@@ -199,7 +264,7 @@ function MusicSection() {
         aria-label="Next track"
         disabled={!hasQueue}
         onClick={() => void next()}
-        title="Next track (Ctrl+Alt+Right)"
+        title={`Next track (${hk('Ctrl+Alt+Right')})`}
       >
         <Icon name="next" size={15} />
       </button>
@@ -209,7 +274,7 @@ function MusicSection() {
         aria-label={muted ? 'Unmute all audio' : 'Mute all audio'}
         aria-pressed={muted}
         onClick={toggleMuted}
-        title="Panic mute (Ctrl+Alt+M)"
+        title={`Panic mute (${hk('Ctrl+Alt+M')})`}
       >
         <Icon name="mute" size={15} />
       </button>
@@ -218,19 +283,23 @@ function MusicSection() {
 }
 
 function DiceSection() {
-  const openTool = useShellStore((s) => s.openTool);
+  const pop = useShellStore((s) => s.pop);
+  const togglePop = useShellStore((s) => s.togglePop);
   return (
     <div className="strip-sec" data-strip="dice">
+      <DicePool compact />
       <button
         type="button"
-        className="chrome-btn"
+        className={`chrome-btn${pop === 'dice' ? ' on' : ''}`}
         aria-label="Dice"
-        title="Dice (Ctrl+D)"
-        onClick={() => openTool('dice')}
+        aria-haspopup="dialog"
+        aria-expanded={pop === 'dice'}
+        data-pop="dice"
+        title={`Dice (${hk('Ctrl+D')})`}
+        onClick={() => togglePop('dice')}
       >
         <Icon name="dice" size={15} />
       </button>
-      <DicePool compact />
     </div>
   );
 }

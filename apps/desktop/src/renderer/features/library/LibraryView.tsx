@@ -7,6 +7,7 @@ import { SettingsPage } from '../settings/SettingsPage';
 import { Icon, type IconName } from '../shell/icons';
 import { CampaignsPage } from './CampaignsPage';
 import { CompendiumLibraryPage } from './CompendiumLibraryPage';
+import { hk } from '../../platform';
 
 const PAGES: Array<{ id: LibraryPage; label: string; icon: IconName }> = [
   { id: 'campaigns', label: 'Campaigns', icon: 'campaign' },
@@ -27,7 +28,7 @@ export function LibraryView() {
   const counts: Partial<Record<LibraryPage, string>> = {
     campaigns: String(campaigns),
     music: `${tracks} tracks`,
-    settings: 'Ctrl+,',
+    settings: hk('Ctrl+,'),
   };
 
   return (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { describeLayout, matchesPreset } from '../../stores/shellLayout';
 import { useShellStore } from '../../stores/shellStore';
 import { Icon } from './icons';
+import { hk } from '../../platform';
 
 /**
  * The DM's layouts (ADR 0004 §6): apply, overwrite with the screen as it is now, rename,
@@ -10,6 +11,7 @@ import { Icon } from './icons';
 export function LayoutsTool() {
   const layout = useShellStore((s) => s.layout);
   const presets = useShellStore((s) => s.presets);
+  const webTabs = useShellStore((s) => s.webTabs);
   const applyLayout = useShellStore((s) => s.applyLayout);
   const savePreset = useShellStore((s) => s.savePreset);
   const updatePreset = useShellStore((s) => s.updatePreset);
@@ -43,8 +45,8 @@ export function LayoutsTool() {
         </button>
       </form>
       <p className="muted small">
-        A layout keeps which tabs are open, where, and the dock. Ctrl+1 to Ctrl+9 apply the first
-        nine.
+        A layout keeps which tabs are open, where, and the dock. {hk('Ctrl+1')} to {hk('Ctrl+9')}{' '}
+        apply the first nine.
       </p>
 
       {presets.length === 0 && <p className="muted">No layouts yet. Save the screen above.</p>}
@@ -53,7 +55,7 @@ export function LayoutsTool() {
           const current = matchesPreset(layout, preset.layout);
           return (
             <li key={index} className={`layout-row${current ? ' current' : ''}`}>
-              <span className="layout-hotkey kbd">{index < 9 ? `Ctrl+${index + 1}` : ''}</span>
+              <span className="layout-hotkey kbd">{index < 9 ? hk(`Ctrl+${index + 1}`) : ''}</span>
               {renaming?.index === index ? (
                 <form
                   className="layout-rename"
@@ -92,7 +94,7 @@ export function LayoutsTool() {
                     {preset.name}
                     {current && <span className="badge roll">current</span>}
                   </strong>
-                  <span className="muted small">{describeLayout(preset.layout)}</span>
+                  <span className="muted small">{describeLayout(preset.layout, webTabs)}</span>
                 </button>
               )}
               <span className="layout-actions">

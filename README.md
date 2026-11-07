@@ -1,8 +1,8 @@
 # Trifold
 
-A local Windows desktop console for a Dungeon Master running 5e-compatible games at a physical table: compendium, campaign notes, encounters and combat tracker, a second-screen presenter, and a music controller.
+A local desktop console (Windows and macOS) for a Dungeon Master running 5e-compatible games at a physical table: compendium, campaign notes, encounters and combat tracker, a second-screen presenter, and a music controller.
 
-Everything stays on your machine. There are no accounts, no cloud services and no telemetry. Your data lives in a plain folder of JSON files and media (the Library) that you can back up, copy or sync however you like.
+Everything stays on your machine. There are no accounts, no cloud services and no telemetry. Your data lives in a plain folder of JSON files and media (the Library) that you can back up, copy or sync however you like. To play music from your phone's own apps through the laptop, open the Music tool's Phone tab: on Windows 11 Trifold is the Bluetooth audio receiver, so a paired phone connects in one click; on macOS it walks you to AirPlay Receiver. An "Audio source" toggle switches the Music tool and the live strip between Trifold's own player and the phone.
 
 - What the app is and why: [docs/DESIGN.md](docs/DESIGN.md)
 - File formats and parsing rules: [docs/DATA-FORMATS.md](docs/DATA-FORMATS.md)
@@ -24,7 +24,7 @@ pnpm test         # Vitest unit tests
 pnpm typecheck    # tsc across every package
 pnpm lint         # ESLint + Prettier check
 pnpm smoke        # build, then a Playwright smoke test that drives the real app
-pnpm build        # electron-builder → dist/ (NSIS installer + portable exe)
+pnpm build        # electron-builder → dist/ (Windows: NSIS installer + portable exe; macOS: dmg + zip)
 pnpm fetch:content # download the SRD snapshot and the game-icons set into resources/; needs network
 ```
 
@@ -36,7 +36,8 @@ Two things worth knowing:
 
 - `pnpm i` finishes by running `scripts/rebuild-native.mjs`, which makes sure Electron's binary is downloaded and fetches the prebuilt `better-sqlite3` for the pinned Electron version. If Electron is missing or fails to load the index, run `pnpm rebuild:native`. The Electron and better-sqlite3 pins move together; see [ADR 0001](docs/adr/0001-electron-and-native-module-pins.md).
 - Some editor and extension-host terminals export `ELECTRON_RUN_AS_NODE=1`, which makes Electron start as plain Node and refuse to open windows. `pnpm dev` (via `scripts/dev.mjs`) and the smoke test strip it automatically; the packaged exe does not, so unset it before launching that from such a terminal.
-- To start dev mode without a terminal, double-click `Trifold.cmd` in the repo root (or a shortcut to it).
+- To start dev mode without a terminal, double-click `Trifold.cmd` (Windows) or `Trifold.command` (macOS) in the repo root.
+- macOS builds are unsigned for now: the first launch is right-click → Open. Build on the Mac you target; `pnpm build` packages for the build machine's architecture (ADR 0006).
 
 ## Content and licensing
 

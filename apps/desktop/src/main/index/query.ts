@@ -194,18 +194,44 @@ export function buildSearch(query: CompendiumQuery): SearchSql {
   }
 
   const from = `FROM records r ${joins.join(' ')} WHERE ${where.join(' AND ')}`;
-  const order = match
-    ? 'ORDER BY bm25(records_fts), r.display_name COLLATE NOCASE, r.edition DESC'
-    : 'ORDER BY r.display_name COLLATE NOCASE, r.edition DESC';
   const limit = Math.min(Math.max(query.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
   const offset = Math.max(query.offset ?? 0, 0);
 
+  // Records sharing a key (the 2024 and legacy Goblin, or the same monster from two sources)
+  // collapse to one row (DESIGN.md §7.2). The plain inner query filters and scores (bm25 only
+  // works at that level, never beside a window function); the middle one ranks each key's
+  // records, preferred edition first, and gathers every edition behind the row; the outer one
+  // keeps rank 1. The `?` in the middle SELECT list binds first, before the WHERE params.
+  const rank = match ? 'bm25(records_fts)' : '0';
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, ${rank} AS rank ${from}`;
+  if (query.collapse === false) {
+    const plainOrder = match
+      ? 'ORDER BY rank, r.display_name COLLATE NOCASE, r.edition DESC'
+      : 'ORDER BY r.display_name COLLATE NOCASE, r.edition DESC';
+    return {
+      sql: `${base} ${plainOrder} LIMIT ? OFFSET ?`,
+      countSql: `SELECT COUNT(*) AS n ${from}`,
+      params: [...params, limit, offset],
+      countParams: params,
+    };
+  }
+  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY key ORDER BY (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY key) AS editions FROM (${base})`;
+  const order = match
+    ? 'ORDER BY rank, display_name COLLATE NOCASE, edition DESC'
+    : 'ORDER BY display_name COLLATE NOCASE, edition DESC';
+
   return {
-    sql: `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity ${from} ${order} LIMIT ? OFFSET ?`,
-    countSql: `SELECT COUNT(*) AS n ${from}`,
-    params: [...params, limit, offset],
+    sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ${order} LIMIT ? OFFSET ?`,
+    countSql: `SELECT COUNT(DISTINCT r.key) AS n ${from}`,
+    params: [query.preferEdition ?? '2024', ...params, limit, offset],
     countParams: params,
   };
+}
+
+/** The distinct editions behind a collapsed row, the row's own first, then newest first. */
+export function parseEditions(own: string, concatenated: string | null): string[] {
+  const rest = new Set((concatenated ?? '').split(',').filter((e) => e && e !== own));
+  return [own, ...[...rest].sort().reverse()];
 }
 
 export interface RawRow {
@@ -225,6 +251,8 @@ export interface RawRow {
   level: number | null;
   type_code: string | null;
   rarity: string | null;
+  /** Comma-joined editions of every record behind the row (GROUP_CONCAT); absent uncollapsed. */
+  editions?: string | null;
 }
 
 export function toRow(raw: RawRow): CompendiumRow {
@@ -237,6 +265,7 @@ export function toRow(raw: RawRow): CompendiumRow {
     sourceId: raw.source_id,
     sourceName: raw.source_name,
     edition: raw.edition,
+    editions: parseEditions(raw.edition, raw.editions ?? null),
     cr: raw.cr,
     type: raw.type,
     size: raw.size,

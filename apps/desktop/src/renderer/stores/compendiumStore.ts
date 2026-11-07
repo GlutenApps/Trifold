@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { CompendiumFacets, CompendiumQuery, CompendiumRow } from '@trifold/api';
 import type { CompendiumRecord, RecordKind } from '@trifold/schema';
+import { useCampaignStore } from './campaignStore';
 
 export type Filters = Omit<CompendiumQuery, 'kind' | 'limit' | 'offset'>;
 
@@ -80,7 +81,13 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
     const seq = (searchSeq += 1);
     set({ loading: true });
     try {
-      const result = await window.trifold.compendium.search({ kind: get().kind, ...get().filters });
+      // Rows sharing a key collapse to one; the campaign's preferred edition heads it (§7.2).
+      const preferred = useCampaignStore.getState().current?.campaign.preferredEdition;
+      const result = await window.trifold.compendium.search({
+        kind: get().kind,
+        ...get().filters,
+        preferEdition: preferred === '2014' ? '2014' : '2024',
+      });
       if (seq !== searchSeq) return;
       set({
         rows: result.rows,

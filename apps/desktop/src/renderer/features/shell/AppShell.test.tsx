@@ -62,6 +62,7 @@ describe('AppShell', () => {
       presets: [],
       consoles: {},
       flyout: null,
+      pop: null,
       draggingTab: null,
       splitHover: false,
       focusedTab: null,
@@ -89,8 +90,11 @@ describe('AppShell', () => {
     await waitFor(() =>
       expect(screen.getByRole('region', { name: 'Stage group 1' })).toBeInTheDocument(),
     );
-    const tabs = group(1).getAllByRole('tab');
-    expect(tabs.map((t) => t.textContent)).toEqual(['Campaign', 'Compendium', 'Encounters', 'Map']);
+    // Only the stage strip's tabs: the Campaign major has sub-tabs of its own.
+    const tabs = within(group(1).getByRole('tablist', { name: 'Stage group 1 tabs' })).getAllByRole(
+      'tab',
+    );
+    expect(tabs.map((t) => t.textContent)).toEqual(['Campaign', 'Compendium', 'Encounters', 'VTT']);
     expect(screen.getByTestId('live-strip')).toBeInTheDocument();
     expect(screen.getByTestId('topbar')).toHaveTextContent('Sunken Keep');
   });
@@ -122,7 +126,8 @@ describe('AppShell', () => {
       expect(screen.getByRole('region', { name: 'Stage group 1' })).toBeInTheDocument(),
     );
     await userEvent.click(group(1).getByRole('tab', { name: 'Encounters' }));
-    await userEvent.click(group(1).getByRole('button', { name: 'Split right' }));
+    // Dragging a tab past the stage's middle is the gesture; it lands in moveTab(kind, 1).
+    act(() => useShellStore.getState().moveTab('encounters', 1));
     expect(screen.getByRole('region', { name: 'Stage group 2' })).toBeInTheDocument();
     expect(group(2).getByRole('tab', { name: 'Encounters' })).toBeInTheDocument();
     await userEvent.click(group(2).getByRole('button', { name: 'Maximize group' }));
@@ -138,23 +143,27 @@ describe('AppShell', () => {
       expect(screen.getByRole('region', { name: 'Stage group 1' })).toBeInTheDocument(),
     );
     const add = (n: number) => group(n).getByRole('button', { name: `Add a tab to group ${n}` });
-    // Every major is open in group 1, so + has nothing to offer.
-    expect(add(1)).toBeDisabled();
+    const offered = async (n: number) => {
+      await userEvent.click(add(n));
+      const names = within(screen.getByRole('menu', { name: 'Tabs' }))
+        .getAllByRole('menuitem')
+        .map((b) => b.textContent);
+      // The button toggles: a second click closes the menu again.
+      await userEvent.click(add(n));
+      return names;
+    };
+    // Every major is open in group 1, so + offers only a new web tab (ADR 0011).
+    expect(await offered(1)).toEqual(['New web tab…']);
     await userEvent.click(group(1).getByRole('tab', { name: 'Encounters' }));
-    await userEvent.click(group(1).getByRole('button', { name: 'Split right' }));
-    // Encounters now lives in group 2; neither strip offers it or anything else.
-    expect(add(1)).toBeDisabled();
-    expect(add(2)).toBeDisabled();
+    // Dragging a tab past the stage's middle is the gesture; it lands in moveTab(kind, 1).
+    act(() => useShellStore.getState().moveTab('encounters', 1));
+    // Encounters now lives in group 2; neither strip offers it or any other major.
+    expect(await offered(1)).toEqual(['New web tab…']);
+    expect(await offered(2)).toEqual(['New web tab…']);
 
     await userEvent.click(group(1).getByRole('button', { name: 'Close Compendium tab' }));
-    await userEvent.click(add(2));
-    const items = screen.getByRole('menu', { name: 'Majors' });
-    expect(
-      within(items)
-        .getAllByRole('menuitem')
-        .map((b) => b.textContent),
-    ).toEqual(['Compendium']);
-  });
+    expect(await offered(2)).toEqual(['Compendium', 'New web tab…']);
+  }, 15_000);
 
   it('spreads a lone group across the stage when the other side empties', async () => {
     render(<AppShell />);
@@ -166,33 +175,64 @@ describe('AppShell', () => {
       screen.getByRole('region', { name: `Stage group ${n}` }).style.flexGrow;
     expect(grow(1)).toBe('1');
     await userEvent.click(group(1).getByRole('tab', { name: 'Encounters' }));
-    await userEvent.click(group(1).getByRole('button', { name: 'Split right' }));
+    // Dragging a tab past the stage's middle is the gesture; it lands in moveTab(kind, 1).
+    act(() => useShellStore.getState().moveTab('encounters', 1));
     expect(grow(1)).toBe('0.5');
     await userEvent.click(group(2).getByRole('button', { name: 'Close Encounters tab' }));
     expect(screen.queryByRole('region', { name: 'Stage group 2' })).not.toBeInTheDocument();
     expect(grow(1)).toBe('1');
   });
 
-  it('toggles dock tools, collapses to icons with flyouts, and hides the dock', async () => {
+  it('toggles dock tools and collapses to icons with flyouts', async () => {
     render(<AppShell />);
     openCampaign();
     await waitFor(() => expect(screen.getByTestId('dock')).toBeInTheDocument());
     const dock = () => within(screen.getByTestId('dock'));
-    expect(dock().getByRole('region', { name: 'Dice' })).toBeInTheDocument();
-    await userEvent.click(dock().getByRole('button', { name: 'Hotkeys tool' }));
-    expect(dock().getByRole('region', { name: 'Hotkeys' })).toBeInTheDocument();
+    expect(dock().getByRole('region', { name: 'Scenes' })).toBeInTheDocument();
+    await userEvent.click(dock().getByRole('button', { name: 'Scenes tool' }));
+    expect(dock().queryByRole('region', { name: 'Scenes' })).not.toBeInTheDocument();
+    await userEvent.click(dock().getByRole('button', { name: 'Scenes tool' }));
+    expect(dock().getByRole('region', { name: 'Scenes' })).toBeInTheDocument();
+    // Dice, Hotkeys and Layouts are pop-ups now, not dock tools (ADR 0009).
+    expect(dock().queryByRole('button', { name: 'Dice tool' })).not.toBeInTheDocument();
+    expect(dock().queryByRole('button', { name: 'Hotkeys tool' })).not.toBeInTheDocument();
 
     await userEvent.click(dock().getByRole('button', { name: 'Collapse dock to icons' }));
-    expect(dock().queryByRole('region', { name: 'Dice' })).not.toBeInTheDocument();
-    await userEvent.click(dock().getByRole('button', { name: 'Dice tool' }));
-    expect(screen.getByRole('dialog', { name: 'Dice' })).toBeInTheDocument();
+    expect(dock().queryByRole('region', { name: 'Scenes' })).not.toBeInTheDocument();
+    await userEvent.click(dock().getByRole('button', { name: 'Scenes tool' }));
+    expect(screen.getByRole('dialog', { name: 'Scenes' })).toBeInTheDocument();
     await userEvent.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog', { name: 'Dice' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Scenes' })).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Hide dock' }));
-    expect(screen.queryByTestId('dock')).not.toBeInTheDocument();
+    // The top bar no longer hides the dock; collapsing to icons is the dock's own job.
+    expect(screen.queryByRole('button', { name: 'Hide dock' })).not.toBeInTheDocument();
+  });
+
+  it('pops Dice up from the strip and Hotkeys and Layouts from the top bar, one at a time', async () => {
+    render(<AppShell />);
+    openCampaign();
+    await waitFor(() => expect(screen.getByTestId('live-strip')).toBeInTheDocument());
+    const strip = within(screen.getByTestId('live-strip'));
+    await userEvent.click(strip.getByRole('button', { name: 'Dice' }));
+    expect(screen.getByRole('dialog', { name: 'Dice' })).toBeInTheDocument();
+    expect(strip.getByRole('button', { name: 'Dice' })).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(strip.getByRole('button', { name: 'Dice' }));
+    expect(screen.queryByRole('dialog', { name: 'Dice' })).not.toBeInTheDocument();
     await userEvent.keyboard('{Control>}d{/Control}');
     expect(screen.getByRole('dialog', { name: 'Dice' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hotkeys' }));
+    expect(screen.getByRole('dialog', { name: 'Hotkeys' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Dice' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Layouts' }));
+    expect(screen.getByRole('dialog', { name: 'Layouts' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Hotkeys' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await userEvent.keyboard('{Control>}/{/Control}');
+    expect(screen.getByRole('dialog', { name: 'Hotkeys' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Close pop-up' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('rolls the shared pool from the strip and finds it in the Dice tool log', async () => {
@@ -203,9 +243,14 @@ describe('AppShell', () => {
     await userEvent.click(strip.getByRole('button', { name: 'Add d6 (tray)' }));
     await userEvent.click(strip.getByRole('button', { name: 'Add d6 (tray)' }));
     await userEvent.click(strip.getByRole('button', { name: 'Roll the pool (tray)' }));
-    const total = Number(strip.getByLabelText('Last roll').textContent);
+    // The tray total tumbles through stand-in faces; a click settles it on the real roll.
+    const result = strip.getByLabelText('Last roll');
+    await userEvent.click(within(result).getByTestId('roll-reveal'));
+    expect(within(result).getByTestId('roll-reveal')).toHaveAttribute('data-settled', 'true');
+    const total = Number(result.textContent);
     expect(total).toBeGreaterThanOrEqual(2);
     expect(total).toBeLessThanOrEqual(12);
+    await userEvent.click(strip.getByRole('button', { name: 'Dice' }));
     expect(screen.getByRole('list', { name: 'Roll log' })).toHaveTextContent('2d6');
     expect(screen.getByRole('list', { name: 'Roll log' })).toHaveTextContent('pool');
   });
@@ -215,18 +260,16 @@ describe('AppShell', () => {
     openCampaign();
     await waitFor(() => expect(useShellStore.getState().hydratedFor).not.toBeNull());
     await userEvent.click(screen.getByRole('button', { name: 'Layouts' }));
-    // The Layouts section closes when a layout without it is applied, so query it fresh each time.
     const list = () => within(screen.getByRole('list', { name: 'Layouts' }));
     await userEvent.click(list().getByRole('button', { name: 'Apply layout Table' }));
-    expect(group(1).getByRole('tab', { name: 'Map' })).toHaveAttribute('aria-selected', 'true');
+    expect(group(1).getByRole('tab', { name: 'VTT' })).toHaveAttribute('aria-selected', 'true');
     expect(group(2).getByRole('tab', { name: 'Encounters' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
     expect(screen.getByTestId('topbar')).toHaveTextContent('Table');
 
-    // Applying Table closed the Layouts section (it is not in that layout); open it again.
-    await userEvent.click(screen.getByRole('button', { name: 'Layouts' }));
+    // The pop-up stays open across an apply, so the DM can try several in a row.
     await userEvent.type(screen.getByLabelText('New layout name'), 'Fight night{Enter}');
     expect(list().getByRole('button', { name: 'Apply layout Fight night' })).toHaveAttribute(
       'aria-current',
@@ -275,12 +318,12 @@ describe('AppShell', () => {
     await waitFor(() =>
       expect(screen.getByRole('region', { name: 'Stage group 1' })).toBeInTheDocument(),
     );
-    await userEvent.click(group(1).getByRole('tab', { name: 'Map' }));
+    await userEvent.click(group(1).getByRole('tab', { name: 'VTT' }));
     await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
     expect(screen.getByTestId('library')).toBeInTheDocument();
     expect(screen.getByTestId('live-strip')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Back to Sunken Keep/ }));
-    expect(group(1).getByRole('tab', { name: 'Map' })).toHaveAttribute('aria-selected', 'true');
+    expect(group(1).getByRole('tab', { name: 'VTT' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('toggles blackout from the hotkey and pushes to main', async () => {

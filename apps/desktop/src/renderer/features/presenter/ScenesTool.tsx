@@ -5,12 +5,15 @@ import { registerHotkey } from '../../hotkeys';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useMusicStore } from '../../stores/musicStore';
 import { usePresenterStore } from '../../stores/presenterStore';
-import { isMapScene, useSceneStore } from '../../stores/sceneStore';
-import { useShellStore } from '../../stores/shellStore';
+import { useSceneStore } from '../../stores/sceneStore';
 import { Icon } from '../shell/icons';
+import { placeItem } from '@trifold/rules';
+import { useTreeDnd } from '../../treeDnd';
 import { createScene } from './createScene';
 import { SceneEditor } from './SceneEditor';
-import { firstChildOf, flattenTree, matchesQuery, parentOf, reorder, siblingAt } from './sceneTree';
+import { firstChildOf, flattenTree, matchesQuery, parentOf, siblingAt } from './sceneTree';
+
+const isFolder = (scene: Scene) => scene.kind === 'folder';
 
 /**
  * The Scenes tool (ADR 0004 §3.5): tree, new-scene row, selected card and edit form.
@@ -31,7 +34,6 @@ export function ScenesTool() {
   const setHover = useSceneStore((s) => s.setHover);
   const setDraft = useSceneStore((s) => s.setDraft);
   const send = useSceneStore((s) => s.send);
-  const openMajor = useShellStore((s) => s.openMajor);
   const [query, setQuery] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [editOpen, setEditOpen] = useState(false);
@@ -43,9 +45,19 @@ export function ScenesTool() {
   const rows = query.trim()
     ? scenes.filter((s) => matchesQuery(s, query)).map((scene) => ({ scene, depth: 0 }))
     : flattenTree(scenes);
-  const folders = scenes.filter((s) => s.kind === 'folder');
+  const folders = scenes.filter(isFolder);
   const selected = scenes.find((s) => s.id === selectedId) ?? null;
   const hovered = scenes.find((s) => s.id === hoverId) ?? null;
+
+  // Rows drag to reorder, into a folder, or to the empty space below for the root.
+  const dnd = useTreeDnd<Scene>({
+    items: scenes,
+    isFolder,
+    onMove: (id, parentId, index) => {
+      const changed = placeItem(scenes, id, parentId, index);
+      if (changed.length) void saveScenes(changed);
+    },
+  });
 
   // Scene navigation hotkeys send the neighbour of the live (or selected) scene to the TV.
   useEffect(() => {
@@ -174,7 +186,7 @@ export function ScenesTool() {
       </form>
 
       <div
-        className="scene-tree"
+        className={`scene-tree${dnd.containerClass}`}
         role="listbox"
         aria-label="Scenes"
         ref={treeRef}
@@ -182,6 +194,7 @@ export function ScenesTool() {
           setHover(null);
           setPreview(null);
         }}
+        {...dnd.containerProps}
       >
         {rows.length === 0 && <p className="muted">No scenes yet. Add a title card or an image.</p>}
         {rows.map(({ scene, depth }) => {
@@ -193,7 +206,7 @@ export function ScenesTool() {
               role="option"
               aria-selected={isSelected}
               tabIndex={0}
-              className={`scene-row kind-${scene.kind}${isLive ? ' live' : ''}${isSelected ? ' selected' : ''}`}
+              className={`scene-row kind-${scene.kind}${isLive ? ' live' : ''}${isSelected ? ' selected' : ''}${dnd.rowClass(scene)}`}
               style={{ paddingLeft: 6 + depth * 14 }}
               data-testid="scene-row"
               onMouseEnter={(e) => hoverRow(scene, e.currentTarget)}
@@ -202,12 +215,13 @@ export function ScenesTool() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') send(scene);
               }}
+              {...dnd.rowProps(scene)}
             >
               <span className="scene-title">
                 <Icon name={kindIcon(scene)} size={14} />
                 <span className="scene-name">{scene.title}</span>
               </span>
-              {isLive && <span className="badge roll">live</span>}
+              {isLive && <span className="badge live">live</span>}
               <span className="scene-actions">
                 {scene.kind !== 'folder' && (
                   <button
@@ -235,32 +249,6 @@ export function ScenesTool() {
                   }}
                 >
                   <Icon name="pencil" size={13} />
-                </button>
-                <button
-                  type="button"
-                  className="chrome-btn xs"
-                  aria-label={`Move ${scene.title} up`}
-                  title="Move up"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const r = reorder(scenes, scene, -1);
-                    if (r) void saveScenes(r);
-                  }}
-                >
-                  <Icon name="up" size={13} />
-                </button>
-                <button
-                  type="button"
-                  className="chrome-btn xs"
-                  aria-label={`Move ${scene.title} down`}
-                  title="Move down"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const r = reorder(scenes, scene, 1);
-                    if (r) void saveScenes(r);
-                  }}
-                >
-                  <Icon name="down" size={13} />
                 </button>
               </span>
             </div>
@@ -309,15 +297,6 @@ export function ScenesTool() {
                 Send to TV
               </button>
             )}
-            {isMapScene(selected) && (
-              <button
-                type="button"
-                className="btn small"
-                onClick={() => openMajor('map', { avoid: 'encounters' })}
-              >
-                Open in Map
-              </button>
-            )}
             <button
               type="button"
               className="btn small"
@@ -330,7 +309,6 @@ export function ScenesTool() {
           {editOpen && (
             <SceneEditor
               scene={draft}
-              folders={folders}
               playlists={playlists}
               onChange={setDraft}
               onRemove={() => {

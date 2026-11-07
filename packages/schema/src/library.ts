@@ -7,14 +7,90 @@ export const MAJOR_KINDS = ['campaign', 'compendium', 'encounters', 'map'] as co
 export const MajorKind = z.enum(MAJOR_KINDS);
 export type MajorKind = z.infer<typeof MajorKind>;
 
-/** Minors: the dock's tools. Never on the stage. */
-export const MINOR_KINDS = ['dice', 'tv', 'music', 'scenes', 'hotkeys', 'layouts'] as const;
+/** Minors: the dock's tools, the tall ones. Never on the stage. Dice, Hotkeys and Layouts are
+ *  pop-ups from their buttons (ADR 0009) and are not part of a layout. */
+export const MINOR_KINDS = ['music', 'scenes'] as const;
 export const MinorKind = z.enum(MINOR_KINDS);
 export type MinorKind = z.infer<typeof MinorKind>;
 
+/**
+ * Web tabs (ADR 0011): the DM's own browser tabs on the stage, each a saved URL that loads
+ * again at launch. They live with the Library's workspace settings and are keyed on the stage
+ * as `web:<id>`, beside the fixed majors.
+ */
+export const WEB_TAB_PREFIX = 'web:';
+/** The Electron session every web tab shares; `persist:` keeps logins across launches. */
+export const WEB_TAB_PARTITION = 'persist:web';
+/** The marks a web tab can wear on the stage; none is shared with a tool. */
+export const WEB_TAB_ICONS = [
+  'globe',
+  'tome',
+  'person',
+  'scroll',
+  'quill',
+  'crown',
+  'potion',
+  'coin',
+  'compass',
+  'skull',
+  'gem',
+  'star',
+] as const;
+export const WebTabIcon = z.enum(WEB_TAB_ICONS);
+export type WebTabIcon = z.infer<typeof WebTabIcon>;
+
+export const WebTab = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  /** The saved address, loaded at launch and by Home; http(s) only, the main process refuses
+   *  anything else. It changes only when the DM edits the tab. */
+  url: z.string().min(1),
+  /** The title follows the page until the DM names the tab. */
+  autoTitle: z.boolean().default(true),
+  icon: WebTabIcon.default('globe'),
+  /** Page zoom factor (1 = 100%), kept per tab and re-applied after every navigation. */
+  zoom: z.number().min(0.25).max(5).default(1),
+});
+export type WebTab = z.infer<typeof WebTab>;
+
+/** Only http(s) pages are hosted in a web tab or handed to the system browser. */
+export function isWebUrl(url: string): boolean {
+  // No URL class here: this package builds without the DOM lib. A scheme, a host, no spaces.
+  return /^https?:\/\/[^\s/?#:]+(:\d+)?([/?#]\S*)?$/i.test(url.trim());
+}
+
+/** `example.com/page` → `https://example.com/page`; anything already schemed is left alone. */
+export function normalizeWebUrl(input: string): string | null {
+  const text = input.trim();
+  if (!text) return null;
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(text) ? text : `https://${text}`;
+  return isWebUrl(withScheme) ? withScheme : null;
+}
+
+export type WebTabKey = `${typeof WEB_TAB_PREFIX}${string}`;
+/** A stage tab: a major, or a web tab by key. */
+export type TabKey = MajorKind | WebTabKey;
+export const TabKey = z.union([
+  MajorKind,
+  z.string().regex(/^web:.+/),
+]) as unknown as z.ZodType<TabKey>;
+
+export function isWebTabKey(key: string): key is WebTabKey {
+  return key.startsWith(WEB_TAB_PREFIX);
+}
+export function isMajorKind(key: string): key is MajorKind {
+  return (MAJOR_KINDS as readonly string[]).includes(key);
+}
+export function webTabKey(id: string): WebTabKey {
+  return `${WEB_TAB_PREFIX}${id}`;
+}
+export function webTabId(key: WebTabKey): string {
+  return key.slice(WEB_TAB_PREFIX.length);
+}
+
 export const StageGroup = z.object({
-  tabs: z.array(MajorKind).default([]),
-  active: MajorKind.nullable().default(null),
+  tabs: z.array(TabKey).default([]),
+  active: TabKey.nullable().default(null),
 });
 export type StageGroup = z.infer<typeof StageGroup>;
 
@@ -63,11 +139,13 @@ export const WorkspaceSettings = z.object({
   seeded: z.boolean().default(false),
   /** Each campaign's console as it was left, by campaign slug. */
   consoles: z.record(z.string(), ShellLayout).default({}),
+  /** The DM's saved web tabs (ADR 0011), Library-wide like the layouts. */
+  webTabs: z.array(WebTab).default([]),
 });
 export type WorkspaceSettings = z.infer<typeof WorkspaceSettings>;
 
 /** `Library/library.json` — settings for one Library folder. DESIGN.md §4.2. */
-export const LIBRARY_SCHEMA_VERSION = 3;
+export const LIBRARY_SCHEMA_VERSION = 5;
 
 export const LibrarySettings = z.object({
   schemaVersion: z.literal(LIBRARY_SCHEMA_VERSION),

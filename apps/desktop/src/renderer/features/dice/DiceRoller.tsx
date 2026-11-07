@@ -48,7 +48,7 @@ export function DiceRoller({ showLog = true, inputLabel = 'Dice expression' }: D
         <>
           <div className="row">
             <h2 className="mt">Roll log</h2>
-            <span className="muted small">one log: pool, tracker and save rolls</span>
+            <span className="muted small">one log: pool, tracker, compendium and save rolls</span>
             <span className="spacer" />
             <button type="button" className="btn" disabled={entries.length === 0} onClick={clear}>
               Clear

@@ -7,7 +7,13 @@ on:
 
 jobs:
   check:
-    runs-on: windows-latest
+    # Both desktop platforms (ADR 0006): lint, typecheck and unit tests are OS-neutral, but the
+    # smoke test drives the real Electron app, so it runs on each.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -25,6 +31,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: smoke-test-results
+          name: smoke-test-results-${{ matrix.os }}
           path: apps/desktop/test-results
           if-no-files-found: ignore

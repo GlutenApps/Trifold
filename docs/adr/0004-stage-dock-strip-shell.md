@@ -1,6 +1,6 @@
 # ADR 0004 · Console shell: stage, dock and live strip
 
-**Status:** accepted, 2026-09-28. Supersedes ADR 0003 (DM screen workspace). The Combat major is folded into Encounters by ADR 0005.
+**Status:** accepted, 2026-09-28. Supersedes ADR 0003 (DM screen workspace). The Combat major is folded into Encounters by ADR 0005. The Map major becomes the TV major and the TV controls minor is removed by ADR 0008. Dice, Hotkeys and Layouts leave the dock for pop-ups anchored to their buttons by ADR 0009.
 
 ## Context
 

@@ -1,6 +1,12 @@
 import { create } from 'zustand';
-import type { CampaignBundle, CampaignImportReport, CampaignSummary } from '@trifold/api';
+import type {
+  CampaignBundle,
+  CampaignImportReport,
+  CampaignSummary,
+  NoteFolderContents,
+} from '@trifold/api';
 import type { Campaign, Encounter, Note, PCCard, Scene, SceneImage } from '@trifold/schema';
+import { childrenOf, descendantsOf, nextOrder, placeItem } from '@trifold/rules';
 
 interface CampaignState {
   campaigns: CampaignSummary[];
@@ -12,11 +18,12 @@ interface CampaignState {
 
   load(): Promise<void>;
   importXml(mode: 'new' | 'merge'): Promise<void>;
-  /** Saves a note; a new one (no id) lands at the end of the list. */
+  /** Saves a note; a new one (no id) lands last among its siblings. */
   saveNote(note: Note): Promise<Note | null>;
-  removeNote(noteId: string): Promise<void>;
-  /** Moves a note one place up (-1) or down (1) in the campaign's list. */
-  moveNote(noteId: string, step: 1 | -1): Promise<void>;
+  /** Removes a note; a folder's contents move up a level unless `contents` is `delete`. */
+  removeNote(noteId: string, contents?: NoteFolderContents): Promise<void>;
+  /** Puts a note (or folder) under `parentId` (null for the root) at `index` there. */
+  moveNote(noteId: string, parentId: string | null, index: number): Promise<void>;
   removeNpc(npcId: string): Promise<void>;
   removeAdventure(adventureId: string): Promise<void>;
   saveScene(scene: Scene): Promise<Scene | null>;
@@ -126,29 +133,44 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
       return saved;
     },
 
-    async moveNote(noteId, step) {
+    async moveNote(noteId, parentId, index) {
       const current = get().current;
       if (!current) return;
-      const ids = current.notes.map((n) => n.id);
-      const i = ids.indexOf(noteId);
-      const j = i + step;
-      if (i === -1 || j < 0 || j >= ids.length) return;
-      [ids[i], ids[j]] = [ids[j]!, ids[i]!];
-      // Show the move at once; the saved list replaces it when main answers.
-      const byId = new Map(current.notes.map((n) => [n.id, n]));
-      set({ current: { ...current, notes: ids.map((id) => byId.get(id)!) } });
-      const notes = await guard(() => window.trifold.notes.reorder(ids));
+      // The same placement main will make, shown at once; the saved list replaces it when main
+      // answers, and the old list comes back if the save fails.
+      const changed = placeItem(current.notes, noteId, parentId, index);
+      if (!changed.length) return;
+      const byId = new Map(changed.map((n) => [n.id, n]));
+      set({ current: { ...current, notes: current.notes.map((n) => byId.get(n.id) ?? n) } });
+      const notes = await guard(() => window.trifold.notes.move(noteId, parentId, index));
       const latest = get().current;
       if (latest?.campaign.id !== current.campaign.id) return;
       set({ current: { ...latest, notes: notes ?? current.notes } });
     },
 
-    async removeNote(noteId) {
+    async removeNote(noteId, contents = 'lift') {
       await guard(async () => {
-        await window.trifold.notes.remove(noteId);
+        await window.trifold.notes.remove(noteId, contents);
         const current = get().current;
-        if (current)
-          set({ current: { ...current, notes: current.notes.filter((n) => n.id !== noteId) } });
+        if (!current) return;
+        const target = current.notes.find((n) => n.id === noteId);
+        const gone = new Set([noteId]);
+        if (target && contents === 'delete') {
+          for (const d of descendantsOf(current.notes, noteId)) gone.add(d.id);
+        }
+        let notes = current.notes.filter((n) => !gone.has(n.id));
+        if (target && contents === 'lift') {
+          // Mirror main: the contents land after the folder's own siblings, in their order.
+          const parentId = target.parentId ?? null;
+          let order = nextOrder(notes, parentId) - 1;
+          const lifted = new Map(
+            childrenOf(current.notes, noteId).map((child) => [child.id, ++order]),
+          );
+          notes = notes.map((n) =>
+            lifted.has(n.id) ? { ...n, parentId, order: lifted.get(n.id)! } : n,
+          );
+        }
+        set({ current: { ...current, notes } });
       });
     },
 

@@ -78,10 +78,16 @@ describe('importCampaignXml', () => {
       'Items from import',
       'Read-aloud: the gate',
       'Rumours',
+      'The Sunken Keep',
     ]);
     expect(bundle.adventures[0]).toMatchObject({ name: 'The Sunken Keep', order: 0 });
     expect(bundle.adventures[0]?.encounterIds).toHaveLength(1);
     expect(bundle.adventures[0]?.noteIds).toHaveLength(1);
+    // The adventure's note sits in a folder named after it (ADR 0010).
+    const folder = bundle.notes.find((n) => n.title === 'The Sunken Keep');
+    expect(folder?.kind).toBe('folder');
+    const inside = bundle.notes.find((n) => n.id === bundle.adventures[0]?.noteIds[0]);
+    expect(inside?.parentId).toBe(folder?.id);
 
     const chamber = bundle.encounters.find((e) => e.name === "Warden's chamber")!;
     const refs = chamber.combatants.map(

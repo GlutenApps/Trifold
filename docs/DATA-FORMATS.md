@@ -223,6 +223,8 @@ A single `Record` with `sourceId = "homebrew"` and `basedOn` when duplicated.
 ### 5.4 Campaign folder
 `campaign.json` (Campaign), `adventures/`, `notes/`, `npcs/`, `pcs/`, `encounters/`, `scenes/` each holding one JSON object per file matching `DESIGN.md` §5.2; `images/<sceneImageId>.<ext>` + `images/<sceneImageId>.display.webp`; `tokens/<id>.png`.
 
+Note templates are Library-level, not per campaign: `templates/notes/<id>.json` holds `{ schemaVersion: 1, id, name, body (markdown), createdAt, updatedAt }`. The folder is created and seeded with one "Session prep" template the first time it is missing; deleting every template leaves it empty for good.
+
 Scene token coordinates are in grid units (floats) relative to the grid origin (`offsetX/Y` in image pixels). Pixel position = `offset + coord × cellPx`. Footprint is in cells.
 
 ### 5.5 Music

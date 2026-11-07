@@ -8,6 +8,7 @@ import type {
   IconTables,
   LibrarySettings,
   Note,
+  NoteTemplate,
   NPC,
   PCCard,
   Playlist,
@@ -34,6 +35,9 @@ export interface AppInfo {
   platform: string;
   userDataPath: string;
 }
+
+/** OS settings pages the "Phone audio" guide opens (ADR 0007); see main/systemPages.ts. */
+export type SystemPage = 'bluetooth' | 'bluetoothReceiverStore' | 'airplay' | 'sound';
 
 export interface DisplayInfo {
   id: number;
@@ -257,6 +261,37 @@ export function mediaUrl(campaignSlug: string, relativePath: string): string {
   return `${MEDIA_SCHEME}://library/${parts.join('/')}`;
 }
 
+// ---------- phone audio receiver (ADR 0007, Windows) ----------
+
+/** A paired phone Windows can receive audio from. */
+export interface PhoneAudioDevice {
+  id: string;
+  name: string;
+}
+
+/** A phone that has been connected before; shown first and connectable in one click. */
+export interface RememberedPhone extends PhoneAudioDevice {
+  lastConnectedAt: string;
+}
+
+export type PhoneAudioState = 'off' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
+
+/** Where the table's music comes from: Trifold's own player, or the phone through this computer. */
+export type AudioSource = 'computer' | 'phone';
+
+export interface PhoneAudioStatus {
+  /** False where the OS cannot do this (macOS: the guide points at AirPlay instead). */
+  supported: boolean;
+  state: PhoneAudioState;
+  /** The phone being connected, connected or retried; null when off. */
+  device: PhoneAudioDevice | null;
+  /** Why it failed or what it is waiting for, for the status line. */
+  detail: string | null;
+  remembered: RememberedPhone[];
+  /** Chosen on the Music tool and remembered per machine. */
+  source: AudioSource;
+}
+
 // ---------- sources and compendium (DESIGN.md §6.1) ----------
 
 /** A source on disk plus whether its records predate the current importer. */
@@ -305,6 +340,13 @@ export interface CompendiumQuery {
   npc?: 'any' | 'only' | 'exclude';
   level?: number;
   includeDisabled?: boolean;
+  /**
+   * Records sharing a key collapse to one row (DESIGN.md §7.2) unless `collapse` is false;
+   * pickers that must reach one exact record turn it off. `preferEdition` names the edition
+   * whose record heads a collapsed row when it exists; defaults to 2024.
+   */
+  collapse?: boolean;
+  preferEdition?: '2024' | '2014';
   limit?: number;
   offset?: number;
 }
@@ -319,6 +361,8 @@ export interface CompendiumRow {
   sourceId: string;
   sourceName: string;
   edition: string;
+  /** Every edition the row stands for, this record's first; more than one means a switch. */
+  editions: string[];
   cr: string | null;
   type: string | null;
   size: string | null;
@@ -370,6 +414,9 @@ export interface CampaignBundle {
   scenes: Scene[];
 }
 
+/** What `notes.remove` does with a folder's contents: move it up a level, or remove it too. */
+export type NoteFolderContents = 'lift' | 'delete';
+
 export interface CampaignImportReport {
   campaignId: string;
   name: string;
@@ -390,12 +437,16 @@ export interface CampaignImportReport {
 export interface TrifoldApi {
   app: {
     getInfo(): Promise<AppInfo>;
+    /** Opens an OS settings page; false when this OS has no such page. */
+    openSystemPage(page: SystemPage): Promise<boolean>;
     /** Save-as dialog plus write; resolves to the path, or null when cancelled. */
     saveTextFile(options: {
       title: string;
       defaultName: string;
       text: string;
     }): Promise<string | null>;
+    /** Opens an http(s) URL in the system browser (ADR 0011); false for any other scheme. */
+    openExternal(url: string): Promise<boolean>;
   };
   library: {
     getInfo(): Promise<LibraryInfo>;
@@ -453,11 +504,26 @@ export interface TrifoldApi {
     remove(adventureId: string): Promise<void>;
   };
   notes: {
-    /** A note without an id is new and goes to the end of the list. */
+    /** A note without an id is new and goes last among its siblings (its folder, or the root). */
     save(note: Note): Promise<Note>;
-    remove(noteId: string): Promise<void>;
-    /** Puts the campaign's notes in this order; resolves to the whole list, renumbered. */
-    reorder(noteIds: string[]): Promise<Note[]>;
+    /**
+     * Removes a note. For a folder, `contents` says what happens to what is inside: `lift`
+     * (the default) moves it up a level, `delete` removes it too.
+     */
+    remove(noteId: string, contents?: NoteFolderContents): Promise<void>;
+    /**
+     * Puts a note (or folder) under `parentId` (null for the root) at `index` among the notes
+     * there, renumbering that folder. Resolves to the whole list in tree order.
+     */
+    move(noteId: string, parentId: string | null, index: number): Promise<Note[]>;
+  };
+  /** Starting bodies for new notes, shared by every campaign in the Library (ADR 0010). */
+  noteTemplates: {
+    /** Seeds the session-prep template the first time a Library is asked. */
+    list(): Promise<NoteTemplate[]>;
+    /** A template without an id is new. */
+    save(template: NoteTemplate): Promise<NoteTemplate>;
+    remove(templateId: string): Promise<void>;
   };
   npcs: {
     save(npc: NPC): Promise<NPC>;
@@ -504,6 +570,16 @@ export interface TrifoldApi {
     savePlaylist(playlist: Playlist): Promise<Playlist>;
     removePlaylist(playlistId: string): Promise<void>;
   };
+  phoneAudio: {
+    status(): Promise<PhoneAudioStatus>;
+    /** Asks Windows for the paired phones that can send audio; takes a second or two. */
+    listDevices(): Promise<PhoneAudioDevice[]>;
+    /** Brings up the Bluetooth link and the audio connection; status arrives as events. */
+    connect(device: PhoneAudioDevice): Promise<PhoneAudioStatus>;
+    disconnect(): Promise<PhoneAudioStatus>;
+    forget(deviceId: string): Promise<PhoneAudioStatus>;
+    setSource(source: AudioSource): Promise<PhoneAudioStatus>;
+  };
   homebrew: {
     /** Copies any record into the homebrew source with `basedOn` provenance (DESIGN.md §6.2). */
     duplicate(recordId: string): Promise<CompendiumRecord>;
@@ -533,7 +609,7 @@ export type ApiNamespace = keyof TrifoldApi;
 
 /** Every method, by namespace. The preload and the IPC registry iterate this table. */
 export const API_METHODS = {
-  app: ['getInfo', 'saveTextFile'],
+  app: ['getInfo', 'openSystemPage', 'saveTextFile', 'openExternal'],
   library: ['getInfo', 'chooseFolder', 'open', 'openInExplorer', 'getSettings', 'updateSettings'],
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],
@@ -560,7 +636,8 @@ export const API_METHODS = {
     'importXml',
   ],
   adventures: ['save', 'remove'],
-  notes: ['save', 'remove', 'reorder'],
+  notes: ['save', 'remove', 'move'],
+  noteTemplates: ['list', 'save', 'remove'],
   npcs: ['save', 'remove'],
   scenes: ['save', 'remove', 'importImage'],
   pcs: ['save', 'remove', 'quickAdd'],
@@ -577,6 +654,7 @@ export const API_METHODS = {
     'savePlaylist',
     'removePlaylist',
   ],
+  phoneAudio: ['status', 'listDevices', 'connect', 'disconnect', 'forget', 'setSource'],
   homebrew: ['duplicate', 'save', 'remove'],
   icons: ['tables', 'available', 'credits', 'reportMiss'],
   compendium: ['search', 'get', 'findByKey', 'facets'],
@@ -593,12 +671,26 @@ export function channelName(ns: ApiNamespace, method: string): string {
   return `trifold:${ns}.${method}`;
 }
 
+/**
+ * A modifier combo pressed inside a web tab's page (ADR 0011). The page keeps the key; the
+ * console gets a copy so table-time hotkeys still fire while a web page has focus.
+ */
+export interface WebTabInput {
+  key: string;
+  control: boolean;
+  alt: boolean;
+  shift: boolean;
+  meta: boolean;
+}
+
 /** Events pushed from main to a renderer without a request. */
 export interface TrifoldEvents {
   presenterState: PresenterState;
   playerWindowChanged: { open: boolean };
   importProgress: ImportProgress;
   musicScan: MusicScanProgress;
+  phoneAudioStatus: PhoneAudioStatus;
+  webTabInput: WebTabInput;
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -606,6 +698,8 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   playerWindowChanged: 'trifold:event:player-window-changed',
   importProgress: 'trifold:event:import-progress',
   musicScan: 'trifold:event:music-scan',
+  phoneAudioStatus: 'trifold:event:phone-audio-status',
+  webTabInput: 'trifold:event:web-tab-input',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */

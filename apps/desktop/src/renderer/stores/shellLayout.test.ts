@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   applyPreset,
   closeTab,
+  pruneTabs,
+  tabTitle,
+  describeLayout,
   defaultLayout,
   groupOf,
   matchesPreset,
   moveTab,
+  normalize,
   openMajor,
   setDockWidth,
   splitRight,
@@ -68,10 +72,16 @@ describe('dock', () => {
     expect(setDockWidth(table, 150).dock.state).toBe('icons');
   });
 
+  it('shows a layout saved with a hidden dock as icons', () => {
+    expect(normalize({ ...table, dock: { ...table.dock, state: 'hidden' } }).dock.state).toBe(
+      'icons',
+    );
+  });
+
   it('toggles sections and keeps every minor listed once', () => {
-    const layout = toggleSection(table, 'dice');
-    expect(layout.dock.sections.find((s) => s.tool === 'dice')?.open).toBe(true);
-    expect(layout.dock.sections).toHaveLength(6);
+    const layout = toggleSection(table, 'music');
+    expect(layout.dock.sections.find((s) => s.tool === 'music')?.open).toBe(true);
+    expect(layout.dock.sections).toHaveLength(2);
   });
 });
 
@@ -87,7 +97,46 @@ describe('presets', () => {
   it('matches on intent: a narrow dock trimmed to icons still counts', () => {
     expect(matchesPreset(table, table)).toBe(true);
     expect(matchesPreset({ ...table, dock: { ...table.dock, state: 'icons' } }, table)).toBe(true);
-    expect(matchesPreset(toggleSection(table, 'dice'), table)).toBe(false);
+    expect(matchesPreset(toggleSection(table, 'music'), table)).toBe(false);
     expect(matchesPreset(openMajor(table, 'compendium'), table)).toBe(false);
+  });
+});
+
+describe('web tabs (ADR 0011)', () => {
+  const docs = {
+    id: '01A',
+    title: 'Session notes',
+    url: 'https://example.com',
+    autoTitle: true,
+    icon: 'tome' as const,
+    zoom: 1,
+  };
+
+  it('opens, moves and closes a web tab like a major', () => {
+    let layout = openMajor(defaultLayout(), 'web:01A');
+    expect(groupOf(layout, 'web:01A')).toBe(0);
+    layout = moveTab(layout, 'web:01A', 1);
+    expect(groupOf(layout, 'web:01A')).toBe(1);
+    expect(layout.stage.groups[1]!.active).toBe('web:01A');
+    layout = closeTab(layout, 'web:01A');
+    expect(groupOf(layout, 'web:01A')).toBeNull();
+    expect(layout.stage.groups).toHaveLength(1);
+  });
+
+  it('titles a web tab from the list and falls back when it is gone', () => {
+    expect(tabTitle('web:01A', [docs])).toBe('Session notes');
+    expect(tabTitle('web:zzz', [docs])).toBe('Web tab');
+    expect(tabTitle('campaign', [docs])).toBe('Campaign');
+    expect(describeLayout(openMajor(defaultLayout(), 'web:01A'), [docs])).toContain(
+      'Session notes',
+    );
+  });
+
+  it('prunes web tabs the Library no longer has and leaves others untouched', () => {
+    const layout = openMajor(openMajor(defaultLayout(), 'web:01A'), 'web:gone');
+    const pruned = pruneTabs(layout, [docs]);
+    expect(groupOf(pruned, 'web:01A')).toBe(0);
+    expect(groupOf(pruned, 'web:gone')).toBeNull();
+    expect(pruneTabs(pruned, [docs])).toBe(pruned);
   });
 });

@@ -1,13 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { defaultAppConfig } from './appConfig';
-import { defaultLibrarySettings, LibrarySettings } from './library';
+import {
+  defaultLibrarySettings,
+  isMajorKind,
+  isWebTabKey,
+  isWebUrl,
+  normalizeWebUrl,
+  LibrarySettings,
+  StageGroup,
+  WebTab,
+  webTabId,
+  webTabKey,
+} from './library';
 import { Scene } from './campaign';
 import { Source } from './source';
 
 describe('LibrarySettings', () => {
   it('fills every default from just a schemaVersion', () => {
     expect(defaultLibrarySettings()).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 5,
       indexVersion: 0,
       lastOpenCampaignSlug: null,
       theme: 'dark',
@@ -24,16 +35,16 @@ describe('LibrarySettings', () => {
         sfxVolume: 0.8,
         crossfadeSec: 4,
       },
-      workspace: { presets: [], seeded: false, consoles: {} },
+      workspace: { presets: [], seeded: false, consoles: {}, webTabs: [] },
     });
   });
 
   it('rejects an unknown schemaVersion', () => {
-    expect(LibrarySettings.safeParse({ schemaVersion: 4 }).success).toBe(false);
+    expect(LibrarySettings.safeParse({ schemaVersion: 6 }).success).toBe(false);
   });
 
   it('keeps explicit values', () => {
-    const parsed = LibrarySettings.parse({ schemaVersion: 3, theme: 'light', playerDisplayId: 42 });
+    const parsed = LibrarySettings.parse({ schemaVersion: 5, theme: 'light', playerDisplayId: 42 });
     expect(parsed.theme).toBe('light');
     expect(parsed.playerDisplayId).toBe(42);
   });
@@ -46,6 +57,8 @@ describe('AppConfig', () => {
       libraryPath: null,
       recentLibraries: [],
       consoleWindow: null,
+      audioSource: 'computer',
+      phoneAudioDevices: [],
     });
   });
 });
@@ -117,5 +130,52 @@ describe('Scene', () => {
     });
     expect(parsed.backgrounds?.map((b) => b.name)).toEqual(['Day', 'Night']);
     expect(parsed.activeBackgroundId).toBe('b2');
+  });
+});
+
+describe('stage tabs', () => {
+  it('accepts majors and web tab keys, nothing else', () => {
+    expect(StageGroup.parse({ tabs: ['campaign', 'web:01ARZ3'], active: 'web:01ARZ3' })).toEqual({
+      tabs: ['campaign', 'web:01ARZ3'],
+      active: 'web:01ARZ3',
+    });
+    expect(StageGroup.safeParse({ tabs: ['browser'] }).success).toBe(false);
+    expect(StageGroup.safeParse({ tabs: ['web:'] }).success).toBe(false);
+  });
+
+  it('round-trips a web tab key', () => {
+    const key = webTabKey('abc');
+    expect(key).toBe('web:abc');
+    expect(isWebTabKey(key)).toBe(true);
+    expect(isWebTabKey('campaign')).toBe(false);
+    expect(isMajorKind('campaign')).toBe(true);
+    expect(isMajorKind(key)).toBe(false);
+    expect(webTabId(key)).toBe('abc');
+  });
+
+  it('defaults a web tab to following the page title', () => {
+    expect(WebTab.parse({ id: 'a', title: 'Docs', url: 'https://example.com' }).autoTitle).toBe(
+      true,
+    );
+  });
+});
+
+describe('web URLs', () => {
+  it('accepts http and https only', () => {
+    expect(isWebUrl('https://example.com/doc')).toBe(true);
+    expect(isWebUrl('http://localhost:8080')).toBe(true);
+    expect(isWebUrl('file:///C:/secrets.txt')).toBe(false);
+    expect(isWebUrl('javascript:alert(1)')).toBe(false);
+    expect(isWebUrl('not a url')).toBe(false);
+  });
+
+  it('adds https to a bare host and keeps an explicit scheme', () => {
+    expect(normalizeWebUrl('example.com/page')).toBe('https://example.com/page');
+    expect(normalizeWebUrl('  http://example.com ')).toBe('http://example.com');
+  });
+
+  it('refuses blanks and non-web schemes', () => {
+    expect(normalizeWebUrl('')).toBeNull();
+    expect(normalizeWebUrl('file:///tmp/x')).toBeNull();
   });
 });

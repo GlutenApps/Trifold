@@ -3,7 +3,7 @@ import { createMigrator, migrate, MigrationError, type MigrationRegistry } from 
 
 const versions = {
   appConfig: 1,
-  library: 3,
+  library: 4,
   source: 1,
   record: 1,
   campaign: 1,
@@ -15,12 +15,14 @@ const versions = {
   scene: 1,
   musicLibrary: 1,
   playlist: 1,
+  noteTemplate: 1,
 };
 const registry: MigrationRegistry = {
   appConfig: [],
   library: [
     { from: 1, to: 2, migrate: (d) => ({ ...d, theme: 'dark' }) },
     { from: 2, to: 3, migrate: (d) => ({ ...d, backups: { enabled: true, keepDays: 14 } }) },
+    { from: 3, to: 4, migrate: (d) => ({ ...d, workspace: { presets: [] } }) },
   ],
   source: [],
   record: [],
@@ -33,6 +35,7 @@ const registry: MigrationRegistry = {
   scene: [],
   musicLibrary: [],
   playlist: [],
+  noteTemplate: [],
 };
 const run = createMigrator(registry, versions);
 
@@ -45,18 +48,19 @@ describe('migrate', () => {
 
   it('chains forward migrations and stamps the final version', () => {
     expect(run('library', { schemaVersion: 1 })).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       theme: 'dark',
       backups: { enabled: true, keepDays: 14 },
+      workspace: { presets: [] },
     });
   });
 
   it('treats a missing schemaVersion as version 1', () => {
-    expect(run('library', {})).toMatchObject({ schemaVersion: 3, theme: 'dark' });
+    expect(run('library', {})).toMatchObject({ schemaVersion: 4, theme: 'dark' });
   });
 
   it('refuses documents from a newer app', () => {
-    expect(() => run('library', { schemaVersion: 4 })).toThrow(MigrationError);
+    expect(() => run('library', { schemaVersion: 5 })).toThrow(MigrationError);
   });
 
   it('fails loudly when a step is missing', () => {
@@ -75,9 +79,93 @@ describe('migrate', () => {
       },
     };
     expect(migrate('library', old)).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 5,
       theme: 'light',
       workspace: { presets: [], seeded: false, consoles: {} },
+    });
+  });
+
+  it('drops the TV controls dock section but keeps the rest of a layout (library 3 → 4)', () => {
+    const dock = {
+      state: 'narrow',
+      width: 300,
+      sections: [
+        { tool: 'tv', open: true },
+        { tool: 'scenes', open: true },
+        { tool: 'music', open: false },
+      ],
+    };
+    const stage = { groups: [{ tabs: ['map'], active: 'map' }], split: 0.5, maximized: null };
+    const old = {
+      schemaVersion: 3,
+      workspace: {
+        presets: [{ name: 'Mine', layout: { stage, dock } }],
+        seeded: true,
+        consoles: { keep: { stage, dock } },
+      },
+    };
+    const kept = {
+      stage,
+      dock: {
+        ...dock,
+        sections: [
+          { tool: 'scenes', open: true },
+          { tool: 'music', open: false },
+        ],
+      },
+    };
+    expect(migrate('library', old)).toEqual({
+      schemaVersion: 5,
+      workspace: {
+        presets: [{ name: 'Mine', layout: kept }],
+        seeded: true,
+        consoles: { keep: kept },
+      },
+    });
+  });
+
+  it('drops the Dice, Hotkeys and Layouts dock sections when they become pop-ups (library 4 → 5)', () => {
+    const dock = {
+      state: 'wide',
+      width: 400,
+      sections: [
+        { tool: 'dice', open: true },
+        { tool: 'music', open: false },
+        { tool: 'scenes', open: true },
+        { tool: 'hotkeys', open: true },
+        { tool: 'layouts', open: false },
+      ],
+    };
+    const stage = {
+      groups: [{ tabs: ['campaign'], active: 'campaign' }],
+      split: 0.5,
+      maximized: null,
+    };
+    const old = {
+      schemaVersion: 4,
+      workspace: {
+        presets: [{ name: 'Mine', layout: { stage, dock } }],
+        seeded: true,
+        consoles: { keep: { stage, dock } },
+      },
+    };
+    const kept = {
+      stage,
+      dock: {
+        ...dock,
+        sections: [
+          { tool: 'music', open: false },
+          { tool: 'scenes', open: true },
+        ],
+      },
+    };
+    expect(migrate('library', old)).toEqual({
+      schemaVersion: 5,
+      workspace: {
+        presets: [{ name: 'Mine', layout: kept }],
+        seeded: true,
+        consoles: { keep: kept },
+      },
     });
   });
 

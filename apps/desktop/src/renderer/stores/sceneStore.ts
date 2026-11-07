@@ -6,8 +6,8 @@ import { usePresenterStore } from './presenterStore';
 import { useShellStore } from './shellStore';
 
 /**
- * The scene the DM is working on, shared by the Scenes tool (tree, edit form) and the Map
- * major (canvas). Selecting never sends anything to the TV (ADR 0004, Decision 10).
+ * The scene the DM is working on, shared by the Scenes tool (tree, edit form) and the TV
+ * major (canvas and preview). Selecting never sends anything to the TV (ADR 0004, Decision 10).
  */
 interface SceneState {
   selectedId: string | null;
@@ -38,7 +38,7 @@ export const useSceneStore = create<SceneState>((set, get) => ({
   select(id) {
     const scene = useCampaignStore.getState().current?.scenes.find((s) => s.id === id) ?? null;
     set({ selectedId: scene ? id : null, draft: scene });
-    // A map opens in the Map tab (in its own group; the other group is not disturbed).
+    // A map opens in the TV tab (in its own group; the other group is not disturbed).
     if (isMapScene(scene)) useShellStore.getState().openMajor('map', { avoid: 'encounters' });
   },
 

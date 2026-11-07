@@ -1,5 +1,9 @@
-import { useEffect, useState } from 'react';
-import type { CompendiumRecord } from '@trifold/schema';
+import { useEffect, useMemo, useState } from 'react';
+import type { CompendiumRecord, Roll } from '@trifold/schema';
+import { useRollLogStore } from '../../stores/rollLogStore';
+import { RollReveal, useRollReveal } from '../dice/RollReveal';
+import { compendiumActions, logDiceRoll } from './compendiumRolls';
+import { itemTypeName } from './formatting';
 import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
 
@@ -127,6 +131,47 @@ function Text({ text }: { text: string }) {
   );
 }
 
+/** The `<roll>` entries of a spell, item, feat or trait as pills that roll into the shared log. */
+function RollPills({ actor, rolls }: { actor: string; rolls: Roll[] }) {
+  if (rolls.length === 0) return null;
+  return (
+    <p className="roll-pills">
+      {rolls.map((r, i) => {
+        const label = `${r.description ?? 'Roll'}${r.level ? ` (level ${r.level})` : ''}`;
+        return (
+          <button
+            key={i}
+            type="button"
+            className="badge roll clickable"
+            title={`Roll ${r.dice}`}
+            onClick={() => void logDiceRoll(actor, label, r.dice)}
+          >
+            {label}: {r.dice}
+          </button>
+        );
+      })}
+    </p>
+  );
+}
+
+/** The newest roll made from this record, so a click shows its result without opening Dice. */
+function LastRoll({ actor }: { actor: string }) {
+  const last = useRollLogStore(
+    (s) => s.entries.find((e) => e.source === 'compendium' && e.actor === actor) ?? null,
+  );
+  const reveal = useRollReveal(last);
+  if (!last) return null;
+  return (
+    <output className="detail-last-roll" aria-live="polite" data-testid="detail-last-roll">
+      <RollReveal entry={last} reveal={reveal} className="last-roll-total" />
+      <span className={`muted small reveal-detail${reveal.settled ? ' settled' : ''}`}>
+        {last.label}
+        {reveal.settled && last.faces ? ` · ${last.faces}` : ''}
+      </span>
+    </output>
+  );
+}
+
 function Rows({ rows }: { rows: Array<[string, string | undefined | null]> }) {
   return (
     <dl className="sb-details">
@@ -149,9 +194,13 @@ function Body({
   record: CompendiumRecord;
   onOpenSpell(key: string): void;
 }) {
+  const actions = useMemo(
+    () => (record.kind === 'monster' ? compendiumActions(record) : undefined),
+    [record],
+  );
   switch (record.kind) {
     case 'monster':
-      return <StatBlock record={record} onOpenSpell={onOpenSpell} />;
+      return <StatBlock record={record} onOpenSpell={onOpenSpell} actions={actions} />;
     case 'spell': {
       const d = record.data;
       return (
@@ -171,18 +220,8 @@ function Body({
               ['Classes', d.classes.join(', ')],
             ]}
           />
+          <RollPills actor={record.displayName} rolls={d.rolls} />
           <Text text={d.text} />
-          {d.rolls.length > 0 && (
-            <p className="muted">
-              Rolls:{' '}
-              {d.rolls
-                .map(
-                  (r) =>
-                    `${r.description ?? 'roll'}${r.level ? ` (level ${r.level})` : ''} ${r.dice}`,
-                )
-                .join(' · ')}
-            </p>
-          )}
         </article>
       );
     }
@@ -192,7 +231,7 @@ function Body({
         <article className="statblock">
           <h2>{record.displayName}</h2>
           <p className="muted">
-            {d.typeCode}
+            {itemTypeName(d.typeCode)}
             {d.rarity ? ` · ${d.rarity}` : ''}
             {d.requiresAttunement ? ' · requires attunement' : ''}
             {d.magic ? ' · magic' : ''}
@@ -214,6 +253,7 @@ function Body({
               ['Value', d.value !== undefined ? `${d.value} gp` : undefined],
             ]}
           />
+          <RollPills actor={record.displayName} rolls={d.rolls} />
           <Text text={d.text} />
           {d.contents.length > 0 && (
             <p>Contents: {d.contents.map((c) => `${c.quantity} × ${c.name}`).join(', ')}</p>
@@ -230,6 +270,7 @@ function Body({
         <article className="statblock">
           <h2>{record.displayName}</h2>
           <Rows rows={[['Prerequisite', d.prerequisite]]} />
+          <RollPills actor={record.displayName} rolls={d.rolls} />
           <Text text={d.text} />
         </article>
       );
@@ -256,6 +297,7 @@ function Body({
           {d.traits.map((t, i) => (
             <div key={i} className="sb-feature">
               <strong>{t.name}</strong>
+              <RollPills actor={record.displayName} rolls={t.rolls} />
               <Text text={t.text} />
             </div>
           ))}
@@ -396,6 +438,7 @@ export function RecordDetail({
       {tab === 'block' ? (
         <>
           {homebrew && <HomebrewBar record={record} actions={homebrew} />}
+          <LastRoll actor={record.displayName} />
           <Body record={record} onOpenSpell={onOpenSpell} />
         </>
       ) : (

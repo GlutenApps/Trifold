@@ -48,7 +48,7 @@ function Builder({
     }
     debounce.current = window.setTimeout(() => {
       window.trifold.compendium
-        .search({ kind: 'monster', text: query, limit: 12 })
+        .search({ kind: 'monster', text: query, limit: 12, collapse: false })
         .then((r) => setRows(r.rows))
         .catch(() => setRows([]));
     }, 150);

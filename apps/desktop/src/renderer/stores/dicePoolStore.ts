@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import { parseRollRequest, rollRequest, type RollMode } from '@trifold/rules';
+import {
+  parseRollRequest,
+  rollRequest,
+  type D20Roll,
+  type RollMode,
+  type RollResult,
+} from '@trifold/rules';
 import { facesText, useRollLogStore } from './rollLogStore';
 
 /** The dice the app offers as buttons, largest first so expressions read naturally. */
@@ -51,12 +57,22 @@ export function poolLabel(pool: DicePool): string {
   return pretty + mode;
 }
 
+/** Natural 20 or 1 when the roll was a lone d20 (with or without a modifier), else nothing. */
+export function d20Outcome(result: RollResult & { d20?: D20Roll }): 'crit' | 'fumble' | undefined {
+  const only = result.dice.length === 1 ? result.dice[0] : undefined;
+  const natural =
+    result.d20?.natural ??
+    (only && only.term.sides === 20 && only.term.count === 1 ? only.kept[0] : undefined);
+  return natural === 20 ? 'crit' : natural === 1 ? 'fumble' : undefined;
+}
+
 /** Rolls `text` into the shared log. Returns an error message, or null when it rolled. */
 export function rollAndLog(text: string, actor?: string): string | null {
   const request = parseRollRequest(text);
   if (!request) return `Cannot read "${text}". Try 2d6+3, 4d6kh3 or d20 adv.`;
   const result = rollRequest(request);
   const modeNote = request.mode === 'normal' ? '' : ` (${request.mode})`;
+  const outcome = d20Outcome(result);
   useRollLogStore.getState().add({
     kind: 'dice',
     label: `${request.expression}${modeNote}`,
@@ -65,6 +81,7 @@ export function rollAndLog(text: string, actor?: string): string | null {
     faces: facesText(result),
     source: 'pool',
     ...(actor ? { actor } : {}),
+    ...(outcome ? { outcome } : {}),
   });
   return null;
 }

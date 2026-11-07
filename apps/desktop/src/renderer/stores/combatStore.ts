@@ -660,6 +660,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         actor: c.name,
         source: 'tracker',
         ...(get().encounterId ? { encounterId: get().encounterId! } : {}),
+        ...(result.crit ? { outcome: 'crit' } : result.fumble ? { outcome: 'fumble' } : {}),
       });
     },
 

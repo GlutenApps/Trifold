@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { linkifySpells, signed, speedText, usesText } from './formatting';
+import { itemTypeName, linkifySpells, signed, speedText, usesText } from './formatting';
 
 describe('statblock helpers', () => {
   it('formats signed numbers and speeds', () => {
@@ -40,5 +40,15 @@ describe('statblock helpers', () => {
       { text: ' at will.' },
     ]);
     expect(linkifySpells('nothing', [])).toEqual([{ text: 'nothing' }]);
+  });
+});
+
+describe('itemTypeName', () => {
+  it('spells out the XML type codes and passes unknown ones through', () => {
+    expect(itemTypeName('LA')).toBe('Light armor');
+    expect(itemTypeName('w')).toBe('Wondrous item');
+    expect(itemTypeName('$')).toBe('Treasure');
+    expect(itemTypeName('ZZ')).toBe('ZZ');
+    expect(itemTypeName(null)).toBe('');
   });
 });

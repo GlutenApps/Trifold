@@ -2,7 +2,6 @@ import { useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { MinorKind } from '@trifold/schema';
 import { useMusicStore } from '../../stores/musicStore';
 import { usePresenterStore } from '../../stores/presenterStore';
-import { useRollLogStore } from '../../stores/rollLogStore';
 import { MINOR_TITLES } from '../../stores/shellLayout';
 import { useShellStore } from '../../stores/shellStore';
 import { Icon } from './icons';
@@ -164,26 +163,21 @@ export function Dock() {
   );
 }
 
-/** Which tools carry a live pip: TV and Scenes while a scene is on, Music while playing. */
+/** Which tools carry a live pip: Scenes while a scene is on, Music while playing. */
 export function useLivePips(): Set<MinorKind> {
   const sceneLive = usePresenterStore((s) => !!s.state.scene && !s.state.blackout);
   const playing = useMusicStore((s) => s.playing);
   const pips = new Set<MinorKind>();
-  if (sceneLive) {
-    pips.add('tv');
-    pips.add('scenes');
-  }
+  if (sceneLive) pips.add('scenes');
   if (playing) pips.add('music');
   return pips;
 }
 
 function SectionSummary({ tool, collapsed }: { tool: MinorKind; collapsed: boolean }) {
-  const scene = usePresenterStore((s) => (s.state.blackout ? 'Blackout' : s.state.scene?.title));
   const trackId = useMusicStore((s) => s.order[s.index] ?? null);
   const track = useMusicStore((s) => s.library?.tracks.find((t) => t.id === trackId)?.title);
   const playing = useMusicStore((s) => s.playing);
   const togglePlay = useMusicStore((s) => s.togglePlay);
-  const last = useRollLogStore((s) => s.entries[0]?.total);
   if (tool === 'music' && track) {
     return (
       <>
@@ -201,7 +195,5 @@ function SectionSummary({ tool, collapsed }: { tool: MinorKind; collapsed: boole
       </>
     );
   }
-  if (tool === 'tv' && scene) return <span className="dh-sum">{scene}</span>;
-  if (tool === 'dice' && last !== undefined) return <span className="dh-sum mono">{last}</span>;
   return null;
 }

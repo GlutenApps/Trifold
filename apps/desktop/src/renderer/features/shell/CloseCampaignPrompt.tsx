@@ -24,8 +24,8 @@ export function CloseCampaignPrompt() {
           if (e.key === 'Escape') cancelClose();
         }}
       >
-        <h2 id="close-campaign-title">Something is on the player window</h2>
-        <p>Closing stops sharing to the player window and ends the session.</p>
+        <h2 id="close-campaign-title">Something is on the TV</h2>
+        <p>Closing stops sharing to the TV and ends the session.</p>
         <div className="row modal-actions">
           <button ref={keep} type="button" className="btn" onClick={cancelClose}>
             Keep running

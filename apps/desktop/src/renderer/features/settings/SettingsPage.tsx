@@ -61,7 +61,7 @@ export function SettingsPage() {
 
       <div className="card">
         <h2>Displays</h2>
-        <p className="muted">The player window opens full screen on the chosen display.</p>
+        <p className="muted">The TV opens full screen on the chosen display.</p>
         {displays.map((d) => (
           <label key={d.id} className="row">
             <input

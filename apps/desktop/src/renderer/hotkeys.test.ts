@@ -53,3 +53,14 @@ describe('registry', () => {
     expect(combo).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('comboFromEvent on macOS', () => {
+  it('reads the Command key as the primary modifier and Control as the extra one', () => {
+    const cmd = new KeyboardEvent('keydown', { key: 'k', metaKey: true });
+    expect(comboFromEvent(cmd, true)).toBe('Ctrl+K');
+    expect(comboFromEvent(cmd, false)).toBe('Meta+K');
+    const ctrl = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true });
+    expect(comboFromEvent(ctrl, true)).toBe('Meta+K');
+    expect(comboFromEvent(ctrl, false)).toBe('Ctrl+K');
+  });
+});

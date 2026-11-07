@@ -22,8 +22,9 @@ test('console, Library, import, search, stat block and player window all work en
   // as plain Node and reject Chromium switches. Never pass it through to the app under test.
   const { ELECTRON_RUN_AS_NODE: _dropped, ...env } = process.env;
 
-  // TRIFOLD_SMOKE_EXE points at a packaged build (dist/win-unpacked/Trifold.exe) to run this same
-  // test against the installer's app instead of out/.
+  // TRIFOLD_SMOKE_EXE points at a packaged build (dist/win-unpacked/Trifold.exe, or on macOS
+  // dist/mac*/Trifold.app/Contents/MacOS/Trifold) to run this same test against the installer's
+  // app instead of out/.
   const exe = process.env['TRIFOLD_SMOKE_EXE'];
   const app = await electron.launch({
     ...(exe ? { executablePath: exe, args: [] } : { args: [resolve(__dirname, '..')] }),
@@ -56,7 +57,7 @@ test('console, Library, import, search, stat block and player window all work en
 
     // Library folder layout and settings file were created atomically on first run.
     const settings = JSON.parse(await readFile(join(library, 'library.json'), 'utf8'));
-    expect(settings.schemaVersion).toBe(3);
+    expect(settings.schemaVersion).toBe(5);
     await expect(stat(join(library, 'sources'))).resolves.toBeTruthy();
 
     // The native SQLite index opened inside Electron.
@@ -94,17 +95,28 @@ test('console, Library, import, search, stat block and player window all work en
     expect(again.status).toBe('unchanged');
 
     // Search with FTS and filters, open a stat block, follow a spell link, switch editions.
+    // The sample has six monsters, but its 2024 and legacy Aboleth collapse to one row (§7.2).
     await console_
       .getByLabel('Source', { exact: true })
       .selectOption({ label: 'compendium-sample' });
-    await expect(console_.getByRole('listbox', { name: 'Results' })).toContainText('6 results');
+    await expect(console_.getByRole('listbox', { name: 'Results' })).toContainText('5 results');
     await console_.getByLabel('Search').fill('abol');
-    await expect(console_.getByRole('option', { name: /Aboleth/ })).toHaveCount(2);
+    const abolethRow = console_.getByRole('option', { name: /Aboleth/ });
+    await expect(abolethRow).toHaveCount(1);
+    await expect(abolethRow).toContainText('2024');
+    await expect(abolethRow).toContainText('legacy');
     await console_.getByLabel('Edition', { exact: true }).selectOption('2024');
-    await expect(console_.getByRole('option', { name: /Aboleth/ })).toHaveCount(1);
-    await console_.getByRole('option', { name: /Aboleth/ }).click();
+    await expect(abolethRow).toHaveCount(1);
+    await expect(abolethRow).not.toContainText('legacy');
+    await abolethRow.click();
     await expect(console_.getByRole('heading', { name: 'Aboleth' })).toBeVisible();
     await expect(console_.getByRole('group', { name: 'Switch edition' })).toContainText('Legacy');
+    // Roll pills work outside a fight: the attack lands in the shared log and the tray total.
+    await console_
+      .getByRole('button', { name: /^\+9 · 2d6\+5/ })
+      .first()
+      .click();
+    await expect(console_.getByTestId('detail-last-roll')).toContainText('Tentacle');
     await console_
       .getByRole('group', { name: 'Switch edition' })
       .getByRole('button', { name: /^Legacy/ })
@@ -179,6 +191,7 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(console_.getByTestId('difficulty')).toContainText('Enemy XP 150');
     await console_.getByLabel('Add creature').fill('mage');
     // The fixture's 2014 Mage carries <slots>; the bundled 2024 one describes spells in text.
+    // The picker lists every record (no edition collapse), so the sample's own Mage is reachable.
     await creatureResults
       .getByRole('option', { name: /^Mage/ })
       .filter({ hasText: 'compendium-sample' })
@@ -241,21 +254,25 @@ test('console, Library, import, search, stat block and player window all work en
     await tab('Encounters').click();
     await expect(console_.getByTestId('encounter-row')).toContainText('fought 1×');
 
-    // The strip rolls the shared pool; the Dice tool in the dock shows the one log.
+    // The strip rolls the shared pool; the Dice pop-up from its button shows the one log.
     await strip.getByRole('button', { name: 'Add d6 (tray)' }).click();
     await strip.getByRole('button', { name: 'Add d6 (tray)' }).click();
     await strip.getByRole('button', { name: 'Roll the pool (tray)' }).click();
     await expect(strip.getByLabel('Last roll')).not.toHaveText('–');
+    await strip.getByRole('button', { name: 'Dice', exact: true }).click();
     await expect(console_.getByRole('list', { name: 'Roll log' })).toContainText('2d6');
+    await console_.keyboard.press('Escape');
+    await expect(console_.getByRole('dialog', { name: 'Dice' })).toHaveCount(0);
 
     // Open the player window from the strip; the Scenes tool sends a title card through main.
     const playerPromise = app.waitForEvent('window');
-    await strip.getByRole('button', { name: 'Open player window' }).click();
+    await strip.getByRole('button', { name: 'Open TV (tray)' }).click();
     const player = await playerPromise;
     await expect(player).toHaveTitle('Trifold player');
     await expect(player.getByTestId('player-blackout')).toBeVisible();
 
-    await dockTool('Scenes').click();
+    // A fresh campaign's dock opens with Scenes showing (ADR 0009), so its form is ready.
+    await expect(dockTool('Scenes')).toHaveAttribute('aria-pressed', 'true');
     await console_.getByLabel('New scene title').fill('The Sunken Keep');
     await console_.getByRole('button', { name: 'New title card' }).click();
     await expect(console_.getByTestId('scene-row')).toHaveCount(1);
@@ -265,22 +282,23 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByTestId('scene-row').press('Enter');
     await expect(player.getByRole('heading', { name: 'The Sunken Keep' })).toBeVisible();
     await expect(console_.getByTestId('live-status')).toHaveText('Live: The Sunken Keep');
-    await dockTool('TV controls').click();
-    await console_.getByLabel('Handout title').fill('Letter');
-    await console_.getByLabel('Handout text').fill('Come at dusk.');
-    await console_.getByRole('button', { name: 'Show text handout' }).click();
-    await expect(player.getByTestId('handout')).toContainText('Come at dusk.');
-    await console_.getByRole('button', { name: 'Dismiss handout' }).click();
-    await expect(player.getByTestId('handout')).toHaveCount(0);
+    // The break screen is shown from the TV tab (ADR 0008); the strip only mirrors one-tap actions.
+    await tab('VTT').click();
+    await console_.getByRole('button', { name: 'Break…' }).click();
+    await console_.getByLabel('Break title').fill('Snacks');
+    await console_.getByRole('button', { name: 'Show break screen' }).click();
+    await expect(player.getByTestId('break-screen')).toContainText('Snacks');
+    await console_.getByRole('button', { name: 'End break' }).click();
+    await expect(player.getByTestId('break-screen')).toHaveCount(0);
     await strip.getByRole('button', { name: 'Blackout' }).click();
     await expect(player.getByTestId('player-blackout')).toBeVisible();
 
     // A blank grid goes live, the party lands where the DM clicks, and the TV mirrors it.
-    // The Map tab's empty state offers the same button while hidden; use the Scenes tool's.
+    // The TV tab's empty state offers the same button while hidden; use the Scenes tool's.
     await console_.getByTestId('dock').getByRole('button', { name: 'New blank grid' }).click();
     const gridRow = console_.getByTestId('scene-row').filter({ hasText: 'Blank grid' });
     await expect(gridRow).toHaveAttribute('aria-selected', 'true');
-    await expect(tab('Map')).toHaveAttribute('aria-selected', 'true');
+    await expect(tab('VTT')).toHaveAttribute('aria-selected', 'true');
     await gridRow.press('Enter');
     await expect(player.getByTestId('map-layer')).toBeVisible();
     await console_.getByRole('button', { name: 'Add player characters' }).click();
@@ -303,6 +321,28 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(console_.getByRole('contentinfo')).toContainText('Tavern Night');
     await expect(
       console_.getByTestId('music-player').getByRole('button', { name: 'Pause', exact: true }),
+    ).toBeVisible();
+
+    // Phone audio receiver (ADR 0007): on Windows the helper lists paired phones (none on CI)
+    // through the bundled PowerShell script; elsewhere it reports itself unsupported.
+    const phoneAudio = await console_.evaluate(() => window.trifold.phoneAudio.status());
+    expect(phoneAudio.state).toBe('off');
+    expect(phoneAudio.supported).toBe(process.platform === 'win32');
+    const phones = await console_.evaluate(() => window.trifold.phoneAudio.listDevices());
+    expect(Array.isArray(phones)).toBe(true);
+
+    // Audio source (ADR 0007): choosing Phone pauses Trifold's player, hides it, and swaps the
+    // strip's controls for the phone's; choosing This computer brings the player back.
+    await console_.getByRole('button', { name: 'Phone', exact: true }).click();
+    await expect(console_.getByTestId('music-player')).toHaveCount(0);
+    await expect(console_.getByTestId('phone-audio')).toBeVisible();
+    await expect(strip.locator('[data-strip="phone"]')).toBeVisible();
+    await expect(strip.getByRole('button', { name: /^(Play|Pause) music$/ })).toHaveCount(0);
+    await expect(strip.getByRole('button', { name: /Mute all audio/ })).toHaveCount(0);
+    await console_.getByRole('button', { name: 'This computer', exact: true }).click();
+    await expect(console_.getByTestId('music-player')).toBeVisible();
+    await expect(
+      console_.getByTestId('music-player').getByRole('button', { name: 'Play', exact: true }),
     ).toBeVisible();
 
     // Bundled glyphs are served to the player over the media scheme (only when fetched).

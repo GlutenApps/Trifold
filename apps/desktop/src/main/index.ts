@@ -9,6 +9,9 @@ import { createLogger, errorMessage } from './log';
 import { IconResources } from './icons';
 import { runDailyBackup } from './libraryOpen';
 import { installMediaHandler, registerMediaScheme } from './media';
+import { installApplicationMenu } from './menu';
+import phoneAudioHelper from './phoneAudio/helper.ps1?raw';
+import { PhoneAudioReceiver } from './phoneAudio/receiver';
 import { PresenterHub } from './presenter';
 import { WindowManager } from './windows';
 
@@ -27,6 +30,7 @@ if (!app.requestSingleInstanceLock()) {
 
 async function main(): Promise<void> {
   await app.whenReady();
+  installApplicationMenu();
 
   let session: LibrarySession | null = null;
   const logger = createLogger(() => session?.logDir ?? null);
@@ -64,13 +68,35 @@ async function main(): Promise<void> {
   void runDailyBackup({ session: activeSession, logger });
   setInterval(() => void runDailyBackup({ session: activeSession, logger }), 60 * 60 * 1000);
 
+  // Phone audio receiver (ADR 0007, Windows): a hidden PowerShell helper holds the connection.
+  const phoneAudio = new PhoneAudioReceiver(phoneAudioHelper, logger, (status) =>
+    windows.sendToConsole(EVENT_CHANNELS.phoneAudioStatus, {
+      ...status,
+      remembered: config.get().phoneAudioDevices,
+      source: config.get().audioSource,
+    }),
+  );
+
   registerIpc(
-    createApi({ config, session: activeSession, windows, presenter, logger, icons }),
+    createApi({
+      config,
+      session: activeSession,
+      windows,
+      presenter,
+      logger,
+      icons,
+      phoneAudio,
+    }),
     logger,
   );
   windows.openConsole(config.get().consoleWindow);
 
   app.on('second-instance', () => windows.focusConsole());
+  // The console window is the app on every platform (ADR 0006): closing it quits, so the
+  // player window and audio never outlive it, on macOS too.
   app.on('window-all-closed', () => app.quit());
-  app.on('before-quit', () => activeSession.close());
+  app.on('before-quit', () => {
+    phoneAudio.disconnect();
+    activeSession.close();
+  });
 }

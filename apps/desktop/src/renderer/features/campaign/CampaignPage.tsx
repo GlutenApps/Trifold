@@ -154,30 +154,160 @@ function blankPc(): PCCard {
   };
 }
 
-/** Campaign list, creation, PC cards and notes (DESIGN.md §6.3). Adventures and NPCs follow. */
+type CampaignTab = 'party' | 'npcs' | 'notes';
+
+function PartyTab() {
+  const current = useCampaignStore((s) => s.current);
+  const quickAdd = useCampaignStore((s) => s.quickAdd);
+  const savePc = useCampaignStore((s) => s.savePc);
+  const removePc = useCampaignStore((s) => s.removePc);
+  const [quick, setQuick] = useState('');
+  const [editing, setEditing] = useState<PCCard | null>(null);
+  if (!current) return null;
+  return (
+    <div className="card">
+      <h2>Party</h2>
+      {current.pcs.length === 0 && <p className="muted">No PC cards yet.</p>}
+      {current.pcs.map((pc) =>
+        editing?.id === pc.id ? (
+          <PcEditor
+            key={pc.id}
+            pc={editing}
+            onSave={(p) => {
+              void savePc(p);
+              setEditing(null);
+            }}
+            onCancel={() => setEditing(null)}
+          />
+        ) : (
+          <div key={pc.id} className="row pc-row" data-testid="pc-row">
+            <strong>{pc.name}</strong>
+            <span className="muted">
+              {pc.playerName ? `${pc.playerName} · ` : ''}
+              {pc.classText} {pc.level} · HP {pc.maxHp} · AC {pc.ac} · Init{' '}
+              {pc.initiativeBonus >= 0 ? '+' : ''}
+              {pc.initiativeBonus} · PP {pc.passives.perception}
+            </span>
+            <span className="spacer" />
+            <span className="row-actions">
+              <button
+                type="button"
+                className="chrome-btn xs"
+                aria-label={`Edit ${pc.name}`}
+                title="Edit"
+                onClick={() => setEditing(pc)}
+              >
+                <Icon name="pencil" size={13} />
+              </button>
+              <button
+                type="button"
+                className="chrome-btn xs danger"
+                aria-label={`Remove ${pc.name}`}
+                title="Remove"
+                onClick={() => void removePc(pc.id)}
+              >
+                <Icon name="trash" size={13} />
+              </button>
+            </span>
+          </div>
+        ),
+      )}
+      {editing && !editing.id && (
+        <PcEditor
+          pc={editing}
+          onSave={(p) => {
+            void savePc(p);
+            setEditing(null);
+          }}
+          onCancel={() => setEditing(null)}
+        />
+      )}
+      <div className="row">
+        <button type="button" className="btn" onClick={() => setEditing(blankPc())}>
+          New PC card
+        </button>
+      </div>
+      <h2 className="mt">Quick add</h2>
+      <p className="muted">One PC per line: Name, Player, Class L, HP, AC, Init, Speed, PP</p>
+      <textarea
+        aria-label="Quick add"
+        rows={3}
+        value={quick}
+        onChange={(e) => setQuick(e.target.value)}
+        placeholder="Thora, Sam, Fighter 5, 44, 18, +1, 30, 12"
+      />
+      <div className="row">
+        <button
+          type="button"
+          className="btn primary"
+          disabled={!quick.trim()}
+          onClick={() => {
+            void quickAdd(quick).then(() => setQuick(''));
+          }}
+        >
+          Add PCs
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NpcsTab() {
+  const current = useCampaignStore((s) => s.current);
+  const removeNpc = useCampaignStore((s) => s.removeNpc);
+  if (!current) return null;
+  return (
+    <div className="card">
+      <h2>NPCs</h2>
+      {current.npcs.length === 0 && <p className="muted">No NPCs yet.</p>}
+      {current.npcs.map((n) => (
+        <div key={n.id} className="entity-row" data-testid="npc-row">
+          <div className="row">
+            <strong>{n.name}</strong>
+            {n.role && <span className="muted">{n.role}</span>}
+            {n.location && <span className="muted">· {n.location}</span>}
+            {n.recordRef && <span className="badge">stat block</span>}
+            {!n.isAlive && <span className="badge">dead</span>}
+            <span className="spacer" />
+            <button type="button" className="btn tiny" onClick={() => void removeNpc(n.id)}>
+              Remove
+            </button>
+          </div>
+          {n.notes && <p className="muted">{n.notes}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The Campaign major (DESIGN.md §6.3): the open campaign's header, then Party, NPCs and Notes as
+ * sub-tabs. Notes fills the panel (ADR 0010); adventures are folders in that tree now.
+ */
 export function CampaignPage() {
   const current = useCampaignStore((s) => s.current);
   const error = useCampaignStore((s) => s.error);
   const load = useCampaignStore((s) => s.load);
-  const quickAdd = useCampaignStore((s) => s.quickAdd);
-  const savePc = useCampaignStore((s) => s.savePc);
-  const removePc = useCampaignStore((s) => s.removePc);
   const clearError = useCampaignStore((s) => s.clearError);
   const importXml = useCampaignStore((s) => s.importXml);
   const importing = useCampaignStore((s) => s.importing);
   const lastImport = useCampaignStore((s) => s.lastImport);
-  const removeNpc = useCampaignStore((s) => s.removeNpc);
-  const removeAdventure = useCampaignStore((s) => s.removeAdventure);
-
-  const [quick, setQuick] = useState('');
-  const [editing, setEditing] = useState<PCCard | null>(null);
+  const [tab, setTab] = useState<CampaignTab>('party');
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  const tabs: [CampaignTab, string][] = current
+    ? [
+        ['party', `Party (${current.pcs.length})`],
+        ['npcs', `NPCs (${current.npcs.length})`],
+        ['notes', `Notes (${current.notes.filter((n) => n.kind !== 'folder').length})`],
+      ]
+    : [];
+
   return (
-    <section className="campaign">
+    <section className={`campaign${current && tab === 'notes' ? ' fill' : ''}`}>
       {error && (
         <div className="banner error" role="alert">
           <span>{error}</span>
@@ -220,137 +350,26 @@ export function CampaignPage() {
             </button>
           </div>
 
-          <div className="card">
-            <h2>Party</h2>
-            {current.pcs.length === 0 && <p className="muted">No PC cards yet.</p>}
-            {current.pcs.map((pc) =>
-              editing?.id === pc.id ? (
-                <PcEditor
-                  key={pc.id}
-                  pc={editing}
-                  onSave={(p) => {
-                    void savePc(p);
-                    setEditing(null);
-                  }}
-                  onCancel={() => setEditing(null)}
-                />
-              ) : (
-                <div key={pc.id} className="row pc-row" data-testid="pc-row">
-                  <strong>{pc.name}</strong>
-                  <span className="muted">
-                    {pc.playerName ? `${pc.playerName} · ` : ''}
-                    {pc.classText} {pc.level} · HP {pc.maxHp} · AC {pc.ac} · Init{' '}
-                    {pc.initiativeBonus >= 0 ? '+' : ''}
-                    {pc.initiativeBonus} · PP {pc.passives.perception}
-                  </span>
-                  <span className="spacer" />
-                  <span className="row-actions">
-                    <button
-                      type="button"
-                      className="chrome-btn xs"
-                      aria-label={`Edit ${pc.name}`}
-                      title="Edit"
-                      onClick={() => setEditing(pc)}
-                    >
-                      <Icon name="pencil" size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      className="chrome-btn xs danger"
-                      aria-label={`Remove ${pc.name}`}
-                      title="Remove"
-                      onClick={() => void removePc(pc.id)}
-                    >
-                      <Icon name="trash" size={13} />
-                    </button>
-                  </span>
-                </div>
-              ),
-            )}
-            {editing && !editing.id && (
-              <PcEditor
-                pc={editing}
-                onSave={(p) => {
-                  void savePc(p);
-                  setEditing(null);
-                }}
-                onCancel={() => setEditing(null)}
-              />
-            )}
-            <div className="row">
-              <button type="button" className="btn" onClick={() => setEditing(blankPc())}>
-                New PC card
-              </button>
-            </div>
-            <h2 className="mt">Quick add</h2>
-            <p className="muted">One PC per line: Name, Player, Class L, HP, AC, Init, Speed, PP</p>
-            <textarea
-              aria-label="Quick add"
-              rows={3}
-              value={quick}
-              onChange={(e) => setQuick(e.target.value)}
-              placeholder="Thora, Sam, Fighter 5, 44, 18, +1, 30, 12"
-            />
-            <div className="row">
-              <button
-                type="button"
-                className="btn primary"
-                disabled={!quick.trim()}
-                onClick={() => {
-                  void quickAdd(quick).then(() => setQuick(''));
-                }}
-              >
-                Add PCs
-              </button>
+          <div className="subtabbar">
+            <div className="subtablist" role="tablist" aria-label="Campaign view">
+              {tabs.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  className={`subtab${tab === id ? ' active' : ''}`}
+                  aria-selected={tab === id}
+                  onClick={() => setTab(id)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="card">
-            <h2>Adventures</h2>
-            {current.adventures.length === 0 && <p className="muted">No adventures yet.</p>}
-            {current.adventures.map((a) => (
-              <div key={a.id} className="entity-row" data-testid="adventure-row">
-                <div className="row">
-                  <strong>{a.name}</strong>
-                  <span className="muted">
-                    {a.encounterIds.length} encounters · {a.noteIds.length} notes
-                  </span>
-                  <span className="spacer" />
-                  <button
-                    type="button"
-                    className="btn tiny"
-                    onClick={() => void removeAdventure(a.id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-                {a.summary && <p className="muted">{a.summary}</p>}
-              </div>
-            ))}
-          </div>
-
-          <div className="card">
-            <h2>NPCs</h2>
-            {current.npcs.length === 0 && <p className="muted">No NPCs yet.</p>}
-            {current.npcs.map((n) => (
-              <div key={n.id} className="entity-row" data-testid="npc-row">
-                <div className="row">
-                  <strong>{n.name}</strong>
-                  {n.role && <span className="muted">{n.role}</span>}
-                  {n.location && <span className="muted">· {n.location}</span>}
-                  {n.recordRef && <span className="badge">stat block</span>}
-                  {!n.isAlive && <span className="badge">dead</span>}
-                  <span className="spacer" />
-                  <button type="button" className="btn tiny" onClick={() => void removeNpc(n.id)}>
-                    Remove
-                  </button>
-                </div>
-                {n.notes && <p className="muted">{n.notes}</p>}
-              </div>
-            ))}
-          </div>
-
-          <CampaignNotes notes={current.notes} />
+          {tab === 'party' && <PartyTab />}
+          {tab === 'npcs' && <NpcsTab />}
+          {tab === 'notes' && <CampaignNotes notes={current.notes} />}
         </>
       )}
     </section>
