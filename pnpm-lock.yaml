@@ -356,6 +356,9 @@ importers:
       ulid:
         specifier: 3.0.2
         version: 3.0.2
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/sax':
         specifier: 1.2.7

@@ -2,7 +2,9 @@ import { join } from 'node:path';
 import type { LibraryInfo } from '@trifold/api';
 import { INDEX_VERSION, IndexDb } from '../index/IndexDb';
 import { syncIndex } from '../index/sync';
+import { CampaignPackager } from '../campaign/campaignPackage';
 import { CampaignRepository } from '../campaign/repository';
+import { SAMPLE_PACKAGE, SampleCampaign } from '../campaign/sampleCampaign';
 import { BackupService, type BackupOptions } from '../backups';
 import { MusicRepository } from '../music/repository';
 import { errorMessage, type Logger } from '../log';
@@ -16,7 +18,8 @@ import { LibraryStore } from './LibraryStore';
  * Everything that exists while a Library is open: the store, the source repositories and
  * catalog, the index, and the campaign, music and backup services. Opening a different Library
  * tears all of it down and builds it again (`LibrarySession` below). A Library that fails to
- * open leaves the session empty and reports why through `LibraryInfo` instead of throwing.
+ * open leaves the session empty and reports why through `LibraryInfo` instead of throwing. Once
+ * the index is ready, a Library that has never had the bundled sample campaign gets it (ADR 0016).
  */
 export interface OpenSession {
   store: LibraryStore;
@@ -37,6 +40,8 @@ export class LibrarySession {
   backups: BackupService | null = null;
   index: IndexDb | null = null;
   readonly bundled: BundledSources;
+  /** The bundled sample campaign (ADR 0016). */
+  readonly sample: SampleCampaign;
   private path = '';
   private error: string | null = null;
   private indexError: string | null = null;
@@ -48,6 +53,7 @@ export class LibrarySession {
     private readonly backupOptions?: BackupOptions,
   ) {
     this.bundled = new BundledSources(bundledResourcesDir, logger);
+    this.sample = new SampleCampaign(join(bundledResourcesDir, SAMPLE_PACKAGE), logger);
   }
 
   get logDir(): string | null {
@@ -89,6 +95,7 @@ export class LibrarySession {
         this.logger.info(
           `index ready: ${stats.records} records from ${stats.sources} sources (${stats.tookMs} ms)`,
         );
+        await this.sample.seedOnce(this.store, this.packager());
       } catch (err) {
         this.index = null;
         this.indexError = errorMessage(err);
@@ -111,6 +118,21 @@ export class LibrarySession {
       catalog: this.catalog,
       index: this.index,
     };
+  }
+
+  /** Campaign export and import (ADR 0015) for the open Library. */
+  packager(): CampaignPackager {
+    const { store, index } = this.require();
+    if (!this.campaigns || !this.homebrew) throw new Error('No Library is open');
+    return new CampaignPackager({
+      store,
+      campaigns: this.campaigns,
+      homebrew: this.homebrew,
+      backups: this.backups,
+      logger: this.logger,
+      appVersion: this.backupOptions?.appVersion ?? '',
+      hasRecord: (ref) => index.get(ref.recordId) !== null,
+    });
   }
 
   info(): LibraryInfo {

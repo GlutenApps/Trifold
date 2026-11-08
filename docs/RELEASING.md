@@ -20,7 +20,8 @@ Inside every package: the app, the SRD snapshot and game-icons set under `resour
 2. **Changelog.** Move the `[Unreleased]` section of `CHANGELOG.md` under the new version with today's date.
 3. **Version.** Set `version` in `apps/desktop/package.json` (the one electron-builder and `app.getVersion()` read) and keep the root `package.json` in step. The release workflow refuses a tag that does not match.
 4. **Docs.** `README.md` install section and `docs/USER-GUIDE.md` still describe the build (file names, first-launch steps).
-5. Commit: `chore(release): v0.3.0`.
+5. **Sample campaign maps.** They are CC BY-NC 4.0 (ADR 0016). A free release may ship them. Before 1.0, or any release that is sold or sits behind payment, replace them with openly licensed maps or get 2-Minute Tabletop's written permission.
+6. Commit: `chore(release): v0.3.0`.
 
 ## Tag and build
 

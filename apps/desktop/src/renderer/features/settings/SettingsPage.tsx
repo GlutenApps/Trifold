@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import type { AttributionEntry, IconCreditsInfo } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
 import { BackupsCard } from './BackupsCard';
+import { SampleCampaignCard } from './SampleCampaignCard';
 
 /**
- * Library › Settings: the Library folder, the display the TV opens on, the theme, the Backups
- * card and About. About carries the SRD and game-icons attribution the content policy requires
+ * Library › Settings: the Library folder, the display the TV opens on, the theme, the sample
+ * campaign (ADR 0016), the Backups card and About. About carries the SRD and game-icons attribution the content policy requires
  * (DESIGN.md §6.1 and §8); the statements and license texts come from main, never from this
  * file. The Sources card lives under Library › Compendium, not here.
  */
@@ -111,6 +112,8 @@ export function SettingsPage() {
         </label>
       </div>
 
+      <SampleCampaignCard />
+
       <BackupsCard />
 
       <div className="card span">
@@ -120,9 +123,9 @@ export function SettingsPage() {
           {info?.chrome ?? ''} · Node {info?.node ?? ''}
         </p>
         <p className="muted">
-          Trifold is 5e-compatible. It ships only System Reference Document content and
-          game-icons.net icons. Everything you import stays in your Library and is never
-          transmitted.
+          Trifold is 5e-compatible. It ships only System Reference Document content, game-icons.net
+          icons and a sample campaign (credited below). Everything you import stays in your Library
+          and is never transmitted.
         </p>
         {attribution.length === 0 ? (
           <p className="muted">No bundled content in this build.</p>
@@ -156,6 +159,14 @@ export function SettingsPage() {
           ) : (
             <p className="muted">No bundled icon set in this build; tokens show initials.</p>
           )}
+        </div>
+        <div className="attribution" data-testid="sample-credits">
+          <p>
+            Sample campaign maps: Highway Town, Dwarven Tavern and Howling Tunnels by Ross
+            McConnell, 2-Minute Tabletop (2minutetabletop.com), licensed CC BY-NC 4.0
+            (creativecommons.org/licenses/by-nc/4.0) and adapted for Trifold; not covered by
+            Trifold&apos;s MIT licence. The adventure text and the handout are Trifold&apos;s own.
+          </p>
         </div>
         <div className="attribution" data-testid="font-credits">
           <p>

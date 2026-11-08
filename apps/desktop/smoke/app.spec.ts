@@ -69,10 +69,15 @@ test('console, Library, import, search, stat block and player window all work en
     const settings = JSON.parse(await readFile(join(library, 'library.json'), 'utf8'));
     expect(settings.schemaVersion).toBe(5);
     await expect(stat(join(library, 'sources'))).resolves.toBeTruthy();
+    // Every new Library is given the bundled sample campaign once (ADR 0016).
+    expect(settings.sampleCampaign).toEqual({ added: true });
 
     // The native SQLite index opened inside Electron.
     await libNav('Settings').click();
     await expect(console_.getByTestId('index-status')).toHaveText('Index: ok');
+    await expect(console_.getByTestId('sample-campaign-status')).toHaveText(
+      'The Lantern at Greyford is in this Library.',
+    );
 
     // Import the SRD-only fixture through the API (no native dialog) and see it listed.
     const report = await console_.evaluate(
@@ -91,6 +96,17 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(importedRow).toHaveCount(1);
 
     // A manual backup lands in Library/backups (the daily one may already be there).
+    // The first-run daily backup (which carries the sample campaign's maps) has to finish first:
+    // while one runs, Back up now answers with that backup instead of starting another.
+    await expect
+      .poll(
+        async () =>
+          (await readdir(join(library, 'backups')).catch(() => [] as string[])).some((n) =>
+            n.endsWith('.zip'),
+          ),
+        { timeout: 30_000 },
+      )
+      .toBe(true);
     await libNav('Settings').click();
     await console_.getByRole('button', { name: 'Back up now' }).click();
     await expect(console_.getByTestId('backup-row').filter({ hasText: 'manual' })).toHaveCount(1);
@@ -187,8 +203,10 @@ test('console, Library, import, search, stat block and player window all work en
     expect(timing.total).toBe(1);
     expect(timing.tookMs).toBeLessThan(50);
 
-    // Campaign: create one in the Library; opening it enters the console with its tabs.
+    // Campaign: create one in the Library; opening it enters the console with its tabs. The
+    // sample campaign is already listed.
     await libNav('Campaigns').click();
+    await expect(console_.getByText('The Lantern at Greyford').first()).toBeVisible();
     await console_.getByLabel('New campaign name').fill('Smoke Campaign');
     await console_.getByRole('button', { name: 'Create campaign' }).click();
     await expect(console_.getByRole('heading', { name: 'Smoke Campaign' })).toBeVisible();

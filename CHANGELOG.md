@@ -4,6 +4,10 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+
+- A sample campaign, *The Lantern at Greyford*: every Library gets it once, and Settings › Sample campaign adds it back or resets it (ADR 0016). Maps by 2-Minute Tabletop (CC BY-NC 4.0, for pre-1.0 testing), with night/day and flood variants; our own adventure text and SRD creatures.
+
 ## [0.3.0] - 2026-11-07
 
 Everything since the 0.2.0 install pass; the first release built by the release workflow.

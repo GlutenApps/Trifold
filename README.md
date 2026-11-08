@@ -53,4 +53,4 @@ Two things worth knowing:
 
 ## Content and licensing
 
-Trifold's code is MIT licensed ([LICENSE](LICENSE)). The package ships only System Reference Document content (CC-BY 4.0), game-icons.net icons (CC BY 3.0), the Outfit and IBM Plex Mono fonts (SIL OFL) and this project's own text. Attribution is shown in the app. Anything you import stays in your Library and is never transmitted anywhere.
+Trifold's code is MIT licensed ([LICENSE](LICENSE)). The package ships only System Reference Document content (CC-BY 4.0), game-icons.net icons (CC BY 3.0), the Outfit and IBM Plex Mono fonts (SIL OFL), this project's own text, and the sample campaign's maps by 2-Minute Tabletop (CC BY-NC 4.0, non-commercial, not covered by the MIT licence; see `samples/greyford/images/CREDITS.md`). Attribution is shown in the app. Anything you import stays in your Library and is never transmitted anywhere.
