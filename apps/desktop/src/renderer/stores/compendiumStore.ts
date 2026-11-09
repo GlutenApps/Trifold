@@ -32,6 +32,11 @@ interface CompendiumState {
   search(): Promise<void>;
   loadFacets(): Promise<void>;
   select(recordId: string): Promise<void>;
+  /**
+   * Shows a record from anywhere (a deep link, ADR 0017): switches to its kind when the tab is
+   * on another, then selects it. Resolves false when it is gone from the enabled sources.
+   */
+  openRecord(recordId: string): Promise<boolean>;
   openByKey(kind: RecordKind, key: string): Promise<boolean>;
   switchEdition(record: CompendiumRecord): void;
   back(): void;
@@ -124,6 +129,33 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
       set({ selected: record, editions, history: [] });
     } catch (err) {
       set({ error: errorMessage(err) });
+    }
+  },
+
+  async openRecord(recordId) {
+    try {
+      const record = await window.trifold.compendium.get(recordId);
+      if (!record) {
+        set({ error: 'That record is no longer in an enabled source.' });
+        return false;
+      }
+      const editions = await window.trifold.compendium.findByKey(record.kind, record.key);
+      if (record.kind !== get().kind) {
+        set({
+          kind: record.kind,
+          filters: { edition: get().filters.edition, npc: 'any' },
+          selected: record,
+          editions,
+          history: [],
+        });
+        void Promise.all([get().search(), get().loadFacets()]);
+      } else {
+        set({ selected: record, editions, history: [] });
+      }
+      return true;
+    } catch (err) {
+      set({ error: errorMessage(err) });
+      return false;
     }
   },
 

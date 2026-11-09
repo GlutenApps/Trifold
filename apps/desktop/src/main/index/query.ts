@@ -289,3 +289,40 @@ export function toRow(raw: RawRow): CompendiumRow {
     rarity: raw.rarity,
   };
 }
+
+/** `text` as a LIKE pattern body: its own `%`, `_` and `\` escaped (ESCAPE '\\'). */
+export function likeEscape(text: string): string {
+  return text.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+const SUGGEST_LIMIT = 50;
+
+/**
+ * The global search's compendium half (ADR 0017): records of every kind whose display name
+ * contains `text`, ranked by the same tiers as `rankByName` in @trifold/rules (exact 0, prefix
+ * 1, start of a later word 2, anywhere 3), then by name. Records sharing a kind and key collapse
+ * to one row headed by `preferEdition`, as `buildSearch` does. Only enabled sources answer.
+ * LIKE is case-insensitive for ASCII in SQLite; the `?` placeholders bind in order: the
+ * preferred edition, then the four patterns, then the limit.
+ */
+export function buildSuggest(
+  text: string,
+  limit = 12,
+  preferEdition: '2024' | '2014' = '2024',
+): { sql: string; params: unknown[] } {
+  const term = likeEscape(text.trim().toLowerCase());
+  const tier = `CASE WHEN lower(r.display_name) = ? THEN 0 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 1 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 2 ELSE 3 END`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, ${tier} AS tier FROM records r JOIN sources s ON s.id = r.source_id WHERE s.enabled = 1 AND r.display_name LIKE ? ESCAPE '\\'`;
+  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, key ORDER BY (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, key) AS editions FROM (${base})`;
+  return {
+    sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ORDER BY tier, display_name COLLATE NOCASE, kind LIMIT ?`,
+    params: [
+      preferEdition,
+      text.trim().toLowerCase(),
+      `${term}%`,
+      `% ${term}%`,
+      `%${term}%`,
+      Math.min(Math.max(limit, 1), SUGGEST_LIMIT),
+    ],
+  };
+}

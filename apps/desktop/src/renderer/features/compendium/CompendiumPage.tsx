@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type WheelEvent } from 'react';
 import { CR_ORDER, crToNumber } from '@trifold/rules';
 import { Edition, type RecordKind } from '@trifold/schema';
+import { landOn, navKey, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
@@ -63,6 +64,7 @@ export function CompendiumPage() {
   const search = useCompendiumStore((s) => s.search);
   const loadFacets = useCompendiumStore((s) => s.loadFacets);
   const select = useCompendiumStore((s) => s.select);
+  const openRecord = useCompendiumStore((s) => s.openRecord);
   const openByKey = useCompendiumStore((s) => s.openByKey);
   const switchEdition = useCompendiumStore((s) => s.switchEdition);
   const back = useCompendiumStore((s) => s.back);
@@ -87,6 +89,13 @@ export function CompendiumPage() {
   // record replaces the list until Back to results, a new search or a new kind brings it back.
   const [backedOut, setBackedOut] = useState(false);
   const showDetail = (editing !== null || selected !== null) && !backedOut;
+
+  // Deep links (ADR 0017): a record opens here whatever kind the tab was showing.
+  useNavTarget('record', (target) => {
+    setBackedOut(false);
+    void openRecord(target.id).then((ok) => ok && landOn(navKey('record', target.id)));
+    return true;
+  });
 
   useEffect(() => {
     void search();
@@ -378,7 +387,10 @@ export function CompendiumPage() {
             </p>
           )}
         </div>
-        <div className="inspector">
+        <div
+          className="inspector"
+          data-nav={selected && !editing ? navKey('record', selected.id) : undefined}
+        >
           {editing && editing.kind === 'monster' ? (
             <MonsterEditor
               key={editing.id}

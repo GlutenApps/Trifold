@@ -8,6 +8,7 @@ Start here. Each document has one job; when two disagree, `DESIGN.md` wins on pr
 | [DESIGN.md](DESIGN.md)                     | You want to know what the app is and why. §2 is the decision log, §6 the module specs, §10 what shipped and what remains.   |
 | [DATA-FORMATS.md](DATA-FORMATS.md)         | You are touching an importer, a schema or a file in the Library: every XML convention, JSON format and index table.         |
 | [UI-GUIDELINES.md](UI-GUIDELINES.md)       | You are adding or changing UI: control tiers, patterns for common actions, panel widths (ADR 0013, 0014).                   |
+| [DEEP-LINKS.md](DEEP-LINKS.md)             | You are opening one feature's item from another (search, note links): the `navigate` contract and how a panel lands it.    |
 | [TOKENS.md](TOKENS.md)                     | You need the palette, type and size tokens behind `global.css` (`tokens.json` has the same values for tools).               |
 | [RELEASING.md](RELEASING.md)               | You are cutting a build: content fetch, icon, version, tag, the release workflow, what to check on each platform.           |
 | [../CLAUDE.md](../CLAUDE.md)               | You are writing code: ground rules, stack, repo layout, commands, conventions, definition of done.                           |
@@ -35,3 +36,4 @@ One short file per decision that deviates from or refines `DESIGN.md`. Number th
 | [0013](adr/0013-one-control-scale.md)                            | One control scale and one pattern per common action; `UI-GUIDELINES.md` is the rulebook.                        |
 | [0014](adr/0014-panel-floor-and-folding.md)                      | Panel floors (480 px stage, 360 px dock), folding order, and one set of layout switch points.                    |
 | [0015](adr/0015-backups-off-the-computer-and-campaign-export.md) | A second backup location, restore from any zip, and `.trifold-campaign` export and import.                       |
+| [0017](adr/0017-global-search-and-deep-links.md)                 | Global search in the middle of the top bar, over one deep-link contract that every panel implements.             |

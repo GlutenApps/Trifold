@@ -14,7 +14,7 @@ Trifold is a desktop console for a Dungeon Master running 5e-compatible games at
 
 Trifold has two spaces. The **Library** (the mark at the top left) holds what every campaign shares: Campaigns, Compendium, Music folders and Settings. Opening a campaign enters its **console**; one campaign is open at a time.
 
-- **Top bar.** The mark returns to the Library. The campaign name is a menu: switch campaign, New campaign…, Import campaign XML…, Close campaign. On the right: the current layout, Hotkeys (`Ctrl+/`) and Settings (`Ctrl+,`).
+- **Top bar.** The mark returns to the Library. The campaign name is a menu: switch campaign, New campaign…, Import campaign XML…, Close campaign. In the middle, **Search** (`Ctrl+F`) finds anything by name: notes and folders, NPCs, party members, encounters (also by who is in them), scenes, compendium records and web tabs, grouped by type. Arrows move, Enter opens the item where it lives and marks it for a moment, Escape clears. In a narrow window the field is behind a search button. On the right: the current layout, Hotkeys (`Ctrl+/`) and Settings (`Ctrl+,`).
 - **Stage.** One or two groups of tabs holding **Campaign**, **Compendium**, **Encounters**, **VTT** (the virtual tabletop: what the TV shows) and any **web tabs**. Each group's `+` opens a tab here and offers **New web tab…**. Drag a tab to move it, or onto the right half of a lone group to split the stage. A closed tab keeps its state.
 - **Dock.** The right-hand column for the two tall tools, **Scenes** and **Music**. Its header toggles each and collapses the dock to icons, where a tool opens as a flyout. **Dice**, **Hotkeys** and **Layouts** are pop-ups from their own buttons.
 - **Live strip.** The bottom bar, for table state only: the TV with Blackout and undo, round and turn, music and mute, the dice pool. Every strip button also exists in its tool.
@@ -119,6 +119,7 @@ Plain letter keys do nothing while you are typing in a field.
 
 | Area | Action | Combo |
 |---|---|---|
+| Console | Search the campaign and compendium | `Ctrl+F` |
 | Console | Jump to the compendium search | `Ctrl+K` |
 | Console | VTT: the scene on the TV | `Ctrl+T` |
 | Console | Music: transport, playlists, tracks | `Ctrl+M` |

@@ -1,0 +1,367 @@
+import { create } from 'zustand';
+import type { CampaignBundle, CompendiumSuggestion } from '@trifold/api';
+import { ancestorsOf, rankByName, TIER_RANK, type MatchTier } from '@trifold/rules';
+import { errorMessage, type RecordKind, type SceneKind, type WebTab } from '@trifold/schema';
+import type { IconName } from '../features/shell/icons';
+import { navigate, navKey, type NavTarget } from '../navigate';
+import { useCampaignStore } from './campaignStore';
+import { useShellStore } from './shellStore';
+
+/**
+ * Global search (ADR 0017): names and titles across the open campaign, the shell's web tabs and
+ * the compendium, ranked exact, prefix, word, substring and grouped by type. The campaign half
+ * is ranked in memory on every keystroke (`searchLocal`, a pure function); the compendium half
+ * asks main's SQLite index through `compendium.suggest` after a short debounce, and a stale
+ * answer is dropped by sequence number. Picking a result goes through `navigate` and nothing
+ * else. The store keeps the query and the active row; the field and the results pop-up in
+ * features/shell/GlobalSearch.tsx render it.
+ */
+export type SearchGroup =
+  'notes' | 'npcs' | 'party' | 'encounters' | 'scenes' | 'compendium' | 'webTabs';
+
+export const GROUP_ORDER: readonly SearchGroup[] = [
+  'notes',
+  'npcs',
+  'party',
+  'encounters',
+  'scenes',
+  'compendium',
+  'webTabs',
+];
+
+export const GROUP_LABELS: Record<SearchGroup, string> = {
+  notes: 'Notes',
+  npcs: 'NPCs',
+  party: 'Party',
+  encounters: 'Encounters',
+  scenes: 'Scenes',
+  compendium: 'Compendium',
+  webTabs: 'Web tabs',
+};
+
+/** Rows shown per group before "+N more". */
+export const GROUP_LIMIT = 6;
+/** Below this window width the search field lives in its pop-up, not the top bar. */
+export const SEARCH_COMPACT_BELOW = 960;
+/** Compendium rows asked for; the group shows GROUP_LIMIT and counts the rest. */
+const SUGGEST_LIMIT = 12;
+const DEBOUNCE_MS = 80;
+
+export interface SearchResult {
+  /** `type:id`, the same string the landing element carries as `data-nav`. */
+  key: string;
+  group: SearchGroup;
+  title: string;
+  /** The second line: folder path, role, kind and source, "with <member>". */
+  detail: string;
+  tier: MatchTier;
+  icon: IconName;
+  target: NavTarget;
+}
+
+export interface SearchGroupView {
+  group: SearchGroup;
+  label: string;
+  results: SearchResult[];
+  /** Matches beyond the rows shown. */
+  more: number;
+}
+
+const KIND_LABELS: Record<RecordKind, string> = {
+  monster: 'Monster',
+  spell: 'Spell',
+  item: 'Item',
+  feat: 'Feat',
+  species: 'Species',
+  background: 'Background',
+  class: 'Class',
+};
+
+const SCENE_LABELS: Record<SceneKind, string> = {
+  folder: 'Folder',
+  title: 'Title card',
+  image: 'Image',
+  map: 'Map',
+  blankGrid: 'Blank grid',
+};
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+const joinDetail = (parts: readonly (string | false | undefined | null)[]) =>
+  parts.filter((p): p is string => !!p).join(' · ');
+
+/** Every name match in the open campaign and the shell, unordered across groups. */
+export function searchLocal(
+  query: string,
+  bundle: CampaignBundle | null,
+  webTabs: readonly WebTab[],
+): SearchResult[] {
+  const out: SearchResult[] = [];
+  if (bundle) {
+    for (const m of rankByName(query, bundle.notes, (n) => n.title)) {
+      const folder = m.item.kind === 'folder';
+      const type = folder ? 'folder' : 'note';
+      const path = ancestorsOf(bundle.notes, m.item)
+        .map((a) => a.title)
+        .join(' / ');
+      out.push({
+        key: navKey(type, m.item.id),
+        group: 'notes',
+        title: m.item.title,
+        detail: joinDetail([folder && 'Folder', path]),
+        tier: m.tier,
+        icon: folder ? 'folder' : 'card',
+        target: { type, id: m.item.id },
+      });
+    }
+    for (const m of rankByName(query, bundle.npcs, (n) => n.name)) {
+      out.push({
+        key: navKey('npc', m.item.id),
+        group: 'npcs',
+        title: m.item.name,
+        detail: joinDetail([m.item.role, m.item.location, !m.item.isAlive && 'dead']),
+        tier: m.tier,
+        icon: 'person',
+        target: { type: 'npc', id: m.item.id },
+      });
+    }
+    for (const m of rankByName(query, bundle.pcs, (p) => [p.name, p.playerName])) {
+      out.push({
+        key: navKey('pc', m.item.id),
+        group: 'party',
+        title: m.item.name,
+        detail: joinDetail([m.item.playerName, `${m.item.classText} ${m.item.level}`.trim()]),
+        tier: m.tier,
+        icon: 'party',
+        target: { type: 'pc', id: m.item.id },
+      });
+    }
+    // An encounter answers to its own name first; one that merely contains a matching member
+    // (an NPC, a creature, a label) lists after every name match and says who it was.
+    const named = rankByName(query, bundle.encounters, (e) => e.name);
+    const namedIds = new Set(named.map((m) => m.item.id));
+    const withMember = rankByName(
+      query,
+      bundle.encounters.filter((e) => !namedIds.has(e.id)),
+      (e) => e.combatants.map((t) => t.label || t.ref.name),
+    );
+    for (const m of named) {
+      const count = m.item.combatants.reduce((n, t) => n + t.quantity, 0);
+      out.push({
+        key: navKey('encounter', m.item.id),
+        group: 'encounters',
+        title: m.item.name,
+        detail: `${count} combatant${count === 1 ? '' : 's'}`,
+        tier: m.tier,
+        icon: 'encounters',
+        target: { type: 'encounter', id: m.item.id },
+      });
+    }
+    for (const m of withMember) {
+      out.push({
+        key: navKey('encounter', m.item.id),
+        group: 'encounters',
+        title: m.item.name,
+        detail: `with ${m.name}`,
+        tier: 'substring',
+        icon: 'encounters',
+        target: { type: 'encounter', id: m.item.id },
+      });
+    }
+    for (const m of rankByName(query, bundle.scenes, (s) => [s.title, s.subtitle])) {
+      out.push({
+        key: navKey('scene', m.item.id),
+        group: 'scenes',
+        title: m.item.title,
+        detail: joinDetail([SCENE_LABELS[m.item.kind], m.name !== m.item.title && m.name]),
+        tier: m.tier,
+        icon: 'scenes',
+        target: { type: 'scene', id: m.item.id },
+      });
+    }
+  }
+  for (const m of rankByName(query, webTabs, (t) => t.title)) {
+    out.push({
+      key: navKey('webTab', m.item.id),
+      group: 'webTabs',
+      title: m.item.title,
+      detail: hostOf(m.item.url),
+      tier: m.tier,
+      icon: 'globe',
+      target: { type: 'webTab', id: m.item.id },
+    });
+  }
+  return out;
+}
+
+/** A compendium hit as a result row. */
+export function fromSuggestion(row: CompendiumSuggestion): SearchResult {
+  const fact =
+    row.kind === 'monster' && row.cr !== null
+      ? `CR ${row.cr}`
+      : row.kind === 'spell' && row.level !== null
+        ? row.level === 0
+          ? 'Cantrip'
+          : `Level ${row.level}`
+        : '';
+  return {
+    key: navKey('record', row.id),
+    group: 'compendium',
+    title: row.displayName,
+    detail: joinDetail([KIND_LABELS[row.kind], fact, row.sourceName]),
+    tier: row.tier,
+    icon: 'compendium',
+    target: { type: 'record', id: row.id },
+  };
+}
+
+const byRank = (a: SearchResult, b: SearchResult) =>
+  TIER_RANK[a.tier] - TIER_RANK[b.tier] ||
+  a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+
+/** Results in display order: fixed group order, best tier first inside, capped per group. */
+export function groupResults(
+  results: readonly SearchResult[],
+  limit = GROUP_LIMIT,
+): SearchGroupView[] {
+  const groups: SearchGroupView[] = [];
+  for (const group of GROUP_ORDER) {
+    const all = results.filter((r) => r.group === group).sort(byRank);
+    if (all.length === 0) continue;
+    groups.push({
+      group,
+      label: GROUP_LABELS[group],
+      results: all.slice(0, limit),
+      more: Math.max(0, all.length - limit),
+    });
+  }
+  return groups;
+}
+
+export const flattenGroups = (groups: readonly SearchGroupView[]): SearchResult[] =>
+  groups.flatMap((g) => g.results);
+
+interface SearchState {
+  query: string;
+  local: SearchResult[];
+  compendium: SearchResult[];
+  /** A compendium answer is on its way. */
+  loading: boolean;
+  error: string | null;
+  /** The highlighted row; a key no longer shown falls back to the first row. */
+  activeKey: string | null;
+  /** Bumped by Ctrl+F; the field focuses itself when it changes. */
+  summoned: number;
+
+  setQuery(query: string): void;
+  groups(): SearchGroupView[];
+  active(): SearchResult | null;
+  move(delta: 1 | -1): void;
+  setActive(key: string | null): void;
+  /** Navigates to the active result; false when there is none. */
+  activate(): boolean;
+  clear(): void;
+  summon(): void;
+}
+
+let timer: number | null = null;
+let seq = 0;
+
+export const useSearchStore = create<SearchState>((set, get) => ({
+  query: '',
+  local: [],
+  compendium: [],
+  loading: false,
+  error: null,
+  activeKey: null,
+  summoned: 0,
+
+  setQuery(query) {
+    const trimmed = query.trim();
+    const bundle = useCampaignStore.getState().current;
+    const local = trimmed ? searchLocal(trimmed, bundle, useShellStore.getState().webTabs) : [];
+    if (timer) window.clearTimeout(timer);
+    const mine = ++seq;
+    if (!trimmed) {
+      set({ query, local, compendium: [], loading: false, error: null });
+      return;
+    }
+    set({ query, local, loading: true });
+    timer = window.setTimeout(() => {
+      const preferred = bundle?.campaign.preferredEdition === '2014' ? '2014' : '2024';
+      window.trifold.compendium
+        .suggest(trimmed, { limit: SUGGEST_LIMIT, preferEdition: preferred })
+        .then((rows) => {
+          if (mine !== seq) return;
+          set({ compendium: rows.map(fromSuggestion), loading: false, error: null });
+        })
+        .catch((err: unknown) => {
+          if (mine !== seq) return;
+          set({ compendium: [], loading: false, error: errorMessage(err) });
+        });
+    }, DEBOUNCE_MS);
+  },
+
+  groups() {
+    const { local, compendium } = get();
+    return groupResults(local.concat(compendium));
+  },
+
+  active() {
+    const flat = flattenGroups(get().groups());
+    return flat.find((r) => r.key === get().activeKey) ?? flat[0] ?? null;
+  },
+
+  move(delta) {
+    const flat = flattenGroups(get().groups());
+    if (flat.length === 0) return;
+    const current = get().active();
+    const at = current ? flat.findIndex((r) => r.key === current.key) : -1;
+    const next =
+      at < 0 ? (delta > 0 ? 0 : flat.length - 1) : (at + delta + flat.length) % flat.length;
+    set({ activeKey: flat[next]!.key });
+  },
+
+  setActive(key) {
+    if (get().activeKey !== key) set({ activeKey: key });
+  },
+
+  activate() {
+    const result = get().active();
+    if (!result) return false;
+    navigate(result.target);
+    return true;
+  },
+
+  clear() {
+    if (timer) window.clearTimeout(timer);
+    seq += 1;
+    set({ query: '', local: [], compendium: [], loading: false, error: null, activeKey: null });
+  },
+
+  summon() {
+    set({ summoned: get().summoned + 1 });
+  },
+}));
+
+// A rename or a new note while the list is open shows at once; another campaign starts clean.
+useCampaignStore.subscribe((s, prev) => {
+  if (s.current === prev.current) return;
+  const { query } = useSearchStore.getState();
+  if (!s.current || s.current.campaign.id !== prev.current?.campaign.id) {
+    if (query) useSearchStore.getState().clear();
+    return;
+  }
+  const trimmed = query.trim();
+  if (trimmed) {
+    useSearchStore.setState({
+      local: searchLocal(trimmed, s.current, useShellStore.getState().webTabs),
+    });
+  }
+});

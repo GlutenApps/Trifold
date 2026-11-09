@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { SEARCH_COMPACT_BELOW } from '../../stores/searchStore';
 import { useShellStore, type PopKind } from '../../stores/shellStore';
 import { DiceRoller } from '../dice/DiceRoller';
+import { SearchResults } from './GlobalSearch';
 import { HotkeysTool } from './HotkeysTool';
 import { Icon, type IconName } from './icons';
 import { LayoutsTool } from './LayoutsTool';
@@ -8,7 +10,9 @@ import { LayoutsTool } from './LayoutsTool';
 /**
  * Pop-up tools (ADR 0009): Dice, Hotkeys and Layouts are anchored to the button that opens
  * them instead of taking a dock section. This file maps each kind to its body, title and icon
- * and places the one open pop-up; `Pop` below explains the anchoring.
+ * and places the one open pop-up; `Pop` below explains the anchoring. The global search's
+ * results (ADR 0017) are a pop-up too, centred under the field in the top bar and without the
+ * header, since the field is the heading; in a narrow window the field moves inside it.
  */
 
 /** The heading each pop-up shows; the kinds are the shell store's `PopKind`. */
@@ -16,15 +20,17 @@ const POP_TITLES: Record<PopKind, string> = {
   dice: 'Dice',
   hotkeys: 'Hotkeys',
   layouts: 'Layouts',
+  search: 'Search',
 };
 
 const POP_ICON: Record<PopKind, IconName> = {
   dice: 'dice',
   hotkeys: 'keys',
   layouts: 'layout',
+  search: 'search',
 };
 
-function PopBody({ kind }: { kind: PopKind }) {
+function PopBody({ kind, compact }: { kind: PopKind; compact: boolean }) {
   switch (kind) {
     case 'dice':
       return <DiceRoller />;
@@ -32,6 +38,8 @@ function PopBody({ kind }: { kind: PopKind }) {
       return <HotkeysTool />;
     case 'layouts':
       return <LayoutsTool />;
+    case 'search':
+      return <SearchResults withField={compact} />;
   }
 }
 
@@ -43,6 +51,7 @@ function PopBody({ kind }: { kind: PopKind }) {
 export function Pop() {
   const pop = useShellStore((s) => s.pop);
   const closePop = useShellStore((s) => s.closePop);
+  const compact = useShellStore((s) => s.viewportWidth < SEARCH_COMPACT_BELOW);
   const ref = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<CSSProperties>({});
 
@@ -57,6 +66,13 @@ export function Pop() {
         : 12;
       if (pop === 'dice') {
         setStyle({ right, bottom: anchored ? window.innerHeight - anchored.top + 6 : 42 + 10 });
+      } else if (pop === 'search' && anchored && anchored.width > 60) {
+        // Under the middle of the field; the icon button (compact) right-aligns like the rest.
+        const left = Math.max(
+          12,
+          Math.min(anchored.left + anchored.width / 2 - width / 2, window.innerWidth - width - 12),
+        );
+        setStyle({ left, top: anchored.bottom + 6 });
       } else {
         setStyle({ right, top: anchored ? anchored.bottom + 6 : 34 + 8 });
       }
@@ -91,21 +107,23 @@ export function Pop() {
       data-tool={pop}
       data-testid="pop"
     >
-      <header className="fly-head">
-        <Icon name={POP_ICON[pop]} size={14} />
-        <span className="dh-name">{POP_TITLES[pop]}</span>
-        <span className="spacer" />
-        <button
-          type="button"
-          className="chrome-btn xs"
-          aria-label="Close pop-up"
-          onClick={closePop}
-        >
-          <Icon name="close" />
-        </button>
-      </header>
-      <div className="fly-body">
-        <PopBody kind={pop} />
+      {pop !== 'search' && (
+        <header className="fly-head">
+          <Icon name={POP_ICON[pop]} size={14} />
+          <span className="dh-name">{POP_TITLES[pop]}</span>
+          <span className="spacer" />
+          <button
+            type="button"
+            className="chrome-btn xs"
+            aria-label="Close pop-up"
+            onClick={closePop}
+          >
+            <Icon name="close" />
+          </button>
+        </header>
+      )}
+      <div className={`fly-body${pop === 'search' ? ' search-body' : ''}`}>
+        <PopBody kind={pop} compact={compact} />
       </div>
     </div>
   );
