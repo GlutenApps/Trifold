@@ -348,7 +348,9 @@ test('console, Library, import, search, stat block and player window all work en
       .toBe('Quick Notes');
     await tab('Campaign').click();
     await console_.getByRole('tab', { name: /^Notes/ }).click();
-    await console_.getByRole('treeitem', { name: 'Quick Notes' }).click();
+    // Folders start open, so the note shows under it. (Clicking the folder would select it, and
+    // a Campaign panel under 640 px, as on CI screens, then shows the folder instead of the tree.)
+    await expect(console_.getByRole('treeitem', { name: 'Quick Notes' })).toBeVisible();
     await expect(console_.getByRole('treeitem', { name: 'Guard took the bribe' })).toBeVisible();
 
     // The strip's Dice button opens the shared pool at every window width. (Below 1180 px the
