@@ -114,6 +114,9 @@ export function indexText(record: CompendiumRecord): string {
     case 'feat':
       parts.push(record.data.text, record.data.prerequisite ?? '');
       break;
+    case 'condition':
+      parts.push(record.data.text);
+      break;
     case 'species':
     case 'background':
       for (const t of record.data.traits) parts.push(t.name, t.text);

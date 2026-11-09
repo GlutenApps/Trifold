@@ -209,7 +209,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Lenient parser rules.** Unknown elements are preserved in `data.extra`. Missing fields never fail an import; they produce warnings listed on the source page. Names match case-insensitively for cross-references. See `DATA-FORMATS.md` for every field and convention found in real files.
 
-**Browse and search.** One list per kind with a persistent filter bar: text search (FTS), source, edition (2024 / legacy / all), CR range, type, size, environment, NPC flag. Monster rows show name, CR, type, size, source badge, edition badge. Detail panes render the stat block in a 2024 layout regardless of the record's edition; original text is available in a "source text" tab. Spell references inside stat blocks and item text are clickable when the spell exists in an enabled source.
+**Browse and search.** One list per kind (monsters, spells, items, feats, species, backgrounds, classes, conditions) with a persistent filter bar: text search (FTS), source, edition (2024 / legacy / all), CR range, type, size, environment, NPC flag. Monster rows show name, CR, type, size, source badge, edition badge. Detail panes render the stat block in a 2024 layout regardless of the record's edition; original text is available in a "source text" tab. Spell references inside stat blocks and item text are clickable when the spell exists in an enabled source.
 
 **Edition handling.** See §7.
 
@@ -340,6 +340,8 @@ Each record has `edition`. Sources: `[5.5e]` suffix in the name → 2024; source
 ### 7.3 Conditions (2024)
 Blinded, Charmed, Deafened, Exhaustion (levels 1–6: −2 × level to d20 tests, −5 ft × level speed, death at 6), Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious. Tracker-only markers: Concentrating, Surprised (disadvantage on initiative), Hidden, Dead, Bloodied (display threshold only, at ≤ half HP).
 
+The rules text of each condition is a compendium record (`kind: condition`, one per edition) fetched from the SRD documents at build time like every other kind; the Compendium tab lists them under Conditions and the tracker's condition lane opens the selected one through a deep link (ADR 0017). Tracker-only markers have no record.
+
 ### 7.4 Encounter budget (2024 DMG) — XP per character by level
 Verify these numbers against the DMG (2024) before release; tables of numbers are not copyrightable and the values below are from memory.
 
@@ -405,7 +407,7 @@ Electron + Vite + React + TS + Zod + Zustand + better-sqlite3 + electron-builder
 ### M1 — Session-ready cut (done)
 Everything below works end to end on Windows 11 and macOS. Where the shape changed on the way, the ADR is cited.
 
-1. **Compendium:** bundled SRD 2024 + 2014 (Open5e snapshot); XML compendium import with the lenient parser and all conventions in `DATA-FORMATS.md` §2; source enable/disable; monster/spell/item browse and search with source and edition filters; stat block view in 2024 layout with clickable spells.
+1. **Compendium:** bundled SRD 2024 + 2014 (Open5e snapshot, including the conditions); XML compendium import with the lenient parser and all conventions in `DATA-FORMATS.md` §2; source enable/disable; monster/spell/item browse and search with source and edition filters; stat block view in 2024 layout with clickable spells.
 2. **Campaign:** create campaign; notes as a tree of folders with templates and phrase search (folders replaced adventures in the UI, ADR 0010; `[[links]]` deferred to M2); NPCs with carried HP (ADR 0012); PC cards with quick add and Fight Club GM export import.
 3. **Encounters & combat:** builder with 2024 budget; initiative (per creature/group, PC prompt); turn loop with recharge and legendary pools; conditions with durations; damage with type math, temp HP, concentration prompt; death saves; attack/multiattack/save-call buttons; roll log.
 4. **Presenter:** player window on chosen display; scene tree with click-to-live, hover preview, hotkeys, undo; title card / image / map / blank grid scenes; image import with display-size generation; grid with two-click alignment; tokens with generated art (engraved + flat), drag mirroring, hidden/masked/dead states; party placement by clicking the map; player camera presets and viewport rectangle; overlays (scene title, initiative strip, PC health bars, round counter), blackout, handout, break screen; start combat from scene.

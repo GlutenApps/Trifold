@@ -163,9 +163,23 @@ export interface O5eClass extends O5eBase {
   }> | null;
 }
 
-export type O5eKind =
-  'creatures' | 'spells' | 'items' | 'feats' | 'species' | 'backgrounds' | 'classes';
+/**
+ * A condition. Conditions are not filed under a document: one `core` record per condition
+ * carries a description per document (`srd-2014`, `srd-2024`, others), so the fetch script
+ * reads the endpoint once and emits a record for every document that describes it.
+ */
+export interface O5eCondition extends O5eBase {
+  descriptions?: Array<{
+    desc?: string | null;
+    document?: string | null;
+    gamesystem?: string | null;
+  }> | null;
+}
 
+export type O5eKind =
+  'creatures' | 'spells' | 'items' | 'feats' | 'species' | 'backgrounds' | 'classes' | 'conditions';
+
+/** Kinds filed under a document; fetched with `?document__key=`. */
 export const O5E_KINDS: readonly O5eKind[] = [
   'creatures',
   'spells',
@@ -175,3 +189,6 @@ export const O5E_KINDS: readonly O5eKind[] = [
   'backgrounds',
   'classes',
 ];
+
+/** Kinds shared across documents, described per document inside each record. */
+export const O5E_SHARED_KINDS: readonly O5eKind[] = ['conditions'];

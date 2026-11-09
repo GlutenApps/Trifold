@@ -25,6 +25,7 @@ const KINDS: Array<{ id: RecordKind; label: string }> = [
   { id: 'species', label: 'Species' },
   { id: 'background', label: 'Backgrounds' },
   { id: 'class', label: 'Classes' },
+  { id: 'condition', label: 'Conditions' },
 ];
 
 /**

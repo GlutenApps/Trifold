@@ -194,6 +194,9 @@ function normalize(
       return normalizeBackground(node, ctx);
     case 'class':
       return normalizeClass(node, ctx);
+    case 'condition':
+      // Compendium XML has no condition element; conditions come from the SRD snapshot only.
+      return null;
   }
 }
 

@@ -179,6 +179,19 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('button', { name: 'Back to Mage' }).click();
     await expect(console_.getByRole('heading', { name: 'Mage' })).toBeVisible();
 
+    // Conditions come with the bundled SRD snapshot (DESIGN.md §7.3): a Conditions kind with
+    // one record per edition whose bulleted text renders as a list.
+    await console_.getByLabel('Source', { exact: true }).selectOption({ label: 'All sources' });
+    await console_.getByRole('tab', { name: 'Conditions', exact: true }).click();
+    await console_.getByRole('option', { name: /^Blinded/ }).click();
+    await expect(console_.getByRole('heading', { name: 'Blinded' })).toBeVisible();
+    await expect(console_.getByRole('group', { name: 'Switch edition' })).toContainText('Legacy');
+    await expect(console_.getByRole('listitem').first()).toBeVisible();
+    await console_.getByRole('tab', { name: 'Monsters', exact: true }).click();
+    await console_
+      .getByLabel('Source', { exact: true })
+      .selectOption({ label: 'compendium-sample' });
+
     const timing = await console_.evaluate(
       (id) =>
         window.trifold.compendium.search({ kind: 'monster', text: 'dragon', sourceIds: [id] }),

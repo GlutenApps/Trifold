@@ -27,7 +27,7 @@ Trifold has two spaces. The **Library** (the mark at the top left) holds what ev
 
 Trifold ships the System Reference Document, 2024 and 2014 (shown as "legacy"), with attribution on the About card. **Library › Compendium › Sources** lists every source; **Import XML file…** adds a compendium XML file, which stays in your Library. Untick a source to hide its records without removing it; the trash icon removes an imported one.
 
-**Browse** (the console's Compendium tab, or Library › Compendium › Browse) has sub-tabs for Monsters, Spells, Items, Feats, Species, Backgrounds and Classes, a search over names and text, and filters for source and edition; monsters add CR range, type, size, environment and a named-NPC filter, spells add level. `Ctrl+K` jumps to the search. Where a record exists in both rulesets, a **2024 / Legacy** switch at the top of the detail flips between them; **Source text** shows the text as imported.
+**Browse** (the console's Compendium tab, or Library › Compendium › Browse) has sub-tabs for Monsters, Spells, Items, Feats, Species, Backgrounds, Classes and Conditions, a search over names and text, and filters for source and edition; monsters add CR range, type, size, environment and a named-NPC filter, spells add level. `Ctrl+K` jumps to the search. Where a record exists in both rulesets, a **2024 / Legacy** switch at the top of the detail flips between them; **Source text** shows the text as imported.
 
 Monster stat blocks use the 2024 layout whatever their edition. Attack and roll badges are clickable: the result goes to the shared roll log and shows at the top of the record. Shift-click rolls with advantage, Ctrl-click with disadvantage.
 
@@ -57,7 +57,7 @@ Create a campaign in **Library › Campaigns** (name, **Create campaign**) or im
 
 **HP.** Type an amount, pick a damage type if it matters, and press **Damage** (or Enter). The heart heals that amount, the shield grants it as temp HP, and the fan-out icon opens the damage pop-up to deal it to several combatants at full or half each. A PC at 0 HP gets a **Death save** button; successes and failures show on the row.
 
-**Conditions.** Pick a condition and a duration: none, rounds, until the start or end of the active turn, or until a save. Exhaustion stacks a level each time. A save-ended condition raises a banner at the end of the turn with **Saved, remove it** and **Failed**. Concentration takes a spell name; damage to that combatant raises a banner with the DC and **Failed, drop it** or **Kept it**.
+**Conditions.** Pick a condition and a duration: none, rounds, until the start or end of the active turn, or until a save. The book button beside Add opens the picked condition's rules in the Compendium tab. Exhaustion stacks a level each time. A save-ended condition raises a banner at the end of the turn with **Saved, remove it** and **Failed**. Concentration takes a spell name; damage to that combatant raises a banner with the DC and **Failed, drop it** or **Kept it**.
 
 **Attacks and saves from the stat block.** The selected creature's stat block sits beside the list. Click an attack to roll to hit and damage; the damage pop-up lets you tick who takes it, full or half, and press **Apply** (`Ctrl+Enter`). **Roll all** on Multiattack rolls every attack. A save badge rolls the save for every creature in the fight, marks each saved or failed, pre-selects half or full damage, and shows the PCs' bonuses so you can ask the players.
 
