@@ -347,6 +347,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async suggest(text, opts) {
         return ctx.session.require().index.suggest(text, opts);
       },
+      async searchText(text, opts) {
+        return ctx.session.require().index.searchText(text, opts);
+      },
     },
   };
 }

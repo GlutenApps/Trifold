@@ -367,6 +367,16 @@ test('console, Library, import, search, stat block and player window all work en
     );
     await expect(console_.getByLabel('Find in notes')).toHaveValue('owes the party');
 
+    // Compendium text (ADR 0017): a phrase from a stat block finds the record through the index.
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
+    await searchField.fill('mucous cloud');
+    const recordText = searchResults.getByRole('group', { name: 'Compendium text' });
+    await expect(recordText).toContainText('Aboleth');
+    await expect(recordText.locator('mark').first()).toHaveText(/mucous cloud/i);
+    await recordText.getByRole('option').first().click();
+    await expect(tab('Compendium')).toHaveAttribute('aria-selected', 'true');
+    await expect(console_.getByRole('heading', { name: 'Aboleth' })).toBeVisible();
+
     // The strip's Dice button opens the shared pool at every window width. (Below 1180 px the
     // strip hides its own dice chips, and CI screens are narrower than that, so roll here.)
     await strip.getByRole('button', { name: 'Dice', exact: true }).click();

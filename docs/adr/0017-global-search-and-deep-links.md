@@ -79,6 +79,11 @@ existing callers.
 - Three sub-tab and selection states stay local (Campaign sub-tab, Notes selection, Encounters
   draft); the hook drives them rather than moving them into stores.
 - The `search` pop-up is the first without a header; the ADR 0009 pattern otherwise holds.
-- Not done: tracks and playlists; compendium record text in the global search (the Compendium
-  tab's own search covers it); listing every mention past the group's six rows; a hotkey to open
-  a result in the other group; conditions in the compendium (fetched from Open5e in a separate change).
+- **Compendium text and Show all** (added 2026-11-09): a **Compendium text** group lists
+  records whose text holds the phrase but whose name does not, from the same FTS5 index as the
+  Compendium tab (`compendium.searchText`: a phrase match on the text column, bm25 order,
+  editions collapsed, an FTS `snippet()` per row). Any group with more rows than it shows has a
+  **Show all** button in its header: the pop-up then lists only that group, every row (a
+  compendium group asks the index again for up to 100), with a Back row above it; Escape steps
+  back out before it clears. A compendium count that reached the index's limit reads `12+`.
+- Not done: tracks and playlists; a hotkey to open a result in the other group; conditions in the compendium (fetched from Open5e in a separate change).

@@ -3,9 +3,9 @@ import { navigate } from '../../navigate';
 import { hk } from '../../platform';
 import {
   flattenGroups,
-  groupResults,
   SEARCH_COMPACT_BELOW,
   useSearchStore,
+  viewGroups,
   type SearchGroupView,
   type SearchResult,
 } from '../../stores/searchStore';
@@ -27,12 +27,15 @@ const optionId = (key: string) => `gs-${key.replace(/[^a-z0-9]/gi, '-')}`;
 function useResults(): { groups: SearchGroupView[]; active: SearchResult | null } {
   const local = useSearchStore((s) => s.local);
   const compendium = useSearchStore((s) => s.compendium);
+  const compendiumText = useSearchStore((s) => s.compendiumText);
+  const expanded = useSearchStore((s) => s.expanded);
+  const capped = useSearchStore((s) => s.capped);
   const activeKey = useSearchStore((s) => s.activeKey);
   return useMemo(() => {
-    const groups = groupResults(local.concat(compendium));
+    const groups = viewGroups({ local, compendium, compendiumText, expanded, capped });
     const flat = flattenGroups(groups);
     return { groups, active: flat.find((r) => r.key === activeKey) ?? flat[0] ?? null };
-  }, [local, compendium, activeKey]);
+  }, [local, compendium, compendiumText, expanded, capped, activeKey]);
 }
 
 export const SearchField = forwardRef<HTMLInputElement, { autoFocus?: boolean }>(
@@ -56,6 +59,11 @@ export const SearchField = forwardRef<HTMLInputElement, { autoFocus?: boolean }>
         if (store.activate()) e.currentTarget.blur();
       } else if (e.key === 'Escape') {
         e.preventDefault();
+        // Out of Show all first; the next Escape clears.
+        if (store.expanded) {
+          store.setExpanded(null);
+          return;
+        }
         clear();
         closePop();
         e.currentTarget.blur();
@@ -158,8 +166,12 @@ export function SearchResults({ withField }: { withField: boolean }) {
   const loading = useSearchStore((s) => s.loading);
   const error = useSearchStore((s) => s.error);
   const setActive = useSearchStore((s) => s.setActive);
+  const expanded = useSearchStore((s) => s.expanded);
+  const setExpanded = useSearchStore((s) => s.setExpanded);
   const closePop = useShellStore((s) => s.closePop);
   const { groups, active } = useResults();
+  /** Buttons in the list keep the cursor in the field, so the arrows still move. */
+  const keepFocus = (e: { preventDefault(): void }) => e.preventDefault();
   const trimmed = query.trim();
 
   useEffect(() => {
@@ -191,11 +203,40 @@ export function SearchResults({ withField }: { withField: boolean }) {
         aria-label="Search results"
         data-testid="search-results"
       >
+        {expanded && (
+          <div className="row search-expanded-head">
+            <button
+              type="button"
+              className="chrome-btn xs"
+              aria-label="Back to all results"
+              title="Back to all results (Esc)"
+              onMouseDown={keepFocus}
+              onClick={() => setExpanded(null)}
+            >
+              <Icon name="left" />
+            </button>
+            <span className="muted small">All results · showing one type</span>
+          </div>
+        )}
         {groups.map((g) => (
           <div key={g.group} role="group" aria-label={g.label} className="search-group">
             <div className="search-group-head">
               {g.label}
-              <span className="muted">{g.results.length + g.more}</span>
+              <span className="muted">
+                {g.results.length + g.more}
+                {g.capped ? '+' : ''}
+              </span>
+              {!expanded && (g.more > 0 || g.capped) && (
+                <button
+                  type="button"
+                  className="link small search-show-all"
+                  aria-label={`Show all ${g.label}`}
+                  onMouseDown={keepFocus}
+                  onClick={() => setExpanded(g.group)}
+                >
+                  Show all
+                </button>
+              )}
             </div>
             {g.results.map((r) => (
               <div
@@ -220,7 +261,6 @@ export function SearchResults({ withField }: { withField: boolean }) {
                 )}
               </div>
             ))}
-            {g.more > 0 && <div className="muted small search-more">+{g.more} more</div>}
           </div>
         ))}
         {trimmed && loading && !groups.some((g) => g.group === 'compendium') && (
@@ -232,7 +272,7 @@ export function SearchResults({ withField }: { withField: boolean }) {
           </p>
         )}
         {trimmed && !loading && groups.length === 0 && !error && (
-          <p className="muted search-status">Nothing named “{trimmed}”.</p>
+          <p className="muted search-status">Nothing matches “{trimmed}”.</p>
         )}
         {!trimmed && (
           <p className="muted search-status">
