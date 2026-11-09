@@ -687,6 +687,31 @@ body.resizing {
   text-overflow: ellipsis;
 }
 
+/* A text match: the title line, then the phrase in context on a second line. */
+.search-result.has-snippet {
+  flex-wrap: wrap;
+  height: auto;
+  min-height: var(--control-h);
+  padding-top: 4px;
+  padding-bottom: 4px;
+  row-gap: 2px;
+}
+
+.search-snippet {
+  flex-basis: 100%;
+  padding-left: 22px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-snippet mark {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--text);
+  border-radius: 2px;
+}
+
 .search-more,
 .search-status {
   padding: 4px 8px;

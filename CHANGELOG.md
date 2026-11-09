@@ -8,6 +8,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 - Global search in the middle of the top bar (`Ctrl+F`): notes, folders, NPCs, party, encounters and their members, scenes, compendium records and web tabs by name, grouped and ranked, with keyboard navigation (ADR 0017).
 - One deep-link contract, `navigate({ type, id, anchor? })`, that opens an item in its tab or tool, selects it and flashes it; a closed tab lands away from the VTT and a running fight. Documented in `docs/DEEP-LINKS.md` for note links and other features to reuse.
+- Global search finds text too: a Mentioned in group lists notes, encounter DM notes and NPC, PC and scene notes that contain the phrase, with a snippet, and opens a note at that occurrence.
 - `compendium.suggest`: a name-only lookup across every kind on the index, for search.
 - Quick notes (ADR 0018): a dock tool and `Ctrl+N` to write a titled note mid-session without leaving the current tab; notes go into a Quick Notes folder that is made when missing, and the tool lists and edits every note in it.
 - Conditions in the compendium: the SRD 5.1 and 5.2.1 condition texts are fetched at build time with the rest of the snapshot, listed under a Conditions tab, found by search, and opened from the combat tracker's condition lane.

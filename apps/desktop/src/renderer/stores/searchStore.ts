@@ -1,7 +1,21 @@
 import { create } from 'zustand';
 import type { CampaignBundle, CompendiumSuggestion } from '@trifold/api';
-import { ancestorsOf, rankByName, TIER_RANK, type MatchTier } from '@trifold/rules';
-import { errorMessage, type RecordKind, type SceneKind, type WebTab } from '@trifold/schema';
+import {
+  ancestorsOf,
+  phraseSnippets,
+  rankByName,
+  stripMarkdown,
+  TIER_RANK,
+  type MatchTier,
+  type SearchSnippet,
+} from '@trifold/rules';
+import {
+  errorMessage,
+  type Note,
+  type RecordKind,
+  type SceneKind,
+  type WebTab,
+} from '@trifold/schema';
 import type { IconName } from '../features/shell/icons';
 import { navigate, navKey, type NavTarget } from '../navigate';
 import { useCampaignStore } from './campaignStore';
@@ -9,7 +23,9 @@ import { useShellStore } from './shellStore';
 
 /**
  * Global search (ADR 0017): names and titles across the open campaign, the shell's web tabs and
- * the compendium, ranked exact, prefix, word, substring and grouped by type. The campaign half
+ * the compendium, ranked exact, prefix, word, substring and grouped by type; and, under
+ * Mentioned in, the phrase in the text of notes, encounter DM notes, NPC, PC and scene notes,
+ * each with a snippet, opening at that occurrence (`searchMentions`). The campaign half
  * is ranked in memory on every keystroke (`searchLocal`, a pure function); the compendium half
  * asks main's SQLite index through `compendium.suggest` after a short debounce, and a stale
  * answer is dropped by sequence number. Picking a result goes through `navigate` and nothing
@@ -17,7 +33,7 @@ import { useShellStore } from './shellStore';
  * features/shell/GlobalSearch.tsx render it.
  */
 export type SearchGroup =
-  'notes' | 'npcs' | 'party' | 'encounters' | 'scenes' | 'compendium' | 'webTabs';
+  'notes' | 'npcs' | 'party' | 'encounters' | 'scenes' | 'mentions' | 'compendium' | 'webTabs';
 
 export const GROUP_ORDER: readonly SearchGroup[] = [
   'notes',
@@ -25,6 +41,7 @@ export const GROUP_ORDER: readonly SearchGroup[] = [
   'party',
   'encounters',
   'scenes',
+  'mentions',
   'compendium',
   'webTabs',
 ];
@@ -35,6 +52,7 @@ export const GROUP_LABELS: Record<SearchGroup, string> = {
   party: 'Party',
   encounters: 'Encounters',
   scenes: 'Scenes',
+  mentions: 'Mentioned in',
   compendium: 'Compendium',
   webTabs: 'Web tabs',
 };
@@ -46,9 +64,12 @@ export const SEARCH_COMPACT_BELOW = 960;
 /** Compendium rows asked for; the group shows GROUP_LIMIT and counts the rest. */
 const SUGGEST_LIMIT = 12;
 const DEBOUNCE_MS = 80;
+/** Text search starts at this many characters; one letter would match nearly every note. */
+export const MENTION_MIN = 2;
 
 export interface SearchResult {
-  /** `type:id`, the same string the landing element carries as `data-nav`. */
+  /** Unique per row: `type:id` for a name match (the landing's `data-nav`), `mention:type:id`
+   *  for a text match, so a note can be listed under Notes and under Mentioned in at once. */
   key: string;
   group: SearchGroup;
   title: string;
@@ -57,6 +78,10 @@ export interface SearchResult {
   tier: MatchTier;
   icon: IconName;
   target: NavTarget;
+  /** A text match's first occurrence in context. */
+  snippet?: SearchSnippet;
+  /** Breaks ties inside a tier, higher first: how often the phrase occurs. */
+  weight?: number;
 }
 
 export interface SearchGroupView {
@@ -224,7 +249,91 @@ export function fromSuggestion(row: CompendiumSuggestion): SearchResult {
 
 const byRank = (a: SearchResult, b: SearchResult) =>
   TIER_RANK[a.tier] - TIER_RANK[b.tier] ||
+  (b.weight ?? 0) - (a.weight ?? 0) ||
   a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+
+/** A note body as the editor shows it; computed once per saved note, not per keystroke. */
+const plainBodies = new WeakMap<Note, string>();
+function plainBody(note: Note): string {
+  let text = plainBodies.get(note);
+  if (text === undefined) {
+    text = stripMarkdown(note.body);
+    plainBodies.set(note, text);
+  }
+  return text;
+}
+
+const mentionDetail = (count: number, where: string) =>
+  joinDetail([`${count} mention${count === 1 ? '' : 's'}`, where]);
+
+/**
+ * The phrase in the campaign's text (ADR 0017): note bodies, encounter DM notes, and the notes
+ * on NPCs, PCs and scenes. Case-insensitive, matched as one phrase; one row per item with its
+ * first snippet, opening at that occurrence where the panel can show it (a note's body, an
+ * encounter's DM notes). Folders have no text.
+ */
+export function searchMentions(query: string, bundle: CampaignBundle | null): SearchResult[] {
+  const phrase = query.trim();
+  if (!bundle || phrase.length < MENTION_MIN) return [];
+  const out: SearchResult[] = [];
+  const opts = { maxSnippets: 1, context: 40 };
+  const push = (
+    type: 'note' | 'encounter' | 'npc' | 'pc' | 'scene',
+    id: string,
+    title: string,
+    text: string,
+    where: string,
+    icon: IconName,
+    target: (occurrence: number) => NavTarget,
+  ) => {
+    if (!text) return;
+    const { count, snippets } = phraseSnippets(text, phrase, opts);
+    const first = snippets[0];
+    if (!count || !first) return;
+    out.push({
+      key: `mention:${navKey(type, id)}`,
+      group: 'mentions',
+      title,
+      detail: mentionDetail(count, where),
+      tier: 'substring',
+      icon,
+      target: target(first.occurrence),
+      snippet: first,
+      weight: count,
+    });
+  };
+  for (const n of bundle.notes) {
+    if (n.kind === 'folder' || !n.body) continue;
+    const path = ancestorsOf(bundle.notes, n)
+      .map((a) => a.title)
+      .join(' / ');
+    push('note', n.id, n.title, plainBody(n), path ? `Note · ${path}` : 'Note', 'card', (o) => ({
+      type: 'note',
+      id: n.id,
+      anchor: { phrase, occurrence: o },
+    }));
+  }
+  for (const e of bundle.encounters) {
+    push('encounter', e.id, e.name, e.notes, 'Encounter DM notes', 'encounters', (o) => ({
+      type: 'encounter',
+      id: e.id,
+      anchor: { field: 'notes', phrase, occurrence: o },
+    }));
+  }
+  for (const n of bundle.npcs) {
+    push('npc', n.id, n.name, n.notes, 'NPC notes', 'person', () => ({ type: 'npc', id: n.id }));
+  }
+  for (const p of bundle.pcs) {
+    push('pc', p.id, p.name, p.notes, 'PC notes', 'party', () => ({ type: 'pc', id: p.id }));
+  }
+  for (const s of bundle.scenes) {
+    push('scene', s.id, s.title, s.notes, 'Scene notes', 'scenes', () => ({
+      type: 'scene',
+      id: s.id,
+    }));
+  }
+  return out;
+}
 
 /** Results in display order: fixed group order, best tier first inside, capped per group. */
 export function groupResults(
@@ -247,6 +356,13 @@ export function groupResults(
 
 export const flattenGroups = (groups: readonly SearchGroupView[]): SearchResult[] =>
   groups.flatMap((g) => g.results);
+
+/** Everything answered in memory: name matches, then text mentions. */
+function localResults(query: string, bundle: CampaignBundle | null): SearchResult[] {
+  return searchLocal(query, bundle, useShellStore.getState().webTabs).concat(
+    searchMentions(query, bundle),
+  );
+}
 
 interface SearchState {
   query: string;
@@ -286,7 +402,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   setQuery(query) {
     const trimmed = query.trim();
     const bundle = useCampaignStore.getState().current;
-    const local = trimmed ? searchLocal(trimmed, bundle, useShellStore.getState().webTabs) : [];
+    const local = trimmed ? localResults(trimmed, bundle) : [];
     if (timer) window.clearTimeout(timer);
     const mine = ++seq;
     if (!trimmed) {
@@ -362,7 +478,7 @@ useCampaignStore.subscribe((s, prev) => {
   const trimmed = query.trim();
   if (trimmed) {
     useSearchStore.setState({
-      local: searchLocal(trimmed, s.current, useShellStore.getState().webTabs),
+      local: localResults(trimmed, s.current),
     });
   }
 });

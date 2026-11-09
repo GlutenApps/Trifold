@@ -8,6 +8,7 @@ import {
   fromSuggestion,
   groupResults,
   searchLocal,
+  searchMentions,
   useSearchStore,
 } from './searchStore';
 
@@ -256,5 +257,88 @@ describe('useSearchStore', () => {
       },
     });
     expect(useSearchStore.getState().local.filter((r) => r.group === 'npcs')).toHaveLength(2);
+  });
+});
+
+describe('searchMentions', () => {
+  function withText(): CampaignBundle {
+    const b = bundle();
+    const notes = b.notes as unknown as Array<Record<string, unknown>>;
+    notes[1]!.body = '**Hesper** keeps the lamp lit. Nobody trusts Hesper. hesper again.';
+    notes.push({
+      id: 'n3',
+      kind: 'note',
+      title: 'Bridge',
+      parentId: null,
+      order: 2,
+      body: 'Hesper waits at the bridge.',
+    });
+    (b.encounters[0] as unknown as Record<string, unknown>).notes =
+      'If Hesper runs, the bandits scatter.';
+    (b.npcs[0] as unknown as Record<string, unknown>).notes = 'Owes the guild.';
+    return b;
+  }
+
+  it('finds the phrase in note bodies and DM notes, most mentions first, with an anchor to land on', () => {
+    const results = searchMentions('hesper', withText());
+    expect(results.map((r) => [r.title, r.weight])).toEqual([
+      ['Hesper’s letter', 3],
+      ['Bridge', 1],
+      ['Ambush at the bridge', 1],
+    ]);
+    const letter = results[0]!;
+    expect(letter).toMatchObject({
+      key: 'mention:note:n1',
+      group: 'mentions',
+      detail: '3 mentions · Note · Part 1',
+      target: { type: 'note', id: 'n1', anchor: { phrase: 'hesper', occurrence: 0 } },
+    });
+    // Markdown is stripped before matching, so the snippet reads as the editor shows it.
+    expect(letter.snippet).toMatchObject({ before: '', match: 'Hesper' });
+    expect(letter.snippet!.after).toMatch(/^ keeps the lamp/);
+    expect(results[2]!.target).toEqual({
+      type: 'encounter',
+      id: 'e1',
+      anchor: { field: 'notes', phrase: 'hesper', occurrence: 0 },
+    });
+    // NPC notes are searched too.
+    expect(searchMentions('guild', withText())[0]).toMatchObject({
+      title: 'Hesper',
+      detail: '1 mention · NPC notes',
+      target: { type: 'npc', id: 'npc1' },
+    });
+  });
+
+  it('waits for two characters and lists a note under both Notes and Mentioned in', () => {
+    expect(searchMentions('h', withText())).toEqual([]);
+    useCampaignStore.setState({ current: withText() });
+    useSearchStore.getState().setQuery('bridge');
+    const groups = useSearchStore.getState().groups();
+    const notes = groups.find((g) => g.group === 'notes')!;
+    const mentions = groups.find((g) => g.group === 'mentions');
+    expect(notes.results.map((r) => r.key)).toContain('note:n3');
+    expect(mentions?.results.map((r) => r.key)).toEqual(['mention:note:n3']);
+    useSearchStore.getState().clear();
+  });
+});
+
+describe('searchMentions on a large campaign', () => {
+  it('stays inside the 50 ms search budget per keystroke once bodies are read', () => {
+    const b = bundle();
+    const paragraph =
+      'The **party** reached the ford at dusk. [Hesper](x) had warned them about the toll. ';
+    b.notes = Array.from({ length: 800 }, (_, i) => ({
+      id: `big${i}`,
+      kind: 'note',
+      title: `Session ${i}`,
+      parentId: null,
+      order: i,
+      body: paragraph.repeat(40),
+    })) as unknown as CampaignBundle['notes'];
+    searchMentions('warm up', b);
+    const started = performance.now();
+    for (const q of ['fo', 'for', 'ford', 'ford a', 'ford at']) searchMentions(q, b);
+    expect((performance.now() - started) / 5).toBeLessThan(50);
+    expect(searchMentions('toll', b)).toHaveLength(800);
   });
 });

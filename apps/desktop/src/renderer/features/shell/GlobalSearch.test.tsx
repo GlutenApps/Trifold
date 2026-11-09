@@ -136,6 +136,29 @@ describe('GlobalSearch', () => {
     expect(field).toHaveValue('');
   });
 
+  it('lists a phrase found inside a note with a snippet and opens the note at it', async () => {
+    render(<AppShell />);
+    openCampaign();
+    await waitFor(() => expect(useShellStore.getState().hydratedFor).not.toBeNull());
+    await userEvent.click(
+      screen.getByRole('combobox', { name: 'Search the campaign and compendium' }),
+    );
+    await userEvent.keyboard('dear');
+    const results = await screen.findByTestId('search-results');
+    const mentions = within(results).getByRole('group', { name: 'Mentioned in' });
+    const row = within(mentions).getByRole('option');
+    expect(row).toHaveTextContent('Hesper’s letter');
+    expect(row.querySelector('mark')).toHaveTextContent('Dear');
+    await userEvent.keyboard('{Enter}');
+    // The Notes panel opens the note with the phrase found in it.
+    const campaign = screen.getByRole('tabpanel', { name: 'Campaign' });
+    await waitFor(() =>
+      expect(within(campaign).getByTestId('note-pane')).toHaveAttribute('data-nav', 'note:n1'),
+    );
+    expect(within(campaign).getByLabelText('Find in notes')).toHaveValue('dear');
+    expect(useNavStore.getState().pending).toBeNull();
+  });
+
   it('asks the compendium once the typing pauses and lists its hits last', async () => {
     const hit: CompendiumSuggestion = {
       id: 'r1',
