@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { Note, NoteTemplate } from '@trifold/schema';
 import { ancestorsOf, descendantsOf, flattenTree, nextOrder, searchNotes } from '@trifold/rules';
 import { landOn, navKey, useNavTarget } from '../../navigate';
@@ -113,13 +113,13 @@ function useDraft(note: Note) {
   return { draft, update, dirty, flush };
 }
 
-function BackButton({ onBack }: { onBack(): void }) {
+function BackButton({ onBack, label = 'Back to notes' }: { onBack(): void; label?: string }) {
   return (
     <button
       type="button"
       className="chrome-btn notes-back"
-      aria-label="Back to notes"
-      title="Back to notes"
+      aria-label={label}
+      title={label}
       onClick={onBack}
     >
       <Icon name="left" />
@@ -127,14 +127,23 @@ function BackButton({ onBack }: { onBack(): void }) {
   );
 }
 
-function NotePane({
+/**
+ * One open note: title, tags, the formatted body and delete, saving itself as it changes. The
+ * notes panel shows it beside the tree; the Quick notes tool (ADR 0018) shows it in the dock
+ * with its own Back label and extra `actions` (move, open in Notes) before delete.
+ */
+export function NotePane({
   note,
   highlight,
   onBack,
+  backLabel,
+  actions,
 }: {
   note: Note;
   highlight: Highlight | null;
   onBack(): void;
+  backLabel?: string;
+  actions?: ReactNode;
 }) {
   const removeNote = useCampaignStore((s) => s.removeNote);
   const { draft, update, dirty, flush } = useDraft(note);
@@ -151,7 +160,7 @@ function NotePane({
   return (
     <div className="notes-pane" data-testid="note-pane" data-nav={navKey('note', note.id)}>
       <div className="row note-head">
-        <BackButton onBack={onBack} />
+        <BackButton onBack={onBack} label={backLabel} />
         <input
           ref={titleRef}
           className="note-title"
@@ -163,6 +172,7 @@ function NotePane({
         <span className="muted small note-status" aria-live="polite">
           {dirty ? 'Unsaved' : 'Saved'}
         </span>
+        {actions}
         {confirmDelete ? (
           <InlineConfirm
             name={note.title}

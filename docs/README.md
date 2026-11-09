@@ -37,3 +37,4 @@ One short file per decision that deviates from or refines `DESIGN.md`. Number th
 | [0014](adr/0014-panel-floor-and-folding.md)                      | Panel floors (480 px stage, 360 px dock), folding order, and one set of layout switch points.                    |
 | [0015](adr/0015-backups-off-the-computer-and-campaign-export.md) | A second backup location, restore from any zip, and `.trifold-campaign` export and import.                       |
 | [0017](adr/0017-global-search-and-deep-links.md)                 | Global search in the middle of the top bar, over one deep-link contract that every panel implements.             |
+| [0018](adr/0018-quick-notes.md)                                  | Quick notes: a dock tool and Ctrl+N that file titled notes in a Quick Notes folder found by its role.            |

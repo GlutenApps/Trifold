@@ -16,7 +16,7 @@ Trifold has two spaces. The **Library** (the mark at the top left) holds what ev
 
 - **Top bar.** The mark returns to the Library. The campaign name is a menu: switch campaign, New campaign…, Import campaign XML…, Close campaign. In the middle, **Search** (`Ctrl+F`) finds anything by name: notes and folders, NPCs, party members, encounters (also by who is in them), scenes, compendium records and web tabs, grouped by type. Arrows move, Enter opens the item where it lives and marks it for a moment, Escape clears. In a narrow window the field is behind a search button. On the right: the current layout, Hotkeys (`Ctrl+/`) and Settings (`Ctrl+,`).
 - **Stage.** One or two groups of tabs holding **Campaign**, **Compendium**, **Encounters**, **VTT** (the virtual tabletop: what the TV shows) and any **web tabs**. Each group's `+` opens a tab here and offers **New web tab…**. Drag a tab to move it, or onto the right half of a lone group to split the stage. A closed tab keeps its state.
-- **Dock.** The right-hand column for the two tall tools, **Scenes** and **Music**. Its header toggles each and collapses the dock to icons, where a tool opens as a flyout. **Dice**, **Hotkeys** and **Layouts** are pop-ups from their own buttons.
+- **Dock.** The right-hand column for the tall tools, **Scenes**, **Music** and **Quick notes**. Its header toggles each and collapses the dock to icons, where a tool opens as a flyout. **Dice**, **Hotkeys** and **Layouts** are pop-ups from their own buttons.
 - **Live strip.** The bottom bar, for table state only: the TV with Blackout and undo, round and turn, music and mute, the dice pool. Every strip button also exists in its tool.
 
 **Layouts.** A layout keeps which tabs are open, where, and the dock. Three starters come with the app: **Prep**, **Table** (VTT beside Campaign, Encounters and Compendium) and **Combat** (Encounters alone on the right). The Layouts pop-up applies, overwrites, renames, reorders and deletes them, saves the screen as a new one, and brings the starters back. `Ctrl+1` to `Ctrl+9` apply the first nine.
@@ -113,6 +113,12 @@ A web tab is a page you choose, hosted inside the stage. In a group's `+` menu p
 
 **Logs.** `trifold-<date>.log` in the Library's `logs` folder; before a Library is open, in the app's data folder.
 
+## Quick notes
+
+Press `Ctrl+N` anywhere in the console, or open **Quick notes** in the dock, to write something down without leaving what you are doing. Give it a title (Save stays off until it has one), write as much as you like with the same formatting as any note, then press **Save** or `Ctrl+S`. The cursor goes back where it was. Escape throws the draft away.
+
+Quick notes are ordinary notes kept in a folder called **Quick Notes** in the Campaign tab's Notes. Trifold makes the folder when it is missing, even if you deleted it, and you can rename it. Below the form the tool lists every quick note, newest first, with a find field. Open one to rename, tag, edit or delete it, move it to another folder, or open it in Notes. A note moved out of the Quick Notes folder becomes an ordinary note and leaves the list.
+
 ## Hotkeys
 
 Plain letter keys do nothing while you are typing in a field.
@@ -120,6 +126,8 @@ Plain letter keys do nothing while you are typing in a field.
 | Area | Action | Combo |
 |---|---|---|
 | Console | Search the campaign and compendium | `Ctrl+F` |
+| Console | Quick note: jot something down without leaving your place | `Ctrl+N` |
+| Quick notes | Save the quick note | `Ctrl+S` |
 | Console | Jump to the compendium search | `Ctrl+K` |
 | Console | VTT: the scene on the TV | `Ctrl+T` |
 | Console | Music: transport, playlists, tracks | `Ctrl+M` |

@@ -646,6 +646,12 @@ export interface TrifoldApi {
      * there, renumbering that folder. Resolves to the whole list in tree order.
      */
     move(noteId: string, parentId: string | null, index: number): Promise<Note[]>;
+    /**
+     * Saves a quick note (ADR 0018) into the Quick Notes folder, creating the folder at the end
+     * of the root first when the campaign has none (or the DM deleted it). The title must not
+     * be blank. Resolves to the note and the folder it went into.
+     */
+    capture(input: { title: string; body: string }): Promise<{ note: Note; folder: Note }>;
   };
   /** Starting bodies for new notes, shared by every campaign in the Library (ADR 0010). */
   noteTemplates: {
@@ -819,7 +825,7 @@ export const API_METHODS = {
     'choosePackage',
     'importPackage',
   ],
-  notes: ['save', 'remove', 'move'],
+  notes: ['save', 'remove', 'move', 'capture'],
   noteTemplates: ['list', 'save', 'remove'],
   npcs: ['save', 'remove'],
   scenes: ['save', 'remove', 'importImage'],
