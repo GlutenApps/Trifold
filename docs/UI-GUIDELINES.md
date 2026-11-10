@@ -10,11 +10,11 @@ Every button, icon button, text field, number field and select takes its height 
 
 | Tier | Height | Token | Where |
 |---|---|---|---|
-| Regular | 30 px | `--control-h` | Panel content: toolbars, headers, forms, the combat bar, drawers, pop-up bodies |
-| Compact | 26 px | `--control-h-compact` | Window chrome: top bar, tab strips, dock and pop-up headers, live strip, web bar |
+| Regular | 30 px | `--control-h` | Panel content: toolbars, headers, forms, the combat bar, drawers, pop-up bodies; the top bar (44 px tall) |
+| Compact | 26 px | `--control-h-compact` | Window chrome: tab strips, dock and pop-up headers, live strip, web bar |
 | Row | 22 px | `--control-h-row` | Actions inside a list row; icon-only |
 
-The chrome bars (`.topbar`, `.tabs`, `.dock-tabs`, `.dh`, `.fly-head`, `.strip`, `.web-bar`) set `--control-h` to the compact tier, so a plain `btn`, `chrome-btn` or input placed in them is compact automatically. Do not add a new chrome bar without adding it to that list in `shell.css`.
+The chrome bars (`.tabs`, `.dock-tabs`, `.dh`, `.fly-head`, `.strip`, `.web-bar`) set `--control-h` to the compact tier, so a plain `btn`, `chrome-btn` or input placed in them is compact automatically. The top bar is the exception: it is the window's title bar, holds the global search and the campaign switcher, and keeps the regular tier. Do not add a new chrome bar without adding it to that list in `shell.css`.
 
 | Class | Gives you |
 |---|---|

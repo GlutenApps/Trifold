@@ -119,11 +119,11 @@ export class WindowManager {
 
   private static titleBarOptions(): Electron.BrowserWindowConstructorOptions {
     if (process.platform === 'darwin') {
-      return { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 9 } };
+      return { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 14 } };
     }
     return {
       titleBarStyle: 'hidden',
-      titleBarOverlay: { color: RAIL_BG, symbolColor: TEXT_MUTED, height: 34 },
+      titleBarOverlay: { color: RAIL_BG, symbolColor: TEXT_MUTED, height: 44 },
     };
   }
 
