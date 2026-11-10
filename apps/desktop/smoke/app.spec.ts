@@ -374,7 +374,10 @@ test('console, Library, import, search, stat block and player window all work en
     const notesDir = join(library, 'campaigns', 'smoke-campaign', 'notes');
     await expect
       .poll(async () => {
-        const files = await readdir(notesDir).catch(() => [] as string[]);
+        // Only finished files: an atomic write's .tmp can vanish between readdir and read.
+        const files = (await readdir(notesDir).catch(() => [] as string[])).filter((f) =>
+          f.endsWith('.json'),
+        );
         const all = await Promise.all(
           files.map(async (f) => JSON.parse(await readFile(join(notesDir, f), 'utf8'))),
         );
