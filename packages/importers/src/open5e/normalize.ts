@@ -25,6 +25,7 @@ import type {
   O5eBackground,
   O5eBase,
   O5eClass,
+  O5eCondition,
   O5eCreature,
   O5eFeat,
   O5eItem,
@@ -665,8 +666,32 @@ export function normalizeClass(raw: O5eClass, ctx: Open5eContext): CompendiumRec
 }
 
 /** Dispatches one raw Open5e record by endpoint kind; `raw` is cast, not validated. */
+/**
+ * A condition for one document. Conditions are `core` records with a description per document,
+ * so the text is the one filed under `ctx.sourceId`; `describesDocument` says whether there is
+ * one before this is called. Without it the first description stands in, with a warning.
+ */
+export function normalizeCondition(raw: O5eCondition, ctx: Open5eContext): CompendiumRecord {
+  const descriptions = raw.descriptions ?? [];
+  const own = descriptions.find((d) => d.document === ctx.sourceId);
+  if (!own) ctx.warn(`condition ${raw.key}: no ${ctx.sourceId} text; using the first description`);
+  const desc = own ?? descriptions[0];
+  return {
+    ...header(raw, ctx, 'condition'),
+    kind: 'condition',
+    data: { text: text(desc?.desc), extra: {} },
+  };
+}
+
+/** Whether a shared record (a condition) carries text for `documentKey`. */
+export function describesDocument(raw: O5eCondition, documentKey: string): boolean {
+  return (raw.descriptions ?? []).some((d) => d.document === documentKey && text(d.desc));
+}
+
 export function normalizeOpen5e(kind: O5eKind, raw: O5eBase, ctx: Open5eContext): CompendiumRecord {
   switch (kind) {
+    case 'conditions':
+      return normalizeCondition(raw as O5eCondition, ctx);
     case 'creatures':
       return normalizeCreature(raw as O5eCreature, ctx);
     case 'spells':

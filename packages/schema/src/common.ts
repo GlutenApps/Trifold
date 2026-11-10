@@ -14,6 +14,7 @@ export const RecordKind = z.enum([
   'species',
   'background',
   'class',
+  'condition',
 ]);
 export type RecordKind = z.infer<typeof RecordKind>;
 

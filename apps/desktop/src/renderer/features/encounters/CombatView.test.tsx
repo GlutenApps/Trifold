@@ -3,8 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CampaignBundle } from '@trifold/api';
 import type { Combatant, Scene, Token } from '@trifold/schema';
+import { useNavStore } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
+import { useShellStore } from '../../stores/shellStore';
 import { CombatView } from './CombatView';
 
 function combatant(id: string, extra: Partial<Combatant> = {}): Combatant {
@@ -66,6 +68,34 @@ beforeEach(() => {
 });
 
 describe('CombatView', () => {
+  it('opens the picked condition’s rules through a deep link, and says when there are none', async () => {
+    useShellStore.setState({ space: 'console' });
+    useNavStore.setState({ pending: null });
+    window.trifold.compendium.findByKey = vi.fn(async (kind: string, key: string) =>
+      kind === 'condition' && key === 'frightened'
+        ? [{ id: 'srd-2024:condition:frightened', kind: 'condition', edition: '2024' } as never]
+        : [],
+    );
+    render(<CombatView />);
+    const rules = await screen.findByRole('button', { name: 'Rules for Frightened' });
+    await userEvent.click(rules);
+    await waitFor(() =>
+      expect(useNavStore.getState().pending?.target).toEqual({
+        type: 'record',
+        id: 'srd-2024:condition:frightened',
+      }),
+    );
+    expect(window.trifold.compendium.findByKey).toHaveBeenCalledWith('condition', 'frightened');
+    // A tracker-only marker has no rules; a condition no source carries says so.
+    await userEvent.selectOptions(screen.getByLabelText('Condition'), 'Hidden');
+    expect(screen.getByRole('button', { name: 'Rules for Hidden' })).toBeDisabled();
+    await userEvent.selectOptions(screen.getByLabelText('Condition'), 'Prone');
+    await userEvent.click(screen.getByRole('button', { name: 'Rules for Prone' }));
+    expect(
+      await screen.findByText('No rules text for Prone in the enabled sources.'),
+    ).toBeInTheDocument();
+  });
+
   it('puts the way back to the encounter list before the round', () => {
     render(<CombatView />);
     const bar = screen.getByRole('heading', { name: /Round 1/ }).parentElement!;

@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CompendiumRecord } from '@trifold/schema';
 import { describe, expect, it } from 'vitest';
-import { normalizeOpen5e, type Open5eContext } from './normalize';
-import type { O5eBase, O5eKind } from './types';
+import { describesDocument, normalizeOpen5e, type Open5eContext } from './normalize';
+import type { O5eBase, O5eCondition, O5eKind } from './types';
 
 const FIXTURE = join(__dirname, '..', '..', '..', '..', 'fixtures', 'open5e-sample.json');
 const sample = JSON.parse(readFileSync(FIXTURE, 'utf8')) as Record<O5eKind, O5eBase[]>;
@@ -151,6 +151,31 @@ describe('normalizeOpen5e', () => {
     const potion = get('items', 'srd-2024_potion-of-healing');
     if (potion.kind !== 'item') throw new Error('kind');
     expect(potion.data).toMatchObject({ typeCode: 'P', magic: true });
+  });
+
+  it('maps a condition to one record per document from its shared descriptions', () => {
+    const raw = sample.conditions[0] as O5eCondition;
+    expect(describesDocument(raw, 'srd-2024')).toBe(true);
+    expect(describesDocument(raw, 'srd-2014')).toBe(true);
+    expect(describesDocument(raw, 'a5e-ag')).toBe(false);
+    const current = get('conditions', 'blinded');
+    const legacy = get('conditions', 'blinded', ctx2014);
+    if (current.kind !== 'condition' || legacy.kind !== 'condition') throw new Error('kind');
+    expect(current.id).toBe('srd-2024:condition:blinded');
+    expect(current.key).toBe('blinded');
+    expect(current.edition).toBe('2024');
+    expect(current.data.text).toContain('While you have the Blinded condition');
+    expect(legacy.edition).toBe('2014');
+    expect(legacy.data.text).toMatch(/^\* A blinded creature/);
+    expect(legacy.data.text).not.toContain('\r');
+    // A document without its own text falls back to the first description, with a warning.
+    const before = warnings.length;
+    const other = normalizeOpen5e('conditions', raw, { ...ctx2024, sourceId: 'a5e-ag' });
+    if (other.kind !== 'condition') throw new Error('kind');
+    expect(other.data.text).toBe(legacy.data.text);
+    expect(warnings.slice(before)).toEqual([
+      'condition blinded: no a5e-ag text; using the first description',
+    ]);
   });
 
   it('maps feats, species, backgrounds and classes', () => {

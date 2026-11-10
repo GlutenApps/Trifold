@@ -1313,5 +1313,38 @@
         "to": []
       }
     }
+  ],
+  "conditions": [
+    {
+      "key": "blinded",
+      "document": {
+        "name": "5e Core Concepts",
+        "key": "core",
+        "type": "MISC",
+        "display_name": "5e Core",
+        "publisher": {
+          "name": "Open5e",
+          "key": "open5e"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2014",
+          "key": "5e-2014"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "descriptions": [
+        {
+          "desc": "* A blinded creature can't see and automatically fails any ability check that requires sight.\r\n* Attack rolls against the creature have advantage, and the creature’s attack rolls have disadvantage.",
+          "document": "srd-2014",
+          "gamesystem": "5e-2014"
+        },
+        {
+          "desc": "While you have the Blinded condition, you experience the following effects.\n * Can’t See. You can’t see and automatically fail any ability check that requires sight.\n * Attacks Affected. Attack rolls against you have Advantage, and your attack rolls have Disadvantage.",
+          "document": "srd-2024",
+          "gamesystem": "5e-2024"
+        }
+      ],
+      "name": "Blinded"
+    }
   ]
 }

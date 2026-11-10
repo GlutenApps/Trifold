@@ -75,6 +75,7 @@ const KIND_LABELS: Record<RecordKind, string> = {
   species: 'Species',
   background: 'Background',
   class: 'Class',
+  condition: 'Condition',
 };
 
 const SCENE_LABELS: Record<SceneKind, string> = {

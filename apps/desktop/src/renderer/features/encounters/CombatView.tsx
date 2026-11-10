@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ulid } from 'ulid';
 import type { Combatant, ConditionDuration, Scene, Token } from '@trifold/schema';
+import { normalizeKey } from '@trifold/rules';
 import { registerHotkey } from '../../hotkeys';
+import { navigate } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore, type DamageTarget } from '../../stores/combatStore';
 import { COMBAT_NOTES_SLOT, hasPendingSave, scheduleSave } from '../../stores/pendingSaves';
@@ -57,6 +59,21 @@ const CONDITIONS = [
   'Surprised',
   'Hidden',
 ];
+/** Markers the tracker keeps that have no rules text in the compendium (DESIGN.md §7.3). */
+const TRACKER_ONLY = new Set(['Concentrating', 'Surprised', 'Hidden']);
+
+/**
+ * Opens a condition's rules in the Compendium tab through the deep link (ADR 0017), preferring
+ * the campaign's edition. Resolves to a message when no enabled source has it.
+ */
+async function openConditionRules(name: string): Promise<string | null> {
+  const matches = await window.trifold.compendium.findByKey('condition', normalizeKey(name));
+  const preferred = useCampaignStore.getState().current?.campaign.preferredEdition;
+  const pick = matches.find((m) => m.edition === preferred) ?? matches[0];
+  if (!pick) return `No rules text for ${name} in the enabled sources.`;
+  navigate({ type: 'record', id: pick.id });
+  return null;
+}
 const DAMAGE_TYPES = [
   '',
   'bludgeoning',
@@ -259,6 +276,7 @@ function CombatantDrawer({
     store.linkToken(c.id, token.id);
   };
   const [condition, setCondition] = useState('Frightened');
+  const [rulesMissing, setRulesMissing] = useState<string | null>(null);
   const [durationKind, setDurationKind] = useState<
     'none' | 'rounds' | 'untilStartOfTurn' | 'untilEndOfTurn' | 'untilSave'
   >('none');
@@ -587,7 +605,28 @@ function CombatantDrawer({
               >
                 <Icon name="plus" />
               </button>
+              <button
+                type="button"
+                className="chrome-btn"
+                aria-label={`Rules for ${condition}`}
+                title={
+                  TRACKER_ONLY.has(condition)
+                    ? 'A tracker marker; it has no rules text'
+                    : `Open ${condition} in the compendium`
+                }
+                disabled={TRACKER_ONLY.has(condition)}
+                onClick={() => {
+                  void openConditionRules(condition).then(setRulesMissing);
+                }}
+              >
+                <Icon name="tome" />
+              </button>
             </div>
+            {rulesMissing && (
+              <p className="muted small" role="status">
+                {rulesMissing}
+              </p>
+            )}
           </div>
 
           <span className="lane-label">Concentration</span>
