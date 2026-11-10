@@ -21,7 +21,10 @@ import { WindowManager } from './windows';
 const userDataOverride = process.env['TRIFOLD_USER_DATA'];
 if (userDataOverride) app.setPath('userData', userDataOverride);
 
-app.setAppUserModelId('app.trifold.desktop');
+// Windows groups taskbar buttons by this ID and draws them with the icon of the Start-menu
+// shortcut registered under it. Unpackaged runs (dev, smoke) get their own ID, so an installed
+// Trifold's shortcut never lends them its icon or merges with their windows.
+app.setAppUserModelId(app.isPackaged ? 'app.trifold.desktop' : 'app.trifold.desktop.dev');
 registerMediaScheme();
 
 if (!app.requestSingleInstanceLock()) {
