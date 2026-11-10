@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { mediaUrl } from '@trifold/api';
 import type { Scene } from '@trifold/schema';
 import { registerHotkey } from '../../hotkeys';
+import { landOn, navKey, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useMusicStore } from '../../stores/musicStore';
 import { usePresenterStore } from '../../stores/presenterStore';
@@ -111,6 +112,14 @@ export function ScenesTool() {
     return () => offs.forEach((off) => off());
   }, [scenes, liveId, selectedId, send]);
 
+  // Deep links (ADR 0017): select the scene and show its row; a map also opens the VTT.
+  useNavTarget('scene', (target) => {
+    setQuery('');
+    select(target.id);
+    landOn(navKey('scene', target.id));
+    return true;
+  });
+
   if (!current) return <p className="muted">Open a campaign first.</p>;
 
   const kindIcon = (scene: Scene) =>
@@ -216,6 +225,7 @@ export function ScenesTool() {
               className={`scene-row kind-${scene.kind}${isLive ? ' live' : ''}${isSelected ? ' selected' : ''}${dnd.rowClass(scene)}`}
               style={{ paddingLeft: 8 + depth * 14 }}
               data-testid="scene-row"
+              data-nav={navKey('scene', scene.id)}
               onMouseEnter={(e) => hoverRow(scene, e.currentTarget)}
               onClick={() => select(scene.id)}
               onDoubleClick={() => send(scene)}

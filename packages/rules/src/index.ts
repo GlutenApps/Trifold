@@ -12,3 +12,4 @@ export * from './combat/index';
 export * from './art/glyph';
 export * from './tree';
 export * from './noteSearch';
+export * from './nameSearch';

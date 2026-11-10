@@ -425,6 +425,11 @@ export interface CompendiumRow {
   rarity: string | null;
 }
 
+/** One global-search hit from the compendium (ADR 0017): a row plus how its name matched. */
+export interface CompendiumSuggestion extends CompendiumRow {
+  tier: 'exact' | 'prefix' | 'word' | 'substring';
+}
+
 export interface CompendiumSearchResult {
   rows: CompendiumRow[];
   total: number;
@@ -769,6 +774,14 @@ export interface TrifoldApi {
     findByKey(kind: RecordKind, key: string): Promise<CompendiumRecord[]>;
     /** Distinct types, sizes and environments of a kind across enabled sources. */
     facets(kind: RecordKind): Promise<CompendiumFacets>;
+    /**
+     * Records of every enabled kind whose display name contains `text`, best match first, with
+     * editions collapsed (ADR 0017, global search). Name only; no body text.
+     */
+    suggest(
+      text: string,
+      opts?: { limit?: number; preferEdition?: '2024' | '2014' },
+    ): Promise<CompendiumSuggestion[]>;
   };
 }
 
@@ -837,7 +850,7 @@ export const API_METHODS = {
   phoneAudio: ['status', 'listDevices', 'connect', 'disconnect', 'forget', 'setSource'],
   homebrew: ['duplicate', 'save', 'remove'],
   icons: ['tables', 'available', 'credits', 'reportMiss'],
-  compendium: ['search', 'get', 'findByKey', 'facets'],
+  compendium: ['search', 'get', 'findByKey', 'facets', 'suggest'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };
 
 // Compile-time check: every method of TrifoldApi is listed in API_METHODS.

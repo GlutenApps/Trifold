@@ -232,6 +232,7 @@ export function installBridgeMock(): TrifoldBridge {
       get: vi.fn(async () => null),
       findByKey: vi.fn(async () => []),
       facets: vi.fn(async () => ({ types: [], sizes: [], environments: [] })),
+      suggest: vi.fn(async () => []),
     },
     on: vi.fn(() => () => undefined),
   };

@@ -282,6 +282,33 @@ test('console, Library, import, search, stat block and player window all work en
     await tab('Encounters').click();
     await expect(console_.getByTestId('encounter-row')).toContainText('fought 1×');
 
+    // Global search (ADR 0017): Ctrl+F reaches the field whatever the window width (under
+    // 960 px it sits inside the pop-up), a PC is found by name and Enter lands on their row in
+    // the Campaign tab; a creature from the fixture is found through the index and opens its
+    // stat block in the Compendium tab.
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
+    const searchField = console_.getByRole('combobox', {
+      name: 'Search the campaign and compendium',
+    });
+    await expect(searchField).toBeFocused();
+    await searchField.fill('thora');
+    const searchResults = console_.getByTestId('search-results');
+    await expect(searchResults.getByRole('group', { name: 'Party' })).toContainText('Thora');
+    await console_.keyboard.press('Enter');
+    await expect(searchResults).toHaveCount(0);
+    await expect(tab('Campaign')).toHaveAttribute('aria-selected', 'true');
+    await expect(console_.getByTestId('pc-row').filter({ hasText: 'Thora' })).toBeVisible();
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
+    await searchField.fill('goblin war');
+    const compendiumHits = searchResults.getByRole('group', { name: 'Compendium' });
+    await expect(compendiumHits).toContainText('Goblin Warrior');
+    await compendiumHits.getByRole('option', { name: /Goblin Warrior/ }).click();
+    await expect(tab('Compendium')).toHaveAttribute('aria-selected', 'true');
+    await expect(console_.getByRole('heading', { name: 'Goblin Warrior' })).toBeVisible();
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
+    await console_.keyboard.press('Escape');
+    await expect(searchField).toHaveValue('');
+
     // The strip's Dice button opens the shared pool at every window width. (Below 1180 px the
     // strip hides its own dice chips, and CI screens are narrower than that, so roll here.)
     await strip.getByRole('button', { name: 'Dice', exact: true }).click();

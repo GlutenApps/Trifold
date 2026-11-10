@@ -3,6 +3,7 @@ import { ulid } from 'ulid';
 import type { CompendiumRow } from '@trifold/api';
 import { difficultyBand, partyBudget } from '@trifold/rules';
 import type { CombatantTemplate, Encounter, NPC, PCCard } from '@trifold/schema';
+import { landOn, navKey, selectPhrase, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { cancelSave, encounterSlot, scheduleSave } from '../../stores/pendingSaves';
@@ -303,7 +304,7 @@ function Builder({
   const band = partyLevels.length ? difficultyBand(enemyXp, budget) : null;
 
   return (
-    <div className="card builder">
+    <div className="card builder" data-nav={navKey('encounter', encounter.id)}>
       <div className="row">
         <input
           type="text"
@@ -415,6 +416,33 @@ export function EncountersPage() {
     if (!current) void load();
   }, [current, load]);
 
+  // Deep links (ADR 0017): the running fight comes back, a paused one shows in the list, any
+  // other opens in the builder, with its DM-notes phrase selected when the link names one.
+  useNavTarget('encounter', (target) => {
+    const encounter = useCampaignStore
+      .getState()
+      .current?.encounters.find((e) => e.id === target.id);
+    if (!encounter) return true;
+    const combat = useCombatStore.getState();
+    if (combat.encounterId === target.id) {
+      combat.setBrowsing(false);
+      return true;
+    }
+    if (combat.encounterId) combat.setBrowsing(true);
+    if (encounter.state) {
+      setDraft(null);
+      landOn(navKey('encounter', target.id));
+      return true;
+    }
+    setDraft(encounter);
+    const anchor = target.anchor;
+    landOn(navKey('encounter', target.id), (el) => {
+      const field = el.querySelector<HTMLTextAreaElement>('.encounter-notes');
+      if (anchor && field) selectPhrase(field, anchor.phrase, anchor.occurrence);
+    });
+    return true;
+  });
+
   // Autosave the builder draft.
   useEffect(() => {
     if (!draft || !draft.id) return;
@@ -519,7 +547,12 @@ export function EncountersPage() {
           </div>
           {current.encounters.length === 0 && <p className="muted">No encounters yet.</p>}
           {current.encounters.map((e) => (
-            <div key={e.id} className="row encounter-row" data-testid="encounter-row">
+            <div
+              key={e.id}
+              className="row encounter-row"
+              data-testid="encounter-row"
+              data-nav={navKey('encounter', e.id)}
+            >
               <div className="encounter-row-text">
                 <strong>{e.name}</strong>
                 <span className="muted">

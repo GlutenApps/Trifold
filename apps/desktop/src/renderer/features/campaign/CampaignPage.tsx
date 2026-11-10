@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { PCCard } from '@trifold/schema';
+import { landOn, navKey, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
@@ -227,7 +228,12 @@ function PartyTab() {
             onCancel={() => setEditing(null)}
           />
         ) : (
-          <div key={pc.id} className="row pc-row" data-testid="pc-row">
+          <div
+            key={pc.id}
+            className="row pc-row"
+            data-testid="pc-row"
+            data-nav={navKey('pc', pc.id)}
+          >
             <strong>{pc.name}</strong>
             <span className="muted">
               {pc.playerName ? `${pc.playerName} · ` : ''}
@@ -322,7 +328,7 @@ function NpcsTab() {
       <h2>NPCs</h2>
       {current.npcs.length === 0 && <p className="muted">No NPCs yet.</p>}
       {current.npcs.map((n) => (
-        <div key={n.id} className="entity-row" data-testid="npc-row">
+        <div key={n.id} className="entity-row" data-testid="npc-row" data-nav={navKey('npc', n.id)}>
           <div className="row">
             <strong>{n.name}</strong>
             {n.role && <span className="muted">{n.role}</span>}
@@ -400,6 +406,17 @@ export function CampaignPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Deep links (ADR 0017): pick the sub-tab. NPC and PC rows land here; a note or folder is
+  // landed by the Notes sub-tab once it is showing.
+  useNavTarget(['note', 'folder', 'npc', 'pc'], (target) => {
+    setTab(target.type === 'npc' ? 'npcs' : target.type === 'pc' ? 'party' : 'notes');
+    if (target.type === 'npc' || target.type === 'pc') {
+      landOn(navKey(target.type, target.id));
+      return true;
+    }
+    return false;
+  });
 
   const tabs: [CampaignTab, string][] = current
     ? [

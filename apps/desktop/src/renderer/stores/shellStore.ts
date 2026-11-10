@@ -49,8 +49,9 @@ import {
  * keeps the result and saves it. Features change the shell through these actions only.
  */
 export type Space = 'library' | 'console';
-/** Tools that pop up from their own button rather than living in the dock (ADR 0009). */
-export type PopKind = 'dice' | 'hotkeys' | 'layouts';
+/** Tools that pop up from their own button rather than living in the dock (ADR 0009), plus the
+ *  global search's results under its field in the top bar (ADR 0017). */
+export type PopKind = 'dice' | 'hotkeys' | 'layouts' | 'search';
 export type LibraryPage = 'campaigns' | 'compendium' | 'music' | 'settings';
 
 interface ShellState {
@@ -122,6 +123,7 @@ interface ShellState {
   closeFlyout(): void;
   /** Opens a pop-up from its button, or closes it when it is the one showing. */
   togglePop(kind: PopKind): void;
+  openPop(kind: PopKind): void;
   closePop(): void;
 
   applyLayout(index: number): void;
@@ -421,6 +423,10 @@ export const useShellStore = create<ShellState>((set, get) => {
 
     togglePop(kind) {
       set({ pop: get().pop === kind ? null : kind });
+    },
+
+    openPop(kind) {
+      if (get().pop !== kind) set({ pop: kind });
     },
 
     closePop() {
