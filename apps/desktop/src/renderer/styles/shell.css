@@ -11,12 +11,13 @@
   max-width: none;
 }
 
-/* Top bar: the frameless window's title bar. Windows draws the controls over its right end. */
+/* Top bar: the frameless window's title bar. Windows draws the controls over its right end, at the
+   same height (titleBarOverlay in main/windows.ts); macOS centres the traffic lights on it. */
 .topbar {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 34px;
+  height: 44px;
   padding-left: 10px;
   background: var(--bg-rail);
   border-bottom: 1px solid var(--border);
@@ -584,13 +585,17 @@ body.resizing {
   gap: 6px;
   width: 280px;
   max-width: 30vw;
-  height: var(--control-h-compact);
+  height: var(--control-h);
   padding: 0 4px 0 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
-  background: var(--bg);
+  background: var(--bg-panel);
   color: var(--text-muted);
   -webkit-app-region: no-drag;
+}
+
+.topbar-search:hover {
+  border-color: var(--text-muted);
 }
 
 .topbar-search:focus-within {
@@ -1146,9 +1151,10 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   height: calc(var(--control-h) - 2px);
 }
 
-/* Window chrome (top bar, tab strips, dock and pop-up headers, live strip, web bar) uses the
-   compact tier, so the chrome sits quieter than the panel content it frames. */
-.topbar,
+/* Window chrome (tab strips, dock and pop-up headers, live strip, web bar) uses the
+   compact tier, so the chrome sits quieter than the panel content it frames. The top bar is
+   the window's title bar and carries the search and the campaign switcher, so it keeps the
+   regular tier in a taller bar. */
 .tabs,
 .dock-tabs,
 .dh,
