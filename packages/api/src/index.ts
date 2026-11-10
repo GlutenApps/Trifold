@@ -514,6 +514,15 @@ export interface CampaignPackageResult {
   safety: string | null;
 }
 
+/** The bundled sample campaign (ADR 0016), as Settings › Sample campaign shows it. */
+export interface SampleCampaignStatus {
+  /** False when this build has no sample (a dev checkout that never built it). */
+  available: boolean;
+  /** True when this Library has it (by the campaign id the sample ships with). */
+  present: boolean;
+  name: string | null;
+}
+
 export interface CampaignImportReport {
   campaignId: string;
   name: string;
@@ -637,6 +646,13 @@ export interface TrifoldApi {
      * gives everything new ids), adds homebrew the Library lacks and re-indexes when it did.
      */
     importPackage(path: string, mode: CampaignPackageMode): Promise<CampaignPackageResult>;
+    /** Whether this build has the sample campaign and whether this Library has it (ADR 0016). */
+    sample(): Promise<SampleCampaignStatus>;
+    /**
+     * Adds the sample campaign, or replaces it with the shipped copy when it is there (a
+     * safety backup is written first). Every Library is also given it once when it opens.
+     */
+    addSample(): Promise<CampaignPackageResult>;
   };
   notes: {
     /** A note without an id is new and goes last among its siblings (its folder, or the root). */
@@ -837,6 +853,8 @@ export const API_METHODS = {
     'exportTo',
     'choosePackage',
     'importPackage',
+    'sample',
+    'addSample',
   ],
   notes: ['save', 'remove', 'move', 'capture'],
   noteTemplates: ['list', 'save', 'remove'],

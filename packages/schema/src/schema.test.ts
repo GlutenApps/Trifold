@@ -36,6 +36,7 @@ describe('LibrarySettings', () => {
         crossfadeSec: 4,
       },
       workspace: { presets: [], seeded: false, consoles: {}, webTabs: [] },
+      sampleCampaign: { added: false },
     });
   });
 

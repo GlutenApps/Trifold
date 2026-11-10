@@ -179,6 +179,11 @@ export const LibrarySettings = z.object({
     .prefault({}),
   music: MusicSettings.prefault({}),
   workspace: WorkspaceSettings.prefault({}),
+  /**
+   * The bundled sample campaign (ADR 0016) is added once per Library; `added` records that it
+   * was, so deleting it is final. Settings › Sample campaign adds it again on request.
+   */
+  sampleCampaign: z.object({ added: z.boolean().default(false) }).prefault({}),
 });
 export type LibrarySettings = z.infer<typeof LibrarySettings>;
 

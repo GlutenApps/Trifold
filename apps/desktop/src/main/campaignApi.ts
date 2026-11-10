@@ -1,6 +1,5 @@
-import { app, dialog } from 'electron';
+import { dialog } from 'electron';
 import type { TrifoldApi } from '@trifold/api';
-import { CampaignPackager } from './campaign/campaignPackage';
 import { CampaignEntities } from './campaign/entities';
 import { importSceneImage } from './campaign/images';
 import { importCampaignXml } from './campaign/importCampaign';
@@ -22,20 +21,7 @@ export function createCampaignApi(
     return campaigns;
   };
   const entities = () => new CampaignEntities(repo());
-  const packager = () => {
-    const { store, index } = session.require();
-    const homebrew = session.homebrew;
-    if (!homebrew) throw new Error('No Library is open');
-    return new CampaignPackager({
-      store,
-      campaigns: repo(),
-      homebrew,
-      backups: session.backups,
-      logger,
-      appVersion: app.getVersion(),
-      hasRecord: (ref) => index.get(ref.recordId) !== null,
-    });
-  };
+  const packager = () => session.packager();
   return {
     campaigns: {
       async list() {
@@ -108,6 +94,12 @@ export function createCampaignApi(
           await syncIndex(index, catalog, store, logger);
         }
         return imported;
+      },
+      async sample() {
+        return session.sample.status(packager());
+      },
+      async addSample() {
+        return session.sample.add(session.require().store, packager());
       },
     },
     pcs: {

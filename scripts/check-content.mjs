@@ -52,10 +52,16 @@ if (!existsSync(iconManifestPath)) {
   }
 }
 
+// The sample campaign every Library is given once (ADR 0016), built from samples/ by
+// scripts/build-sample.ts (part of fetch:content, and run again by prebuild).
+if (!existsSync(join(resources, 'sample', 'greyford.trifold-campaign'))) {
+  problems.push('resources/sample/greyford.trifold-campaign is missing (run `pnpm build:sample`)');
+}
+
 if (problems.length) {
   console.error('check-content: the build would ship without bundled content:');
   for (const p of problems) console.error(`  - ${p}`);
   console.error('Run `pnpm fetch:content` (needs network) and build again.');
   process.exit(1);
 }
-console.log('check-content: SRD snapshot and icon set present');
+console.log('check-content: SRD snapshot, icon set and sample campaign present');

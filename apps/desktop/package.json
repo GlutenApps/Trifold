@@ -10,11 +10,11 @@
   "scripts": {
     "dev": "node ../../scripts/dev.mjs",
     "build:bundle": "electron-vite build",
-    "prebuild": "node ../../scripts/check-content.mjs",
+    "prebuild": "node --import tsx ../../scripts/build-sample.ts && node ../../scripts/check-content.mjs",
     "build": "electron-vite build && electron-builder --config electron-builder.yml",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "postinstall": "node ../../scripts/rebuild-native.mjs",
-    "smoke": "electron-vite build && playwright test -c smoke/playwright.config.ts"
+    "smoke": "node --import tsx ../../scripts/build-sample.ts && electron-vite build && playwright test -c smoke/playwright.config.ts"
   },
   "dependencies": {
     "better-sqlite3": "12.11.1",

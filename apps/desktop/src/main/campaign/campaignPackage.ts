@@ -1,11 +1,10 @@
-import { createWriteStream } from 'node:fs';
 import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
 import { basename, join, posix } from 'node:path';
-import { pipeline } from 'node:stream/promises';
 import { ulid } from 'ulid';
 import yauzl from 'yauzl';
 import yazl from 'yazl';
 import type { ZodType } from 'zod';
+import { addFileLazily, writeZipTo } from '../zipWrite';
 import type {
   BackupManifest,
   CampaignExportPreview,
@@ -153,7 +152,8 @@ export class CampaignPackager {
       for (const rel of await this.walk(`campaigns/${slug}/${media}`)) {
         const inCampaign = `${media}/${rel}`;
         if (skip.has(inCampaign)) continue;
-        zip.addFile(
+        addFileLazily(
+          zip,
           this.deps.store.resolvePath(`campaigns/${slug}/${inCampaign}`),
           `${ROOT}/${inCampaign}`,
         );
@@ -191,7 +191,7 @@ export class CampaignPackager {
     zip.end();
 
     const partial = `${target}.partial`;
-    await pipeline(zip.outputStream, createWriteStream(partial));
+    await writeZipTo(zip, partial);
     await rename(partial, target);
     this.deps.logger.info(
       `campaign "${prepared.campaign.name}" exported to ${target} (${options.state}, party ${options.party ? 'on' : 'off'})`,

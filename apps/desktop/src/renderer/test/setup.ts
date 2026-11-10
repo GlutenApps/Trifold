@@ -192,6 +192,10 @@ export function installBridgeMock(): TrifoldBridge {
       importPackage: vi.fn(async () => {
         throw new Error('not mocked');
       }),
+      sample: vi.fn(async () => ({ available: false, present: false, name: null })),
+      addSample: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
     },
     notes: {
       save: vi.fn(async (n) => n),

@@ -1,0 +1,435 @@
+{
+  "campaign": {
+    "name": "The Lantern at Greyford",
+    "slug": "the-lantern-at-greyford",
+    "preferredEdition": "2024",
+    "settings": {
+      "hpDisplayMode": "bloodied",
+      "initiativeMode": "perGroup",
+      "tokenStyle": "engraved"
+    }
+  },
+  "adventure": {
+    "id": "adv-greyford",
+    "name": "The Lantern at Greyford",
+    "summary": "The lantern in Grey Gorge has gone dark, the river is rising, the dead are stirring, and bandits hold the bridges. One session for four level-3 characters."
+  },
+  "pcs": [
+    {
+      "id": "pc-brannoc",
+      "name": "Brannoc Hale",
+      "playerName": "",
+      "classText": "Human Fighter (Champion)",
+      "level": 3,
+      "maxHp": 31,
+      "ac": 18,
+      "initiativeBonus": 1,
+      "speed": 30,
+      "passives": {
+        "perception": 13,
+        "insight": 11,
+        "investigation": 10
+      },
+      "saves": {
+        "str": 5,
+        "dex": 1,
+        "con": 5,
+        "int": 0,
+        "wis": 1,
+        "cha": 0
+      },
+      "notes": "Chain mail and shield. Longsword +5, 1d8+3 slashing. Second Wind, Action Surge, crits on 19–20.\n\nA former river-barge guard who still owes Oswin Barrow at the Wayside Lamp for a winter's board. Loud, loyal and bad at cards."
+    },
+    {
+      "id": "pc-wren",
+      "name": "Wren Ashby",
+      "playerName": "",
+      "classText": "Dwarf Cleric (Life Domain)",
+      "level": 3,
+      "maxHp": 27,
+      "ac": 18,
+      "initiativeBonus": 0,
+      "speed": 30,
+      "passives": {
+        "perception": 13,
+        "insight": 15,
+        "investigation": 10
+      },
+      "spellSaveDc": 13,
+      "saves": {
+        "str": 1,
+        "dex": 0,
+        "con": 2,
+        "int": 0,
+        "wis": 5,
+        "cha": 3
+      },
+      "notes": "Chain mail and shield. Mace +3, 1d6+1 bludgeoning. Spell attack +5. Channel Divinity (Preserve Life). Prepared: Cure Wounds, Bless, Guiding Bolt, Lesser Restoration, Spiritual Weapon.\n\nTrained under Hesper Quill, the Lantern-keeper, for a season as a girl. Hesper's letter brought her here."
+    },
+    {
+      "id": "pc-tamsin",
+      "name": "Tamsin Reed",
+      "playerName": "",
+      "classText": "Halfling Rogue (Thief)",
+      "level": 3,
+      "maxHp": 24,
+      "ac": 14,
+      "initiativeBonus": 3,
+      "speed": 30,
+      "passives": {
+        "perception": 15,
+        "insight": 11,
+        "investigation": 13
+      },
+      "saves": {
+        "str": -1,
+        "dex": 5,
+        "con": 2,
+        "int": 3,
+        "wis": 1,
+        "cha": 1
+      },
+      "notes": "Leather armour. Shortsword +5, 1d6+3 piercing; shortbow +5, 1d6+3. Sneak Attack 2d6. Cunning Action, Fast Hands, Second-Story Work.\n\nGrew up in Greyford's timber yard. Tobin Marsh, the sawyer's missing son, is her cousin."
+    },
+    {
+      "id": "pc-ilyra",
+      "name": "Ilyra Vey",
+      "playerName": "",
+      "classText": "Elf Wizard (Evoker)",
+      "level": 3,
+      "maxHp": 20,
+      "ac": 12,
+      "initiativeBonus": 2,
+      "speed": 30,
+      "passives": {
+        "perception": 13,
+        "insight": 11,
+        "investigation": 15
+      },
+      "spellSaveDc": 13,
+      "saves": {
+        "str": -1,
+        "dex": 2,
+        "con": 2,
+        "int": 5,
+        "wis": 3,
+        "cha": 0
+      },
+      "notes": "Quarterstaff. Spell attack +5. Cantrips: Fire Bolt, Light, Mage Hand, Ray of Frost. Prepared: Mage Armor (AC 15), Magic Missile, Shield, Sleep, Misty Step, Scorching Ray.\n\nStudies old wards. Came to see the still flame of Greyford, which the books say has burned for two hundred years."
+    }
+  ],
+  "npcs": [
+    {
+      "id": "npc-hesper",
+      "name": "Hesper Quill",
+      "record": "srd-2024:monster:srd-2024_priest-acolyte",
+      "role": "The Lantern-keeper",
+      "location": "Grey Gorge (held in the storehouse, G8)",
+      "notes": "Seventy, sharp, impatient with fools. Has kept the still flame for forty years. Captive since the lantern went dark; weak but alive. If freed she fights beside the party (ally) and knows the words to relight the lantern."
+    },
+    {
+      "id": "npc-oswin",
+      "name": "Oswin Barrow",
+      "record": "srd-2024:monster:srd-2024_commoner",
+      "role": "Keeper of the Wayside Lamp",
+      "location": "Greyford",
+      "notes": "Round, anxious, generous. Has been paying the bandits to leave his inn alone and is ashamed of it. Will give the party free rooms if they deal with Gorm."
+    },
+    {
+      "id": "npc-pell",
+      "name": "Pell Marsh",
+      "record": "srd-2024:monster:srd-2024_commoner",
+      "role": "Sawyer",
+      "location": "Greyford (the timber yard)",
+      "notes": "Quiet, big hands, grieving. His son Tobin went up the gorge two nights ago to see why the lantern was out and has not come back. Knows every path through the woods to the gorge."
+    },
+    {
+      "id": "npc-agatha",
+      "name": "Agatha Thorne",
+      "record": "srd-2024:monster:srd-2024_noble",
+      "role": "Village reeve",
+      "location": "Greyford (the walled house)",
+      "notes": "Brisk, proud, frightened. Quietly asked the bandits for terms and got nothing for it. Wants the problem solved without anyone learning she tried to buy it off. Will decide Corvin's fate if the party hands him over."
+    },
+    {
+      "id": "npc-gorm",
+      "name": "Gorm Tallow",
+      "record": "srd-2024:monster:srd-2024_tough",
+      "role": "Bandit enforcer",
+      "location": "Greyford (the old toll house)",
+      "notes": "Mara Venn's collector. Bullies the village for \"road money\" from the old toll house. Surrenders when bloodied and alone. If he lives he tells the party that Mara holds the bridges at the gorge mouth, hoping to buy his freedom."
+    },
+    {
+      "id": "npc-mara",
+      "name": "Mara Venn",
+      "record": "srd-2024:monster:srd-2024_bandit-captain",
+      "role": "Bandit captain",
+      "location": "Grey Gorge (the bridges)",
+      "notes": "Hired by Brother Corvin to hold the bridges at the mouth of the gorge for a week, paid in old shrine silver. Practical, not cruel. Flees when she drops to half HP. If she escapes she runs to the shrine hall for the rest of her pay and joins the last fight in round 2 with whatever HP she had left."
+    },
+    {
+      "id": "npc-corvin",
+      "name": "Brother Corvin Ashe",
+      "record": "srd-2024:monster:srd-2024_cultist-fanatic",
+      "role": "Defrocked priest, the villain",
+      "location": "Grey Gorge (the shrine hall, G13)",
+      "notes": "Once Hesper's student. His sister Lissa drowned when the Grey flooded ten years ago. He believes the still flame, taken off its gate and fed in the shrine, can call her back out of the river. It can't; it only raises the river and wakes the dead. Pleads, then fights. Will not surrender while he holds the flame."
+    },
+    {
+      "id": "npc-tobin",
+      "name": "Tobin Marsh",
+      "record": "srd-2024:monster:srd-2024_commoner",
+      "role": "The sawyer's son",
+      "location": "Grey Gorge (the storehouse, G8)",
+      "notes": "Sixteen. Went up the gorge, was caught, is tied up beside Hesper. Terrified but unhurt. Knows Corvin talks to the river and calls it \"Lissa\"."
+    }
+  ],
+  "encounters": [
+    {
+      "id": "enc-inn",
+      "name": "Trouble at the Wayside Lamp",
+      "scene": "scene-inn",
+      "notes": "Gorm and his crew come in out of the rain to collect. Starts as a shakedown; the party decides whether it's a fight. Gorm surrenders when bloodied and alone. 500 XP for four level-3 characters: just under Low, an easy opener.",
+      "combatants": [
+        {
+          "npc": "npc-gorm",
+          "quantity": 1,
+          "hidden": true,
+          "cells": [[17, 8]]
+        },
+        {
+          "record": "srd-2024:monster:srd-2024_tough",
+          "quantity": 3,
+          "hidden": true,
+          "cells": [
+            [18, 7],
+            [18, 8],
+            [19, 8]
+          ]
+        },
+        {
+          "record": "srd-2024:monster:srd-2024_bandit",
+          "quantity": 4,
+          "hidden": true,
+          "cells": [
+            [13, 4],
+            [15, 2],
+            [11, 6],
+            [11, 9]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "enc-bridges",
+      "name": "Holding the bridges",
+      "scene": "scene-gorge",
+      "notes": "Mara by the fire at the statue, scouts in the bell house, two bandits on each bridge, wolves around the statue rock. Mara flees across the north bridge into the shrine at half HP. 900 XP: Moderate.",
+      "combatants": [
+        {
+          "npc": "npc-mara",
+          "quantity": 1,
+          "hidden": true,
+          "cells": [[4, 15]]
+        },
+        {
+          "record": "srd-2024:monster:srd-2024_scout",
+          "quantity": 2,
+          "hidden": true,
+          "cells": [
+            [12, 10],
+            [14, 10]
+          ]
+        },
+        {
+          "record": "srd-2024:monster:srd-2024_bandit",
+          "quantity": 4,
+          "hidden": true,
+          "cells": [
+            [7, 17],
+            [7, 18],
+            [5, 9],
+            [6, 9]
+          ]
+        },
+        {
+          "record": "srd-2024:monster:srd-2024_wolf",
+          "quantity": 3,
+          "hidden": true,
+          "cells": [
+            [1, 14],
+            [3, 17],
+            [2, 16]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "enc-keepers",
+      "name": "The keepers' rooms",
+      "scene": "scene-gorge",
+      "notes": "The dead rise when anyone steps into the kitchen or the library (G6). Start it from the Encounters tab: the creatures are already on the gorge map. Rats pour from under the stove. The ghoul waits in the library's far corner until someone is down. 600 XP: Low.",
+      "combatants": [
+        {
+          "record": "srd-2024:monster:srd-2024_skeleton",
+          "quantity": 4,
+          "hidden": true,
+          "cells": [
+            [19, 19],
+            [20, 19],
+            [19, 20],
+            [20, 20]
+          ]
+        },
+        {
+          "record": "srd-2024:monster:srd-2024_zombie",
+          "quantity": 2,
+          "hidden": true,
+          "cells": [
+            [14, 20],
+            [15, 19]
+          ]
+        },
+        {
+          "record": "srd-2024:monster:srd-2024_swarm-of-rats",
+          "quantity": 2,
+          "hidden": true,
+          "cells": [
+            [16, 20],
+            [17, 20]
+          ]
+        },
+        {
+          "record": "srd-2024:monster:srd-2024_ghoul",
+          "quantity": 1,
+          "hidden": true,
+          "cells": [[21, 19]]
+        }
+      ]
+    },
+    {
+      "id": "enc-flame",
+      "name": "The still flame",
+      "scene": null,
+      "notes": "Not on the map in advance: use Place encounter… on the gorge map when the party reaches the shrine hall (G13). Switch the map to Flood at the start of round 2. 750 XP (Moderate) alone; if Mara escaped the bridges, add her with Add to fight in round 2 and it rises to 1,200 XP, between Moderate and High. If Hesper is free, add her as an ally.",
+      "combatants": [
+        {
+          "npc": "npc-corvin",
+          "quantity": 1
+        },
+        {
+          "record": "srd-2024:monster:srd-2024_shadow",
+          "quantity": 2
+        },
+        {
+          "record": "srd-2024:monster:srd-2024_cultist",
+          "quantity": 4
+        }
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene-folder",
+      "kind": "folder",
+      "title": "Session 1"
+    },
+    {
+      "id": "scene-title",
+      "parent": "scene-folder",
+      "kind": "title",
+      "title": "The Lantern at Greyford",
+      "subtitle": "Session 1",
+      "backdrop": "parchment",
+      "notes": "Show this while people settle in. Music: something quiet and expectant."
+    },
+    {
+      "id": "scene-village",
+      "parent": "scene-folder",
+      "kind": "image",
+      "title": "Greyford",
+      "image": "images/village.jpg",
+      "notes": "Show while you read the opening (Part 1). Point out the Wayside Lamp at the crossroads, the timber yard, the old toll house, and the road east toward the gorge."
+    },
+    {
+      "id": "scene-handout",
+      "parent": "scene-folder",
+      "kind": "image",
+      "title": "Hesper's letter",
+      "showTitleOverride": false,
+      "image": "images/handout-letter.jpg",
+      "notes": "The letter that brought Wren here. Send it as a handout so it sits over whatever is on the TV."
+    },
+    {
+      "id": "scene-inn",
+      "parent": "scene-folder",
+      "kind": "map",
+      "title": "The Wayside Lamp",
+      "backgrounds": [
+        {
+          "name": "Night",
+          "image": "images/inn-night.jpg"
+        },
+        {
+          "name": "Day",
+          "image": "images/inn-day.jpg"
+        }
+      ],
+      "grid": {
+        "cellPx": 72,
+        "offsetX": 0,
+        "offsetY": 0,
+        "opacity": 0.2,
+        "showToPlayers": true
+      },
+      "encounter": "enc-inn",
+      "notes": "Rain on the windows, the fire pit, a dozen locals who go quiet when the door opens. The tokens are Gorm and his crew, hidden until they walk in. Night for the shakedown; switch to Day for the morning after. Music: tavern, then tense."
+    },
+    {
+      "id": "scene-gorge",
+      "parent": "scene-folder",
+      "kind": "map",
+      "title": "Grey Gorge",
+      "backgrounds": [
+        {
+          "name": "Low water",
+          "image": "images/gorge.jpg"
+        },
+        {
+          "name": "Flood",
+          "image": "images/gorge-flood.jpg"
+        }
+      ],
+      "grid": {
+        "cellPx": 85.333,
+        "offsetX": 0,
+        "offsetY": 0,
+        "opacity": 0.2,
+        "showToPlayers": true
+      },
+      "encounter": "enc-bridges",
+      "notes": "The whole shrine on one map (48 × 22 squares): frame the part the party is in with the player camera. Hidden tokens: the bridges fight (west, linked to this scene) and the keepers' rooms fight (south bank; start it from the Encounters tab). The last fight is placed during play. Switch to Flood in round 2 of the last fight, and back to Low water when the lantern is relit. Music: river and wind, battle, then a boss fight."
+    },
+    {
+      "id": "scene-anywhere",
+      "parent": "scene-folder",
+      "kind": "blankGrid",
+      "title": "Anywhere else",
+      "blank": {
+        "cols": 30,
+        "rows": 20
+      },
+      "showTitleOverride": false,
+      "notes": "For a fight nobody planned: the party picks a fight in the village, or chases Mara into the woods."
+    },
+    {
+      "id": "scene-end",
+      "parent": "scene-folder",
+      "kind": "title",
+      "title": "The lantern burns again",
+      "subtitle": "Thanks for playing",
+      "backdrop": "dark",
+      "notes": "Show at the end of the night."
+    }
+  ]
+}

@@ -10,6 +10,8 @@ Trifold is a desktop console for a Dungeon Master running 5e-compatible games at
 
 **The Library folder.** On first launch Trifold creates `Trifold Library` in your Documents folder. Everything you make lives there as plain JSON and media, so you can zip it, copy it to another machine, or move it with **Settings › Library › Change folder…**. The one file you can ignore is `index.sqlite`, the search index, which is derived from the rest and can be rebuilt at any time.
 
+**The sample campaign.** Every Library starts with *The Lantern at Greyford*, a short adventure for four level-3 characters with notes, NPCs, a ready-made party, encounters, maps and a handout, so you can see how the parts fit together. Open it from **Campaigns** and start with its *Start here* note. Delete it whenever you like; it will not come back on its own. **Settings › Sample campaign** adds it again, or resets it to how it ships (a backup is written first). Its maps are by 2-Minute Tabletop.
+
 ## The console at a glance
 
 Trifold has two spaces. The **Library** (the mark at the top left) holds what every campaign shares: Campaigns, Compendium, Music folders and Settings. Opening a campaign enters its **console**; one campaign is open at a time.
