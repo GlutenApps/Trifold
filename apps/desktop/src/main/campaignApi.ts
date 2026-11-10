@@ -8,13 +8,16 @@ import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 
 /**
- * Campaign, PC card, encounter, note, NPC and scene namespaces, backed by `CampaignRepository`,
+ * Campaign, PC card, encounter, note, NPC, scene, counter and timer namespaces, backed by `CampaignRepository`,
  * `CampaignEntities`, `CampaignPackager` and the campaign XML importer.
  */
 export function createCampaignApi(
   session: LibrarySession,
   logger: Logger,
-): Pick<TrifoldApi, 'campaigns' | 'pcs' | 'encounters' | 'notes' | 'npcs' | 'scenes'> {
+): Pick<
+  TrifoldApi,
+  'campaigns' | 'pcs' | 'encounters' | 'notes' | 'npcs' | 'scenes' | 'counters' | 'timers'
+> {
   const repo = () => {
     const campaigns = session.campaigns;
     if (!campaigns) throw new Error('No Library is open');
@@ -147,6 +150,28 @@ export function createCampaignApi(
       },
       async remove(id) {
         await entities().removeNpc(id);
+      },
+    },
+    counters: {
+      async save(counter) {
+        return entities().saveCounter(counter);
+      },
+      async remove(id) {
+        await entities().removeCounter(id);
+      },
+      async move(counterId, index) {
+        return entities().moveCounter(counterId, index);
+      },
+    },
+    timers: {
+      async save(timer) {
+        return entities().saveTimer(timer);
+      },
+      async remove(id) {
+        await entities().removeTimer(id);
+      },
+      async move(timerId, index) {
+        return entities().moveTimer(timerId, index);
       },
     },
     scenes: {

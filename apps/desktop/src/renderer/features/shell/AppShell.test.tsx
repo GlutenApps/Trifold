@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CampaignBundle } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { usePresenterStore } from '../../stores/presenterStore';
+import { useTimersStore } from '../../stores/timersStore';
 import { useShellStore } from '../../stores/shellStore';
 import { defaultLayout } from '../../stores/shellLayout';
 import { AppShell } from './AppShell';
@@ -27,6 +29,8 @@ function bundle(): CampaignBundle {
     npcs: [],
     encounters: [],
     scenes: [],
+    counters: [],
+    timers: [],
   } as unknown as CampaignBundle;
 }
 
@@ -363,5 +367,77 @@ describe('AppShell', () => {
       expect.objectContaining({ blackout: false }),
     );
     vi.clearAllMocks();
+  });
+
+  it('mirrors the counters marked Show on TV to the player window, three at most', async () => {
+    render(<AppShell />);
+    openCampaign();
+    const at = '2026-09-28T00:00:00.000Z';
+    const counters = ['A', 'B', 'C', 'D', 'E'].map((name, order) => ({
+      schemaVersion: 1 as const,
+      id: name,
+      name,
+      initial: 0,
+      value: order,
+      step: 1,
+      order,
+      showOnTv: name !== 'B',
+      createdAt: at,
+      updatedAt: at,
+    }));
+    act(() => {
+      const current = useCampaignStore.getState().current!;
+      useCampaignStore.setState({ current: { ...current, counters } });
+    });
+    await waitFor(() =>
+      expect(usePresenterStore.getState().state.counters.map((c) => c.name)).toEqual([
+        'A',
+        'C',
+        'D',
+      ]),
+    );
+  });
+  it('sends the timer marked Show on TV, with its end time once started', async () => {
+    render(<AppShell />);
+    openCampaign();
+    const at = '2026-09-28T00:00:00.000Z';
+    const timers = ['A', 'B'].map((name, order) => ({
+      schemaVersion: 1 as const,
+      id: name,
+      name,
+      durationSec: 60,
+      chime: true,
+      order,
+      showOnTv: name === 'B',
+      createdAt: at,
+      updatedAt: at,
+    }));
+    // The shell reloads the campaign from the bridge too, so both carry the timers.
+    window.trifold.campaigns.current = vi.fn(async () => ({ ...bundle(), timers }));
+    // Let the shell's own load on mount finish before the timers go in.
+    await waitFor(() => expect(screen.getByRole('tab', { name: /^Campaign$/ })).toBeVisible());
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    act(() => {
+      const current = useCampaignStore.getState().current!;
+      useCampaignStore.setState({ current: { ...current, timers } });
+    });
+    await waitFor(() =>
+      expect(usePresenterStore.getState().state.timer).toEqual({
+        id: 'B',
+        name: 'B',
+        status: 'idle',
+        leftMs: 60_000,
+      }),
+    );
+    const before = Date.now();
+    act(() => useTimersStore.getState().start('B'));
+    const live = usePresenterStore.getState().state.timer!;
+    expect(live.status).toBe('running');
+    expect(live.endsAt).toBeGreaterThanOrEqual(before + 60_000);
+    act(() => useTimersStore.getState().pause('B'));
+    expect(usePresenterStore.getState().state.timer).toMatchObject({ status: 'paused' });
+    act(() => useTimersStore.getState().reset('B'));
   });
 });

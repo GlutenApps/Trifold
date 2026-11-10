@@ -16,7 +16,7 @@ import {
   type SceneImage,
 } from '@trifold/schema';
 import { childrenOf, descendantsOf, nextOrder, placeItem } from '@trifold/rules';
-import { cancelSave, encounterSlot } from './pendingSaves';
+import { cancelSave, encounterSlot, flushPendingSaves } from './pendingSaves';
 
 /**
  * The one owner of the open campaign: `current` is the CampaignBundle (campaign, notes, PCs,
@@ -243,6 +243,8 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
 
     async create(name) {
       await guard(async () => {
+        // Saves still waiting belong to the campaign open now; write them before it changes.
+        await flushPendingSaves();
         set({ current: await window.trifold.campaigns.create(name) });
         await refreshList();
       });
@@ -250,12 +252,14 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
 
     async open(campaignId) {
       await guard(async () => {
+        await flushPendingSaves();
         set({ current: await window.trifold.campaigns.open(campaignId) });
       });
     },
 
     async close() {
       await guard(async () => {
+        await flushPendingSaves();
         await window.trifold.campaigns.close();
         set({ current: null });
         await refreshList();

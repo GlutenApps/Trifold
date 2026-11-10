@@ -90,6 +90,34 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * A timer's chime (ADR 0021): two short sine notes on the sfx layer, made here so no sound
+   * file ships. Each note rises and falls on a ramp, so nothing starts or stops abruptly; the
+   * music layer is not touched, and the master volume and panic mute apply as to everything.
+   */
+  chime(): void {
+    const { ctx, layers } = this.ensure();
+    const start = ctx.currentTime + 0.02;
+    [880, 1318.51].forEach((frequency, i) => {
+      const at = start + i * 0.22;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = frequency;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(0.35, at + 0.02);
+      gain.gain.linearRampToValueAtTime(0, at + 0.7);
+      osc.connect(gain);
+      gain.connect(layers.sfx);
+      osc.onended = () => {
+        osc.disconnect();
+        gain.disconnect();
+      };
+      osc.start(at);
+      osc.stop(at + 0.75);
+    });
+  }
+
   /** Panic mute: master to silence in 50 ms, back over 300 ms. */
   setMuted(muted: boolean): void {
     this.muted = muted;

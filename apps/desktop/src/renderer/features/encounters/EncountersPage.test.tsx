@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CampaignBundle } from '@trifold/api';
@@ -49,6 +49,8 @@ function bundle(): CampaignBundle {
     npcs: [],
     encounters: [encounter('e1', 'Bridge ambush'), encounter('e2', 'Crypt guards')],
     scenes: [],
+    counters: [],
+    timers: [],
   } as unknown as CampaignBundle;
 }
 
@@ -76,7 +78,14 @@ describe('EncountersPage', () => {
     expect(screen.getAllByTestId('encounter-row')).toHaveLength(2);
     // One fight at a time: the others wait, and the running one cannot be removed.
     expect(screen.getByRole('button', { name: 'Start combat: Crypt guards' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Delete Bridge ambush' })).not.toBeInTheDocument();
+    // Its actions keep their places (Play, Edit, Delete; ADR 0020), disabled where they do not apply.
+    const running = screen.getAllByTestId('encounter-row')[0]!;
+    expect(
+      within(running)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Return to fight: Bridge ambush', 'Edit Bridge ambush', 'Delete Bridge ambush']);
+    expect(screen.getByRole('button', { name: 'Delete Bridge ambush' })).toBeDisabled();
 
     await userEvent.click(screen.getByRole('button', { name: 'Return to fight: Bridge ambush' }));
     expect(screen.getByRole('button', { name: 'End combat' })).toBeInTheDocument();

@@ -362,6 +362,8 @@ describe('adding to a running fight', () => {
         npcs: [],
         encounters: [{ id: 'enc', combatants: [], results: [] }],
         scenes: [],
+        counters: [],
+        timers: [],
       } as unknown as CampaignBundle,
     });
     useCombatStore.setState({

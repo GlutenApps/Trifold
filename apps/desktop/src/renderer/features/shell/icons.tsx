@@ -89,7 +89,11 @@ export type IconName =
   | 'skullOff'
   | 'linkOff'
   | 'heart'
-  | 'shield';
+  | 'shield'
+  | 'tally'
+  | 'hourglass'
+  | 'bell'
+  | 'bellOff';
 
 /** Hand-drawn 24 px stroke glyphs; no icon dependency, so the chrome stays small and ours. */
 const PATHS: Record<IconName, string> = {
@@ -183,6 +187,10 @@ const PATHS: Record<IconName, string> = {
   scroll:
     'M5 6a2 2 0 0 1 4 0v12a2 2 0 0 1-4 0zM7 4h11a2 2 0 0 1 2 2v1h-4M9 20h8a2 2 0 0 0 2-2v-1h-4M11 10h6M11 13h6',
   quill: 'M20 4c-6 0-11 4-13 10l-3 6 6-3c6-2 10-7 10-13zM5 19l7-7',
+  tally: 'M6 5v14M10 5v14M14 5v14M18 5v14M3 16l18-8',
+  hourglass: 'M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9',
+  bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0',
+  bellOff: 'M6 16V11a6 6 0 0 1 9.5-4.9M18 11v5l2 2H8M10 20a2 2 0 0 0 4 0M4 4l16 16',
   crown: 'M4 18h16l1-10-5 4-4-6-4 6-5-4zM4 18v2h16v-2',
   potion: 'M10 3h4M11 3v5l-5 8a3 3 0 0 0 2.6 4.5h6.8A3 3 0 0 0 18 16l-5-8V3M8 15h8',
   coin: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9z',

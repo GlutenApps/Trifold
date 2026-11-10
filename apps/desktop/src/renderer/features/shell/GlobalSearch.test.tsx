@@ -56,6 +56,8 @@ function bundle(): CampaignBundle {
     ],
     encounters: [],
     scenes: [],
+    counters: [],
+    timers: [],
   } as unknown as CampaignBundle;
 }
 

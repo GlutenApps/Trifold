@@ -2,11 +2,13 @@ import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { ulid } from 'ulid';
 import type { ZodType } from 'zod';
 import type { CampaignBundle, CampaignSummary } from '@trifold/api';
-import { normalizeKey, parseQuickAdd } from '@trifold/rules';
+import { normalizeKey, parseQuickAdd, sortCounters } from '@trifold/rules';
 import {
   Adventure,
   CAMPAIGN_SCHEMA_VERSION,
   Campaign,
+  CampaignCounter,
+  CampaignTimer,
   CombatState,
   Encounter,
   Note,
@@ -27,6 +29,9 @@ import type { Logger } from '../log';
  * other kinds through the helpers here. Reads validate and migrate; writes go through
  * `LibraryStore`, so they are atomic.
  */
+/** The entity folders CampaignEntities writes through the helpers here. */
+export type EntityFolder = 'adventures' | 'notes' | 'npcs' | 'scenes' | 'counters' | 'timers';
+
 /** Sub-folders of every campaign (DATA-FORMATS.md §5.4). */
 export const CAMPAIGN_LAYOUT = [
   'adventures',
@@ -35,6 +40,8 @@ export const CAMPAIGN_LAYOUT = [
   'pcs',
   'encounters',
   'scenes',
+  'counters',
+  'timers',
   'images',
   'tokens',
 ];
@@ -80,7 +87,7 @@ export class CampaignRepository {
   private async readAll<T>(
     relative: string,
     schema: ZodType<T>,
-    kind: 'pc' | 'encounter' | 'adventure' | 'note' | 'npc' | 'scene',
+    kind: 'pc' | 'encounter' | 'adventure' | 'note' | 'npc' | 'scene' | 'counter' | 'timer',
   ): Promise<T[]> {
     const out: T[] = [];
     for (const file of await this.listDir(relative)) {
@@ -244,7 +251,13 @@ export class CampaignRepository {
     const scenes = (await this.readAll(this.dir(slug, 'scenes'), Scene, 'scene')).sort(
       (a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt),
     );
-    return { campaign, pcs, encounters, adventures, notes, npcs, scenes };
+    const counters = sortCounters(
+      await this.readAll(this.dir(slug, 'counters'), CampaignCounter, 'counter'),
+    );
+    const timers = sortCounters(
+      await this.readAll(this.dir(slug, 'timers'), CampaignTimer, 'timer'),
+    );
+    return { campaign, pcs, encounters, adventures, notes, npcs, scenes, counters, timers };
   }
 
   /** The open campaign's notes in list order. */
@@ -254,6 +267,18 @@ export class CampaignRepository {
       slug,
       await this.readAll(this.dir(slug, 'adventures'), Adventure, 'adventure'),
     );
+  }
+
+  /** The open campaign's counters in list order (ADR 0019). */
+  async counters(): Promise<CampaignCounter[]> {
+    const slug = this.requireSlug();
+    return sortCounters(await this.readAll(this.dir(slug, 'counters'), CampaignCounter, 'counter'));
+  }
+
+  /** The open campaign's timers in list order (ADR 0021). */
+  async timers(): Promise<CampaignTimer[]> {
+    const slug = this.requireSlug();
+    return sortCounters(await this.readAll(this.dir(slug, 'timers'), CampaignTimer, 'timer'));
   }
 
   /** The open campaign's scenes in tree order. */
@@ -303,24 +328,17 @@ export class CampaignRepository {
   }
 
   /** Absolute path of one entity file; used by CampaignEntities for removal. */
-  entityPath(folder: 'adventures' | 'notes' | 'npcs' | 'scenes', id: string): string {
+  entityPath(folder: EntityFolder, id: string): string {
     return this.store.resolvePath(this.dir(this.requireSlug(), folder, `${id}.json`));
   }
 
-  async writeEntity(
-    folder: 'adventures' | 'notes' | 'npcs' | 'scenes',
-    id: string,
-    value: unknown,
-  ): Promise<void> {
+  async writeEntity(folder: EntityFolder, id: string, value: unknown): Promise<void> {
     await this.store.writeJson(this.dir(this.requireSlug(), folder, `${id}.json`), value);
     await this.touch();
   }
 
   /** Several entity files, touching campaign.json once at the end. */
-  async writeEntities(
-    folder: 'adventures' | 'notes' | 'npcs' | 'scenes',
-    values: readonly { id: string }[],
-  ): Promise<void> {
+  async writeEntities(folder: EntityFolder, values: readonly { id: string }[]): Promise<void> {
     const slug = this.requireSlug();
     for (const value of values) {
       await this.store.writeJson(this.dir(slug, folder, `${value.id}.json`), value);

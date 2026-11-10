@@ -76,3 +76,27 @@ export function installHotkeys(target: Window = window): () => void {
   target.addEventListener('keydown', listener);
   return () => target.removeEventListener('keydown', listener);
 }
+
+/**
+ * Keys that act on a focused control rather than the whole console, listed here so the cheat
+ * sheet shows them beside the hotkeys. The control handles them itself; nothing here runs.
+ */
+export interface FocusedKeys {
+  /** What has to be focused, for the cheat sheet's heading. */
+  on: string;
+  keys: readonly { combo: string; description: string }[];
+}
+
+export const FOCUSED_KEYS: readonly FocusedKeys[] = [
+  {
+    on: 'On a focused counter',
+    keys: [
+      { combo: 'ArrowUp', description: 'Add the primary step' },
+      { combo: 'ArrowDown', description: 'Take the primary step' },
+      { combo: 'Shift+ArrowUp', description: 'Add the alternate step (or PageUp)' },
+      { combo: 'Shift+ArrowDown', description: 'Take the alternate step (or PageDown)' },
+      { combo: 'Home', description: 'Go to the minimum, when it has one' },
+      { combo: 'End', description: 'Go to the maximum, when it has one' },
+    ],
+  },
+];

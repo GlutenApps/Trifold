@@ -40,6 +40,8 @@ function bundle(notes: Note[]): CampaignBundle {
     npcs: [],
     encounters: [],
     scenes: [],
+    counters: [],
+    timers: [],
   } as unknown as CampaignBundle;
 }
 

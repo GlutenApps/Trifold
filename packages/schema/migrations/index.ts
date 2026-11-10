@@ -17,7 +17,9 @@ export type FileKind =
   | 'scene'
   | 'musicLibrary'
   | 'playlist'
-  | 'noteTemplate';
+  | 'noteTemplate'
+  | 'counter'
+  | 'timer';
 
 export type JsonObject = Record<string, unknown>;
 
@@ -50,6 +52,8 @@ export const CURRENT_SCHEMA_VERSION: VersionTable = {
   musicLibrary: 1,
   playlist: 1,
   noteTemplate: 1,
+  counter: 1,
+  timer: 1,
 };
 
 /** Registered migrations, oldest first. Add an entry whenever a schema version is bumped. */
@@ -99,6 +103,8 @@ export const MIGRATIONS: MigrationRegistry = {
   musicLibrary: [],
   playlist: [],
   noteTemplate: [],
+  counter: [],
+  timer: [],
 };
 
 /** Removes one minor tool from every saved layout's dock (presets and per-campaign consoles). */

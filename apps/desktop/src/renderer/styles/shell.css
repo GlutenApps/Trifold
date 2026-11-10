@@ -134,6 +134,12 @@
   flex-shrink: 0;
 }
 
+/* A tool that needs the DM now (a timer at zero, ADR 0021). */
+.pip.alert {
+  background: var(--danger);
+  box-shadow: 0 0 5px var(--danger);
+}
+
 .pip.tally {
   background: var(--tally);
   box-shadow: 0 0 5px var(--tally);
@@ -292,13 +298,7 @@
   height: 20px;
   border-radius: var(--radius-sm);
   color: var(--text-muted);
-  visibility: hidden;
   cursor: pointer;
-}
-
-.tab:hover .tab-close,
-.tab.active .tab-close {
-  visibility: visible;
 }
 
 .tab .tab-close .icon {
@@ -1057,9 +1057,17 @@ body.resizing {
   outline-offset: -2px;
 }
 
-.chrome-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
+/* Disabled icon buttons (ADR 0020): grey whatever their kind (danger, on, pressed), very faint,
+   and a not-allowed pointer, so they never pass for a quiet row action. Filled ones (primary,
+   tally) keep their fill and only fade. */
+button.chrome-btn:disabled {
+  opacity: var(--disabled);
+  cursor: not-allowed;
+}
+
+button.chrome-btn:disabled:not(.primary, .tally) {
+  color: var(--text-muted);
+  background: none;
 }
 
 .chrome-btn[aria-pressed='true'],
@@ -1904,4 +1912,12 @@ body.resizing {
   .strip-sec {
     padding: 0 6px;
   }
+}
+
+.hotkey-group {
+  padding: 12px 0 4px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
 }

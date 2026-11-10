@@ -46,6 +46,8 @@ export const MINOR_TITLES: Record<MinorKind, string> = {
   music: 'Music',
   scenes: 'Scenes',
   quickNotes: 'Quick notes',
+  counters: 'Counters',
+  timers: 'Timers',
 };
 
 /**

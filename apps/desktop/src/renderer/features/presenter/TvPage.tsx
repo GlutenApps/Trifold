@@ -25,6 +25,8 @@ const OVERLAY_LABELS: { [K in keyof PresenterOverlays]: string } = {
   initiativeStrip: 'Initiative strip',
   pcHealthBars: 'PC health bars',
   roundCounter: 'Round counter',
+  counters: 'Counters',
+  timers: 'Timers',
 };
 
 type Pop = 'overlays' | 'break';

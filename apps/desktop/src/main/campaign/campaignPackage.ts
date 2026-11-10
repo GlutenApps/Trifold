@@ -27,7 +27,9 @@ import {
   Adventure,
   CAMPAIGN_SCHEMA_VERSION,
   Campaign,
+  CampaignCounter,
   CampaignExportOptions,
+  CampaignTimer,
   CompendiumRecord,
   Encounter,
   LIBRARY_SCHEMA_VERSION,
@@ -61,7 +63,8 @@ const ROOT = 'campaign';
 const MEDIA = ['images', 'tokens'] as const;
 const RECORD_ID = /^[A-Za-z0-9:_-]+$/;
 
-type EntityFolder = 'pcs' | 'encounters' | 'adventures' | 'notes' | 'npcs' | 'scenes';
+type EntityFolder =
+  'pcs' | 'encounters' | 'adventures' | 'notes' | 'npcs' | 'scenes' | 'counters' | 'timers';
 const ENTITIES: readonly { folder: EntityFolder; kind: FileKind; schema: ZodType<unknown> }[] = [
   { folder: 'pcs', kind: 'pc', schema: PCCard },
   { folder: 'encounters', kind: 'encounter', schema: Encounter },
@@ -69,6 +72,8 @@ const ENTITIES: readonly { folder: EntityFolder; kind: FileKind; schema: ZodType
   { folder: 'notes', kind: 'note', schema: Note },
   { folder: 'npcs', kind: 'npc', schema: NPC },
   { folder: 'scenes', kind: 'scene', schema: Scene },
+  { folder: 'counters', kind: 'counter', schema: CampaignCounter },
+  { folder: 'timers', kind: 'timer', schema: CampaignTimer },
 ];
 
 /** Every file in a zip, by entry name, read into memory (campaigns are small; maps are a few MB). */
@@ -296,6 +301,9 @@ export class CampaignPackager {
       notes: group('notes', Note, 'note'),
       npcs: group('npcs', NPC, 'npc'),
       scenes: group('scenes', Scene, 'scene'),
+      // Exports from before counters (ADR 0019) have no counters folder.
+      counters: group('counters', CampaignCounter, 'counter'),
+      timers: group('timers', CampaignTimer, 'timer'),
     };
 
     let safety: string | null = null;

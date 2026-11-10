@@ -219,6 +219,16 @@ export function installBridgeMock(): TrifoldBridge {
       remove: vi.fn(async () => undefined),
       importImage: vi.fn(async () => null),
     },
+    counters: {
+      save: vi.fn(async (counter) => ({ ...counter, id: counter.id || 'counter-new' })),
+      remove: vi.fn(async () => undefined),
+      move: vi.fn(async () => []),
+    },
+    timers: {
+      save: vi.fn(async (timer) => ({ ...timer, id: timer.id || 'timer-new' })),
+      remove: vi.fn(async () => undefined),
+      move: vi.fn(async () => []),
+    },
     pcs: {
       save: vi.fn(async (pc) => pc),
       remove: vi.fn(async () => undefined),

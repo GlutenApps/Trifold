@@ -16,6 +16,8 @@ const versions = {
   musicLibrary: 1,
   playlist: 1,
   noteTemplate: 1,
+  counter: 1,
+  timer: 1,
 };
 const registry: MigrationRegistry = {
   appConfig: [],
@@ -36,6 +38,8 @@ const registry: MigrationRegistry = {
   musicLibrary: [],
   playlist: [],
   noteTemplate: [],
+  counter: [],
+  timer: [],
 };
 const run = createMigrator(registry, versions);
 

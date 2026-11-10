@@ -6,6 +6,8 @@ import {
   type BreakScreen,
   type CombatSummary,
   type Handout,
+  type LiveCounter,
+  type LiveTimer,
   type LiveScene,
   type PresenterOverlays,
   type PresenterState,
@@ -149,6 +151,10 @@ interface PresenterStore {
   showBreak(title: string, subtitle?: string, minutes?: number): void;
   clearBreak(): void;
   setCombat(summary: CombatSummary | null): void;
+  /** The counters marked Show on TV (ADR 0019); the shell keeps these current. */
+  setCounters(counters: LiveCounter[]): void;
+  /** The timer marked Show on TV (ADR 0021), or null; the shell keeps it current. */
+  setTimer(timer: LiveTimer | null): void;
 }
 
 /**
@@ -303,6 +309,18 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
             state.scene)
           : state.scene;
       commit({ ...state, combat: summary, scene });
+    },
+
+    setCounters(counters) {
+      const { state } = get();
+      if (JSON.stringify(state.counters) === JSON.stringify(counters)) return;
+      commit({ ...state, counters });
+    },
+
+    setTimer(timer) {
+      const { state } = get();
+      if (JSON.stringify(state.timer) === JSON.stringify(timer)) return;
+      commit({ ...state, timer });
     },
   };
 });

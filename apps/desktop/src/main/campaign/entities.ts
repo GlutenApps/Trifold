@@ -1,8 +1,25 @@
 import { rm } from 'node:fs/promises';
 import { ulid } from 'ulid';
 import type { NoteFolderContents } from '@trifold/api';
-import { placeItem, QUICK_NOTES_TITLE, quickNotesFolder, quickNoteTitle } from '@trifold/rules';
-import { Adventure, CAMPAIGN_SCHEMA_VERSION, Note, NPC, nowIso, Scene } from '@trifold/schema';
+import {
+  clampCounterValue,
+  moveCounter,
+  nextCounterOrder,
+  placeItem,
+  QUICK_NOTES_TITLE,
+  quickNotesFolder,
+  quickNoteTitle,
+} from '@trifold/rules';
+import {
+  Adventure,
+  CAMPAIGN_SCHEMA_VERSION,
+  CampaignCounter,
+  CampaignTimer,
+  Note,
+  NPC,
+  nowIso,
+  Scene,
+} from '@trifold/schema';
 import type { CampaignRepository } from './repository';
 
 /**
@@ -163,6 +180,69 @@ export class CampaignEntities {
   async removeNpc(id: string): Promise<void> {
     await rm(this.repo.entityPath('npcs', id), { force: true });
     await this.repo.touch();
+  }
+
+  // ---------- counters (ADR 0019) ----------
+
+  /** Saves a counter, its value clamped to its bounds; a new one (no id) goes last. */
+  async saveCounter(input: CampaignCounter): Promise<CampaignCounter> {
+    const order = input.id ? input.order : nextCounterOrder(await this.repo.counters());
+    const counter = CampaignCounter.parse({
+      ...input,
+      schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+      id: input.id || ulid(),
+      value: clampCounterValue(input.value, input),
+      order,
+      createdAt: input.createdAt || nowIso(),
+      updatedAt: nowIso(),
+    });
+    await this.repo.writeEntity('counters', counter.id, counter);
+    return counter;
+  }
+
+  async removeCounter(id: string): Promise<void> {
+    await rm(this.repo.entityPath('counters', id), { force: true });
+    await this.repo.touch();
+  }
+
+  /** Puts a counter at `index` and renumbers the list; resolves to the list in order. */
+  async moveCounter(id: string, index: number): Promise<CampaignCounter[]> {
+    const counters = await this.repo.counters();
+    const changed = moveCounter(counters, id, index).map((c) => ({ ...c, updatedAt: nowIso() }));
+    if (!changed.length) return counters;
+    await this.repo.writeEntities('counters', changed);
+    return this.repo.counters();
+  }
+
+  // ---------- timers (ADR 0021) ----------
+
+  /** Saves a timer definition; a new one (no id) goes last. */
+  async saveTimer(input: CampaignTimer): Promise<CampaignTimer> {
+    const order = input.id ? input.order : nextCounterOrder(await this.repo.timers());
+    const timer = CampaignTimer.parse({
+      ...input,
+      schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+      id: input.id || ulid(),
+      order,
+      createdAt: input.createdAt || nowIso(),
+      updatedAt: nowIso(),
+    });
+    await this.repo.writeEntity('timers', timer.id, timer);
+    return timer;
+  }
+
+  async removeTimer(id: string): Promise<void> {
+    await rm(this.repo.entityPath('timers', id), { force: true });
+    await this.repo.touch();
+  }
+
+  /** Puts a timer at `index` and renumbers the list; resolves to the list in order. */
+  async moveTimer(id: string, index: number): Promise<CampaignTimer[]> {
+    const timers = await this.repo.timers();
+    const changed = moveCounter(timers, id, index).map((t) => ({ ...t, updatedAt: nowIso() }));
+    if (!changed.length) return timers;
+    await this.repo.writeEntities('timers', changed);
+    return this.repo.timers();
   }
 
   async saveScene(input: Scene): Promise<Scene> {

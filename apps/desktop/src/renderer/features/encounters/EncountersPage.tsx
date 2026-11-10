@@ -576,71 +576,69 @@ export function EncountersPage() {
                 </span>
               ) : (
                 <span className="encounter-row-actions">
-                  <span className="row-actions pinned">
-                    {!e.state && (
+                  <span className="row-actions">
+                    {e.id === fightId ? (
                       <button
                         type="button"
                         className="chrome-btn xs"
-                        aria-label={`Edit ${e.name}`}
-                        title="Edit"
-                        onClick={() => setDraft(e)}
+                        aria-label={`Return to fight: ${e.name}`}
+                        title="Return to fight"
+                        onClick={() => setBrowsing(false)}
                       >
-                        <Icon name="pencil" />
+                        <Icon name="play" />
                       </button>
-                    )}
-                    {e.id !== fightId && (
+                    ) : e.state ? (
                       <button
                         type="button"
-                        className="chrome-btn xs danger"
-                        aria-label={`Delete ${e.name}`}
-                        title="Delete"
-                        onClick={() => setConfirmDelete(e.id)}
+                        className="chrome-btn xs"
+                        aria-label={`Resume combat: ${e.name}`}
+                        title={fightId ? 'End the current fight first' : 'Resume combat'}
+                        disabled={!!fightId}
+                        onClick={() => void resume(e)}
                       >
-                        <Icon name="trash" />
+                        <Icon name="play" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="chrome-btn xs"
+                        aria-label={`Start combat: ${e.name}`}
+                        title={
+                          fightId
+                            ? 'End the current fight first'
+                            : e.combatants.length === 0
+                              ? 'Add combatants first'
+                              : 'Start combat'
+                        }
+                        disabled={e.combatants.length === 0 || !!fightId}
+                        onClick={() =>
+                          void begin(e, current.pcs, current.campaign.settings.initiativeMode)
+                        }
+                      >
+                        <Icon name="play" />
                       </button>
                     )}
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-label={`Edit ${e.name}`}
+                      title={e.state ? 'End the fight to edit it' : 'Edit'}
+                      disabled={!!e.state}
+                      onClick={() => setDraft(e)}
+                    >
+                      <Icon name="pencil" />
+                    </button>
+                    <button
+                      type="button"
+                      className="chrome-btn xs danger"
+                      aria-label={`Delete ${e.name}`}
+                      title={e.id === fightId ? 'End the fight to delete it' : 'Delete'}
+                      disabled={e.id === fightId}
+                      onClick={() => setConfirmDelete(e.id)}
+                    >
+                      <Icon name="trash" />
+                    </button>
                   </span>
-                  {e.id === fightId ? (
-                    <button
-                      type="button"
-                      className="chrome-btn xs"
-                      aria-label={`Return to fight: ${e.name}`}
-                      title="Return to fight"
-                      onClick={() => setBrowsing(false)}
-                    >
-                      <Icon name="play" />
-                    </button>
-                  ) : e.state ? (
-                    <button
-                      type="button"
-                      className="chrome-btn xs"
-                      aria-label={`Resume combat: ${e.name}`}
-                      title={fightId ? 'End the current fight first' : 'Resume combat'}
-                      disabled={!!fightId}
-                      onClick={() => void resume(e)}
-                    >
-                      <Icon name="play" />
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="chrome-btn xs"
-                      aria-label={`Start combat: ${e.name}`}
-                      title={
-                        fightId
-                          ? 'End the current fight first'
-                          : e.combatants.length === 0
-                            ? 'Add combatants first'
-                            : 'Start combat'
-                      }
-                      disabled={e.combatants.length === 0 || !!fightId}
-                      onClick={() =>
-                        void begin(e, current.pcs, current.campaign.settings.initiativeMode)
-                      }
-                    >
-                      <Icon name="play" />
-                    </button>
-                  )}
                 </span>
               )}
             </div>
