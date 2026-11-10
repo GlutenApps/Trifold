@@ -1,7 +1,9 @@
 import type {
   Adventure,
   Campaign,
+  CampaignCounter,
   CampaignExportOptions,
+  CampaignTimer,
   CombatState,
   CompendiumRecord,
   Encounter,
@@ -74,6 +76,10 @@ export interface PresenterOverlays {
   initiativeStrip: boolean;
   pcHealthBars: boolean;
   roundCounter: boolean;
+  /** The counters the DM put on the TV (ADR 0019). */
+  counters: boolean;
+  /** The timer the DM put on the TV (ADR 0021). */
+  timers: boolean;
 }
 
 export interface TitleCardScene {
@@ -179,6 +185,31 @@ export interface CombatSummary {
   entries: CombatSummaryEntry[];
 }
 
+/** A counter on the TV (ADR 0019): at most three, in the DM's order. */
+export interface LiveCounter {
+  id: string;
+  name: string;
+  value: number;
+  /** Shown as "value / max" when set. */
+  max?: number;
+  /** The bound it sits on, if any. */
+  bound: 'min' | 'max' | null;
+}
+
+/**
+ * A timer on the TV (ADR 0021). The player counts down from `endsAt` on its own clock, so the
+ * console only sends a change when the timer is started, paused, reset or edited.
+ */
+export interface LiveTimer {
+  id: string;
+  name: string;
+  status: 'idle' | 'running' | 'paused' | 'done';
+  /** Milliseconds since the epoch when a running timer reaches zero. */
+  endsAt?: number;
+  /** Time left when not running. */
+  leftMs: number;
+}
+
 /** Authoritative presenter state. Owned by the console, relayed by main, rendered by the player. */
 export interface PresenterState {
   schemaVersion: 1;
@@ -190,6 +221,10 @@ export interface PresenterState {
   handout: Handout | null;
   breakScreen: BreakScreen | null;
   combat: CombatSummary | null;
+  /** The counters marked Show on TV, in list order (ADR 0019). */
+  counters: LiveCounter[];
+  /** The one timer marked Show on TV, or null (ADR 0021). */
+  timer: LiveTimer | null;
   /** Milliseconds since epoch; lets the player ignore stale updates. */
   updatedAt: number;
 }
@@ -199,10 +234,19 @@ export const initialPresenterState: PresenterState = {
   blackout: true,
   scene: null,
   showSceneTitle: true,
-  overlays: { sceneTitle: true, initiativeStrip: true, pcHealthBars: false, roundCounter: true },
+  overlays: {
+    sceneTitle: true,
+    initiativeStrip: true,
+    pcHealthBars: false,
+    roundCounter: true,
+    counters: true,
+    timers: true,
+  },
   handout: null,
   breakScreen: null,
   combat: null,
+  counters: [],
+  timer: null,
   updatedAt: 0,
 };
 
@@ -474,6 +518,10 @@ export interface CampaignBundle {
   notes: Note[];
   npcs: NPC[];
   scenes: Scene[];
+  /** The Counters dock tool's counters, in list order (ADR 0019). */
+  counters: CampaignCounter[];
+  /** The Timers dock tool's timers (definitions only), in list order (ADR 0021). */
+  timers: CampaignTimer[];
 }
 
 /** What `notes.remove` does with a folder's contents: move it up a level, or remove it too. */
@@ -724,6 +772,28 @@ export interface TrifoldApi {
     /** Native picker; copies the image into the campaign and makes a display-size copy. */
     importImage(): Promise<SceneImage | null>;
   };
+  /** The open campaign's counters (ADR 0019), one file each under `counters/`. */
+  counters: {
+    /**
+     * An id-less counter is created and goes last; otherwise its file is replaced. The value is
+     * clamped to the counter's bounds and `updatedAt` is set either way.
+     */
+    save(counter: CampaignCounter): Promise<CampaignCounter>;
+    remove(counterId: string): Promise<void>;
+    /**
+     * Puts a counter at `index` among the others and renumbers them from 0. Resolves to every
+     * counter in list order.
+     */
+    move(counterId: string, index: number): Promise<CampaignCounter[]>;
+  };
+  /** The open campaign's timer definitions (ADR 0021), one file each under `timers/`. */
+  timers: {
+    /** An id-less timer is created and goes last; otherwise its file is replaced. */
+    save(timer: CampaignTimer): Promise<CampaignTimer>;
+    remove(timerId: string): Promise<void>;
+    /** Puts a timer at `index` and renumbers the list; resolves to every timer in order. */
+    move(timerId: string, index: number): Promise<CampaignTimer[]>;
+  };
   backups: {
     list(): Promise<BackupInfo[]>;
     /** Writes a zip now, regardless of the daily schedule. */
@@ -860,6 +930,8 @@ export const API_METHODS = {
   noteTemplates: ['list', 'save', 'remove'],
   npcs: ['save', 'remove'],
   scenes: ['save', 'remove', 'importImage'],
+  counters: ['save', 'remove', 'move'],
+  timers: ['save', 'remove', 'move'],
   pcs: ['save', 'remove', 'quickAdd'],
   encounters: ['save', 'remove', 'saveState', 'finish'],
   backups: [

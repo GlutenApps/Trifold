@@ -132,7 +132,14 @@ describe('PlayerScreen', () => {
           { id: 'w', name: 'Beast', role: 'enemy', isPc: false, dead: false, bloodied: true },
         ],
       },
-      overlays: { sceneTitle: true, initiativeStrip: true, pcHealthBars: true, roundCounter: true },
+      overlays: {
+        sceneTitle: true,
+        initiativeStrip: true,
+        pcHealthBars: true,
+        roundCounter: true,
+        counters: true,
+        timers: true,
+      },
       handout: { kind: 'text', title: 'Letter', body: 'Come at dusk.' },
       breakScreen: { title: 'Back in', endsAt: Date.now() + 65_000 },
     });
@@ -144,5 +151,51 @@ describe('PlayerScreen', () => {
     expect(screen.getByTestId('round-counter')).toHaveTextContent('Round 3');
     expect(screen.getByTestId('handout')).toHaveTextContent('Come at dusk.');
     expect(screen.getByTestId('countdown')).toHaveTextContent(/1:0\d/);
+  });
+
+  it('shows the counters the DM put on the TV, with a maximum when set, unless switched off', async () => {
+    const push = mountWithPush();
+    const counters: PresenterState['counters'] = [
+      { id: 'r', name: 'Ritual rounds', value: 3, max: 5, bound: null },
+      { id: 't', name: 'Torches', value: 0, bound: 'min' },
+    ];
+    await push({ counters });
+    const list = screen.getByRole('list', { name: 'Counters' });
+    expect(list).toHaveTextContent('Ritual rounds3 / 5');
+    expect(list).toHaveTextContent('Torches0');
+    expect(screen.getByText('Torches').closest('li')).toHaveClass('at-min');
+    await push({ counters, overlays: { ...initialPresenterState.overlays, counters: false } });
+    expect(screen.queryByTestId('tv-counters')).not.toBeInTheDocument();
+  });
+  it('counts the TV timer down on its own clock, alerts at zero, and hides with its switch', async () => {
+    vi.useFakeTimers({ now: new Date('2026-11-10T12:00:00.000Z') });
+    try {
+      const push = mountWithPush();
+      const endsAt = Date.now() + 65_000;
+      const timer = { id: 't', name: 'Decide', status: 'running' as const, endsAt, leftMs: 65_000 };
+      await push({ timer });
+      const card = screen.getByTestId('tv-timer');
+      expect(card).toHaveTextContent('Decide1:05');
+      // No push from the console: the player window keeps time itself.
+      await act(async () => {
+        vi.advanceTimersByTime(60_000);
+      });
+      expect(card).toHaveTextContent('0:05');
+      await act(async () => {
+        vi.advanceTimersByTime(5_500);
+      });
+      expect(screen.getByTestId('tv-timer')).toHaveClass('status-done');
+      expect(screen.getByTestId('tv-timer')).toHaveTextContent('0:00Time’s up');
+      // Paused: the time left, standing still.
+      await push({ timer: { id: 't', name: 'Decide', status: 'paused', leftMs: 42_000 } });
+      expect(screen.getByTestId('tv-timer')).toHaveTextContent('0:42');
+      await push({
+        timer: { id: 't', name: 'Decide', status: 'paused', leftMs: 42_000 },
+        overlays: { ...initialPresenterState.overlays, timers: false },
+      });
+      expect(screen.queryByTestId('tv-timer')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

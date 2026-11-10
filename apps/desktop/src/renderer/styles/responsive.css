@@ -74,13 +74,6 @@
 .scene-actions {
   display: inline-flex;
   gap: 0;
-  visibility: hidden;
-}
-
-.scene-row:hover .scene-actions,
-.scene-row.selected .scene-actions,
-.scene-row:focus-within .scene-actions {
-  visibility: visible;
 }
 
 /* Combat rows */
@@ -90,17 +83,10 @@
   gap: 6px;
 }
 
-/* Reorder sits side by side at row tier and shows on hover, focus or selection. */
+/* Reorder sits side by side at row tier, quiet until the row is hovered, focused or selected. */
 .combatant-row .reorder {
   display: inline-flex;
   gap: 2px;
-  visibility: hidden;
-}
-
-.combatant-row:hover .reorder,
-.combatant-row:focus-within .reorder,
-.combatant-row.selected .reorder {
-  visibility: visible;
 }
 
 .combatant-row .init input[type='number'] {
@@ -166,23 +152,67 @@ textarea {
   z-index: 2;
 }
 
-/* Row actions appear on hover, selection or focus, so the row's text gets the width. */
 .row-actions {
   display: inline-flex;
   gap: 0;
-  visibility: hidden;
 }
 
-.row:hover .row-actions,
-.row:focus-within .row-actions,
-.pc-row:hover .row-actions,
-.layout-row:hover .row-actions,
-.layout-row:focus-within .row-actions,
-.source-row:hover .row-actions,
-.backup-row:hover .row-actions,
-.backup-row:focus-within .row-actions,
-.row-actions.pinned {
-  visibility: visible;
+/* Quiet controls (ADR 0020): row actions, scene actions, the tracker's reorder arrows, a stat
+   block's roll modes and a tab's close button are always on screen, each in its own place, at
+   --quiet opacity. They come up to full when their row (or tab) is hovered, holds focus or is
+   selected, and a control is always full while it is hovered or focused itself. Nothing moves.
+   Disabled controls keep their own disabled look, and a toggle that is on (aria-pressed)
+   stays full, because its state is information. */
+.row-actions > :not(:disabled, [aria-pressed='true']),
+.scene-actions > :not(:disabled, [aria-pressed='true']),
+.combatant-row .reorder > :not(:disabled, [aria-pressed='true']),
+.d20-roll .roll-modes > :not(:disabled, [aria-pressed='true']),
+.tab .tab-close {
+  opacity: var(--quiet);
+  transition: opacity 120ms ease-out;
+}
+
+:is(
+    .row,
+    .counter-row,
+    .pc-row,
+    .layout-row,
+    .source-row,
+    .backup-row,
+    .playlist-tracks li,
+    .music-folder-row,
+    .scene-row,
+    .combatant-row,
+    .sb-feature-head,
+    .d20-roll
+  ):is(:hover, :focus-within, .selected)
+  :is(.row-actions, .scene-actions, .reorder, .roll-modes)
+  > :not(:disabled),
+.tab:is(:hover, .active) .tab-close,
+:is(.row-actions, .scene-actions, .reorder, .roll-modes)
+  > :is(:hover, :focus-visible):not(:disabled),
+.tab .tab-close:is(:hover, :focus-visible) {
+  opacity: 1;
+}
+
+/* A row-action toggle that is on sits on a tint, like a state toolbar's, so it reads at rest. */
+.row-actions .chrome-btn[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.row-actions .chrome-btn[aria-pressed='true']:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-actions > *,
+  .scene-actions > *,
+  .combatant-row .reorder > *,
+  .d20-roll .roll-modes > *,
+  .tab .tab-close {
+    transition: none;
+  }
 }
 
 /* A narrow Music panel stacks each track: play, title and length, then tags, then playlists

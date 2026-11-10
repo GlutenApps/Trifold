@@ -136,13 +136,18 @@ describe('dock', () => {
   it('toggles sections and keeps every minor listed once', () => {
     const layout = toggleSection(table, 'music');
     expect(layout.dock.sections.find((s) => s.tool === 'music')?.open).toBe(true);
-    // `table` was saved before Quick notes existed: it gains the tool, closed, once (ADR 0018).
+    // `table` was saved before Quick notes, Counters and Timers existed: it gains each tool,
+    // closed, once (ADR 0018, ADR 0019, ADR 0021).
     expect(layout.dock.sections.map((s) => s.tool).sort()).toEqual([
+      'counters',
       'music',
       'quickNotes',
       'scenes',
+      'timers',
     ]);
     expect(layout.dock.sections.find((s) => s.tool === 'quickNotes')?.open).toBe(false);
+    expect(layout.dock.sections.find((s) => s.tool === 'counters')?.open).toBe(false);
+    expect(layout.dock.sections.find((s) => s.tool === 'timers')?.open).toBe(false);
   });
 });
 

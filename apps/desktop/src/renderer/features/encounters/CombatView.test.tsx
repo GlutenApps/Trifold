@@ -331,6 +331,8 @@ describe('CombatView: adding mid-fight', () => {
         npcs: [],
         encounters: [{ id: 'enc', combatants: [], results: [] }],
         scenes: [],
+        counters: [],
+        timers: [],
       } as unknown as CampaignBundle,
     });
     vi.mocked(window.trifold.compendium.search).mockResolvedValueOnce({
@@ -382,6 +384,8 @@ describe('CombatView: encounter notes', () => {
         npcs: [],
         encounters: [{ id: 'enc', combatants: [], results: [], notes: 'Whistle brings stalkers' }],
         scenes: [],
+        counters: [],
+        timers: [],
       } as unknown as CampaignBundle,
     });
     vi.mocked(window.trifold.encounters.save).mockClear();
@@ -410,6 +414,8 @@ describe('CombatView: encounter notes', () => {
         npcs: [],
         encounters: [{ id: 'enc', combatants: [], results: [], notes: 'Whistle' }],
         scenes: [],
+        counters: [],
+        timers: [],
       } as unknown as CampaignBundle,
     });
     const { save, saveState, finish } = window.trifold.encounters;

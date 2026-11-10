@@ -6,6 +6,7 @@
  * Nothing here renders a feature; it only puts them in their homes.
  */
 import { useEffect } from 'react';
+import { tvCounters, tvTimer } from '@trifold/rules';
 import { handleKeydown, installHotkeys, registerHotkey } from '../../hotkeys';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
@@ -14,6 +15,8 @@ import { useMusicStore } from '../../stores/musicStore';
 import { usePhoneAudioStore } from '../../stores/phoneAudioStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useSceneStore } from '../../stores/sceneStore';
+import { useCountersStore } from '../../stores/countersStore';
+import { useTimersStore } from '../../stores/timersStore';
 import { useQuickNotesStore } from '../../stores/quickNotesStore';
 import { useSearchStore } from '../../stores/searchStore';
 import { useShellStore } from '../../stores/shellStore';
@@ -150,6 +153,48 @@ export function AppShell() {
     return () => offs.forEach((off) => off());
   }, []);
 
+  // Mirror the counters marked Show on TV (ADR 0019): the first three, in the DM's order.
+  useEffect(() => {
+    const sync = () =>
+      usePresenterStore
+        .getState()
+        .setCounters(tvCounters(useCampaignStore.getState().current?.counters ?? []));
+    sync();
+    return useCampaignStore.subscribe((s, prev) => {
+      if (s.current?.counters !== prev.current?.counters) sync();
+    });
+  }, []);
+
+  // Mirror the one timer marked Show on TV (ADR 0021): only when it starts, pauses, resets or
+  // changes; the player counts down from `endsAt` itself.
+  useEffect(() => {
+    const sync = () => {
+      const timer = tvTimer(useCampaignStore.getState().current?.timers ?? []);
+      const run = timer ? useTimersStore.getState().runOf(timer) : null;
+      usePresenterStore.getState().setTimer(
+        timer && run
+          ? {
+              id: timer.id,
+              name: timer.name,
+              status: run.status,
+              ...(run.endsAt !== undefined ? { endsAt: run.endsAt } : {}),
+              leftMs: run.leftMs,
+            }
+          : null,
+      );
+    };
+    sync();
+    const offs = [
+      useCampaignStore.subscribe((s, prev) => {
+        if (s.current?.timers !== prev.current?.timers) sync();
+      }),
+      useTimersStore.subscribe((s, prev) => {
+        if (s.runs !== prev.runs) sync();
+      }),
+    ];
+    return () => offs.forEach((off) => off());
+  }, []);
+
   // A fight that starts anywhere brings Encounters (now the tracker) forward, beside the map.
   useEffect(
     () =>
@@ -227,6 +272,22 @@ export function AppShell() {
         description: 'Quick note: jot something down without leaving your place',
         run: () => {
           if (shell().space === 'console') useQuickNotesStore.getState().summon();
+        },
+      }),
+      registerHotkey({
+        id: 'timers.open',
+        combo: 'Ctrl+Alt+T',
+        description: 'Timers: open the tool and focus the first timer',
+        run: () => {
+          if (shell().space === 'console') useTimersStore.getState().summon();
+        },
+      }),
+      registerHotkey({
+        id: 'counters.open',
+        combo: 'Ctrl+Alt+C',
+        description: 'Counters: open the tool and focus the first counter',
+        run: () => {
+          if (shell().space === 'console') useCountersStore.getState().summon();
         },
       }),
       registerHotkey({

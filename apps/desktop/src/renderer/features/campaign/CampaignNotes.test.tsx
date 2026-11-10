@@ -50,6 +50,8 @@ function seed(notes: Note[]) {
       npcs: [],
       encounters: [],
       scenes: [],
+      counters: [],
+      timers: [],
     } as unknown as CampaignBundle,
     error: null,
   });

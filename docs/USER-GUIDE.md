@@ -18,7 +18,7 @@ Trifold has two spaces. The **Library** (the mark at the top left) holds what ev
 
 - **Top bar.** The mark returns to the Library. The campaign name is a menu: switch campaign, New campaign…, Import campaign XML…, Close campaign. In the middle, **Search** (`Ctrl+F`) finds anything by name: notes and folders, NPCs, party members, encounters (also by who is in them), scenes, compendium records and web tabs, grouped by type. Under **Mentioned in** it also finds what you typed inside your notes, and in the notes on encounters, NPCs, PCs and scenes, with the words around it; opening one takes you to that spot. **Compendium text** finds the phrase inside stat blocks, spells and items. When a group has more than it shows, **Show all** in its header lists just that group in full; Escape (or the back arrow) returns to every result. Arrows move, Enter opens the item where it lives and marks it for a moment, Escape clears. In a narrow window the field is behind a search button. On the right: the current layout, Hotkeys (`Ctrl+/`) and Settings (`Ctrl+,`).
 - **Stage.** One or two groups of tabs holding **Campaign**, **Compendium**, **Encounters**, **VTT** (the virtual tabletop: what the TV shows) and any **web tabs**. Each group's `+` opens a tab here and offers **New web tab…**. Drag a tab to move it, or onto the right half of a lone group to split the stage. A closed tab keeps its state.
-- **Dock.** The right-hand column for the tall tools, **Scenes**, **Music** and **Quick notes**. Its header toggles each and collapses the dock to icons, where a tool opens as a flyout. **Dice**, **Hotkeys** and **Layouts** are pop-ups from their own buttons.
+- **Dock.** The right-hand column for the tall tools, **Scenes**, **Music**, **Quick notes**, **Counters** and **Timers**. Its header toggles each and collapses the dock to icons, where a tool opens as a flyout. **Dice**, **Hotkeys** and **Layouts** are pop-ups from their own buttons.
 - **Live strip.** The bottom bar, for table state only: the TV with Blackout and undo, round and turn, music and mute, the dice pool. Every strip button also exists in its tool.
 
 **Layouts.** A layout keeps which tabs are open, where, and the dock. Three starters come with the app: **Prep**, **Table** (VTT beside Campaign, Encounters and Compendium) and **Combat** (Encounters alone on the right). The Layouts pop-up applies, overwrites, renames, reorders and deletes them, saves the screen as a new one, and brings the starters back. `Ctrl+1` to `Ctrl+9` apply the first nine.
@@ -121,6 +121,26 @@ Press `Ctrl+N` anywhere in the console, or open **Quick notes** in the dock, to 
 
 Quick notes are ordinary notes kept in a folder called **Quick Notes** in the Campaign tab's Notes. Trifold makes the folder when it is missing, even if you deleted it, and you can rename it. Below the form the tool lists every quick note, newest first, with a find field. Open one to rename, tag, edit or delete it, move it to another folder, or open it in Notes. A note moved out of the Quick Notes folder becomes an ordinary note and leaves the list.
 
+## Counters
+
+Counters keep the small numbers of a session: rounds until the ritual completes, legendary resistances, torches, waves of enemies. Open **Counters** in the dock, or press `Ctrl+Alt+C` to open it with the first counter ready for the keyboard. Each campaign has its own counters, and they are there when you come back.
+
+**New counter** (the plus) asks for a name, a starting value (0 unless you change it), an optional minimum and maximum, a **primary step** (1 unless you change it) and an optional **alternate step**. The buttons either side of the number add or take the primary step; with an alternate step, a second pair outside them adds or takes that. Click the number to type a value, then Enter (Escape keeps the old one). With a counter focused, the arrow keys add or take the primary step, Shift with an arrow (or PageUp and PageDown) the alternate step, and Home and End go to the minimum and maximum. The mouse wheel never changes a counter, so scrolling elsewhere is always safe.
+
+A counter with a minimum or maximum never goes past it. When it sits on one, the number turns the warning colour and says **min** or **max**; pressing on into the bound flashes the number. Each counter has **Show on the TV**, **Reset** (back to its starting value), **Edit** and **Delete** (which asks first) at the end of its name line. Drag counters to put them in order.
+
+**On the TV.** Up to three counters can be on the TV at once, stacked in the bottom-left corner with their name, value and maximum. A counter on the TV has its TV button lit; with three on, take one off before adding another. To hide them all for a while without unmarking any, turn off **Counters** in the TV tab's Overlays.
+
+## Timers
+
+Timers are real-world countdowns for the table: "you have 60 seconds to decide", "the guards are back in five minutes". Open **Timers** in the dock, or press `Ctrl+Alt+T` to open it with the first timer's button ready for the keyboard. A campaign keeps its timers, but not whether they were running: after a restart every timer is back at its full time.
+
+**New timer** (the plus) asks for a name and a duration: pick **30s**, **1m** or **5m**, or type one such as `90`, `1:30`, `2m` or `1m 30s`. **Chime at zero** is on unless you turn it off. Each timer has one main button: **Start**, then **Pause** and **Resume**, and **Start again** once it has run out. Next to its name are the bell (chime on or off), **Show on the TV**, **Reset** (back to its full time), **Edit** and **Delete** (which asks first). Run as many as you like at once, and drag them into order. Changing a running timer's duration takes effect when you reset it.
+
+When a timer reaches zero its card turns red, pulses, says **Time's up** and stays at 0:00 until you reset or start it again; the Timers icon in the dock shows a red dot so you notice even with the tool closed. A timer with its bell on plays a short chime. The chime plays over your music without interrupting it, and Mute silences it like everything else.
+
+**On the TV.** One timer at a time can be on the TV, shown large in the bottom-left corner above any counters. Choosing another timer for the TV moves it there. The TV counts down by itself and shows the alert at zero. To hide it for a while, turn off **Timers** in the TV tab's Overlays.
+
 ## Hotkeys
 
 Plain letter keys do nothing while you are typing in a field.
@@ -130,6 +150,11 @@ Plain letter keys do nothing while you are typing in a field.
 | Console | Search the campaign and compendium | `Ctrl+F` |
 | Console | Quick note: jot something down without leaving your place | `Ctrl+N` |
 | Quick notes | Save the quick note | `Ctrl+S` |
+| Console | Counters: open the tool and focus the first counter | `Ctrl+Alt+C` |
+| Console | Timers: open the tool and focus the first timer | `Ctrl+Alt+T` |
+| Counters | Add or take the primary step on a focused counter | `Up`, `Down` |
+| Counters | Add or take the alternate step (the primary one if there is none) | `Shift+Up`, `Shift+Down`, `PageUp`, `PageDown` |
+| Counters | Go to the minimum or maximum, when set | `Home`, `End` |
 | Console | Jump to the compendium search | `Ctrl+K` |
 | Console | VTT: the scene on the TV | `Ctrl+T` |
 | Console | Music: transport, playlists, tracks | `Ctrl+M` |

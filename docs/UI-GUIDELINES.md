@@ -89,10 +89,10 @@ Nothing clickable is smaller than 20 × 20 px, and anything used during combat i
 
 ## 8. Rows and lists
 
-- **Row actions are hidden until the row is hovered, focused or selected.** Wrap them in `.row-actions`; the reveal is in `responsive.css`.
-- **Exception, by the DM's choice:** the Encounters list keeps edit, remove and start always visible (`.row-actions.pinned`). Do not pin other lists without the same kind of decision.
+- **Row actions are always on screen, quiet until the row is in use** (ADR 0020). Wrap them in `.row-actions`: they rest at the `--quiet` opacity and come up to full when the row is hovered, holds focus or is selected; the rule is in `responsive.css` and covers every list, so never hide or reveal actions per feature. A toggle that is on (`aria-pressed`) stays full, so its state reads at rest; use that instead of a separate status badge.
+- **No exceptions:** every list uses the same quiet actions, the Encounters list included (it used to pin its actions at full strength). Each action keeps its place on every row: when one does not apply (Delete for the fight in progress), it stays in its slot, disabled, with a `title` that says why, rather than disappearing and shifting the others. A disabled icon button is grey, at the fainter `--disabled` opacity, with a not-allowed pointer, so it never passes for a quiet one.
 - Row actions are `chrome-btn xs`, icon-only. A row that needs words for its action (Restore, Show) is a sign the action belongs in the selected item's inspector, or it gets a `title` and an icon.
-- Rows of the same kind look the same everywhere: if PC rows have hover icons, NPC rows do too.
+- Rows of the same kind look the same everywhere: if PC rows have row actions, NPC rows do too.
 
 ## 9. Common actions
 
@@ -131,9 +131,9 @@ ADR 0014 records how these came about.
 2. Hierarchy comes from `primary` / `danger`, at most one primary per group.
 3. Icon buttons have `title` and a target-naming `aria-label`; no `size` on icons inside buttons; no typed glyphs.
 4. No text below 12 px except keycaps and badges.
-5. Row actions are `chrome-btn xs` inside `.row-actions` and appear on hover.
+5. Row actions are `chrome-btn xs` inside `.row-actions`, always on screen and quiet until the row is in use (ADR 0020).
 6. Delete, remove, add, back, close and confirm follow section 9.
-7. Colours and radii come from tokens.
+7. Colours and radii come from tokens. Native controls (checkboxes, radios, sliders), selected text, `<mark>` and the fallback focus ring take the accent from `global.css`; never leave a browser or system colour showing.
 8. Headings are `h2` / `h3`; no `h1` in a panel.
 9. Works from 480 px (360 px for a dock tool) with no sideways scrolling; layout switches only at 640 or 960 (§10).
 10. Check it in both themes, at 1366 × 768, and at half of a 1920 screen.

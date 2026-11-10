@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { initialPresenterState, type PresenterState } from '@trifold/api';
 import { MapLayer } from './MapLayer';
+import { TvCorner } from './TvCorner';
 
 /**
  * The `/player` route (ADR 0002): the second screen. It subscribes to the presenter state main
@@ -109,6 +110,11 @@ export function PlayerScreen() {
           Round {combat.round}
         </div>
       )}
+
+      <TvCorner
+        timer={overlays.timers ? state.timer : null}
+        counters={overlays.counters ? state.counters : []}
+      />
 
       {state.handout && (
         <div className="handout" data-testid="handout">

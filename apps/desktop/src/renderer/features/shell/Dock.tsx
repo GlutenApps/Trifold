@@ -2,6 +2,7 @@ import { useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { MinorKind } from '@trifold/schema';
 import { useMusicStore } from '../../stores/musicStore';
 import { usePresenterStore } from '../../stores/presenterStore';
+import { useTimersStore } from '../../stores/timersStore';
 import { MINOR_TITLES } from '../../stores/shellLayout';
 import { useFit, useShellStore } from '../../stores/shellStore';
 import { Icon } from './icons';
@@ -22,6 +23,7 @@ export function Dock() {
   const setDockWidth = useShellStore((s) => s.setDockWidth);
   const [collapsed, setCollapsed] = useState<Set<MinorKind>>(new Set());
   const pips = useLivePips();
+  const alerts = useAlertPips();
   const fit = useFit();
   const effective = fit.dock;
   const expandDock = useShellStore((s) => s.expandDock);
@@ -52,7 +54,7 @@ export function Dock() {
             onClick={() => openTool(s.tool)}
           >
             <Icon name={MINOR_ICON[s.tool]} />
-            {pips.has(s.tool) && <span className="pip" />}
+            {pips.has(s.tool) && <span className={`pip${alerts.has(s.tool) ? ' alert' : ''}`} />}
           </button>
         ))}
       </aside>
@@ -111,7 +113,7 @@ export function Dock() {
             onClick={() => toggleSection(s.tool)}
           >
             <Icon name={MINOR_ICON[s.tool]} />
-            {pips.has(s.tool) && <span className="pip" />}
+            {pips.has(s.tool) && <span className={`pip${alerts.has(s.tool) ? ' alert' : ''}`} />}
           </button>
         ))}
         <span className="spacer" />
@@ -139,7 +141,9 @@ export function Dock() {
               <header className="dh">
                 <Icon name={MINOR_ICON[s.tool]} size={14} />
                 <span className="dh-name">{MINOR_TITLES[s.tool]}</span>
-                {pips.has(s.tool) && <span className="pip" />}
+                {pips.has(s.tool) && (
+                  <span className={`pip${alerts.has(s.tool) ? ' alert' : ''}`} />
+                )}
                 <SectionSummary tool={s.tool} collapsed={isCollapsed} />
                 <span className="spacer" />
                 <button
@@ -164,11 +168,18 @@ export function Dock() {
   );
 }
 
-/** Which tools carry a live pip: Scenes while a scene is on, Music while playing. */
+/**
+ * Which tools carry a live pip: Scenes while a scene is on, Music while playing, Timers while one
+ * runs or has run out.
+ */
 function useLivePips(): Set<MinorKind> {
   const sceneLive = usePresenterStore((s) => !!s.state.scene && !s.state.blackout);
   const playing = useMusicStore((s) => s.playing);
+  const timing = useTimersStore((s) =>
+    Object.values(s.runs).some((r) => r.status === 'running' || r.status === 'done'),
+  );
   const pips = new Set<MinorKind>();
+  if (timing) pips.add('timers');
   if (sceneLive) pips.add('scenes');
   if (playing) pips.add('music');
   return pips;
@@ -198,4 +209,10 @@ function SectionSummary({ tool, collapsed }: { tool: MinorKind; collapsed: boole
     );
   }
   return null;
+}
+
+/** Which tools' pips are alerts: Timers while a timer has run out and is not reset (ADR 0021). */
+function useAlertPips(): Set<MinorKind> {
+  const timeUp = useTimersStore((s) => Object.values(s.runs).some((r) => r.status === 'done'));
+  return new Set<MinorKind>(timeUp ? ['timers'] : []);
 }

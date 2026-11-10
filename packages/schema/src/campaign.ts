@@ -421,6 +421,60 @@ export const Scene = z.object({
 });
 export type Scene = z.infer<typeof Scene>;
 
+// ---------- counters (ADR 0019) ----------
+
+/**
+ * A DM's counter in the Counters dock tool (ADR 0019): rounds until a ritual completes, torches
+ * left, waves of enemies. Not the combatant `Counter` above, which lives inside a fight. One file
+ * per counter; `order` is its place in the list. `min` and `max` are optional bounds the value is
+ * clamped to. `step` is the main step (the inner buttons and the arrow keys); `altStep`, when
+ * set, is a second one (the outer buttons and Shift+arrows). `showOnTv` puts it on the player
+ * window; the TV shows at most three.
+ */
+export const CampaignCounter = z
+  .object({
+    schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+    id: z.string().min(1),
+    name: z.string().min(1),
+    /** What Reset goes back to. */
+    initial: int,
+    value: int,
+    min: int.optional(),
+    max: int.optional(),
+    step: int.min(1).default(1),
+    altStep: int.min(1).optional(),
+    showOnTv: z.boolean().optional(),
+    order: int.default(0),
+    createdAt: IsoDateTime,
+    updatedAt: IsoDateTime,
+  })
+  .refine((c) => c.min === undefined || c.max === undefined || c.min <= c.max, {
+    message: 'min must not be above max',
+    path: ['min'],
+  });
+export type CampaignCounter = z.infer<typeof CampaignCounter>;
+
+// ---------- timers (ADR 0021) ----------
+
+/**
+ * A real-world countdown in the Timers dock tool (ADR 0021): "you have 60 seconds to decide".
+ * Only the definition is stored; whether it is running is the console's, and every timer is idle
+ * again after a restart. `chime` plays a short tone at zero; `showOnTv` puts it on the player
+ * window, where one timer shows at a time.
+ */
+export const CampaignTimer = z.object({
+  schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+  id: z.string().min(1),
+  name: z.string().min(1),
+  durationSec: int.min(1).max(24 * 60 * 60),
+  chime: z.boolean().default(true),
+  showOnTv: z.boolean().optional(),
+  order: int.default(0),
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+});
+export type CampaignTimer = z.infer<typeof CampaignTimer>;
+
 // ---------- campaign export (ADR 0015) ----------
 
 /** What a `.trifold-campaign` file was made with; recorded in its manifest. */

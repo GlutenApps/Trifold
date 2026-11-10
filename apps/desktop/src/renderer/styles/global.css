@@ -86,6 +86,12 @@
   --icon: 16px;
   --icon-row: 14px;
   --icon-text: 14px;
+  /* Row actions and other per-row controls rest at this opacity and come up to full when their
+     row is hovered, focused or selected (ADR 0020). They are never hidden. */
+  --quiet: 0.45;
+  /* A disabled icon button: fainter than a quiet one and without its colour, so "cannot be
+     clicked" reads at a glance next to "not in use yet" (ADR 0020). */
+  --disabled: 0.25;
   font-family: var(--font-ui);
   font-size: 13px;
   line-height: 1.4;
@@ -127,6 +133,31 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
+}
+
+/* Browser and system defaults take the theme. Without these, checkboxes, radios and sliders
+   wear Chromium's blue, selected text wears the Windows accent colour, and <mark> is yellow. */
+:root {
+  accent-color: var(--accent);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--text);
+}
+
+mark {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--text);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* A focus ring for anything without its own (checkboxes, radios, sliders, a details summary).
+   :where keeps it at zero specificity, so every control's own focus style still wins. */
+:where(:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 h1 {
@@ -218,7 +249,7 @@ button.btn:hover:not(:disabled) {
 
 button.btn:disabled {
   opacity: 0.5;
-  cursor: default;
+  cursor: not-allowed;
 }
 
 button.btn.primary {

@@ -39,3 +39,6 @@ One short file per decision that deviates from or refines `DESIGN.md`. Number th
 | [0016](adr/0016-bundled-sample-campaign.md)                      | A sample campaign ships with the app and every Library gets it once.                                             |
 | [0017](adr/0017-global-search-and-deep-links.md)                 | Global search in the middle of the top bar, over one deep-link contract that every panel implements.             |
 | [0018](adr/0018-quick-notes.md)                                  | Quick notes: a dock tool and Ctrl+N that file titled notes in a Quick Notes folder found by its role.            |
+| [0019](adr/0019-counters.md) | Counters: a dock tool (Ctrl+Alt+C) of per-campaign numbers with optional bounds and two steps; up to three on the TV. |
+| [0020](adr/0020-quiet-row-actions.md) | Row actions are always on screen, quiet until their row is hovered, focused or selected. |
+| [0021](adr/0021-timers.md) | Timers: a dock tool (Ctrl+Alt+T) of real-world countdowns kept by timestamps; one on the TV. |

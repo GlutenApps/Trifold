@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Scene } from '@trifold/schema';
+import type { CampaignCounter, CampaignTimer, Scene } from '@trifold/schema';
 import { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 import { CampaignEntities } from './entities';
@@ -287,5 +287,131 @@ describe('captureNote (ADR 0018)', () => {
       'A quick note needs a title',
     );
     await expect(entities.captureNote({ title: 'Fine', body: '' })).resolves.toBeTruthy();
+  });
+});
+
+describe('counters (ADR 0019)', () => {
+  const now = '2026-11-10T00:00:00.000Z';
+  const draft = (name: string, over: Partial<CampaignCounter> = {}): CampaignCounter => ({
+    schemaVersion: 1,
+    id: '',
+    name,
+    initial: 3,
+    value: 3,
+    step: 5,
+    order: 0,
+    createdAt: '',
+    updatedAt: now,
+    ...over,
+  });
+
+  it('saves counters in order, clamps the value, and keeps them through a restart', async () => {
+    const bundle = await repo.create('Keep');
+    expect(bundle.counters).toEqual([]);
+    const entities = new CampaignEntities(repo);
+    const torches = await entities.saveCounter(draft('Torches'));
+    const lr = await entities.saveCounter(draft('Legendary resistance', { min: 0, max: 3 }));
+    expect([torches.order, lr.order]).toEqual([0, 1]);
+    expect(torches.id).not.toBe('');
+
+    // A value past a bound is held at it; editing keeps the counter's place.
+    const pushed = await entities.saveCounter({ ...lr, value: 9 });
+    expect(pushed).toMatchObject({ value: 3, order: 1 });
+    await entities.saveCounter({ ...torches, value: -2 });
+
+    // A fresh store and repository read the files the way a restarted app would.
+    const restarted = new CampaignRepository(await LibraryStore.open(join(dir, 'Library')), logger);
+    const reopened = await restarted.open(bundle.campaign.id);
+    expect(reopened.counters.map((c) => [c.name, c.value, c.min, c.max])).toEqual([
+      ['Torches', -2, undefined, undefined],
+      ['Legendary resistance', 3, 0, 3],
+    ]);
+  });
+
+  it('moves a counter and renumbers the list, then removes one', async () => {
+    const bundle = await repo.create('Keep');
+    const entities = new CampaignEntities(repo);
+    const a = await entities.saveCounter(draft('A'));
+    await entities.saveCounter(draft('B'));
+    await entities.saveCounter(draft('C'));
+    const moved = await entities.moveCounter(a.id, 2);
+    expect(moved.map((c) => [c.name, c.order])).toEqual([
+      ['B', 0],
+      ['C', 1],
+      ['A', 2],
+    ]);
+    await entities.removeCounter(a.id);
+    const reopened = await repo.open(bundle.campaign.id);
+    expect(reopened.counters.map((c) => c.name)).toEqual(['B', 'C']);
+  });
+
+  it('opens a campaign made before counters, and makes the folder on the first save', async () => {
+    const bundle = await repo.create('Old');
+    await rm(join(dir, 'Library', 'campaigns', bundle.campaign.slug, 'counters'), {
+      recursive: true,
+    });
+    expect((await repo.open(bundle.campaign.id)).counters).toEqual([]);
+    await new CampaignEntities(repo).saveCounter(draft('Waves'));
+    expect((await repo.open(bundle.campaign.id)).counters.map((c) => c.name)).toEqual(['Waves']);
+  });
+
+  it('refuses min above max', async () => {
+    await repo.create('Keep');
+    await expect(
+      new CampaignEntities(repo).saveCounter(draft('Bad', { min: 5, max: 2 })),
+    ).rejects.toThrow();
+  });
+});
+
+describe('timers (ADR 0021)', () => {
+  const now = '2026-11-10T00:00:00.000Z';
+  const draft = (name: string, over: Partial<CampaignTimer> = {}): CampaignTimer => ({
+    schemaVersion: 1,
+    id: '',
+    name,
+    durationSec: 60,
+    chime: true,
+    order: 0,
+    createdAt: '',
+    updatedAt: now,
+    ...over,
+  });
+
+  it('saves timer definitions in order and keeps them through a restart', async () => {
+    const bundle = await repo.create('Keep');
+    expect(bundle.timers).toEqual([]);
+    const entities = new CampaignEntities(repo);
+    await entities.saveTimer(draft('Decide', { durationSec: 30 }));
+    const guards = await entities.saveTimer(draft('Guards return', { durationSec: 300 }));
+    await entities.saveTimer({ ...guards, chime: false, showOnTv: true });
+    const restarted = new CampaignRepository(await LibraryStore.open(join(dir, 'Library')), logger);
+    const reopened = await restarted.open(bundle.campaign.id);
+    expect(
+      reopened.timers.map((t) => [t.name, t.durationSec, t.chime, !!t.showOnTv, t.order]),
+    ).toEqual([
+      ['Decide', 30, true, false, 0],
+      ['Guards return', 300, false, true, 1],
+    ]);
+  });
+
+  it('moves and removes timers, and opens a campaign made before timers', async () => {
+    const bundle = await repo.create('Old');
+    await rm(join(dir, 'Library', 'campaigns', bundle.campaign.slug, 'timers'), {
+      recursive: true,
+    });
+    expect((await repo.open(bundle.campaign.id)).timers).toEqual([]);
+    const entities = new CampaignEntities(repo);
+    const a = await entities.saveTimer(draft('A'));
+    await entities.saveTimer(draft('B'));
+    expect((await entities.moveTimer(a.id, 1)).map((t) => t.name)).toEqual(['B', 'A']);
+    await entities.removeTimer(a.id);
+    expect((await repo.open(bundle.campaign.id)).timers.map((t) => t.name)).toEqual(['B']);
+  });
+
+  it('refuses a duration under a second or over a day', async () => {
+    await repo.create('Keep');
+    const entities = new CampaignEntities(repo);
+    await expect(entities.saveTimer(draft('Zero', { durationSec: 0 }))).rejects.toThrow();
+    await expect(entities.saveTimer(draft('Long', { durationSec: 86_401 }))).rejects.toThrow();
   });
 });

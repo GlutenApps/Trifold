@@ -465,6 +465,8 @@ export function buildSampleCampaign(input: SampleInput): SampleBuild {
       notes: [...folders, ...notes],
       npcs,
       scenes,
+      counters: [],
+      timers: [],
     },
     media,
   };

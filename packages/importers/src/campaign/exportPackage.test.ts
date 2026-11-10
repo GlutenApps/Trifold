@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   Campaign,
+  CampaignCounter,
+  CampaignTimer,
   Encounter,
   Note,
   NPC,
@@ -150,6 +152,29 @@ function parts(): CampaignParts {
         updatedAt: now,
       }),
     ],
+    counters: [
+      CampaignCounter.parse({
+        schemaVersion: 1,
+        id: 'CTR',
+        name: 'Ritual rounds',
+        showOnTv: true,
+        initial: 5,
+        value: 2,
+        min: 0,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ],
+    timers: [
+      CampaignTimer.parse({
+        schemaVersion: 1,
+        id: 'TMR',
+        name: 'Decide',
+        durationSec: 60,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ],
   };
 }
 
@@ -168,6 +193,16 @@ describe('freshStart', () => {
     expect(fresh.encounters[0]!.combatants).toHaveLength(2);
     // Token positions stay; only the dead mark goes.
     expect(fresh.scenes[0]!.tokens[0]).toMatchObject({ x: 4.5, y: 7, dead: false });
+    // Counters go back to where they started; their bounds, step and place on the TV stay.
+    expect(fresh.counters[0]).toMatchObject({
+      value: 5,
+      initial: 5,
+      min: 0,
+      step: 1,
+      showOnTv: true,
+    });
+    // Timers are definitions only; a fresh start keeps them.
+    expect(fresh.timers).toMatchObject([{ id: 'TMR', durationSec: 60, chime: true }]);
   });
 });
 
@@ -230,7 +265,7 @@ describe('withNewIds', () => {
   it('gives every object a new id and follows it into every reference', () => {
     let n = 0;
     const copy = withNewIds(parts(), () => `NEW${(n += 1)}`);
-    const oldIds = ['CAMP', 'PC1', 'ENC', 'NOTE', 'NPC', 'SCN'];
+    const oldIds = ['CAMP', 'PC1', 'ENC', 'NOTE', 'NPC', 'SCN', 'CTR', 'TMR'];
     const text = JSON.stringify(copy);
     for (const id of oldIds) expect(text).not.toContain(`"${id}"`);
     const npcId = copy.npcs[0]!.id;

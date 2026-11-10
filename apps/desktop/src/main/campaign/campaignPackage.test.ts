@@ -148,6 +148,29 @@ describe('CampaignPackager', () => {
       createdAt: nowIso(),
       updatedAt: nowIso(),
     });
+    await a.campaigns.writeEntity('timers', 'TMR1', {
+      schemaVersion: 1,
+      id: 'TMR1',
+      name: 'Decide',
+      durationSec: 60,
+      chime: false,
+      showOnTv: true,
+      order: 0,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+    await a.campaigns.writeEntity('counters', 'CTR1', {
+      schemaVersion: 1,
+      id: 'CTR1',
+      name: 'Ritual rounds',
+      initial: 5,
+      value: 2,
+      min: 0,
+      step: 5,
+      order: 0,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
     await a.store.updateSettings({
       workspace: {
         ...defaultLibrarySettings().workspace,
@@ -189,6 +212,10 @@ describe('CampaignPackager', () => {
     expect(imported.pcs[0]).toMatchObject({ name: 'Thora', currentHp: 9 });
     expect(imported.npcs[0]).toMatchObject({ isAlive: false, hp: { current: 0 } });
     expect(imported.scenes[0]!.tokens[0]).toMatchObject({ x: 3, y: 4, dead: true });
+    expect(imported.counters).toMatchObject([{ id: 'CTR1', value: 2, min: 0 }]);
+    expect(imported.timers).toMatchObject([
+      { id: 'TMR1', durationSec: 60, chime: false, showOnTv: true },
+    ]);
     // Music belongs to the other Library.
     expect(imported.scenes[0]).not.toHaveProperty('audio');
     const dir = join(b.root, 'campaigns', result.campaign.slug);
@@ -212,6 +239,7 @@ describe('CampaignPackager', () => {
     expect(imported.npcs[0]!.isAlive).toBe(true);
     expect(imported.npcs[0]).not.toHaveProperty('hp');
     expect(imported.scenes[0]!.tokens[0]).toMatchObject({ x: 3, y: 4, dead: false });
+    expect(imported.counters).toMatchObject([{ name: 'Ritual rounds', value: 5, min: 0 }]);
     const dir = join(b.root, 'campaigns', result.campaign.slug);
     expect(await readdir(join(dir, 'tokens'))).toEqual([]);
     expect(b.store.getSettings().workspace.consoles[result.campaign.slug]).toBeDefined();

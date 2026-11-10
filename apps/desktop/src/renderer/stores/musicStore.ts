@@ -79,6 +79,8 @@ export interface MusicState {
   seek(seconds: number): void;
   setMuted(muted: boolean): void;
   toggleMuted(): void;
+  /** A timer's chime on the sfx layer (ADR 0021); music keeps playing. */
+  chime(): void;
   /** Off → loop playlist → loop track → off; a track played on its own skips "playlist". */
   cycleLoop(): Promise<void>;
   measureLoudness(): Promise<void>;
@@ -424,6 +426,14 @@ export const useMusicStore = create<MusicState>((set, get) => {
     toggleMuted() {
       if (get().source === 'phone') return;
       get().setMuted(!get().muted);
+    },
+
+    chime() {
+      try {
+        engine.chime();
+      } catch {
+        // No audio device (or no Web Audio, as in tests): the alert on screen is enough.
+      }
     },
 
     async cycleLoop() {
