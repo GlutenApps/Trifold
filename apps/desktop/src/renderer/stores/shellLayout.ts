@@ -45,6 +45,7 @@ export function pruneTabs(layout: ShellLayout, webTabs: readonly WebTab[]): Shel
 export const MINOR_TITLES: Record<MinorKind, string> = {
   music: 'Music',
   scenes: 'Scenes',
+  quickNotes: 'Quick notes',
 };
 
 /**

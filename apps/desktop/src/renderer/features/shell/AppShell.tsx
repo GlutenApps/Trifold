@@ -14,6 +14,7 @@ import { useMusicStore } from '../../stores/musicStore';
 import { usePhoneAudioStore } from '../../stores/phoneAudioStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useSceneStore } from '../../stores/sceneStore';
+import { useQuickNotesStore } from '../../stores/quickNotesStore';
 import { useSearchStore } from '../../stores/searchStore';
 import { useShellStore } from '../../stores/shellStore';
 import { LibraryView } from '../library/LibraryView';
@@ -218,6 +219,14 @@ export function AppShell() {
         description: 'Search the campaign and compendium',
         run: () => {
           if (shell().space === 'console') useSearchStore.getState().summon();
+        },
+      }),
+      registerHotkey({
+        id: 'quickNotes.open',
+        combo: 'Ctrl+N',
+        description: 'Quick note: jot something down without leaving your place',
+        run: () => {
+          if (shell().space === 'console') useQuickNotesStore.getState().summon();
         },
       }),
       registerHotkey({

@@ -322,6 +322,37 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.keyboard.press('Escape');
     await expect(searchField).toHaveValue('');
 
+    // Quick notes (ADR 0018): Ctrl+N opens the tool wherever the dock is (a flyout on narrow CI
+    // screens), Save waits for a title, the note lands on disk in a Quick Notes folder made for
+    // it, and the Notes panel shows it there; the current tab does not change.
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+n' : 'Control+n');
+    const quickTitle = console_.getByRole('textbox', { name: 'Quick note title' });
+    await expect(quickTitle).toBeFocused();
+    const quickSave = console_.getByRole('button', { name: 'Save', exact: true });
+    await expect(quickSave).toBeDisabled();
+    await quickTitle.fill('Guard took the bribe');
+    await quickSave.click();
+    await expect(tab('Compendium')).toHaveAttribute('aria-selected', 'true');
+    const notesDir = join(library, 'campaigns', 'smoke-campaign', 'notes');
+    await expect
+      .poll(async () => {
+        const files = await readdir(notesDir).catch(() => [] as string[]);
+        const all = await Promise.all(
+          files.map(async (f) => JSON.parse(await readFile(join(notesDir, f), 'utf8'))),
+        );
+        const folder = all.find((n) => n.role === 'quickNotes');
+        return all.find((n) => n.title === 'Guard took the bribe')?.parentId === folder?.id
+          ? folder?.title
+          : null;
+      })
+      .toBe('Quick Notes');
+    await tab('Campaign').click();
+    await console_.getByRole('tab', { name: /^Notes/ }).click();
+    // Folders start open, so the note shows under it. (Clicking the folder would select it, and
+    // a Campaign panel under 640 px, as on CI screens, then shows the folder instead of the tree.)
+    await expect(console_.getByRole('treeitem', { name: 'Quick Notes' })).toBeVisible();
+    await expect(console_.getByRole('treeitem', { name: 'Guard took the bribe' })).toBeVisible();
+
     // The strip's Dice button opens the shared pool at every window width. (Below 1180 px the
     // strip hides its own dice chips, and CI screens are narrower than that, so roll here.)
     await strip.getByRole('button', { name: 'Dice', exact: true }).click();

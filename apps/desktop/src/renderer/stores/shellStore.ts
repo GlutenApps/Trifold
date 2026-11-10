@@ -119,6 +119,8 @@ interface ShellState {
   toggleSection(tool: MinorKind): void;
   /** Brings a tool forward: a section when the dock shows them, otherwise a flyout. */
   openTool(tool: MinorKind): void;
+  /** Like openTool, but never closes a flyout that is already showing the tool. */
+  showTool(tool: MinorKind): void;
   reorderSection(tool: MinorKind, index: number): void;
   closeFlyout(): void;
   /** Opens a pop-up from its button, or closes it when it is the one showing. */
@@ -410,6 +412,15 @@ export const useShellStore = create<ShellState>((set, get) => {
         set({ flyout: null });
       } else {
         set({ flyout: get().flyout === tool ? null : tool });
+      }
+    },
+
+    showTool(tool) {
+      if (dockShowsSections()) {
+        change(setSection(get().layout, tool, true));
+        set({ flyout: null });
+      } else if (get().flyout !== tool) {
+        set({ flyout: tool });
       }
     },
 

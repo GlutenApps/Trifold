@@ -13,3 +13,4 @@ export * from './art/glyph';
 export * from './tree';
 export * from './noteSearch';
 export * from './nameSearch';
+export * from './quickNotes';

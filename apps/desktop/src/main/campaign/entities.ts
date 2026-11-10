@@ -1,7 +1,7 @@
 import { rm } from 'node:fs/promises';
 import { ulid } from 'ulid';
 import type { NoteFolderContents } from '@trifold/api';
-import { placeItem } from '@trifold/rules';
+import { placeItem, QUICK_NOTES_TITLE, quickNotesFolder, quickNoteTitle } from '@trifold/rules';
 import { Adventure, CAMPAIGN_SCHEMA_VERSION, Note, NPC, nowIso, Scene } from '@trifold/schema';
 import type { CampaignRepository } from './repository';
 
@@ -10,8 +10,60 @@ import type { CampaignRepository } from './repository';
  * Kept separate from the repository class to keep that file focused on campaigns, PCs and
  * encounters; this module reaches the same store through the repository's helpers.
  */
+/** A new note's fields before saveNote fills in the id and order. */
+function blank(at: string): Note {
+  return {
+    schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+    id: '',
+    kind: 'note',
+    title: '',
+    body: '',
+    tags: [],
+    links: [],
+    parentId: null,
+    order: 0,
+    createdAt: at,
+    updatedAt: at,
+  };
+}
+
 export class CampaignEntities {
   constructor(private readonly repo: CampaignRepository) {}
+
+  /** Captures run one after another, so two quick saves never make two Quick Notes folders. */
+  private captures: Promise<unknown> = Promise.resolve();
+
+  /**
+   * A quick note (ADR 0018): an ordinary note, last in the Quick Notes folder, stamped with
+   * the time it was captured. The folder is found by its role and made at the end of the root
+   * when it is missing, including after the DM deleted it.
+   */
+  captureNote(input: { title: string; body: string }): Promise<{ note: Note; folder: Note }> {
+    const run = this.captures.then(async () => {
+      const title = quickNoteTitle(input.title);
+      if (!title) throw new Error('A quick note needs a title');
+      const folder =
+        quickNotesFolder(await this.repo.notes()) ??
+        (await this.saveNote({
+          ...blank(nowIso()),
+          kind: 'folder',
+          title: QUICK_NOTES_TITLE,
+          role: 'quickNotes',
+        }));
+      const at = nowIso();
+      // saveNote gives it an id and puts it last in the folder.
+      const note = await this.saveNote({
+        ...blank(at),
+        title,
+        body: input.body,
+        parentId: folder.id,
+        capture: { at },
+      });
+      return { note, folder };
+    });
+    this.captures = run.catch(() => undefined);
+    return run;
+  }
 
   async saveAdventure(input: Adventure): Promise<Adventure> {
     const adventure = Adventure.parse({

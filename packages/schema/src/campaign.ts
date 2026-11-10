@@ -283,6 +283,16 @@ export const Note = z.object({
   parentId: z.string().nullable().default(null),
   /** Place among siblings. Notes written before reordering existed share 0. */
   order: int.default(0),
+  /**
+   * A folder the app looks after (ADR 0018): `quickNotes` marks the Quick Notes folder, so it
+   * stays that folder when renamed or moved. Absent on every other note.
+   */
+  role: z.enum(['quickNotes']).optional(),
+  /**
+   * Set when the note was taken with Quick notes: when it was captured. Kept after the note
+   * moves out of the folder. Room for an in-game time beside `at` later.
+   */
+  capture: z.object({ at: IsoDateTime }).optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
