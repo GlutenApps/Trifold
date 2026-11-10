@@ -36,14 +36,31 @@ interface Page<T> {
   results: T[];
 }
 
+const ATTEMPTS = 6;
+
+/**
+ * GETs JSON, retrying server errors, rate limits, and a 200 whose body is not JSON (the API's
+ * front end sometimes answers with an HTML page while it is busy), with a growing pause.
+ */
 async function getJson<T>(url: string): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
     const res = await fetch(url, { headers: { accept: 'application/json' } });
-    if (res.ok) return (await res.json()) as T;
-    if (attempt >= 4 || (res.status < 500 && res.status !== 429)) {
+    let problem: string;
+    if (res.ok) {
+      const body = await res.text();
+      try {
+        return JSON.parse(body) as T;
+      } catch {
+        problem = `a page that is not JSON (${body.trim().slice(0, 40)}…)`;
+      }
+    } else if (res.status >= 500 || res.status === 429) {
+      problem = `${res.status} ${res.statusText}`;
+    } else {
       throw new Error(`${res.status} ${res.statusText} for ${url}`);
     }
-    await new Promise((r) => setTimeout(r, 1000 * attempt));
+    if (attempt >= ATTEMPTS) throw new Error(`${problem} for ${url} after ${attempt} attempts`);
+    console.log(`  retrying ${url}: ${problem}`);
+    await new Promise((r) => setTimeout(r, 2000 * attempt));
   }
 }
 
