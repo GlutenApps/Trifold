@@ -15,6 +15,10 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 - Conditions in the compendium: the SRD 5.1 and 5.2.1 condition texts are fetched at build time with the rest of the snapshot, listed under a Conditions tab, found by search, and opened from the combat tracker's condition lane.
 - A sample campaign, *The Lantern at Greyford*: every Library gets it once, and Settings › Sample campaign adds it back or resets it (ADR 0016). Maps by 2-Minute Tabletop (CC BY-NC 4.0, for pre-1.0 testing), with night/day and flood variants; our own adventure text and SRD creatures.
 
+### Fixed
+
+- A save made while a backup was running (the daily one at start, or the one at close) could stop the app with a "JavaScript error occurred in the main process" box. A file that changes during a backup is now read as it is when its turn comes, and a backup that hits a missing file tries again instead. Campaign export reads its media the same way.
+
 ## [0.3.0] - 2026-11-07
 
 Everything since the 0.2.0 install pass; the first release built by the release workflow.

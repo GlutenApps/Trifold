@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { _electron as electron, expect, test } from '@playwright/test';
+import { keepLogs } from './keepLogs';
 
 /**
  * Web tabs (ADR 0011) inside real Electron: the webview attaches, loads a page from a local
@@ -93,6 +94,9 @@ test('a web tab hosts a page, follows its title and survives in the Library', as
     await expect(console_.getByRole('menuitem', { name: /^UA / })).toBeVisible();
 
     expect(rendererErrors).toEqual([]);
+  } catch (err) {
+    await keepLogs({ library, userData });
+    throw err;
   } finally {
     await app.close();
     server.close();

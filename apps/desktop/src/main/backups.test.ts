@@ -66,6 +66,48 @@ describe('BackupService', () => {
     ]);
   });
 
+  // Saves keep happening while a backup runs. A file that changes or disappears between the
+  // listing and its read must never escape as an uncaught error: in Electron's main process that
+  // opens a modal error box and stops the app.
+  it('tries again when a file vanishes mid-backup', async () => {
+    const victim = join(root, 'campaigns', 'one', 'gone.json');
+    await writeFile(victim, '{"soon":"deleted"}');
+    const listing = service as unknown as {
+      walk: (root: string, rel: string) => Promise<string[]>;
+    };
+    const walk = listing.walk.bind(service);
+    let first = true;
+    listing.walk = async (dir, rel) => {
+      const files = await walk(dir, rel);
+      if (first && rel === '') {
+        first = false;
+        await rm(victim);
+      }
+      return files;
+    };
+    const info = await service.create('manual');
+    const names = await entriesOf(join(root, 'backups', info!.name));
+    expect(names).toContain('campaigns/one/campaign.json');
+    expect(names).not.toContain('campaigns/one/gone.json');
+    expect(await readdir(join(root, 'backups'))).toEqual([info!.name]);
+  });
+
+  it('rejects, leaving no partial zip, when a file cannot be read on any attempt', async () => {
+    const listing = service as unknown as {
+      walk: (root: string, rel: string) => Promise<string[]>;
+    };
+    const walk = listing.walk.bind(service);
+    listing.walk = async (dir, rel) => {
+      const files = await walk(dir, rel);
+      return rel === '' ? [...files, join('campaigns', 'one', 'never.json')] : files;
+    };
+    await expect(service.create('manual')).rejects.toThrow(/never\.json|ENOENT/);
+    expect(await readdir(join(root, 'backups'))).toEqual([]);
+    // The failure leaves the service usable.
+    listing.walk = walk;
+    await expect(service.create('manual')).resolves.toMatchObject({ kind: 'manual' });
+  });
+
   it('describes itself in a manifest that inspect reads back', async () => {
     const info = await service.create('manual');
     const file = await service.inspect(join(root, 'backups', info!.name));
