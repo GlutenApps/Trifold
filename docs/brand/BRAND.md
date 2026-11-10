@@ -2,7 +2,7 @@
 
 > **In this repo.** The kit lives here in `docs/brand/` rather than `resources/brand/`, because everything under `resources/` is packaged with the app. The files the app uses are copied, unchanged, to:
 >
-> - `apps/desktop/build/`: icons, NSIS sidebar and header, DMG background (wired in `apps/desktop/electron-builder.yml`; `build/installer.nsh` adds the installer's welcome page so the sidebar shows first).
+> - `apps/desktop/build/`: icons, NSIS sidebar and header, DMG background. One deliberate change from the kit: `icon.ico` (Windows exe, shortcuts, taskbar, installer) is the bare `mark-on-dark` with no tile, filling the frame, so it sits at the same size as other taskbar icons. `pnpm make:ico` builds it from `png/mark/mark-on-dark-*.png`; the kit's tiled `.ico` is not used. macOS keeps the kit's tiled `icon.icns`, as macOS icons expect a tile (wired in `apps/desktop/electron-builder.yml`; `build/installer.nsh` adds the installer's welcome page so the sidebar shows first).
 > - `apps/desktop/src/renderer/features/shell/TrifoldMark.tsx`: the mark component; `Brand.tsx` beside it picks the on-dark or on-light version from the Library theme.
 > - `apps/desktop/src/renderer/assets/brand/`: the horizontal and stacked lockups.
 >
