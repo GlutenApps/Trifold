@@ -12,6 +12,10 @@ import {
 } from '@trifold/schema';
 import type { LibraryStore } from './library/LibraryStore';
 import { errorMessage, type Logger } from './log';
+import { addFileLazily, writeZipTo } from './zipWrite';
+
+/** Attempts at one backup before it fails (see `createNow`). */
+const ZIP_ATTEMPTS = 3;
 
 /** Top-level Library entries that never go into a backup (DESIGN.md §4.2). */
 const SKIP_TOP_LEVEL = new Set([
@@ -265,7 +269,23 @@ export class BackupService {
     return this.running;
   }
 
+  /**
+   * Saves go on while a backup runs, so a file can change or vanish between the listing and its
+   * read. A failed attempt is thrown away and the Library walked again; only a Library that keeps
+   * failing makes the backup fail.
+   */
   private async createNow(kind: Kind): Promise<BackupInfo | null> {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await this.writeZip(kind);
+      } catch (err) {
+        if (attempt >= ZIP_ATTEMPTS) throw err;
+        this.logger.warn(`backup attempt ${attempt} failed (${errorMessage(err)}); trying again`);
+      }
+    }
+  }
+
+  private async writeZip(kind: Kind): Promise<BackupInfo | null> {
     await mkdir(this.dir, { recursive: true });
     const name = zipNameFor(kind);
     const target = join(this.dir, name);
@@ -273,11 +293,11 @@ export class BackupService {
     const zip = new yazl.ZipFile();
     const files = await this.walk(this.store.root, '');
     for (const file of files) {
-      zip.addFile(join(this.store.root, file), file.split(sep).join('/'));
+      addFileLazily(zip, join(this.store.root, file), file.split(sep).join('/'));
     }
     zip.addBuffer(Buffer.from(JSON.stringify(await this.manifest(), null, 2)), MANIFEST);
     zip.end();
-    await pipeline(zip.outputStream, createWriteStream(partial));
+    await writeZipTo(zip, partial);
     await rename(partial, target);
     const info = await stat(target);
     this.logger.info(`backup written: ${name} (${files.length} files, ${info.size} bytes)`);
