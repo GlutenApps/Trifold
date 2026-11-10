@@ -19,7 +19,6 @@
     "fetch:content": "tsx scripts/fetch-content.ts",
     "check:content": "node scripts/check-content.mjs",
     "build:sample": "tsx scripts/build-sample.ts",
-    "make:icon": "pnpm --filter @trifold/desktop exec electron ../../scripts/make-icon.mjs",
     "rebuild:native": "node scripts/rebuild-native.mjs",
     "smoke": "pnpm --filter @trifold/desktop smoke",
     "fetch:open5e": "tsx scripts/fetch-open5e.ts",

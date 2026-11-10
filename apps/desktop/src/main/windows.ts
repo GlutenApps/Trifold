@@ -1,4 +1,4 @@
-import { BrowserWindow, screen, session, shell, type Display } from 'electron';
+import { app, BrowserWindow, screen, session, shell, type Display } from 'electron';
 import { join } from 'node:path';
 import { EVENT_CHANNELS, type DisplayInfo } from '@trifold/api';
 import type { WindowBounds } from '@trifold/schema';
@@ -127,6 +127,17 @@ export class WindowManager {
     };
   }
 
+  /**
+   * A packaged app takes its window icon from the executable (build/icon.ico, the size-tuned
+   * brand icon). Unpackaged runs (dev, smoke) would show Electron's own, so point Windows and
+   * Linux at the same file; macOS takes the Dock icon from the bundle either way.
+   */
+  private static iconOptions(): Electron.BrowserWindowConstructorOptions {
+    if (app.isPackaged || process.platform === 'darwin') return {};
+    const file = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
+    return { icon: join(__dirname, '../../build', file) };
+  }
+
   private static load(win: BrowserWindow, route: Route): void {
     const devUrl = process.env['ELECTRON_RENDERER_URL'];
     if (devUrl) {
@@ -155,6 +166,7 @@ export class WindowManager {
       minHeight: 640,
       title: 'Trifold',
       backgroundColor: WINDOW_BG,
+      ...WindowManager.iconOptions(),
       show: false,
       autoHideMenuBar: true,
       // The renderer draws the title bar (ADR 0004 §2.1). Windows draws the window controls
@@ -201,6 +213,7 @@ export class WindowManager {
       show: false,
       title: 'Trifold player',
       backgroundColor: '#000000',
+      ...WindowManager.iconOptions(),
       autoHideMenuBar: true,
       webPreferences: WindowManager.webPreferences('player'),
     });

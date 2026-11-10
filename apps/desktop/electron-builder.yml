@@ -4,8 +4,9 @@ copyright: Copyright © 2026 Trifold contributors
 directories:
   output: ../../dist
   buildResources: build
-# The app icon is build/icon.png (1024 px), rendered by `pnpm make:icon` from
-# docs/design-brief/logo.svg; electron-builder derives the .ico and .icns from it.
+# Icons and installer art come from the brand kit (docs/brand/BRAND.md §3-4) and are copied into
+# build/ as they are, never edited or regenerated here. icon.ico is size-tuned below 48 px, so
+# Windows uses it instead of deriving one from icon.png.
 files:
   - out/**/*
   - package.json
@@ -27,6 +28,7 @@ extraResources:
       - '*-OFL.txt'
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: [x64]
@@ -36,6 +38,13 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
+  # Welcome and finish pages show the stacked lockup on the sidebar; inner pages carry the header
+  # with the mark. The welcome page itself is added by build/installer.nsh.
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerSidebar: build/installerSidebar.bmp
+  uninstallerSidebar: build/uninstallerSidebar.bmp
+  installerHeader: build/installerHeader.bmp
   artifactName: ${productName}-Setup-${version}-win-${arch}.${ext}
 portable:
   artifactName: ${productName}-Portable-${version}-win-${arch}.${ext}
@@ -54,7 +63,9 @@ mac:
   identity: '-'
   hardenedRuntime: false
   darkModeSupport: true
+  icon: build/icon.icns
 dmg:
   writeUpdateInfo: false
+  background: build/background.png
 # Native modules are prepared by scripts/rebuild-native.mjs (ADR 0001).
 npmRebuild: false

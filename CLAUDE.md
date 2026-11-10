@@ -30,7 +30,7 @@ apps/desktop/            Electron main + preload + renderer (hash routes #/conso
                          stores/ (Zustand), styles/ (global.css tokens, shell, compendium, map, responsive), hotkeys.ts, platform.ts,
                          navigate.ts (deep links, ADR 0017: navigate/useNavTarget/landOn; see docs/DEEP-LINKS.md)
   smoke/                 Playwright specs that drive the real app (app.spec.ts, webtabs.spec.ts)
-  build/                 icon.png, rendered by `pnpm make:icon` (electron-builder derives .ico and .icns)
+  build/                 icon.ico/.icns/.png, installer and DMG art, copied from docs/brand/ (never edited by hand)
 packages/schema/         Zod schemas + TS types for every stored object (src/), migrations/
 packages/api/            the single TypeScript interface between renderer and main
 packages/rules/          pure functions: dice, CR/XP tables, 2024 budgets, combat/ (turns, damage, rolls), statblock/ parsers
@@ -40,11 +40,11 @@ packages/importers/      xml/ (stream parser), compendium/ (Lion's Den XML), cam
 resources/               built at build time: srd-2024.jsonl, srd-2014.jsonl (git-ignored), srd-manifest.json,
                          sample/ (git-ignored), icons/ (svg/ and credits.json git-ignored; mapping.json and manifest.json committed)
 scripts/                 dev.mjs, fetch-content.ts (runs fetch-open5e.ts + fetch-game-icons.ts + verify-mapping.ts
-                         + build-sample.ts), rebuild-native.mjs, check-content.mjs (build guard), make-icon.mjs
+                         + build-sample.ts), rebuild-native.mjs, check-content.mjs (build guard)
 samples/greyford/        source of the bundled sample campaign (ADR 0016): campaign.json, notes/*.md, images/ + CREDITS.md;
                          built into resources/sample/ (git-ignored) by scripts/build-sample.ts
 fixtures/                small SRD-only XML/JSON samples used by tests (fixtures/local/ is git-ignored)
-docs/                    README.md (index), DESIGN.md, DATA-FORMATS.md, UI-GUIDELINES.md, USER-GUIDE.md, RELEASING.md,
+docs/                    README.md (index), brand/ (logo kit and BRAND.md: which version goes where), DESIGN.md, DATA-FORMATS.md, UI-GUIDELINES.md, USER-GUIDE.md, RELEASING.md,
                          TOKENS.md, adr/, design-brief/ (frozen 2026-09 shell brief)
 .github/workflows/       ci.yml (lint, typecheck, test, smoke on Windows and macOS), release.yml (tag → installers)
 ```
@@ -53,7 +53,7 @@ Rules of thumb: all parsing and rules math lives in `packages/*` as pure, tested
 
 ## Commands
 
-`pnpm i` · `pnpm dev` (console + player windows, hot reload) · `pnpm test` (Vitest) · `pnpm typecheck` · `pnpm lint` · `pnpm fetch:content` (Open5e snapshot + game-icons; requires network; commits nothing but the manifests) · `pnpm build:sample` (builds `resources/sample/greyford.trifold-campaign` from `samples/greyford/`; needs the SRD snapshot; runs inside `fetch:content`, `prebuild` and `smoke`) · `pnpm check:content` (fails unless the fetched content and the sample are present and match the manifests; runs automatically before `build`) · `pnpm make:icon` (renders `apps/desktop/build/icon.png` from the logo) · `pnpm build` (electron-builder → `dist/`; see `docs/RELEASING.md`) · `pnpm smoke` (Playwright against the real app: create a Library, import the fixture, homebrew, backups and restore, campaign export and import, the player window, a short mock combat, the TV tab, music scan, phone audio, web tabs). Set `TRIFOLD_SMOKE_EXE=<path to dist/win-unpacked/Trifold.exe or dist/mac*/Trifold.app/Contents/MacOS/Trifold>` and run `playwright test -c smoke/playwright.config.ts` in `apps/desktop` to run the same smoke test against a packaged build.
+`pnpm i` · `pnpm dev` (console + player windows, hot reload) · `pnpm test` (Vitest) · `pnpm typecheck` · `pnpm lint` · `pnpm fetch:content` (Open5e snapshot + game-icons; requires network; commits nothing but the manifests) · `pnpm build:sample` (builds `resources/sample/greyford.trifold-campaign` from `samples/greyford/`; needs the SRD snapshot; runs inside `fetch:content`, `prebuild` and `smoke`) · `pnpm check:content` (fails unless the fetched content and the sample are present and match the manifests; runs automatically before `build`) · `pnpm build` (electron-builder → `dist/`; see `docs/RELEASING.md`) · `pnpm smoke` (Playwright against the real app: create a Library, import the fixture, homebrew, backups and restore, campaign export and import, the player window, a short mock combat, the TV tab, music scan, phone audio, web tabs). Set `TRIFOLD_SMOKE_EXE=<path to dist/win-unpacked/Trifold.exe or dist/mac*/Trifold.app/Contents/MacOS/Trifold>` and run `playwright test -c smoke/playwright.config.ts` in `apps/desktop` to run the same smoke test against a packaged build.
 
 A pre-commit hook (simple-git-hooks + lint-staged, installed by the root `prepare` script on `pnpm i`) runs `eslint --fix` and `prettier --write` on staged files and blocks the commit on any lint error. It covers formatting and lint only; run `pnpm typecheck` and `pnpm test` yourself before pushing. `SKIP_SIMPLE_GIT_HOOKS=1 git commit` bypasses it when you must.
 

@@ -35,7 +35,6 @@
   all: unset;
   display: flex;
   align-items: center;
-  color: var(--accent);
   cursor: pointer;
   padding: 4px;
   border-radius: var(--radius-sm);
@@ -1168,8 +1167,14 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   display: block;
 }
 
-.logo {
+/* The kit's marks and lockups carry their own colours (docs/brand/BRAND.md); never tint them. */
+.brand-mark,
+.brand-lockup {
   display: block;
+}
+
+.about-lockup {
+  margin: 4px 0 12px;
 }
 
 .menu {

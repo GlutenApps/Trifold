@@ -11,6 +11,7 @@ Start here. Each document has one job; when two disagree, `DESIGN.md` wins on pr
 | [DEEP-LINKS.md](DEEP-LINKS.md)             | You are opening one feature's item from another (search, note links): the `navigate` contract and how a panel lands it.    |
 | [TOKENS.md](TOKENS.md)                     | You need the palette, type and size tokens behind `global.css` (`tokens.json` has the same values for tools).               |
 | [RELEASING.md](RELEASING.md)               | You are cutting a build: content fetch, icon, version, tag, the release workflow, what to check on each platform.           |
+| [brand/BRAND.md](brand/BRAND.md)           | You need the logo: which version (mark, lockup, icon) goes where, the colours, and the usage rules.                         |
 | [../CLAUDE.md](../CLAUDE.md)               | You are writing code: ground rules, stack, repo layout, commands, conventions, definition of done.                           |
 | [../CHANGELOG.md](../CHANGELOG.md)         | You want to know what changed between versions.                                                                             |
 | [design-brief/](design-brief/README.md)    | Historical: the September 2026 shell redesign brief and its result. Frozen; kept as the record behind ADR 0004.              |

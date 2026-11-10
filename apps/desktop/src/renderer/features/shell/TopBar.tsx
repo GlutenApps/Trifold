@@ -4,11 +4,12 @@ import { useShellStore } from '../../stores/shellStore';
 import { closeCampaign, switchCampaign } from './campaignFlow';
 import { GlobalSearch } from './GlobalSearch';
 import { Icon } from './icons';
-import { Logo } from './Logo';
+import { BrandLockup, BrandMark } from './Brand';
 import { hk } from '../../platform';
 
 /**
- * The frameless window's title bar (ADR 0004, top bar): mark → Library, campaign breadcrumb →
+ * The frameless window's title bar (ADR 0004, top bar): mark → Library (the full lockup, with the
+ * name, while in the Library), campaign breadcrumb →
  * switcher, the global search in the middle (ADR 0017), current layout, Hotkeys, Settings. Layouts and Hotkeys pop up from their buttons
  * (ADR 0009); the dock collapses from its own header, never from here. Windows draws the window controls over the right end, so the bar
  * leaves that space free.
@@ -58,7 +59,12 @@ export function TopBar() {
         title="Library"
         onClick={() => enterLibrary()}
       >
-        <Logo size={20} />
+        {/* In a campaign the switcher needs the room, so the name gives way to the mark. */}
+        {inConsole ? (
+          <BrandMark size={22} />
+        ) : (
+          <BrandLockup layout="horizontal" height={24} alt="" />
+        )}
       </button>
       {inConsole ? (
         <div className="crumbs" ref={menuRef}>
@@ -142,7 +148,10 @@ export function TopBar() {
           )}
         </div>
       ) : (
-        <span className="topbar-title">Library</span>
+        <>
+          <span className="muted">›</span>
+          <span className="topbar-title">Library</span>
+        </>
       )}
       <span className="spacer drag" />
       {inConsole && (
