@@ -199,6 +199,13 @@ export const FeatData = z.object({
 });
 export type FeatData = z.infer<typeof FeatData>;
 
+/** A condition's rules text (SRD 5.1 or 5.2.1), one record per edition. */
+export const ConditionData = z.object({
+  text: z.string(),
+  extra: Extra,
+});
+export type ConditionData = z.infer<typeof ConditionData>;
+
 export const SimpleTrait = z.object({
   name: z.string(),
   text: z.string(),
@@ -304,6 +311,10 @@ export const BackgroundRecord = RecordHeader.extend({
   data: BackgroundData,
 });
 export const ClassRecord = RecordHeader.extend({ kind: z.literal('class'), data: ClassData });
+export const ConditionRecord = RecordHeader.extend({
+  kind: z.literal('condition'),
+  data: ConditionData,
+});
 
 export const CompendiumRecord = z.discriminatedUnion('kind', [
   MonsterRecord,
@@ -313,6 +324,7 @@ export const CompendiumRecord = z.discriminatedUnion('kind', [
   SpeciesRecord,
   BackgroundRecord,
   ClassRecord,
+  ConditionRecord,
 ]);
 export type CompendiumRecord = z.infer<typeof CompendiumRecord>;
 export type MonsterRecord = z.infer<typeof MonsterRecord>;
@@ -322,3 +334,4 @@ export type FeatRecord = z.infer<typeof FeatRecord>;
 export type SpeciesRecord = z.infer<typeof SpeciesRecord>;
 export type BackgroundRecord = z.infer<typeof BackgroundRecord>;
 export type ClassRecord = z.infer<typeof ClassRecord>;
+export type ConditionRecord = z.infer<typeof ConditionRecord>;

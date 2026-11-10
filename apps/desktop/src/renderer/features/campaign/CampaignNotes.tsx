@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { Note, NoteTemplate } from '@trifold/schema';
 import { ancestorsOf, descendantsOf, flattenTree, nextOrder, searchNotes } from '@trifold/rules';
+import { landOn, navKey, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { cancelSave, scheduleSave } from '../../stores/pendingSaves';
 import { blankTemplate, useNoteTemplateStore } from '../../stores/noteTemplateStore';
@@ -112,13 +113,13 @@ function useDraft(note: Note) {
   return { draft, update, dirty, flush };
 }
 
-function BackButton({ onBack }: { onBack(): void }) {
+function BackButton({ onBack, label = 'Back to notes' }: { onBack(): void; label?: string }) {
   return (
     <button
       type="button"
       className="chrome-btn notes-back"
-      aria-label="Back to notes"
-      title="Back to notes"
+      aria-label={label}
+      title={label}
       onClick={onBack}
     >
       <Icon name="left" />
@@ -126,14 +127,23 @@ function BackButton({ onBack }: { onBack(): void }) {
   );
 }
 
-function NotePane({
+/**
+ * One open note: title, tags, the formatted body and delete, saving itself as it changes. The
+ * notes panel shows it beside the tree; the Quick notes tool (ADR 0018) shows it in the dock
+ * with its own Back label and extra `actions` (move, open in Notes) before delete.
+ */
+export function NotePane({
   note,
   highlight,
   onBack,
+  backLabel,
+  actions,
 }: {
   note: Note;
   highlight: Highlight | null;
   onBack(): void;
+  backLabel?: string;
+  actions?: ReactNode;
 }) {
   const removeNote = useCampaignStore((s) => s.removeNote);
   const { draft, update, dirty, flush } = useDraft(note);
@@ -148,9 +158,9 @@ function NotePane({
   }, [fresh]);
 
   return (
-    <div className="notes-pane" data-testid="note-pane">
+    <div className="notes-pane" data-testid="note-pane" data-nav={navKey('note', note.id)}>
       <div className="row note-head">
-        <BackButton onBack={onBack} />
+        <BackButton onBack={onBack} label={backLabel} />
         <input
           ref={titleRef}
           className="note-title"
@@ -162,6 +172,7 @@ function NotePane({
         <span className="muted small note-status" aria-live="polite">
           {dirty ? 'Unsaved' : 'Saved'}
         </span>
+        {actions}
         {confirmDelete ? (
           <InlineConfirm
             name={note.title}
@@ -227,7 +238,7 @@ function FolderPane({
     .join(', ');
 
   return (
-    <div className="notes-pane" data-testid="folder-pane">
+    <div className="notes-pane" data-testid="folder-pane" data-nav={navKey('folder', folder.id)}>
       <div className="row note-head">
         <BackButton onBack={onBack} />
         <Icon name="folder" />
@@ -463,6 +474,23 @@ export function CampaignNotes({ notes }: { notes: readonly Note[] }) {
     land(landings[next]!);
   };
 
+  // Deep links (ADR 0017): open the note, at its phrase when the link carries one, or the folder.
+  useNavTarget(['note', 'folder'], (target) => {
+    const note = notes.find((n) => n.id === target.id);
+    if (!note) return true;
+    setManaging(null);
+    if (target.type === 'note' && target.anchor) {
+      setQuery(target.anchor.phrase);
+      setHit({ noteId: note.id, occurrence: target.anchor.occurrence });
+    } else {
+      setQuery('');
+      setHit(null);
+    }
+    select(note);
+    landOn(navKey(target.type, target.id));
+    return true;
+  });
+
   /** A new note or folder next to the selection (inside it when a folder is selected). */
   const create = async (kind: Note['kind'], template: NoteTemplate | null = null) => {
     const parentId = selected && isFolder(selected) ? selected.id : (selected?.parentId ?? null);
@@ -621,6 +649,7 @@ export function CampaignNotes({ notes }: { notes: readonly Note[] }) {
                   role="listitem"
                   className={`result${note.id === selectedId ? ' selected' : ''}`}
                   data-testid="note-result"
+                  data-nav={navKey('note', note.id)}
                 >
                   <button
                     type="button"
@@ -680,6 +709,7 @@ export function CampaignNotes({ notes }: { notes: readonly Note[] }) {
                   className={`tree-row kind-${note.kind}${isSelected ? ' selected' : ''}${dnd.rowClass(note)}`}
                   style={{ paddingLeft: 8 + depth * 14 }}
                   data-testid="note-row"
+                  data-nav={navKey(folder ? 'folder' : 'note', note.id)}
                   onClick={() => select(note)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') select(note);

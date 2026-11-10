@@ -45,6 +45,7 @@ export function pruneTabs(layout: ShellLayout, webTabs: readonly WebTab[]): Shel
 export const MINOR_TITLES: Record<MinorKind, string> = {
   music: 'Music',
   scenes: 'Scenes',
+  quickNotes: 'Quick notes',
 };
 
 /**
@@ -221,6 +222,29 @@ export function groupOf(layout: ShellLayout, kind: TabKey): number | null {
 
 export function isOpen(layout: ShellLayout, kind: TabKey): boolean {
   return groupOf(layout, kind) !== null;
+}
+
+/**
+ * Where a deep link opens a closed tab (ADR 0017). An open tab stays where the DM put it, so
+ * this returns its group. A closed one joins the only group when there is one; with two, it
+ * joins the first group that holds none of `avoid` (the VTT, then a running fight), and when
+ * both do, `fallback` (the focused group).
+ */
+export function landingGroup(
+  layout: ShellLayout,
+  kind: TabKey,
+  avoid: readonly TabKey[],
+  fallback: 0 | 1,
+): 0 | 1 {
+  const at = groupOf(layout, kind);
+  if (at !== null) return at as 0 | 1;
+  const groups = layout.stage.groups;
+  if (groups.length < 2) return 0;
+  for (const tab of avoid) {
+    const held = groupOf(layout, tab);
+    if (held !== null) return held === 0 ? 1 : 0;
+  }
+  return Math.min(fallback, groups.length - 1) as 0 | 1;
 }
 
 /**

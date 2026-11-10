@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useShellStore } from '../../stores/shellStore';
 import { closeCampaign, switchCampaign } from './campaignFlow';
+import { GlobalSearch } from './GlobalSearch';
 import { Icon } from './icons';
 import { Logo } from './Logo';
 import { hk } from '../../platform';
 
 /**
  * The frameless window's title bar (ADR 0004, top bar): mark → Library, campaign breadcrumb →
- * switcher, current layout, Hotkeys, Settings. Layouts and Hotkeys pop up from their buttons
+ * switcher, the global search in the middle (ADR 0017), current layout, Hotkeys, Settings. Layouts and Hotkeys pop up from their buttons
  * (ADR 0009); the dock collapses from its own header, never from here. Windows draws the window controls over the right end, so the bar
  * leaves that space free.
  */
@@ -144,6 +145,12 @@ export function TopBar() {
         <span className="topbar-title">Library</span>
       )}
       <span className="spacer drag" />
+      {inConsole && (
+        <>
+          <GlobalSearch />
+          <span className="spacer drag" />
+        </>
+      )}
       {inConsole ? (
         <>
           <button

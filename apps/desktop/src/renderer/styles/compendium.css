@@ -2515,3 +2515,90 @@ input[type='range'].wide {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
+
+/* Quick notes (ADR 0018): the capture form, the list and an open note, in a dock section or
+   flyout as narrow as 360 px. */
+.quick-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.quick-capture {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.quick-capture input[type='text'] {
+  width: 100%;
+}
+
+.quick-notes .note-toolbar {
+  flex-wrap: wrap;
+}
+
+.quick-capture .note-body {
+  min-height: 72px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.quick-list {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  min-height: 0;
+}
+
+.quick-row {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control-h);
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.quick-row:hover,
+.quick-row:focus-visible {
+  background: var(--bg-hover);
+}
+
+.quick-row .icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.quick-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-time {
+  flex-shrink: 0;
+}
+
+.quick-notes .notes-pane {
+  padding: 0;
+}
+
+.quick-notes .notes-back {
+  display: inline-flex;
+}
+
+.quick-notes .note-head {
+  flex-wrap: wrap;
+}
+
+.quick-notes .note-head select {
+  max-width: 100%;
+}

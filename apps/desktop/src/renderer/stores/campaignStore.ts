@@ -43,6 +43,8 @@ interface CampaignState {
   removeNote(noteId: string, contents?: NoteFolderContents): Promise<void>;
   /** Puts a note (or folder) under `parentId` (null for the root) at `index` there. */
   moveNote(noteId: string, parentId: string | null, index: number): Promise<void>;
+  /** Saves a quick note into the Quick Notes folder, which main makes when missing (ADR 0018). */
+  captureNote(title: string, body: string): Promise<Note | null>;
   /** Saves an NPC; a new one (no id) is created. */
   saveNpc(npc: NPC): Promise<NPC | null>;
   removeNpc(npcId: string): Promise<void>;
@@ -149,6 +151,17 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
         set({ current: { ...current, notes } });
       }
       return saved;
+    },
+
+    async captureNote(title, body) {
+      const saved = await guard(() => window.trifold.notes.capture({ title, body }));
+      const current = get().current;
+      if (!saved || !current) return saved?.note ?? null;
+      const byId = new Map(current.notes.map((n) => [n.id, n]));
+      byId.set(saved.folder.id, saved.folder);
+      byId.set(saved.note.id, saved.note);
+      set({ current: { ...current, notes: [...byId.values()] } });
+      return saved.note;
     },
 
     async moveNote(noteId, parentId, index) {

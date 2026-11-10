@@ -27,7 +27,8 @@ apps/desktop/            Electron main + preload + renderer (hash routes #/conso
                          media.ts (trifold-media:// scheme), webTabs.ts, systemPages.ts, log.ts
   src/preload/           typed bridge → window.trifold (generated from packages/api)
   src/renderer/          React app: features/{shell,library,compendium,campaign,encounters,presenter,music,dice,settings},
-                         stores/ (Zustand), styles/ (global.css tokens, shell, compendium, map, responsive), hotkeys.ts, platform.ts
+                         stores/ (Zustand), styles/ (global.css tokens, shell, compendium, map, responsive), hotkeys.ts, platform.ts,
+                         navigate.ts (deep links, ADR 0017: navigate/useNavTarget/landOn; see docs/DEEP-LINKS.md)
   smoke/                 Playwright specs that drive the real app (app.spec.ts, webtabs.spec.ts)
   build/                 icon.png, rendered by `pnpm make:icon` (electron-builder derives .ico and .icns)
 packages/schema/         Zod schemas + TS types for every stored object (src/), migrations/

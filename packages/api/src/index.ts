@@ -425,6 +425,16 @@ export interface CompendiumRow {
   rarity: string | null;
 }
 
+/** One global-search hit from the compendium (ADR 0017): a row plus how its name matched. */
+export interface CompendiumSuggestion extends CompendiumRow {
+  tier: 'exact' | 'prefix' | 'word' | 'substring';
+}
+
+/** A record whose text holds the phrase (ADR 0017): a row plus the phrase in context. */
+export interface CompendiumTextHit extends CompendiumRow {
+  snippet: { before: string; match: string; after: string };
+}
+
 export interface CompendiumSearchResult {
   rows: CompendiumRow[];
   total: number;
@@ -657,6 +667,12 @@ export interface TrifoldApi {
      * there, renumbering that folder. Resolves to the whole list in tree order.
      */
     move(noteId: string, parentId: string | null, index: number): Promise<Note[]>;
+    /**
+     * Saves a quick note (ADR 0018) into the Quick Notes folder, creating the folder at the end
+     * of the root first when the campaign has none (or the DM deleted it). The title must not
+     * be blank. Resolves to the note and the folder it went into.
+     */
+    capture(input: { title: string; body: string }): Promise<{ note: Note; folder: Note }>;
   };
   /** Starting bodies for new notes, shared by every campaign in the Library (ADR 0010). */
   noteTemplates: {
@@ -785,6 +801,22 @@ export interface TrifoldApi {
     findByKey(kind: RecordKind, key: string): Promise<CompendiumRecord[]>;
     /** Distinct types, sizes and environments of a kind across enabled sources. */
     facets(kind: RecordKind): Promise<CompendiumFacets>;
+    /**
+     * Records of every enabled kind whose display name contains `text`, best match first, with
+     * editions collapsed (ADR 0017, global search). Name only; no body text.
+     */
+    suggest(
+      text: string,
+      opts?: { limit?: number; preferEdition?: '2024' | '2014' },
+    ): Promise<CompendiumSuggestion[]>;
+    /**
+     * Records of every enabled kind whose text holds `text` as a phrase and whose name does
+     * not, best match first, editions collapsed, each with a snippet (ADR 0017, global search).
+     */
+    searchText(
+      text: string,
+      opts?: { limit?: number; preferEdition?: '2024' | '2014' },
+    ): Promise<CompendiumTextHit[]>;
   };
 }
 
@@ -824,7 +856,7 @@ export const API_METHODS = {
     'sample',
     'addSample',
   ],
-  notes: ['save', 'remove', 'move'],
+  notes: ['save', 'remove', 'move', 'capture'],
   noteTemplates: ['list', 'save', 'remove'],
   npcs: ['save', 'remove'],
   scenes: ['save', 'remove', 'importImage'],
@@ -855,7 +887,7 @@ export const API_METHODS = {
   phoneAudio: ['status', 'listDevices', 'connect', 'disconnect', 'forget', 'setSource'],
   homebrew: ['duplicate', 'save', 'remove'],
   icons: ['tables', 'available', 'credits', 'reportMiss'],
-  compendium: ['search', 'get', 'findByKey', 'facets'],
+  compendium: ['search', 'get', 'findByKey', 'facets', 'suggest', 'searchText'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };
 
 // Compile-time check: every method of TrifoldApi is listed in API_METHODS.

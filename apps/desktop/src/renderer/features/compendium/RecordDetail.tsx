@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { CompendiumRecord, Roll } from '@trifold/schema';
 import { useRollLogStore } from '../../stores/rollLogStore';
 import { InlineConfirm } from '../shell/InlineConfirm';
@@ -136,12 +136,32 @@ const SCHOOLS: Record<string, string> = {
   T: 'Transmutation',
 };
 
+const BULLET = /^\s*[*-]\s+/;
+
+/**
+ * Record text as paragraphs. A paragraph whose lines are bullets (`* ` or `- `, as the SRD
+ * conditions and some spell text are written) becomes a list, with any first unbulleted line
+ * as its lead; everything else is shown as written.
+ */
 function Text({ text }: { text: string }) {
   return (
     <>
-      {text.split(/\n{2,}/).map((p, i) => (
-        <p key={i}>{p}</p>
-      ))}
+      {text.split(/\n{2,}/).map((p, i) => {
+        const lines = p.split('\n');
+        const bullets = lines.filter((l) => BULLET.test(l));
+        if (bullets.length === 0 || bullets.length < lines.length - 1) return <p key={i}>{p}</p>;
+        const lead = lines.find((l) => !BULLET.test(l));
+        return (
+          <Fragment key={i}>
+            {lead && <p>{lead}</p>}
+            <ul>
+              {bullets.map((l, j) => (
+                <li key={j}>{l.replace(BULLET, '')}</li>
+              ))}
+            </ul>
+          </Fragment>
+        );
+      })}
     </>
   );
 }
@@ -290,6 +310,13 @@ function Body({
         </article>
       );
     }
+    case 'condition':
+      return (
+        <article className="statblock">
+          <h2>{record.displayName}</h2>
+          <Text text={record.data.text} />
+        </article>
+      );
     case 'species':
     case 'background': {
       const d = record.data;
@@ -372,6 +399,7 @@ function sourceText(record: CompendiumRecord): string {
     case 'spell':
     case 'item':
     case 'feat':
+    case 'condition':
       return record.data.text;
     case 'species':
     case 'background':

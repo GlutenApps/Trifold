@@ -137,6 +137,9 @@ export function createCampaignApi(
       async move(noteId, parentId, index) {
         return entities().moveNote(noteId, parentId, index);
       },
+      async capture(input) {
+        return entities().captureNote(input);
+      },
     },
     npcs: {
       async save(npc) {

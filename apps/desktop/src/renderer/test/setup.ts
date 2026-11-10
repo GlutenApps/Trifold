@@ -201,6 +201,9 @@ export function installBridgeMock(): TrifoldBridge {
       save: vi.fn(async (n) => n),
       remove: vi.fn(async () => undefined),
       move: vi.fn(async () => []),
+      capture: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
     },
     noteTemplates: {
       list: vi.fn(async () => []),
@@ -236,6 +239,8 @@ export function installBridgeMock(): TrifoldBridge {
       get: vi.fn(async () => null),
       findByKey: vi.fn(async () => []),
       facets: vi.fn(async () => ({ types: [], sizes: [], environments: [] })),
+      suggest: vi.fn(async () => []),
+      searchText: vi.fn(async () => []),
     },
     on: vi.fn(() => () => undefined),
   };

@@ -8,10 +8,13 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  describesDocument,
   IMPORTER_VERSION,
   normalizeOpen5e,
   O5E_KINDS,
+  O5E_SHARED_KINDS,
   type O5eBase,
+  type O5eCondition,
   type O5eKind,
   type SrdManifest,
   type SrdManifestDocument,
@@ -33,14 +36,31 @@ interface Page<T> {
   results: T[];
 }
 
+const ATTEMPTS = 6;
+
+/**
+ * GETs JSON, retrying server errors, rate limits, and a 200 whose body is not JSON (the API's
+ * front end sometimes answers with an HTML page while it is busy), with a growing pause.
+ */
 async function getJson<T>(url: string): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
     const res = await fetch(url, { headers: { accept: 'application/json' } });
-    if (res.ok) return (await res.json()) as T;
-    if (attempt >= 4 || (res.status < 500 && res.status !== 429)) {
+    let problem: string;
+    if (res.ok) {
+      const body = await res.text();
+      try {
+        return JSON.parse(body) as T;
+      } catch {
+        problem = `a page that is not JSON (${body.trim().slice(0, 40)}…)`;
+      }
+    } else if (res.status >= 500 || res.status === 429) {
+      problem = `${res.status} ${res.statusText}`;
+    } else {
       throw new Error(`${res.status} ${res.statusText} for ${url}`);
     }
-    await new Promise((r) => setTimeout(r, 1000 * attempt));
+    if (attempt >= ATTEMPTS) throw new Error(`${problem} for ${url} after ${attempt} attempts`);
+    console.log(`  retrying ${url}: ${problem}`);
+    await new Promise((r) => setTimeout(r, 2000 * attempt));
   }
 }
 
@@ -84,6 +104,15 @@ async function main(): Promise<void> {
     licenses[l.key] = { name: l.name, text: (l.desc ?? '').trim() };
   }
 
+  // Shared kinds (conditions) are one record per entry with a description per document, so
+  // they are read once and handed to every document that has text for them.
+  const shared = new Map<O5eKind, O5eCondition[]>();
+  for (const kind of O5E_SHARED_KINDS) {
+    const all: O5eCondition[] = [];
+    for await (const raw of paginate<O5eCondition>(`${kind}/?limit=200`)) all.push(raw);
+    shared.set(kind, all);
+  }
+
   const documents: SrdManifestDocument[] = [];
   for (const { key, edition } of DOCUMENTS) {
     const doc = await getJson<ApiDocument>(`${API}/documents/${key}/`);
@@ -107,6 +136,23 @@ async function main(): Promise<void> {
         }
         const record = normalizeOpen5e(kind, raw, ctx);
         const parsed = CompendiumRecord.safeParse(record);
+        if (!parsed.success) {
+          warnings.push(
+            `${kind} ${raw.key}: invalid (${parsed.error.issues[0]?.path.join('.')}: ${parsed.error.issues[0]?.message})`,
+          );
+          continue;
+        }
+        lines.push(JSON.stringify(parsed.data));
+        counts[parsed.data.kind] = (counts[parsed.data.kind] ?? 0) + 1;
+        n += 1;
+      }
+      console.log(`  ${key} ${kind}: ${n}`);
+    }
+    for (const [kind, all] of shared) {
+      let n = 0;
+      for (const raw of all) {
+        if (!describesDocument(raw, key)) continue;
+        const parsed = CompendiumRecord.safeParse(normalizeOpen5e(kind, raw, ctx));
         if (!parsed.success) {
           warnings.push(
             `${kind} ${raw.key}: invalid (${parsed.error.issues[0]?.path.join('.')}: ${parsed.error.issues[0]?.message})`,

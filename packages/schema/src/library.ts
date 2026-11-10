@@ -14,8 +14,9 @@ export const MajorKind = z.enum(MAJOR_KINDS);
 export type MajorKind = z.infer<typeof MajorKind>;
 
 /** Minors: the dock's tools, the tall ones. Never on the stage. Dice, Hotkeys and Layouts are
- *  pop-ups from their buttons (ADR 0009) and are not part of a layout. */
-export const MINOR_KINDS = ['music', 'scenes'] as const;
+ *  pop-ups from their buttons (ADR 0009) and are not part of a layout. Quick notes joined the
+ *  dock in ADR 0018; a layout saved without it gets it as a closed section. */
+export const MINOR_KINDS = ['music', 'scenes', 'quickNotes'] as const;
 export const MinorKind = z.enum(MINOR_KINDS);
 export type MinorKind = z.infer<typeof MinorKind>;
 

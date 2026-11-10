@@ -114,6 +114,9 @@ export function indexText(record: CompendiumRecord): string {
     case 'feat':
       parts.push(record.data.text, record.data.prerequisite ?? '');
       break;
+    case 'condition':
+      parts.push(record.data.text);
+      break;
     case 'species':
     case 'background':
       for (const t of record.data.traits) parts.push(t.name, t.text);
@@ -287,5 +290,106 @@ export function toRow(raw: RawRow): CompendiumRow {
     level: raw.level,
     typeCode: raw.type_code,
     rarity: raw.rarity,
+  };
+}
+
+/** `text` as a LIKE pattern body: its own `%`, `_` and `\` escaped (ESCAPE '\\'). */
+export function likeEscape(text: string): string {
+  return text.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+const SUGGEST_LIMIT = 100;
+
+/**
+ * The global search's compendium half (ADR 0017): records of every kind whose display name
+ * contains `text`, ranked by the same tiers as `rankByName` in @trifold/rules (exact 0, prefix
+ * 1, start of a later word 2, anywhere 3), then by name. Records sharing a kind and key collapse
+ * to one row headed by `preferEdition`, as `buildSearch` does. Only enabled sources answer.
+ * LIKE is case-insensitive for ASCII in SQLite; the `?` placeholders bind in order: the
+ * preferred edition, then the four patterns, then the limit.
+ */
+export function buildSuggest(
+  text: string,
+  limit = 12,
+  preferEdition: '2024' | '2014' = '2024',
+): { sql: string; params: unknown[] } {
+  const term = likeEscape(text.trim().toLowerCase());
+  const tier = `CASE WHEN lower(r.display_name) = ? THEN 0 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 1 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 2 ELSE 3 END`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, ${tier} AS tier FROM records r JOIN sources s ON s.id = r.source_id WHERE s.enabled = 1 AND r.display_name LIKE ? ESCAPE '\\'`;
+  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, key ORDER BY (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, key) AS editions FROM (${base})`;
+  return {
+    sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ORDER BY tier, display_name COLLATE NOCASE, kind LIMIT ?`,
+    params: [
+      preferEdition,
+      text.trim().toLowerCase(),
+      `${term}%`,
+      `% ${term}%`,
+      `%${term}%`,
+      Math.min(Math.max(limit, 1), SUGGEST_LIMIT),
+    ],
+  };
+}
+
+/** Where `snippet()` marks a hit; control characters never occur in record text. */
+export const SNIPPET_OPEN = '\u0001';
+export const SNIPPET_CLOSE = '\u0002';
+const TEXT_LIMIT = 100;
+
+/** FTS5 MATCH for `text` as one phrase in the text column, the last word as a prefix. */
+export function buildPhraseMatch(text: string): string | null {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return null;
+  return `text : "${words.join(' ').replace(/"/g, '""')}"*`;
+}
+
+/**
+ * The global search's compendium text half (ADR 0017): records whose text holds `text` as a
+ * phrase but whose name does not (names are `buildSuggest`'s job), best bm25 first, editions
+ * collapsed like `buildSearch`, each with a `snippet()` of the text column. bm25() and
+ * snippet() only work in the plain inner query, never beside the window function, hence the
+ * nesting. Placeholders bind in text order: the preferred edition, the MATCH, the name LIKE,
+ * the limit.
+ */
+export function buildTextSearch(
+  text: string,
+  limit = 12,
+  preferEdition: '2024' | '2014' = '2024',
+): { sql: string; params: unknown[] } | null {
+  const match = buildPhraseMatch(text);
+  if (!match) return null;
+  const term = likeEscape(text.trim().toLowerCase());
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, snippet(records_fts, 2, char(1), char(2), '…', 12) AS snip, bm25(records_fts) AS rank FROM records r JOIN records_fts f ON f.id = r.id JOIN sources s ON s.id = r.source_id WHERE records_fts MATCH ? AND s.enabled = 1 AND r.display_name NOT LIKE ? ESCAPE '\\'`;
+  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, key ORDER BY (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, key) AS editions FROM (${base})`;
+  return {
+    sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ORDER BY rank, display_name COLLATE NOCASE LIMIT ?`,
+    params: [preferEdition, match, `%${term}%`, Math.min(Math.max(limit, 1), TEXT_LIMIT)],
+  };
+}
+
+/**
+ * A `snippet()` result as before / match / after. FTS marks each matched word on its own, so a
+ * phrase arrives as several marked words with spaces between; they join into one match. Marks
+ * after the first run are dropped.
+ */
+export function splitSnippet(snip: string): { before: string; match: string; after: string } {
+  const strip = (t: string) =>
+    t.split(SNIPPET_OPEN).join('').split(SNIPPET_CLOSE).join('').replace(/\s+/g, ' ');
+  const open = snip.indexOf(SNIPPET_OPEN);
+  if (open < 0) return { before: '', match: '', after: strip(snip) };
+  let close = snip.indexOf(SNIPPET_CLOSE, open);
+  if (close < 0) close = snip.length;
+  // Extend over the next marked word while only spaces sit between.
+  for (;;) {
+    let k = close + 1;
+    while (k < snip.length && /\s/.test(snip[k]!)) k += 1;
+    if (snip[k] !== SNIPPET_OPEN) break;
+    const end = snip.indexOf(SNIPPET_CLOSE, k);
+    if (end < 0) break;
+    close = end;
+  }
+  return {
+    before: strip(snip.slice(0, open)),
+    match: strip(snip.slice(open, close)),
+    after: strip(snip.slice(close + 1)),
   };
 }

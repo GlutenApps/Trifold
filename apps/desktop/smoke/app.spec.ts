@@ -195,6 +195,19 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('button', { name: 'Back to Mage' }).click();
     await expect(console_.getByRole('heading', { name: 'Mage' })).toBeVisible();
 
+    // Conditions come with the bundled SRD snapshot (DESIGN.md §7.3): a Conditions kind with
+    // one record per edition whose bulleted text renders as a list.
+    await console_.getByLabel('Source', { exact: true }).selectOption({ label: 'All sources' });
+    await console_.getByRole('tab', { name: 'Conditions', exact: true }).click();
+    await console_.getByRole('option', { name: /^Blinded/ }).click();
+    await expect(console_.getByRole('heading', { name: 'Blinded' })).toBeVisible();
+    await expect(console_.getByRole('group', { name: 'Switch edition' })).toContainText('Legacy');
+    await expect(console_.getByRole('listitem').first()).toBeVisible();
+    await console_.getByRole('tab', { name: 'Monsters', exact: true }).click();
+    await console_
+      .getByLabel('Source', { exact: true })
+      .selectOption({ label: 'compendium-sample' });
+
     const timing = await console_.evaluate(
       (id) =>
         window.trifold.compendium.search({ kind: 'monster', text: 'dragon', sourceIds: [id] }),
@@ -299,6 +312,90 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('button', { name: 'End combat' }).click();
     await tab('Encounters').click();
     await expect(console_.getByTestId('encounter-row')).toContainText('fought 1×');
+
+    // Global search (ADR 0017): Ctrl+F reaches the field whatever the window width (under
+    // 960 px it sits inside the pop-up), a PC is found by name and Enter lands on their row in
+    // the Campaign tab; a creature from the fixture is found through the index and opens its
+    // stat block in the Compendium tab.
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
+    const searchField = console_.getByRole('combobox', {
+      name: 'Search the campaign and compendium',
+    });
+    await expect(searchField).toBeFocused();
+    await searchField.fill('thora');
+    const searchResults = console_.getByTestId('search-results');
+    await expect(searchResults.getByRole('group', { name: 'Party' })).toContainText('Thora');
+    await console_.keyboard.press('Enter');
+    await expect(searchResults).toHaveCount(0);
+    await expect(tab('Campaign')).toHaveAttribute('aria-selected', 'true');
+    await expect(console_.getByTestId('pc-row').filter({ hasText: 'Thora' })).toBeVisible();
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
+    await searchField.fill('goblin war');
+    const compendiumHits = searchResults.getByRole('group', { name: 'Compendium' });
+    await expect(compendiumHits).toContainText('Goblin Warrior');
+    await compendiumHits.getByRole('option', { name: /Goblin Warrior/ }).click();
+    await expect(tab('Compendium')).toHaveAttribute('aria-selected', 'true');
+    await expect(console_.getByRole('heading', { name: 'Goblin Warrior' })).toBeVisible();
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
+    await console_.keyboard.press('Escape');
+    await expect(searchField).toHaveValue('');
+
+    // Quick notes (ADR 0018): Ctrl+N opens the tool wherever the dock is (a flyout on narrow CI
+    // screens), Save waits for a title, the note lands on disk in a Quick Notes folder made for
+    // it, and the Notes panel shows it there; the current tab does not change.
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+n' : 'Control+n');
+    const quickTitle = console_.getByRole('textbox', { name: 'Quick note title' });
+    await expect(quickTitle).toBeFocused();
+    const quickSave = console_.getByRole('button', { name: 'Save', exact: true });
+    await expect(quickSave).toBeDisabled();
+    await quickTitle.fill('Guard took the bribe');
+    await console_
+      .getByTestId('quick-capture')
+      .getByRole('textbox', { name: 'Body' })
+      .fill('He owes the party a favour.');
+    await quickSave.click();
+    await expect(tab('Compendium')).toHaveAttribute('aria-selected', 'true');
+    const notesDir = join(library, 'campaigns', 'smoke-campaign', 'notes');
+    await expect
+      .poll(async () => {
+        const files = await readdir(notesDir).catch(() => [] as string[]);
+        const all = await Promise.all(
+          files.map(async (f) => JSON.parse(await readFile(join(notesDir, f), 'utf8'))),
+        );
+        const folder = all.find((n) => n.role === 'quickNotes');
+        return all.find((n) => n.title === 'Guard took the bribe')?.parentId === folder?.id
+          ? folder?.title
+          : null;
+      })
+      .toBe('Quick Notes');
+    await tab('Campaign').click();
+    await console_.getByRole('tab', { name: /^Notes/ }).click();
+    // Folders start open, so the note shows under it. (Clicking the folder would select it, and
+    // a Campaign panel under 640 px, as on CI screens, then shows the folder instead of the tree.)
+    await expect(console_.getByRole('treeitem', { name: 'Quick Notes' })).toBeVisible();
+    await expect(console_.getByRole('treeitem', { name: 'Guard took the bribe' })).toBeVisible();
+
+    // Global search finds a phrase inside a note body (ADR 0017) and opens the note at it.
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
+    await searchField.fill('owes the party');
+    const mentioned = searchResults.getByRole('group', { name: 'Mentioned in' });
+    await expect(mentioned).toContainText('Guard took the bribe');
+    await expect(mentioned.locator('mark')).toHaveText('owes the party');
+    await console_.keyboard.press('Enter');
+    await expect(console_.getByTestId('note-pane').getByLabel('Title')).toHaveValue(
+      'Guard took the bribe',
+    );
+    await expect(console_.getByLabel('Find in notes')).toHaveValue('owes the party');
+
+    // Compendium text (ADR 0017): a phrase from a stat block finds the record through the index.
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
+    await searchField.fill('mucous cloud');
+    const recordText = searchResults.getByRole('group', { name: 'Compendium text' });
+    await expect(recordText).toContainText('Aboleth');
+    await expect(recordText.locator('mark').first()).toHaveText(/mucous cloud/i);
+    await recordText.getByRole('option').first().click();
+    await expect(tab('Compendium')).toHaveAttribute('aria-selected', 'true');
+    await expect(console_.getByRole('heading', { name: 'Aboleth' })).toBeVisible();
 
     // The strip's Dice button opens the shared pool at every window width. (Below 1180 px the
     // strip hides its own dice chips, and CI screens are narrower than that, so roll here.)

@@ -41,6 +41,29 @@ describe('RecordDetail', () => {
     });
   });
 
+  it('shows a condition’s text with its bullets as a list', () => {
+    const blinded: CompendiumRecord = {
+      schemaVersion: 1,
+      id: 'srd-2024:condition:blinded',
+      kind: 'condition',
+      key: 'blinded',
+      name: 'Blinded',
+      displayName: 'Blinded',
+      sourceId: 'srd-2024',
+      edition: '2024',
+      tags: [],
+      data: {
+        text: 'While you have the condition, these apply.\n * First. One thing.\n * Second. Another.',
+        extra: {},
+      },
+    };
+    renderDetail(blinded);
+    expect(screen.getByRole('heading', { name: 'Blinded' })).toBeInTheDocument();
+    expect(screen.getByText('While you have the condition, these apply.')).toBeInTheDocument();
+    const items = screen.getAllByRole('listitem');
+    expect(items.map((li) => li.textContent)).toEqual(['First. One thing.', 'Second. Another.']);
+  });
+
   it('offers both rulesets of a record and switches between them', async () => {
     const legacy = record('Aboleth');
     const modern = record('Aboleth [5.5e]');

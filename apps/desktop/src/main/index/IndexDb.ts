@@ -3,10 +3,29 @@ import type {
   CompendiumFacets,
   CompendiumQuery,
   CompendiumSearchResult,
+  CompendiumSuggestion,
+  CompendiumTextHit,
   IndexStats,
 } from '@trifold/api';
 import { CompendiumRecord, type RecordKind, type Source } from '@trifold/schema';
-import { buildSearch, indexText, recordColumns, toRow, type RawRow } from './query';
+import {
+  buildSearch,
+  buildSuggest,
+  buildTextSearch,
+  indexText,
+  recordColumns,
+  splitSnippet,
+  toRow,
+  type RawRow,
+} from './query';
+
+/** `buildSuggest`'s numeric tier column as the API names it. */
+const SUGGEST_TIERS: Record<number, CompendiumSuggestion['tier']> = {
+  0: 'exact',
+  1: 'prefix',
+  2: 'word',
+  3: 'substring',
+};
 
 /**
  * The SQLite index (DESIGN.md §4.3, DATA-FORMATS.md §5.6): a derived, rebuildable view of the
@@ -184,6 +203,28 @@ export class IndexDb {
     const rows = (this.db.prepare(built.sql).all(...built.params) as RawRow[]).map(toRow);
     const total = (this.db.prepare(built.countSql).get(...built.countParams) as { n: number }).n;
     return { rows, total, tookMs: Math.round((performance.now() - started) * 10) / 10 };
+  }
+
+  suggest(
+    text: string,
+    opts: { limit?: number; preferEdition?: '2024' | '2014' } = {},
+  ): CompendiumSuggestion[] {
+    if (!text.trim()) return [];
+    const built = buildSuggest(text, opts.limit, opts.preferEdition);
+    return (this.db.prepare(built.sql).all(...built.params) as (RawRow & { tier: number })[]).map(
+      (raw) => ({ ...toRow(raw), tier: SUGGEST_TIERS[raw.tier] ?? 'substring' }),
+    );
+  }
+
+  searchText(
+    text: string,
+    opts: { limit?: number; preferEdition?: '2024' | '2014' } = {},
+  ): CompendiumTextHit[] {
+    const built = buildTextSearch(text, opts.limit, opts.preferEdition);
+    if (!built) return [];
+    return (this.db.prepare(built.sql).all(...built.params) as (RawRow & { snip: string })[]).map(
+      (raw) => ({ ...toRow(raw), snippet: splitSnippet(raw.snip ?? '') }),
+    );
   }
 
   get(recordId: string): CompendiumRecord | null {

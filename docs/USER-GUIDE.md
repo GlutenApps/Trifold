@@ -16,9 +16,9 @@ Trifold is a desktop console for a Dungeon Master running 5e-compatible games at
 
 Trifold has two spaces. The **Library** (the mark at the top left) holds what every campaign shares: Campaigns, Compendium, Music folders and Settings. Opening a campaign enters its **console**; one campaign is open at a time.
 
-- **Top bar.** The mark returns to the Library. The campaign name is a menu: switch campaign, New campaign…, Import campaign XML…, Close campaign. On the right: the current layout, Hotkeys (`Ctrl+/`) and Settings (`Ctrl+,`).
+- **Top bar.** The mark returns to the Library. The campaign name is a menu: switch campaign, New campaign…, Import campaign XML…, Close campaign. In the middle, **Search** (`Ctrl+F`) finds anything by name: notes and folders, NPCs, party members, encounters (also by who is in them), scenes, compendium records and web tabs, grouped by type. Under **Mentioned in** it also finds what you typed inside your notes, and in the notes on encounters, NPCs, PCs and scenes, with the words around it; opening one takes you to that spot. **Compendium text** finds the phrase inside stat blocks, spells and items. When a group has more than it shows, **Show all** in its header lists just that group in full; Escape (or the back arrow) returns to every result. Arrows move, Enter opens the item where it lives and marks it for a moment, Escape clears. In a narrow window the field is behind a search button. On the right: the current layout, Hotkeys (`Ctrl+/`) and Settings (`Ctrl+,`).
 - **Stage.** One or two groups of tabs holding **Campaign**, **Compendium**, **Encounters**, **VTT** (the virtual tabletop: what the TV shows) and any **web tabs**. Each group's `+` opens a tab here and offers **New web tab…**. Drag a tab to move it, or onto the right half of a lone group to split the stage. A closed tab keeps its state.
-- **Dock.** The right-hand column for the two tall tools, **Scenes** and **Music**. Its header toggles each and collapses the dock to icons, where a tool opens as a flyout. **Dice**, **Hotkeys** and **Layouts** are pop-ups from their own buttons.
+- **Dock.** The right-hand column for the tall tools, **Scenes**, **Music** and **Quick notes**. Its header toggles each and collapses the dock to icons, where a tool opens as a flyout. **Dice**, **Hotkeys** and **Layouts** are pop-ups from their own buttons.
 - **Live strip.** The bottom bar, for table state only: the TV with Blackout and undo, round and turn, music and mute, the dice pool. Every strip button also exists in its tool.
 
 **Layouts.** A layout keeps which tabs are open, where, and the dock. Three starters come with the app: **Prep**, **Table** (VTT beside Campaign, Encounters and Compendium) and **Combat** (Encounters alone on the right). The Layouts pop-up applies, overwrites, renames, reorders and deletes them, saves the screen as a new one, and brings the starters back. `Ctrl+1` to `Ctrl+9` apply the first nine.
@@ -29,7 +29,7 @@ Trifold has two spaces. The **Library** (the mark at the top left) holds what ev
 
 Trifold ships the System Reference Document, 2024 and 2014 (shown as "legacy"), with attribution on the About card. **Library › Compendium › Sources** lists every source; **Import XML file…** adds a compendium XML file, which stays in your Library. Untick a source to hide its records without removing it; the trash icon removes an imported one.
 
-**Browse** (the console's Compendium tab, or Library › Compendium › Browse) has sub-tabs for Monsters, Spells, Items, Feats, Species, Backgrounds and Classes, a search over names and text, and filters for source and edition; monsters add CR range, type, size, environment and a named-NPC filter, spells add level. `Ctrl+K` jumps to the search. Where a record exists in both rulesets, a **2024 / Legacy** switch at the top of the detail flips between them; **Source text** shows the text as imported.
+**Browse** (the console's Compendium tab, or Library › Compendium › Browse) has sub-tabs for Monsters, Spells, Items, Feats, Species, Backgrounds, Classes and Conditions, a search over names and text, and filters for source and edition; monsters add CR range, type, size, environment and a named-NPC filter, spells add level. `Ctrl+K` jumps to the search. Where a record exists in both rulesets, a **2024 / Legacy** switch at the top of the detail flips between them; **Source text** shows the text as imported.
 
 Monster stat blocks use the 2024 layout whatever their edition. Attack and roll badges are clickable: the result goes to the shared roll log and shows at the top of the record. Shift-click rolls with advantage, Ctrl-click with disadvantage.
 
@@ -59,7 +59,7 @@ Create a campaign in **Library › Campaigns** (name, **Create campaign**) or im
 
 **HP.** Type an amount, pick a damage type if it matters, and press **Damage** (or Enter). The heart heals that amount, the shield grants it as temp HP, and the fan-out icon opens the damage pop-up to deal it to several combatants at full or half each. A PC at 0 HP gets a **Death save** button; successes and failures show on the row.
 
-**Conditions.** Pick a condition and a duration: none, rounds, until the start or end of the active turn, or until a save. Exhaustion stacks a level each time. A save-ended condition raises a banner at the end of the turn with **Saved, remove it** and **Failed**. Concentration takes a spell name; damage to that combatant raises a banner with the DC and **Failed, drop it** or **Kept it**.
+**Conditions.** Pick a condition and a duration: none, rounds, until the start or end of the active turn, or until a save. The book button beside Add opens the picked condition's rules in the Compendium tab. Exhaustion stacks a level each time. A save-ended condition raises a banner at the end of the turn with **Saved, remove it** and **Failed**. Concentration takes a spell name; damage to that combatant raises a banner with the DC and **Failed, drop it** or **Kept it**.
 
 **Attacks and saves from the stat block.** The selected creature's stat block sits beside the list. Click an attack to roll to hit and damage; the damage pop-up lets you tick who takes it, full or half, and press **Apply** (`Ctrl+Enter`). **Roll all** on Multiattack rolls every attack. A save badge rolls the save for every creature in the fight, marks each saved or failed, pre-selects half or full damage, and shows the PCs' bonuses so you can ask the players.
 
@@ -115,12 +115,21 @@ A web tab is a page you choose, hosted inside the stage. In a group's `+` menu p
 
 **Logs.** `trifold-<date>.log` in the Library's `logs` folder; before a Library is open, in the app's data folder.
 
+## Quick notes
+
+Press `Ctrl+N` anywhere in the console, or open **Quick notes** in the dock, to write something down without leaving what you are doing. Give it a title (Save stays off until it has one), write as much as you like with the same formatting as any note, then press **Save** or `Ctrl+S`. The cursor goes back where it was. Escape throws the draft away.
+
+Quick notes are ordinary notes kept in a folder called **Quick Notes** in the Campaign tab's Notes. Trifold makes the folder when it is missing, even if you deleted it, and you can rename it. Below the form the tool lists every quick note, newest first, with a find field. Open one to rename, tag, edit or delete it, move it to another folder, or open it in Notes. A note moved out of the Quick Notes folder becomes an ordinary note and leaves the list.
+
 ## Hotkeys
 
 Plain letter keys do nothing while you are typing in a field.
 
 | Area | Action | Combo |
 |---|---|---|
+| Console | Search the campaign and compendium | `Ctrl+F` |
+| Console | Quick note: jot something down without leaving your place | `Ctrl+N` |
+| Quick notes | Save the quick note | `Ctrl+S` |
 | Console | Jump to the compendium search | `Ctrl+K` |
 | Console | VTT: the scene on the TV | `Ctrl+T` |
 | Console | Music: transport, playlists, tracks | `Ctrl+M` |

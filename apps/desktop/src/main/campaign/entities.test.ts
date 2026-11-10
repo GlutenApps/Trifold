@@ -243,3 +243,49 @@ describe('CampaignEntities notes', () => {
     expect(reopened.notes.map((n) => n.title)).toEqual(['Epilogue']);
   });
 });
+
+describe('captureNote (ADR 0018)', () => {
+  it('makes the Quick Notes folder once, files captures in it, and makes it again after a delete', async () => {
+    const bundle = await repo.create('Chronicle');
+    const entities = new CampaignEntities(repo);
+    // Two captures at once still share one folder.
+    const [first, second] = await Promise.all([
+      entities.captureNote({ title: '  Guard  took the bribe ', body: 'Owes us one.' }),
+      entities.captureNote({ title: 'Map in the cellar', body: '' }),
+    ]);
+    expect(first.folder.id).toBe(second.folder.id);
+    expect(first.folder).toMatchObject({
+      kind: 'folder',
+      title: 'Quick Notes',
+      role: 'quickNotes',
+    });
+    expect(first.note).toMatchObject({
+      title: 'Guard took the bribe',
+      body: 'Owes us one.',
+      parentId: first.folder.id,
+    });
+    expect(first.note.capture?.at).toBe(first.note.createdAt);
+    expect(second.note.order).toBe(first.note.order + 1);
+
+    // Renamed, it is still the folder; deleted with its contents, the next capture makes a new one.
+    await entities.saveNote({ ...first.folder, title: 'Loose ends' });
+    const third = await entities.captureNote({ title: 'Third', body: '' });
+    expect(third.folder.id).toBe(first.folder.id);
+    await entities.removeNote(first.folder.id, 'delete');
+    const fourth = await entities.captureNote({ title: 'Fourth', body: '' });
+    expect(fourth.folder.id).not.toBe(first.folder.id);
+
+    const reopened = await repo.open(bundle.campaign.id);
+    expect(reopened.notes.filter((n) => n.role === 'quickNotes')).toHaveLength(1);
+    expect(reopened.notes.find((n) => n.id === fourth.note.id)?.parentId).toBe(fourth.folder.id);
+  });
+
+  it('refuses a blank title and keeps working after', async () => {
+    await repo.create('Chronicle');
+    const entities = new CampaignEntities(repo);
+    await expect(entities.captureNote({ title: ' ', body: 'x' })).rejects.toThrow(
+      'A quick note needs a title',
+    );
+    await expect(entities.captureNote({ title: 'Fine', body: '' })).resolves.toBeTruthy();
+  });
+});

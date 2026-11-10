@@ -11,6 +11,7 @@ import {
   fitLayout,
   fitSplit,
   groupOf,
+  landingGroup,
   matchesPreset,
   moveTab,
   normalize,
@@ -88,6 +89,27 @@ describe('stage', () => {
   });
 });
 
+describe('landingGroup (ADR 0017)', () => {
+  it('keeps an open tab where it is', () => {
+    expect(landingGroup(table, 'campaign', ['map'], 1)).toBe(0);
+    expect(landingGroup(table, 'encounters', ['map'], 0)).toBe(1);
+  });
+
+  it('puts a closed tab in the only group, else away from the VTT', () => {
+    expect(landingGroup(closeTab(defaultLayout(), 'compendium'), 'compendium', ['map'], 1)).toBe(0);
+    // `table` has the VTT in group 0, so a closed tab lands in group 1 whatever is focused.
+    expect(landingGroup(closeTab(table, 'compendium'), 'compendium', ['map'], 0)).toBe(1);
+  });
+
+  it('falls through the avoid list, then to the focused group', () => {
+    const noMap = closeTab(table, 'map');
+    expect(noMap.stage.groups).toHaveLength(2);
+    expect(landingGroup(noMap, 'map', ['map', 'encounters'], 1)).toBe(0);
+    expect(landingGroup(noMap, 'map', ['map'], 1)).toBe(1);
+    expect(landingGroup(noMap, 'map', [], 0)).toBe(0);
+  });
+});
+
 describe('dock', () => {
   it('snaps widths, keeps the 360 floor and collapses to icons when dragged small', () => {
     expect(setDockWidth(table, 390).dock).toMatchObject({ state: 'wide', width: 400 });
@@ -114,7 +136,13 @@ describe('dock', () => {
   it('toggles sections and keeps every minor listed once', () => {
     const layout = toggleSection(table, 'music');
     expect(layout.dock.sections.find((s) => s.tool === 'music')?.open).toBe(true);
-    expect(layout.dock.sections).toHaveLength(2);
+    // `table` was saved before Quick notes existed: it gains the tool, closed, once (ADR 0018).
+    expect(layout.dock.sections.map((s) => s.tool).sort()).toEqual([
+      'music',
+      'quickNotes',
+      'scenes',
+    ]);
+    expect(layout.dock.sections.find((s) => s.tool === 'quickNotes')?.open).toBe(false);
   });
 });
 

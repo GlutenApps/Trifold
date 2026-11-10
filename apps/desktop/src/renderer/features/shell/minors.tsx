@@ -1,4 +1,5 @@
 import type { MinorKind } from '@trifold/schema';
+import { QuickNotesTool } from '../campaign/QuickNotesTool';
 import { MusicTool } from '../music/MusicTool';
 import { ScenesTool } from '../presenter/ScenesTool';
 import type { IconName } from './icons';
@@ -11,6 +12,7 @@ import type { IconName } from './icons';
 export const MINOR_ICON: Record<MinorKind, IconName> = {
   music: 'music',
   scenes: 'clapper',
+  quickNotes: 'quill',
 };
 
 /** Minor kind → the tool that fills its dock section or flyout. */
@@ -20,5 +22,7 @@ export function MinorBody({ kind }: { kind: MinorKind }) {
       return <MusicTool />;
     case 'scenes':
       return <ScenesTool />;
+    case 'quickNotes':
+      return <QuickNotesTool />;
   }
 }
