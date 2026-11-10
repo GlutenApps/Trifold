@@ -58,8 +58,15 @@ existing callers.
   moving the active row.
 - Arrows move across groups with wrap-around, Enter opens the active row through `navigate`,
   Escape clears. The query stays after a pick, for a second look.
-- Full-text search of note bodies is a follow-up; the note anchor exists so its results land on
-  the phrase with nothing new in the contract.
+- **Text inside the campaign** (added 2026-11-09): from two characters on, a **Mentioned in**
+  group lists every note whose body holds the phrase, and every encounter, NPC, PC and scene
+  whose notes do, one row per item with its first snippet (markdown stripped, phrase marked)
+  and the number of mentions, most first. A note opens at that occurrence through the note
+  anchor (the Notes panel's find shows the phrase, the editor highlights it); an encounter opens
+  in the builder with the phrase selected in its DM notes. A note can be listed under Notes (by
+  title) and under Mentioned in (by text) at once. Stripped bodies are cached per saved note,
+  so a keystroke only scans text; a test holds it under the 50 ms search budget on 800 long
+  notes.
 
 ## Consequences
 
@@ -72,5 +79,6 @@ existing callers.
 - Three sub-tab and selection states stay local (Campaign sub-tab, Notes selection, Encounters
   draft); the hook drives them rather than moving them into stores.
 - The `search` pop-up is the first without a header; the ADR 0009 pattern otherwise holds.
-- Not done: tracks and playlists; full-text search of note bodies; a hotkey to open a result in
-  the other group; conditions in the compendium (fetched from Open5e in a separate change).
+- Not done: tracks and playlists; compendium record text in the global search (the Compendium
+  tab's own search covers it); listing every mention past the group's six rows; a hotkey to open
+  a result in the other group; conditions in the compendium (fetched from Open5e in a separate change).

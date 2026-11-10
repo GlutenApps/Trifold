@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findPhrase, searchNotes, stripMarkdown } from './noteSearch';
+import { findPhrase, phraseSnippets, searchNotes, stripMarkdown } from './noteSearch';
 
 describe('stripMarkdown', () => {
   it('drops headings, emphasis, list markers, quotes, links and fences but keeps the words', () => {
@@ -80,5 +80,19 @@ describe('searchNotes', () => {
 
   it('matches nothing on a blank query', () => {
     expect(searchNotes(notes, '  ')).toEqual([]);
+  });
+});
+
+describe('phraseSnippets', () => {
+  it('counts every occurrence in plain text and keeps the first few with context', () => {
+    const text = 'Hesper runs the inn. Ask hesper about the bridge. HESPER lies.';
+    const { count, snippets } = phraseSnippets(text, 'hesper', { maxSnippets: 2, context: 12 });
+    expect(count).toBe(3);
+    expect(snippets.map((s) => [s.match, s.occurrence])).toEqual([
+      ['Hesper', 0],
+      ['hesper', 1],
+    ]);
+    expect(snippets[1]!.before).toMatch(/Ask $/);
+    expect(phraseSnippets(text, 'zzz')).toEqual({ count: 0, snippets: [] });
   });
 });

@@ -331,6 +331,10 @@ test('console, Library, import, search, stat block and player window all work en
     const quickSave = console_.getByRole('button', { name: 'Save', exact: true });
     await expect(quickSave).toBeDisabled();
     await quickTitle.fill('Guard took the bribe');
+    await console_
+      .getByTestId('quick-capture')
+      .getByRole('textbox', { name: 'Body' })
+      .fill('He owes the party a favour.');
     await quickSave.click();
     await expect(tab('Compendium')).toHaveAttribute('aria-selected', 'true');
     const notesDir = join(library, 'campaigns', 'smoke-campaign', 'notes');
@@ -352,6 +356,18 @@ test('console, Library, import, search, stat block and player window all work en
     // a Campaign panel under 640 px, as on CI screens, then shows the folder instead of the tree.)
     await expect(console_.getByRole('treeitem', { name: 'Quick Notes' })).toBeVisible();
     await expect(console_.getByRole('treeitem', { name: 'Guard took the bribe' })).toBeVisible();
+
+    // Global search finds a phrase inside a note body (ADR 0017) and opens the note at it.
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
+    await searchField.fill('owes the party');
+    const mentioned = searchResults.getByRole('group', { name: 'Mentioned in' });
+    await expect(mentioned).toContainText('Guard took the bribe');
+    await expect(mentioned.locator('mark')).toHaveText('owes the party');
+    await console_.keyboard.press('Enter');
+    await expect(console_.getByTestId('note-pane').getByLabel('Title')).toHaveValue(
+      'Guard took the bribe',
+    );
+    await expect(console_.getByLabel('Find in notes')).toHaveValue('owes the party');
 
     // The strip's Dice button opens the shared pool at every window width. (Below 1180 px the
     // strip hides its own dice chips, and CI screens are narrower than that, so roll here.)

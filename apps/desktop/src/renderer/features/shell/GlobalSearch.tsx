@@ -203,7 +203,7 @@ export function SearchResults({ withField }: { withField: boolean }) {
                 id={optionId(r.key)}
                 role="option"
                 aria-selected={active?.key === r.key}
-                className={`search-result${active?.key === r.key ? ' active' : ''}`}
+                className={`search-result${active?.key === r.key ? ' active' : ''}${r.snippet ? ' has-snippet' : ''}`}
                 data-testid="search-result"
                 onMouseEnter={() => setActive(r.key)}
                 onClick={() => navigate(r.target)}
@@ -211,6 +211,13 @@ export function SearchResults({ withField }: { withField: boolean }) {
                 <Icon name={r.icon} size={14} />
                 <span className="search-title">{r.title}</span>
                 {r.detail && <span className="search-detail muted small">{r.detail}</span>}
+                {r.snippet && (
+                  <span className="search-snippet small">
+                    {r.snippet.before}
+                    <mark>{r.snippet.match}</mark>
+                    {r.snippet.after}
+                  </span>
+                )}
               </div>
             ))}
             {g.more > 0 && <div className="muted small search-more">+{g.more} more</div>}
@@ -229,7 +236,8 @@ export function SearchResults({ withField }: { withField: boolean }) {
         )}
         {!trimmed && (
           <p className="muted search-status">
-            Type a name: a note, NPC, encounter, scene, creature or spell.
+            Type a name or a phrase: notes, NPCs, encounters, scenes, creatures, spells, and the
+            text inside your notes.
           </p>
         )}
       </div>

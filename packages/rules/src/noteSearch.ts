@@ -102,6 +102,30 @@ export function findPhrase(text: string, phrase: string): number[] {
 }
 
 /**
+ * Every occurrence of `phrase` in plain `text` (markdown already stripped): how many there are
+ * and the first `maxSnippets` with context. Callers that search the same text often (global
+ * search, ADR 0017) strip it once and keep it.
+ */
+export function phraseSnippets(
+  text: string,
+  phrase: string,
+  options: NoteSearchOptions = {},
+): { count: number; snippets: SearchSnippet[] } {
+  const maxSnippets = options.maxSnippets ?? 3;
+  const context = options.context ?? 60;
+  const offsets = findPhrase(text, phrase);
+  return {
+    count: offsets.length,
+    snippets: offsets.slice(0, maxSnippets).map((at, occurrence) => ({
+      before: cutBefore(text, at, context),
+      match: text.slice(at, at + phrase.length),
+      after: cutAfter(text, at + phrase.length, context),
+      occurrence,
+    })),
+  };
+}
+
+/**
  * Notes that contain `query` as a phrase in their title or body, in the order given, each with
  * up to `maxSnippets` snippets of context. An empty query matches nothing.
  */
@@ -112,25 +136,12 @@ export function searchNotes<T extends SearchableNote>(
 ): NoteSearchHit[] {
   const phrase = query.trim();
   if (!phrase) return [];
-  const maxSnippets = options.maxSnippets ?? 3;
-  const context = options.context ?? 60;
   const hits: NoteSearchHit[] = [];
   for (const note of notes) {
     const titleMatch = note.title.toLowerCase().includes(phrase.toLowerCase());
-    const text = stripMarkdown(note.body);
-    const offsets = findPhrase(text, phrase);
-    if (!titleMatch && offsets.length === 0) continue;
-    hits.push({
-      noteId: note.id,
-      titleMatch,
-      count: offsets.length,
-      snippets: offsets.slice(0, maxSnippets).map((at, occurrence) => ({
-        before: cutBefore(text, at, context),
-        match: text.slice(at, at + phrase.length),
-        after: cutAfter(text, at + phrase.length, context),
-        occurrence,
-      })),
-    });
+    const { count, snippets } = phraseSnippets(stripMarkdown(note.body), phrase, options);
+    if (!titleMatch && count === 0) continue;
+    hits.push({ noteId: note.id, titleMatch, count, snippets });
   }
   return hits;
 }
