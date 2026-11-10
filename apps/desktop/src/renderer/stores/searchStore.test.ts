@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CampaignBundle, CompendiumSuggestion } from '@trifold/api';
+import type { CampaignBundle, CompendiumSuggestion, CompendiumTextHit } from '@trifold/api';
 import { useCampaignStore } from './campaignStore';
 import { useShellStore } from './shellStore';
 import { useNavStore } from '../navigate';
@@ -340,5 +340,105 @@ describe('searchMentions on a large campaign', () => {
     for (const q of ['fo', 'for', 'ford', 'ford a', 'ford at']) searchMentions(q, b);
     expect((performance.now() - started) / 5).toBeLessThan(50);
     expect(searchMentions('toll', b)).toHaveLength(800);
+  });
+});
+
+describe('Show all and compendium text', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    useShellStore.setState({ space: 'console', webTabs: [], pop: null });
+    useSearchStore.getState().clear();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    useSearchStore.getState().clear();
+  });
+
+  const hit = (i: number) =>
+    ({
+      id: `r${i}`,
+      kind: 'monster',
+      key: `m${i}`,
+      name: `Beast ${i}`,
+      displayName: `Beast ${i}`,
+      sourceId: 'srd',
+      sourceName: 'SRD',
+      edition: '2024',
+      editions: ['2024'],
+      cr: '1',
+      type: 'beast',
+      size: 'M',
+      environment: null,
+      isNpc: false,
+      level: null,
+      typeCode: null,
+      rarity: null,
+      snippet: { before: '…lives in the ', match: 'swamp', after: ' at night…' },
+    }) as unknown as CompendiumTextHit;
+
+  it('lists record text hits in the index order, under their own group, with a snippet', async () => {
+    useCampaignStore.setState({ current: bundle() });
+    window.trifold.compendium.searchText = vi.fn(async () => [hit(2), hit(1)]);
+    useSearchStore.getState().setQuery('swamp');
+    await vi.advanceTimersByTimeAsync(100);
+    expect(window.trifold.compendium.searchText).toHaveBeenCalledWith('swamp', {
+      limit: 12,
+      preferEdition: '2024',
+    });
+    const group = useSearchStore
+      .getState()
+      .groups()
+      .find((g) => g.group === 'compendiumText')!;
+    expect(group.label).toBe('Compendium text');
+    expect(group.results.map((r) => r.title)).toEqual(['Beast 2', 'Beast 1']);
+    expect(group.results[0]).toMatchObject({
+      key: 'mention:record:r2',
+      target: { type: 'record', id: 'r2' },
+      snippet: { match: 'swamp' },
+    });
+  });
+
+  it('shows one group in full, asks the index for more, and goes back', async () => {
+    const many = bundle();
+    many.npcs = Array.from({ length: 9 }, (_, i) => ({
+      id: `g${i}`,
+      name: `Guard ${i}`,
+      role: '',
+      location: '',
+      isAlive: true,
+    })) as unknown as CampaignBundle['npcs'];
+    useCampaignStore.setState({ current: many });
+    const texts = Array.from({ length: 12 }, (_, i) => hit(i));
+    window.trifold.compendium.searchText = vi.fn(async (_t: string, o?: { limit?: number }) =>
+      o?.limit === 100 ? texts.concat(Array.from({ length: 30 }, (_, i) => hit(100 + i))) : texts,
+    );
+    const store = useSearchStore.getState();
+    store.setQuery('guard');
+    await vi.advanceTimersByTimeAsync(100);
+    let groups = useSearchStore.getState().groups();
+    const npcs = groups.find((g) => g.group === 'npcs')!;
+    expect(npcs.results).toHaveLength(6);
+    expect(npcs.more).toBe(3);
+    // Twelve text hits came back at the limit: there may be more than counted.
+    expect(groups.find((g) => g.group === 'compendiumText')!.capped).toBe(true);
+
+    store.setExpanded('npcs');
+    groups = useSearchStore.getState().groups();
+    expect(groups.map((g) => g.group)).toEqual(['npcs']);
+    expect(groups[0]!.results).toHaveLength(9);
+    expect(groups[0]!.more).toBe(0);
+
+    useSearchStore.getState().setExpanded('compendiumText');
+    await vi.advanceTimersByTimeAsync(100);
+    expect(window.trifold.compendium.searchText).toHaveBeenLastCalledWith('guard', {
+      limit: 100,
+      preferEdition: '2024',
+    });
+    groups = useSearchStore.getState().groups();
+    expect(groups.map((g) => g.group)).toEqual(['compendiumText']);
+    expect(groups[0]!.results).toHaveLength(42);
+
+    useSearchStore.getState().setExpanded(null);
+    expect(useSearchStore.getState().groups().length).toBeGreaterThan(1);
   });
 });

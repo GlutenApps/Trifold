@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { CampaignBundle, CompendiumSuggestion } from '@trifold/api';
+import type { CampaignBundle, CompendiumSuggestion, CompendiumTextHit } from '@trifold/api';
 import {
   ancestorsOf,
   phraseSnippets,
@@ -33,7 +33,15 @@ import { useShellStore } from './shellStore';
  * features/shell/GlobalSearch.tsx render it.
  */
 export type SearchGroup =
-  'notes' | 'npcs' | 'party' | 'encounters' | 'scenes' | 'mentions' | 'compendium' | 'webTabs';
+  | 'notes'
+  | 'npcs'
+  | 'party'
+  | 'encounters'
+  | 'scenes'
+  | 'mentions'
+  | 'compendium'
+  | 'compendiumText'
+  | 'webTabs';
 
 export const GROUP_ORDER: readonly SearchGroup[] = [
   'notes',
@@ -43,6 +51,7 @@ export const GROUP_ORDER: readonly SearchGroup[] = [
   'scenes',
   'mentions',
   'compendium',
+  'compendiumText',
   'webTabs',
 ];
 
@@ -54,6 +63,7 @@ export const GROUP_LABELS: Record<SearchGroup, string> = {
   scenes: 'Scenes',
   mentions: 'Mentioned in',
   compendium: 'Compendium',
+  compendiumText: 'Compendium text',
   webTabs: 'Web tabs',
 };
 
@@ -63,6 +73,8 @@ export const GROUP_LIMIT = 6;
 export const SEARCH_COMPACT_BELOW = 960;
 /** Compendium rows asked for; the group shows GROUP_LIMIT and counts the rest. */
 const SUGGEST_LIMIT = 12;
+/** Compendium rows asked for once the DM shows all of a compendium group. */
+const EXPANDED_LIMIT = 100;
 const DEBOUNCE_MS = 80;
 /** Text search starts at this many characters; one letter would match nearly every note. */
 export const MENTION_MIN = 2;
@@ -90,6 +102,8 @@ export interface SearchGroupView {
   results: SearchResult[];
   /** Matches beyond the rows shown. */
   more: number;
+  /** The index stopped at its limit, so there may be more than counted. */
+  capped?: boolean;
 }
 
 const KIND_LABELS: Record<RecordKind, string> = {
@@ -247,6 +261,19 @@ export function fromSuggestion(row: CompendiumSuggestion): SearchResult {
   };
 }
 
+/** A record whose text holds the phrase; `order` keeps the index's best-first ranking. */
+export function fromTextHit(row: CompendiumTextHit, order: number): SearchResult {
+  const named = fromSuggestion({ ...row, tier: 'substring' });
+  return {
+    ...named,
+    key: `mention:${named.key}`,
+    group: 'compendiumText',
+    icon: 'tome',
+    snippet: { ...row.snippet, occurrence: 0 },
+    weight: -order,
+  };
+}
+
 const byRank = (a: SearchResult, b: SearchResult) =>
   TIER_RANK[a.tier] - TIER_RANK[b.tier] ||
   (b.weight ?? 0) - (a.weight ?? 0) ||
@@ -335,23 +362,43 @@ export function searchMentions(query: string, bundle: CampaignBundle | null): Se
   return out;
 }
 
-/** Results in display order: fixed group order, best tier first inside, capped per group. */
+/**
+ * Results in display order: fixed group order, best tier first inside, capped per group. With
+ * `expanded` (Show all), only that group, every row. `capped` names the groups whose answer
+ * stopped at the index's limit.
+ */
 export function groupResults(
   results: readonly SearchResult[],
   limit = GROUP_LIMIT,
+  expanded: SearchGroup | null = null,
+  capped: ReadonlySet<SearchGroup> = new Set(),
 ): SearchGroupView[] {
   const groups: SearchGroupView[] = [];
-  for (const group of GROUP_ORDER) {
+  for (const group of expanded ? [expanded] : GROUP_ORDER) {
     const all = results.filter((r) => r.group === group).sort(byRank);
     if (all.length === 0) continue;
+    const max = expanded ? Infinity : limit;
     groups.push({
       group,
       label: GROUP_LABELS[group],
-      results: all.slice(0, limit),
-      more: Math.max(0, all.length - limit),
+      results: all.slice(0, max),
+      more: Math.max(0, all.length - max),
+      ...(capped.has(group) ? { capped: true } : {}),
     });
   }
   return groups;
+}
+
+/** What the pop-up shows for a store state; the store and the component share it. */
+export function viewGroups(
+  s: Pick<SearchState, 'local' | 'compendium' | 'compendiumText' | 'expanded' | 'capped'>,
+): SearchGroupView[] {
+  return groupResults(
+    s.local.concat(s.compendium, s.compendiumText),
+    GROUP_LIMIT,
+    s.expanded,
+    s.capped,
+  );
 }
 
 export const flattenGroups = (groups: readonly SearchGroupView[]): SearchResult[] =>
@@ -368,6 +415,12 @@ interface SearchState {
   query: string;
   local: SearchResult[];
   compendium: SearchResult[];
+  /** Records whose text holds the phrase (not their name). */
+  compendiumText: SearchResult[];
+  /** Show all: the one group listed in full, or null for every group. */
+  expanded: SearchGroup | null;
+  /** Compendium groups whose last answer hit the index's limit. */
+  capped: ReadonlySet<SearchGroup>;
   /** A compendium answer is on its way. */
   loading: boolean;
   error: string | null;
@@ -377,6 +430,8 @@ interface SearchState {
   summoned: number;
 
   setQuery(query: string): void;
+  /** Lists one group in full (Show all), or every group again with null. */
+  setExpanded(group: SearchGroup | null): void;
   groups(): SearchGroupView[];
   active(): SearchResult | null;
   move(delta: 1 | -1): void;
@@ -390,10 +445,17 @@ interface SearchState {
 let timer: number | null = null;
 let seq = 0;
 
+/** How many compendium rows to ask for: more when that group is shown in full. */
+const limitFor = (group: SearchGroup, expanded: SearchGroup | null) =>
+  expanded === group ? EXPANDED_LIMIT : SUGGEST_LIMIT;
+
 export const useSearchStore = create<SearchState>((set, get) => ({
   query: '',
   local: [],
   compendium: [],
+  compendiumText: [],
+  expanded: null,
+  capped: new Set(),
   loading: false,
   error: null,
   activeKey: null,
@@ -406,28 +468,60 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     if (timer) window.clearTimeout(timer);
     const mine = ++seq;
     if (!trimmed) {
-      set({ query, local, compendium: [], loading: false, error: null });
+      set({
+        query,
+        local,
+        compendium: [],
+        compendiumText: [],
+        capped: new Set(),
+        expanded: null,
+        loading: false,
+        error: null,
+      });
       return;
     }
     set({ query, local, loading: true });
     timer = window.setTimeout(() => {
       const preferred = bundle?.campaign.preferredEdition === '2014' ? '2014' : '2024';
-      window.trifold.compendium
-        .suggest(trimmed, { limit: SUGGEST_LIMIT, preferEdition: preferred })
-        .then((rows) => {
+      const { expanded } = get();
+      const nameLimit = limitFor('compendium', expanded);
+      const textLimit = limitFor('compendiumText', expanded);
+      const api = window.trifold.compendium;
+      Promise.all([
+        api.suggest(trimmed, { limit: nameLimit, preferEdition: preferred }),
+        trimmed.length >= MENTION_MIN
+          ? api.searchText(trimmed, { limit: textLimit, preferEdition: preferred })
+          : Promise.resolve([]),
+      ])
+        .then(([names, texts]) => {
           if (mine !== seq) return;
-          set({ compendium: rows.map(fromSuggestion), loading: false, error: null });
+          const capped = new Set<SearchGroup>();
+          if (names.length >= nameLimit) capped.add('compendium');
+          if (texts.length >= textLimit) capped.add('compendiumText');
+          set({
+            compendium: names.map(fromSuggestion),
+            compendiumText: texts.map(fromTextHit),
+            capped,
+            loading: false,
+            error: null,
+          });
         })
         .catch((err: unknown) => {
           if (mine !== seq) return;
-          set({ compendium: [], loading: false, error: errorMessage(err) });
+          set({ compendium: [], compendiumText: [], loading: false, error: errorMessage(err) });
         });
     }, DEBOUNCE_MS);
   },
 
+  setExpanded(group) {
+    if (get().expanded === group) return;
+    set({ expanded: group, activeKey: null });
+    // A compendium group shown in full asks the index again for more rows.
+    if (group === 'compendium' || group === 'compendiumText') get().setQuery(get().query);
+  },
+
   groups() {
-    const { local, compendium } = get();
-    return groupResults(local.concat(compendium));
+    return viewGroups(get());
   },
 
   active() {
@@ -459,7 +553,17 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   clear() {
     if (timer) window.clearTimeout(timer);
     seq += 1;
-    set({ query: '', local: [], compendium: [], loading: false, error: null, activeKey: null });
+    set({
+      query: '',
+      local: [],
+      compendium: [],
+      compendiumText: [],
+      expanded: null,
+      capped: new Set(),
+      loading: false,
+      error: null,
+      activeKey: null,
+    });
   },
 
   summon() {

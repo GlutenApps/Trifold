@@ -4,10 +4,20 @@ import type {
   CompendiumQuery,
   CompendiumSearchResult,
   CompendiumSuggestion,
+  CompendiumTextHit,
   IndexStats,
 } from '@trifold/api';
 import { CompendiumRecord, type RecordKind, type Source } from '@trifold/schema';
-import { buildSearch, buildSuggest, indexText, recordColumns, toRow, type RawRow } from './query';
+import {
+  buildSearch,
+  buildSuggest,
+  buildTextSearch,
+  indexText,
+  recordColumns,
+  splitSnippet,
+  toRow,
+  type RawRow,
+} from './query';
 
 /** `buildSuggest`'s numeric tier column as the API names it. */
 const SUGGEST_TIERS: Record<number, CompendiumSuggestion['tier']> = {
@@ -203,6 +213,17 @@ export class IndexDb {
     const built = buildSuggest(text, opts.limit, opts.preferEdition);
     return (this.db.prepare(built.sql).all(...built.params) as (RawRow & { tier: number })[]).map(
       (raw) => ({ ...toRow(raw), tier: SUGGEST_TIERS[raw.tier] ?? 'substring' }),
+    );
+  }
+
+  searchText(
+    text: string,
+    opts: { limit?: number; preferEdition?: '2024' | '2014' } = {},
+  ): CompendiumTextHit[] {
+    const built = buildTextSearch(text, opts.limit, opts.preferEdition);
+    if (!built) return [];
+    return (this.db.prepare(built.sql).all(...built.params) as (RawRow & { snip: string })[]).map(
+      (raw) => ({ ...toRow(raw), snippet: splitSnippet(raw.snip ?? '') }),
     );
   }
 

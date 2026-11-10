@@ -159,6 +159,41 @@ describe('GlobalSearch', () => {
     expect(useNavStore.getState().pending).toBeNull();
   });
 
+  it('Show all lists one type in full; Escape goes back before it clears', async () => {
+    const crowd = bundle();
+    crowd.npcs = Array.from({ length: 8 }, (_, i) => ({
+      ...crowd.npcs[0]!,
+      id: `npc${i}`,
+      name: `Hesper ${i}`,
+    }));
+    window.trifold.campaigns.current = vi.fn(async () => crowd);
+    render(<AppShell />);
+    act(() => {
+      useCampaignStore.setState({ current: crowd, campaigns: [] });
+    });
+    await waitFor(() => expect(useShellStore.getState().hydratedFor).not.toBeNull());
+    const field = screen.getByRole('combobox', { name: 'Search the campaign and compendium' });
+    await userEvent.click(field);
+    await userEvent.keyboard('hesper');
+    const results = await screen.findByTestId('search-results');
+    const npcs = within(results).getByRole('group', { name: 'NPCs' });
+    expect(within(npcs).getAllByRole('option')).toHaveLength(6);
+    await userEvent.click(within(npcs).getByRole('button', { name: 'Show all NPCs' }));
+    // Only the NPCs remain, all eight, and the cursor stays in the field.
+    expect(
+      within(results)
+        .getAllByRole('group')
+        .map((g) => g.getAttribute('aria-label')),
+    ).toEqual(['NPCs']);
+    expect(within(results).getAllByRole('option')).toHaveLength(8);
+    expect(field).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    expect(within(results).getByRole('group', { name: 'Notes' })).toBeInTheDocument();
+    expect(field).toHaveValue('hesper');
+    await userEvent.keyboard('{Escape}');
+    expect(field).toHaveValue('');
+  });
+
   it('asks the compendium once the typing pauses and lists its hits last', async () => {
     const hit: CompendiumSuggestion = {
       id: 'r1',

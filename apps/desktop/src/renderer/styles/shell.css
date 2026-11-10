@@ -687,6 +687,20 @@ body.resizing {
   text-overflow: ellipsis;
 }
 
+/* Show all (ADR 0017): one group listed in full, with the way back above it. */
+.search-show-all {
+  margin-left: auto;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+.search-expanded-head {
+  gap: 6px;
+  padding: 2px 4px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
 /* A text match: the title line, then the phrase in context on a second line. */
 .search-result.has-snippet {
   flex-wrap: wrap;

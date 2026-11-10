@@ -5,11 +5,14 @@ import { describe, expect, it } from 'vitest';
 import {
   buildFtsMatch,
   buildSearch,
+  buildPhraseMatch,
   buildSuggest,
+  buildTextSearch,
   indexText,
   likeEscape,
   parseEditions,
   recordColumns,
+  splitSnippet,
 } from './query';
 
 const FIXTURE = join(__dirname, '..', '..', '..', '..', '..', 'fixtures', 'compendium-sample.xml');
@@ -157,7 +160,36 @@ describe('buildSuggest', () => {
     const q = buildSuggest('  Ring_of 50% ', 500);
     expect(q.params[1]).toBe('ring_of 50%');
     expect(q.params[4]).toBe('%ring\\_of 50\\%%');
-    expect(q.params[5]).toBe(50);
+    expect(q.params[5]).toBe(100);
     expect(buildSuggest('x', 0).params[5]).toBe(1);
+  });
+});
+
+describe('buildTextSearch', () => {
+  it('matches the phrase in the text column, leaves out name matches, collapses editions', () => {
+    expect(buildPhraseMatch('  owes the  party ')).toBe('text : "owes the party"*');
+    expect(buildPhraseMatch('a"b')).toBe('text : "a""b"*');
+    expect(buildPhraseMatch(' ')).toBeNull();
+    const q = buildTextSearch('Mucous cloud', 12, '2014')!;
+    expect(q.sql).toContain('snippet(records_fts, 2');
+    expect(q.sql).toContain("r.display_name NOT LIKE ? ESCAPE '\\'");
+    expect(q.sql).toContain('PARTITION BY kind, key');
+    expect(q.sql).toContain('WHERE rn = 1 ORDER BY rank');
+    expect(q.params).toEqual(['2014', 'text : "Mucous cloud"*', '%mucous cloud%', 12]);
+    expect(buildTextSearch('x', 999)!.params[3]).toBe(100);
+    expect(buildTextSearch('  ')).toBeNull();
+  });
+});
+
+describe('splitSnippet', () => {
+  it('joins the marked words of a phrase into one match and drops later marks', () => {
+    expect(
+      splitSnippet('…makes two \u0001Mucous\u0002 \u0001Cloud\u0002 attacks \u0001cloud\u0002…'),
+    ).toEqual({
+      before: '…makes two ',
+      match: 'Mucous Cloud',
+      after: ' attacks cloud…',
+    });
+    expect(splitSnippet('plain text')).toEqual({ before: '', match: '', after: 'plain text' });
   });
 });
