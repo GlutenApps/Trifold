@@ -1629,16 +1629,6 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   margin-top: 8px;
 }
 
-.selected-card.live {
-  border-color: var(--accent);
-}
-
-.selected-name {
-  display: block;
-  font-size: 15px;
-  margin: 2px 0 6px;
-}
-
 /* TV major: the header holds every screen control; a title card or image previews in a frame */
 .tv-head {
   flex-wrap: wrap;

@@ -23,7 +23,7 @@ import { firstChildOf, flattenTree, matchesQuery, parentOf, siblingAt } from './
 const isFolder = (scene: Scene) => scene.kind === 'folder';
 
 /**
- * The Scenes tool (ADR 0004, Scenes minor): tree, new-scene row, selected card and edit form.
+ * The Scenes tool (ADR 0004, Scenes minor): tree, new-scene row and the edit form.
  * Click selects and previews; Enter, double-click or ▶ sends to the TV (ADR 0004: click
  * selects, Enter sends).
  */
@@ -258,11 +258,12 @@ export function ScenesTool() {
                   type="button"
                   className="chrome-btn xs"
                   aria-label={`Edit ${scene.title}`}
-                  title="Edit"
+                  aria-pressed={editOpen && isSelected}
+                  title={editOpen && isSelected ? 'Close the editor' : 'Edit'}
                   onClick={(e) => {
                     e.stopPropagation();
                     select(scene.id);
-                    setEditOpen(true);
+                    setEditOpen(!(editOpen && isSelected));
                   }}
                 >
                   <Icon name="pencil" />
@@ -290,50 +291,32 @@ export function ScenesTool() {
         </p>
       )}
 
-      {selected && draft && (
-        <div
-          className={`card selected-card${selected.id === liveId && !blackout ? ' live' : ''}`}
-          data-testid="scene-selected"
-        >
+      {/* The row shows selection, live state, Send to TV and Edit, so only the edit form
+          opens here, from the row's Edit button. */}
+      {editOpen && selected && draft && (
+        <div className="card selected-card" data-testid="scene-editor">
           <div className="row">
-            <span className="muted small">
-              {selected.id === liveId && !blackout ? 'Selected · live' : 'Selected'}
-            </span>
-            <span className="spacer" />
-            <span className="muted small">click selects · Enter sends</span>
-          </div>
-          <strong className="selected-name">{selected.title}</strong>
-          <div className="row">
-            {selected.kind !== 'folder' && (
-              <button
-                type="button"
-                className="btn primary"
-                disabled={selected.id === liveId && !blackout}
-                onClick={() => send(selected)}
-              >
-                Send to TV
-              </button>
-            )}
+            <strong className="grow scene-name">{selected.title}</strong>
             <button
               type="button"
-              className="btn"
-              aria-expanded={editOpen}
-              onClick={() => setEditOpen((v) => !v)}
+              className="chrome-btn xs"
+              aria-label="Close scene editor"
+              title="Close"
+              onClick={() => setEditOpen(false)}
             >
-              {editOpen ? 'Hide edit' : 'Edit'}
+              <Icon name="close" />
             </button>
           </div>
-          {editOpen && (
-            <SceneEditor
-              scene={draft}
-              playlists={playlists}
-              onChange={setDraft}
-              onRemove={() => {
-                void removeScene(selected.id);
-                select(null);
-              }}
-            />
-          )}
+          <SceneEditor
+            scene={draft}
+            playlists={playlists}
+            onChange={setDraft}
+            onRemove={() => {
+              void removeScene(selected.id);
+              setEditOpen(false);
+              select(null);
+            }}
+          />
         </div>
       )}
 
