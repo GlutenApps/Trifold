@@ -48,8 +48,11 @@ export function comboFromEvent(e: KeyboardEvent, mac: boolean = isMac): string {
   return parts.join('+');
 }
 
+/** A checkbox takes no text, so Escape and the other plain keys still reach the hotkeys from one
+ *  (the tray chooser is a list of them, ADR 0023); Space toggles it and is no hotkey. */
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
+  if (target instanceof HTMLInputElement && target.type === 'checkbox') return false;
   return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 

@@ -16,7 +16,8 @@ export type MajorKind = z.infer<typeof MajorKind>;
 /** Minors: the dock's tools, the tall ones. Never on the stage. Dice, Hotkeys and Layouts are
  *  pop-ups from their buttons (ADR 0009) and are not part of a layout. Quick notes joined the
  *  dock in ADR 0018; a layout saved without it gets it as a closed section. */
-export const MINOR_KINDS = ['music', 'scenes', 'quickNotes', 'counters', 'timers'] as const;
+/** Also the dock's order, the same in every layout: Scenes, Music, Quick notes, Counters, Timers. */
+export const MINOR_KINDS = ['scenes', 'music', 'quickNotes', 'counters', 'timers'] as const;
 export const MinorKind = z.enum(MINOR_KINDS);
 export type MinorKind = z.infer<typeof MinorKind>;
 
@@ -127,10 +128,34 @@ export const DockState = z.object({
 });
 export type DockState = z.infer<typeof DockState>;
 
+/**
+ * What the live strip (the tray) shows besides Dice (ADR 0023): the VTT, Music and Encounters
+ * sections, and single counters and timers of the open campaign by id. At most four; Dice is
+ * always there and never counted.
+ */
+export const TRAY_SECTIONS = ['map', 'music', 'encounters'] as const;
+export type TraySection = (typeof TRAY_SECTIONS)[number];
+export type TrayItem = TraySection | `timer:${string}` | `counter:${string}`;
+export const TRAY_MAX = 4;
+export const DEFAULT_TRAY: readonly TrayItem[] = ['map', 'music', 'encounters'];
+
+const TRAY_ITEM = /^(?:map|encounters|music|(?:timer|counter):[0-9A-Za-z]+)$/;
+export function isTrayItem(value: unknown): value is TrayItem {
+  return typeof value === 'string' && TRAY_ITEM.test(value);
+}
+
+/** Lenient: an item it does not know is dropped, as are repeats and anything past the fourth. */
+const Tray = z
+  .array(z.unknown())
+  .transform((items): TrayItem[] => [...new Set(items.filter(isTrayItem))].slice(0, TRAY_MAX))
+  .default([...DEFAULT_TRAY]);
+
 /** What a layout captures: chrome only, never what is live or playing (ADR 0004 §6). */
 export const ShellLayout = z.object({
   stage: StageState,
   dock: DockState,
+  /** The tray's sections (ADR 0023); a layout saved before it gets today's tray. */
+  tray: Tray,
 });
 export type ShellLayout = z.infer<typeof ShellLayout>;
 

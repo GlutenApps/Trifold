@@ -851,11 +851,86 @@ body.resizing {
   max-width: 170px;
 }
 
-/* The dice keep to the strip's right end: last total, chips, Roll, then the Dice button. */
-[data-strip='dice'] {
+/* The dice keep to the strip's right end: last total, chips, Roll, then the Dice button. The
+   tray chooser (ADR 0023) stands just before them and takes the free space on its left. */
+.strip-choose {
   margin-left: auto;
+  flex-shrink: 0;
+}
+
+[data-strip='dice'] {
   padding-right: 0;
   flex-shrink: 0;
+}
+
+/* A timer or counter on the tray (ADR 0023): its name, its value and one or two buttons. */
+.tray-item .strip-text {
+  max-width: 170px;
+}
+
+.tray-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tray-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 2ch;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.tray-item.status-done .tray-value,
+.tray-item.status-done .tray-item-name {
+  color: var(--danger);
+}
+
+.tray-item.at-min .tray-value,
+.tray-item.at-max .tray-value {
+  color: var(--warn);
+}
+
+/* The tray chooser's checklist. */
+.tray-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tray-tool p {
+  margin: 0;
+}
+
+.tray-group {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.tray-options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tray-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tray-option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tray-result {

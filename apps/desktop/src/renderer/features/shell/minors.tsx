@@ -16,7 +16,7 @@ export const MINOR_ICON: Record<MinorKind, IconName> = {
   scenes: 'clapper',
   quickNotes: 'quill',
   counters: 'tally',
-  timers: 'hourglass',
+  timers: 'stopwatch',
 };
 
 /** Minor kind → the tool that fills its dock section or flyout. */

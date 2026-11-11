@@ -5,6 +5,8 @@ import {
   isOpen,
   closeTab,
   pruneTabs,
+  pruneTray,
+  setTrayItem,
   tabTitle,
   describeLayout,
   defaultLayout,
@@ -42,6 +44,7 @@ const table: ShellLayout = {
       { tool: 'scenes', open: true },
     ],
   },
+  tray: ['map', 'encounters', 'music'],
 };
 
 describe('stage', () => {
@@ -287,5 +290,77 @@ describe('fit (ADR 0014)', () => {
     // 1600 - 16 - (2 x 480 + 8) = 616.
     expect(fitLayout(table, 1600).dockMax).toBe(616);
     expect(fitLayout(defaultLayout(), 1600).dockMax).toBe(800);
+  });
+});
+
+describe('tray (ADR 0023)', () => {
+  it('starts with VTT, Music and Encounters, the sections the tray always had', () => {
+    expect(defaultLayout().tray).toEqual(['map', 'music', 'encounters']);
+    for (const p of STARTER_PRESETS) expect(p.layout.tray).toEqual(['map', 'music', 'encounters']);
+  });
+
+  it('takes sections off and on, and nothing past the fourth', () => {
+    let layout = setTrayItem(defaultLayout(), 'music', false);
+    expect(layout.tray).toEqual(['map', 'encounters']);
+    layout = setTrayItem(layout, 'timer:01T', true);
+    layout = setTrayItem(layout, 'counter:01C', true);
+    expect(layout.tray).toHaveLength(4);
+    const full = setTrayItem(layout, 'music', true);
+    expect(full).toBe(layout);
+    // Already on, or already off: the same layout back.
+    expect(setTrayItem(layout, 'map', true)).toBe(layout);
+    expect(setTrayItem(layout, 'music', false)).toBe(layout);
+  });
+
+  it('drops missing timers and counters but never a built-in section', () => {
+    const layout = { ...defaultLayout(), tray: ['map', 'timer:01A', 'counter:01B'] as const };
+    const pruned = pruneTray({ ...layout, tray: [...layout.tray] }, (t) => t === 'counter:01B');
+    expect(pruned.tray).toEqual(['map', 'counter:01B']);
+    const same = { ...defaultLayout() };
+    expect(pruneTray(same, () => false)).toBe(same);
+  });
+
+  it('normalizes a hand-edited tray: no repeats, no unknown items, four at most', () => {
+    const layout = normalize({
+      ...defaultLayout(),
+      tray: ['map', 'map', 'bogus', 'music', 'timer:01A', 'counter:01B', 'encounters'] as never,
+    });
+    expect(layout.tray).toEqual(['map', 'music', 'timer:01A', 'counter:01B']);
+  });
+
+  it("matches a layout on its built-in tray sections, not on one campaign's timers", () => {
+    const preset = setTrayItem(setTrayItem(defaultLayout(), 'music', false), 'timer:01A', true);
+    const elsewhere = setTrayItem(defaultLayout(), 'music', false);
+    expect(matchesPreset(elsewhere, preset)).toBe(true);
+    expect(matchesPreset(defaultLayout(), preset)).toBe(false);
+  });
+
+  it('keeps the tray through clone and apply', () => {
+    const preset = setTrayItem(defaultLayout(), 'map', false);
+    expect(applyPreset(preset).tray).toEqual(['music', 'encounters']);
+  });
+});
+
+describe('dock order', () => {
+  it('is the same in every layout: Scenes, Music, Quick notes, Counters, Timers', () => {
+    const old = normalize({
+      ...defaultLayout(),
+      dock: {
+        state: 'wide',
+        width: 400,
+        sections: [
+          { tool: 'timers', open: true },
+          { tool: 'music', open: false },
+          { tool: 'scenes', open: true },
+        ],
+      },
+    });
+    expect(old.dock.sections).toEqual([
+      { tool: 'scenes', open: true },
+      { tool: 'music', open: false },
+      { tool: 'quickNotes', open: false },
+      { tool: 'counters', open: false },
+      { tool: 'timers', open: true },
+    ]);
   });
 });

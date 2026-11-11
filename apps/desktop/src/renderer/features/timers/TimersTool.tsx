@@ -108,10 +108,7 @@ export function TimersTool() {
       {timers.length === 0 && !creating ? (
         <p className="muted counters-empty">
           No timers yet. Give the table a real countdown: 60 seconds to decide, five minutes until
-          the guards return.{' '}
-          <button type="button" className="btn small" onClick={() => setCreating(true)}>
-            Add your first timer
-          </button>
+          the guards return. Use + above to add one.
         </p>
       ) : (
         <ul
