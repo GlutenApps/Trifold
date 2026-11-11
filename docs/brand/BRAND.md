@@ -2,33 +2,37 @@
 
 > **In this repo.** The kit lives here in `docs/brand/` rather than `resources/brand/`, because everything under `resources/` is packaged with the app. The files the app uses are copied, unchanged, to:
 >
-> - `apps/desktop/build/`: icons, NSIS sidebar and header, DMG background. One deliberate change from the kit: `icon.ico` (Windows exe, shortcuts, taskbar, installer) is the bare `mark-on-dark` with no tile, filling the frame, so it sits at the same size as other taskbar icons. `pnpm make:ico` builds it from `png/mark/mark-on-dark-*.png`; the kit's tiled `.ico` is not used. macOS keeps the kit's tiled `icon.icns`, as macOS icons expect a tile (wired in `apps/desktop/electron-builder.yml`; `build/installer.nsh` adds the installer's welcome page so the sidebar shows first).
+> - `apps/desktop/build/`: icons, NSIS sidebar and header, DMG background (wired in `apps/desktop/electron-builder.yml`; `build/installer.nsh` adds the installer's welcome page so the sidebar shows first). One deliberate change from the kit: `icon.ico` (Windows exe, shortcuts, taskbar, installer) is the bare `mark-on-dark` with no tile, filling the frame, so it sits at the same size as other taskbar icons. `pnpm make:ico` builds it from `png/mark/mark-on-dark-*.png`; the kit's tiled `.ico` is not used. macOS keeps the kit's tiled `icon.icns`, as macOS icons expect a tile.
 > - `apps/desktop/src/renderer/features/shell/TrifoldMark.tsx`: the mark component; `Brand.tsx` beside it picks the on-dark or on-light version from the Library theme.
 > - `apps/desktop/src/renderer/assets/brand/`: the horizontal and stacked lockups.
 >
 > Placements today: the horizontal lockup in the top bar while in the Library and on the About card; the mark alone in the top bar inside a campaign (the campaign switcher needs the room); the README banner. Not built yet: the tray icon, a splash window and the player-window watermark (§3 lists the files for them). The Outfit font is already bundled under `apps/desktop/src/renderer/assets/fonts/` and credited on the About page, so the kit's `fonts/` folder is not copied.
 
-This folder replaces every earlier Trifold logo asset. The design master is `source/trifold-logo-master.svg` (from Illustrator; a PDF copy sits beside it). Every file here was generated from that master. If the logo changes, update the master and regenerate everything; never edit individual exports or trace a PNG.
+This folder replaces every earlier Trifold logo asset. The design masters are in `source/`: `trifold-logo-color.svg` (color mark and lockups, dark and light) and `trifold-logo-mono.svg` (one-color mark), each with a PDF copy. Every file here was generated from those masters. If the logo changes, update the masters and regenerate everything; never edit individual exports or trace a PNG.
 
 Copy the folder into the repo at `resources/brand/` (spec and sources) and copy `build/` into the app's build resources. Use the right file for each context below instead of one image scaled everywhere.
 
 ## 1. The mark
 
-A three-panel DM screen seen from above, with a d20 standing behind it. The top edge of each side panel catches the light as a brighter band, so the bright center panel and the two bands still read as a folded T.
+A sword whose crossguard is a folded three-panel DM screen. Together they form a **T**.
 
-- **One drawing system.** Every angle is 30° (isometric): the panel tops and bottoms and every facet of the die. Keep any new artwork on the same angles.
-- **One lighting rule.** Faces pointing at the viewer are brightest. Faces angled away step darker, symmetrically left and right, on both the screen and the die.
-- **The gap.** A single band of background color separates the die from the screen. It is negative space, not a drawn shape, so the mark works on any background in its family.
-- **Corners.** Only the outer corners of the overall silhouette are rounded.
-- **The wordmark** is custom lettering. Only the corners on the word's outer edge are rounded, echoing the mark, and the r and f have angled cuts.
+- **Crossguard:** the screen. A bright center panel with two darker wings folding down and away; the wing tips are rounded.
+- **Blade:** the stem of the T. Two bevels meet at a central ridge: the left bevel is lit, the right is in shadow. It ends in a sharp point.
+- **Hilt:** a short rust grip and a rust hexagon pommel (a nod to the d20). The hilt is the mark's only accent color, and it is kept short so the mark stays nearly square.
+- **Lighting rule:** lit faces (the center panel and the left bevel) share one tone; faces turned away (the wings and the right bevel) share a darker one. The same rule applies on dark and light backgrounds.
+- **Corners:** the wing tips are rounded; the blade point, center panel and hilt stay crisp.
+
+### Wordmark
+
+Custom lettering, not a font. The dot on the **i** is the same rust hexagon as the pommel. Keep that link in every lockup.
 
 ### Versions
 
 | Version | Use |
 |---|---|
-| `mark-on-dark` | Default. Dark surfaces, app icon at every size (holds up at 16 px). |
+| `mark-on-dark` | Default. Dark surfaces, the app icon at every size (holds up at 16 px). |
 | `mark-on-light` | Light surfaces. |
-| `mark-mono-*` | One-color uses only: tray template icons, print, engraving, watermarks. Surfaces are separated by gaps instead of tone. At 24 px and below the gaps close up, so prefer the shaded mark at small sizes wherever color is allowed. |
+| `mark-mono-*` | One-color uses only: tray template icons, print, engraving, watermarks. The crossguard and lit bevel are solid, the shadow bevel and the pommel are drawn as outlines. At 16 px the outlines thin to about a pixel; the T still reads, but prefer the color mark wherever color is allowed. |
 
 ## 2. Colors
 
@@ -38,22 +42,24 @@ App palette: Slate & bone.
 |---|---|---|
 | `slate` | `#14181D` | App background, icon tile |
 | `surface` | `#1C2229` | Panels, cards |
-| `bone` | `#E3D3B0` | Primary accent |
-| `text` | `#E6E1D6` | Wordmark and body text on dark; light-mode background in the lockups |
+| `bone` | `#E3D3B0` | Primary accent; mark on dark |
+| `text` | `#E6E1D6` | Wordmark and body text on dark |
 | `ink` | `#14181D` | Wordmark on light |
+| `paper` | `#F4F1EA` | Light background |
+| `rust` | `#C45C45` | Pommel, i-dot hexagon |
+| `rust-deep` | `#A84A30` | Grip |
 
-Mark tones (solid colors, taken from the master):
+Mark tones:
 
 | Part | On dark | On light |
 |---|---|---|
-| Center panel | `#E3D3B0` | `#53595E` |
-| Die top face | `#E3D3B0` | `#6E7377` |
-| Die upper faces, die front band | `#BAAE93` | `#53595E` |
-| Side-panel top bands | `#BAAE93` | `#414549` |
-| Side panels | `#8C846F` | `#2C3135` |
-| Die lower corners | `#8C846F` | `#414549` |
-| Die side bands | `#6D6858` | `#2C3135` |
-| One-color mark | `#E3D3B0` on slate | `#1C2229` on light |
+| Center panel, lit blade bevel | `#E3D3B0` | `#6E7377` |
+| Wings, shadow blade bevel | `#8C846F` | `#383C3F` |
+| Grip | `#A84A30` | `#A84A30` |
+| Pommel | `#C45C45` | `#C45C45` |
+| One-color mark | `#E3D3B0` on slate | `#14181D` on paper |
+
+Note: two values in the source SVGs were snapped to the palette in every export: the grip (`#8E3923` → `#A84A30`, so the hilt doesn't vanish into the slate tile at small sizes) and bone/slate (`#E3D3B1` → `#E3D3B0`, `#14171C` → `#14181D`). Make the same changes in the masters next time they're edited.
 
 ## 3. Which file for what
 
@@ -103,11 +109,11 @@ dmg:
 ## 5. Usage rules
 
 - **Clear space:** at least half the mark's width on every side.
-- **Minimum sizes:** shaded mark 16 px tall, one-color mark 32 px, horizontal lockup 24 px tall.
+- **Minimum sizes:** color mark 16 px tall, one-color mark 24 px, horizontal lockup 24 px tall.
 - **Background match:** `-on-dark` files on dark surfaces, `-on-light` on light ones.
-- **Don't:** stretch or skew it, change the 30° angles, close or fill the gap between the die and the screen, add outlines or lines between facets, add new tones, recolor outside the palette, add effects (glows, bevels, shadows inside the UI), or retype the wordmark in a font.
+- **Don't:** stretch or skew it, lengthen the hilt, add a second accent color, recolor the hilt, swap the lit and shadow sides, add outlines to the color mark, add effects (glows, bevels, shadows inside the UI), or retype the wordmark in a font. The i-dot is always the rust hexagon.
 - **App-icon tiles are only for app icons.** Inside the UI, use the bare mark or a lockup.
-- **Seams:** facets share edges exactly. Every generated asset and `TrifoldMark` give each facet a thin stroke in its own color so no hairlines show between them. Keep that if you build new exports.
+- **Seams:** where shapes touch (center panel and blade), every export and `TrifoldMark` give each shape a thin stroke in its own color so no hairlines show. Keep that in new exports.
 
 ## 6. Font
 
@@ -115,10 +121,10 @@ The UI font is Outfit (SIL Open Font License, `fonts/Outfit-OFL.txt`; the variab
 
 ## 7. Implementation checklist for Claude Code
 
-1. Remove every earlier logo asset and reference (any single reused logo image and any previous brand kit), so nothing old is left behind.
+1. Remove every earlier logo asset and reference (the previous screen-and-die mark, any earlier brand kit, any single reused logo image), so nothing old is left behind.
 2. Copy `build/` into the app's build resources and apply the electron-builder config above.
-3. Add `react/TrifoldMark.tsx` to the renderer (e.g. `apps/desktop/src/renderer/components/brand/`), replacing any previous mark component, and use it for in-app marks.
+3. Replace the existing `TrifoldMark` component with `react/TrifoldMark.tsx` and use it for in-app marks.
 4. Replace the console header, About page, splash/setup window and empty states with the lockups in section 3.
 5. Wire the tray icon to switch between dark and light taskbar versions with `nativeTheme`, and use the template image on macOS.
-6. Add the Outfit OFL notice to the About page credits alongside the SRD and game-icons attribution.
-7. Check the icon at 16, 24, 32 and 48 px on Windows 11 in both light and dark taskbar modes, and confirm no seams show between facets at any zoom level.
+6. Keep the Outfit OFL notice on the About page credits alongside the SRD and game-icons attribution.
+7. Check the icon at 16, 24, 32 and 48 px on Windows 11 in both light and dark taskbar modes, and confirm the rust hilt is visible and no seams show at any zoom level.
