@@ -63,7 +63,7 @@ Create a campaign in **Library › Campaigns** (name, **Create campaign**) or im
 
 **Attacks and saves from the stat block.** The selected creature's stat block sits beside the list. Click an attack to roll to hit and damage; the damage pop-up lets you tick who takes it, full or half, and press **Apply** (`Ctrl+Enter`). **Roll all** on Multiattack rolls every attack. A save badge rolls the save for every creature in the fight, marks each saved or failed, pre-selects half or full damage, and shows the PCs' bonuses so you can ask the players.
 
-**Mid-fight.** The `+` button or `A` opens **Add to the fight**: party members, NPCs, or a creature search with a count. **Back to list** browses other encounters while the fight runs; **Return to fight** comes back.
+**Mid-fight.** The `+` button or `A` opens **Add to the fight**: party members, NPCs, or a creature search with a count. **Back to list** pauses the fight: its encounter shows *combat in progress* with **Resume**. Any number of fights can wait like this (a split party, say), and starting or resuming one pauses the fight you were in.
 
 **Ending.** **End combat** shows a result card (rounds, XP, fallen PCs) and writes current and temp HP back to each PC card and named NPC, so the next fight starts where this one ended; compendium creatures are always fresh. Conditions do not carry over.
 

@@ -92,7 +92,6 @@ function CombatSection() {
   const state = useCombatStore((s) => s.state);
   const next = useCombatStore((s) => s.next);
   const previous = useCombatStore((s) => s.previous);
-  const setBrowsing = useCombatStore((s) => s.setBrowsing);
   const openMajor = useShellStore((s) => s.openMajor);
   const started = !!state && state.turnIndex >= 0;
   const active = started ? state.combatants[state.turnIndex] : undefined;
@@ -103,7 +102,6 @@ function CombatSection() {
         type="button"
         className="strip-text"
         onClick={() => {
-          setBrowsing(false);
           openMajor('encounters', { avoid: 'map' });
         }}
         title="Show the fight"

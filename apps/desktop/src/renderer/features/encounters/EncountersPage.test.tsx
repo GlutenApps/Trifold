@@ -57,38 +57,40 @@ function bundle(): CampaignBundle {
 describe('EncountersPage', () => {
   beforeEach(() => {
     useCampaignStore.setState({ current: bundle() });
-    useCombatStore.setState({ encounterId: null, state: null, browsing: false, finished: null });
+    useCombatStore.setState({ encounterId: null, state: null, finished: null });
   });
 
-  it('becomes the tracker while a fight runs, with the list a click away', async () => {
+  it('becomes the tracker while a fight is loaded; Back pauses it and frees the list', async () => {
+    const fight = { round: 2, turnIndex: -1, combatants: [], log: [], startedAt: now };
+    vi.mocked(window.trifold.encounters.saveState).mockImplementationOnce(async (id, state) => ({
+      ...encounter(id, 'Bridge ambush'),
+      state,
+    }));
     render(<EncountersPage />);
     expect(screen.getByRole('button', { name: 'Start combat: Bridge ambush' })).toBeEnabled();
 
-    act(() =>
-      useCombatStore.setState({
-        encounterId: 'e1',
-        state: { round: 2, turnIndex: -1, combatants: [], log: [], startedAt: now },
-      }),
-    );
+    act(() => useCombatStore.setState({ encounterId: 'e1', state: fight }));
     expect(screen.queryByTestId('encounter-row')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'End combat' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Back to encounters' }));
-    expect(screen.getByRole('status')).toHaveTextContent('Bridge ambush is running · round 2');
-    expect(screen.getAllByTestId('encounter-row')).toHaveLength(2);
-    // One fight at a time: the others wait, and the running one cannot be removed.
-    expect(screen.getByRole('button', { name: 'Start combat: Crypt guards' })).toBeDisabled();
-    // Its actions keep their places (Play, Edit, Delete; ADR 0020), disabled where they do not apply.
-    const running = screen.getAllByTestId('encounter-row')[0]!;
+    // The fight is saved and unloaded: no banner, the encounter lists as in progress.
+    await waitFor(() => expect(screen.getAllByTestId('encounter-row')).toHaveLength(2));
+    expect(window.trifold.encounters.saveState).toHaveBeenCalledWith('e1', fight);
+    expect(useCombatStore.getState().encounterId).toBeNull();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    const paused = screen
+      .getAllByTestId('encounter-row')
+      .find((row) => within(row).queryByText('Bridge ambush'))!;
+    expect(within(paused).getByText('combat in progress · round 2')).toBeInTheDocument();
+    // Any number of fights can wait: another starts, and the paused one resumes.
+    expect(screen.getByRole('button', { name: 'Start combat: Crypt guards' })).toBeEnabled();
     expect(
-      within(running)
+      within(paused)
         .getAllByRole('button')
         .map((b) => b.getAttribute('aria-label')),
-    ).toEqual(['Return to fight: Bridge ambush', 'Edit Bridge ambush', 'Delete Bridge ambush']);
-    expect(screen.getByRole('button', { name: 'Delete Bridge ambush' })).toBeDisabled();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Return to fight: Bridge ambush' }));
-    expect(screen.getByRole('button', { name: 'End combat' })).toBeInTheDocument();
+    ).toEqual(['Resume combat: Bridge ambush', 'Edit Bridge ambush', 'Delete Bridge ambush']);
+    expect(screen.getByRole('button', { name: 'Resume combat: Bridge ambush' })).toBeEnabled();
   });
 
   it('shows the finished fight once, then the list', async () => {
@@ -116,7 +118,7 @@ describe('EncountersPage: named NPCs (ADR 0012)', () => {
     const bandits = b.encounters[0]!.combatants[0]!;
     bandits.cache = { xp: 25, cr: '1/8', type: 'humanoid', hp: 11, ac: 12 };
     useCampaignStore.setState({ current: b });
-    useCombatStore.setState({ encounterId: null, state: null, browsing: false, finished: null });
+    useCombatStore.setState({ encounterId: null, state: null, finished: null });
   });
 
   it('splits one creature out of a group as an NPC, and offers NPCs not yet in it', async () => {
@@ -145,7 +147,7 @@ describe('EncountersPage: named NPCs (ADR 0012)', () => {
 describe('EncountersPage: builder autosave (ADR 0015)', () => {
   beforeEach(() => {
     useCampaignStore.setState({ current: bundle() });
-    useCombatStore.setState({ encounterId: null, state: null, browsing: false, finished: null });
+    useCombatStore.setState({ encounterId: null, state: null, finished: null });
     vi.mocked(window.trifold.encounters.save).mockClear();
   });
 

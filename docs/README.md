@@ -43,3 +43,4 @@ One short file per decision that deviates from or refines `DESIGN.md`. Number th
 | [0019](adr/0019-counters.md) | Counters: a dock tool (Ctrl+Alt+C) of per-campaign numbers with optional bounds and two steps; up to three on the TV. |
 | [0020](adr/0020-quiet-row-actions.md) | Row actions are always on screen, quiet until their row is hovered, focused or selected. |
 | [0021](adr/0021-timers.md) | Timers: a dock tool (Ctrl+Alt+T) of real-world countdowns kept by timestamps; one on the TV. |
+| [0022](adr/0022-paused-fights.md) | Back pauses a fight; any number wait in progress, one is loaded in the tracker. |

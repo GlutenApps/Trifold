@@ -422,3 +422,57 @@ describe('adding to a running fight', () => {
     });
   });
 });
+
+describe('pausing fights (ADR 0022)', () => {
+  const waiting = (id: string, name: string): Encounter =>
+    ({
+      schemaVersion: 1,
+      id,
+      name,
+      combatants: [],
+      notes: '',
+      state: null,
+      results: [],
+      createdAt: '2026-11-10T00:00:00.000Z',
+      updatedAt: '2026-11-10T00:00:00.000Z',
+    }) as Encounter;
+
+  beforeEach(() => {
+    useCampaignStore.setState({
+      current: {
+        campaign: { id: 'c1', slug: 'split', settings: { initiativeMode: 'perGroup' } },
+        pcs: [],
+        npcs: [],
+        encounters: [waiting('enc', 'Bridge'), waiting('other', 'Crypt')],
+        scenes: [],
+      } as unknown as CampaignBundle,
+    });
+    vi.mocked(window.trifold.encounters.saveState).mockImplementation(async (id, state) => ({
+      ...waiting(id, id === 'enc' ? 'Bridge' : 'Crypt'),
+      state,
+    }));
+  });
+
+  it('saves the loaded fight to its encounter and unloads it', async () => {
+    const fight = useCombatStore.getState().state;
+    expect(await useCombatStore.getState().pause()).toBe(true);
+    expect(window.trifold.encounters.saveState).toHaveBeenCalledWith('enc', fight);
+    expect(useCombatStore.getState().encounterId).toBeNull();
+    const saved = useCampaignStore.getState().current!.encounters.find((e) => e.id === 'enc');
+    expect(saved?.state).toEqual(fight);
+  });
+
+  it('starting another fight pauses the loaded one, so both stay in progress', async () => {
+    await useCombatStore.getState().begin(waiting('other', 'Crypt'), [], 'perGroup');
+    expect(useCombatStore.getState().encounterId).toBe('other');
+    const encounters = useCampaignStore.getState().current!.encounters;
+    expect(encounters.find((e) => e.id === 'enc')?.state?.round).toBe(1);
+  });
+
+  it('keeps the fight loaded when the save fails', async () => {
+    vi.mocked(window.trifold.encounters.saveState).mockRejectedValueOnce(new Error('disk full'));
+    expect(await useCombatStore.getState().pause()).toBe(false);
+    expect(useCombatStore.getState().encounterId).toBe('enc');
+    expect(useCombatStore.getState().error).toBe('disk full');
+  });
+});
