@@ -671,6 +671,10 @@ input.narrow {
   padding: 6px 0;
 }
 
+.npc-statblock {
+  margin-top: 6px;
+}
+
 .entity-row summary {
   cursor: pointer;
 }
