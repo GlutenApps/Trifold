@@ -28,6 +28,7 @@ import {
   pruneTabs,
   reorderSection,
   reorderTab,
+  expandDockFromIcons,
   setDockMode,
   setDockWidth,
   setSection,
@@ -115,6 +116,8 @@ interface ShellState {
   removeWebTab(id: string): void;
 
   setDockMode(mode: DockMode): void;
+  /** Opens a dock the DM collapsed to icons, at the width it had before. */
+  openDock(): void;
   setDockWidth(px: number): void;
   toggleSection(tool: MinorKind): void;
   /** Brings a tool forward: a section when the dock shows them, otherwise a flyout. */
@@ -396,6 +399,11 @@ export const useShellStore = create<ShellState>((set, get) => {
     setDockMode(mode) {
       change(setDockMode(get().layout, mode));
       if (mode === 'wide' || mode === 'narrow') set({ flyout: null });
+    },
+
+    openDock() {
+      change(expandDockFromIcons(get().layout));
+      set({ flyout: null });
     },
 
     setDockWidth(px) {

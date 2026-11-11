@@ -371,6 +371,18 @@ export function setDockMode(layout: ShellLayout, state: DockMode): ShellLayout {
 }
 
 /**
+ * Opens a dock collapsed to icons at the width it had before, so a wide (or dragged) dock comes
+ * back as it was. Collapsing keeps the width for this.
+ */
+export function expandDockFromIcons(layout: ShellLayout): ShellLayout {
+  const next = cloneLayout(layout);
+  const width = Math.min(DOCK_MAX, Math.max(DOCK_MIN, next.dock.width));
+  next.dock.width = width;
+  next.dock.state = width < DOCK_WIDTH.wide ? 'narrow' : 'wide';
+  return next;
+}
+
+/**
  * A dragged dock edge snaps at the narrow and wide presets and collapses to icons well below
  * the floor. `max` keeps the panels at their floor (fitLayout's dockMax).
  */
@@ -434,8 +446,9 @@ export function matchesPreset(current: ShellLayout, preset: ShellLayout): boolea
     if (ga.tabs.length !== gb.tabs.length || ga.tabs.some((t, j) => gb.tabs[j] !== t)) return false;
   }
   if (a.stage.maximized !== b.stage.maximized) return false;
-  const trimmed = (m: DockMode) => (m === 'icons' && b.dock.state === 'narrow' ? 'narrow' : m);
-  if (trimmed(a.dock.state) !== b.dock.state) return false;
+  // A narrow window trims the dock as drawn (fitLayout), never the saved state, so this compares
+  // what the DM chose: a dock collapsed to icons by hand is a different layout.
+  if (a.dock.state !== b.dock.state) return false;
   const open = (l: ShellLayout) => l.dock.sections.filter((s) => s.open).map((s) => s.tool);
   const oa = open(a);
   const ob = open(b);
