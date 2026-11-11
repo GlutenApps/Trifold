@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CampaignBundle } from '@trifold/api';
@@ -182,15 +182,41 @@ describe('EncountersPage: builder autosave (ADR 0015)', () => {
   });
 
   it('never writes back an encounter deleted while its edit waits', async () => {
-    render(<EncountersPage />);
-    await renameBridge();
-    await userEvent.click(screen.getByRole('button', { name: 'Back to list' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Delete Bridge ambush' }));
-    await userEvent.click(screen.getByRole('button', { name: /^Delete$/ }));
-    await waitFor(() => expect(window.trifold.encounters.remove).toHaveBeenCalledWith('e1'));
-    await new Promise((done) => setTimeout(done, 600));
-    expect(window.trifold.encounters.save).not.toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'e1', name: 'Bridge toll' }),
+    // The clock stands still, so the rename's save is still waiting when the delete happens, however
+    // slowly the clicks run (on real time a busy machine let the save land first, which is allowed).
+    // The delete is held open while the save's time passes: that window is what cancelling the
+    // save covers, since a save that runs after the delete finds no encounter and skips itself.
+    vi.useFakeTimers();
+    let finishRemove = () => {};
+    vi.mocked(window.trifold.encounters.remove).mockImplementationOnce(
+      () => new Promise<void>((done) => (finishRemove = done)),
     );
+    try {
+      render(<EncountersPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Edit Bridge ambush' }));
+      fireEvent.change(screen.getByLabelText('Encounter name'), {
+        target: { value: 'Bridge toll' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Back to list' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete Bridge ambush' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Delete$/ }));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(window.trifold.encounters.remove).toHaveBeenCalledWith('e1');
+      // Well past the 400 ms the save waits, with the delete still in flight.
+      act(() => {
+        vi.advanceTimersByTime(2_000);
+      });
+      await act(async () => {
+        finishRemove();
+        await Promise.resolve();
+      });
+      expect(window.trifold.encounters.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'e1', name: 'Bridge toll' }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
