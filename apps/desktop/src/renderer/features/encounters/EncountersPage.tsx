@@ -560,7 +560,9 @@ export function EncountersPage() {
                   {e.results.length ? ` · fought ${e.results.length}×` : ''}
                 </span>
                 {e.state && (
-                  <span className="badge warn">combat in progress · round {e.state.round}</span>
+                  <span className="badge in-progress">
+                    combat in progress · round {e.state.round}
+                  </span>
                 )}
               </div>
               {confirmDelete === e.id ? (

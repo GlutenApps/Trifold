@@ -1854,6 +1854,12 @@ input[type='range'].wide {
   color: var(--accent-contrast);
 }
 
+.badge.in-progress {
+  background: var(--fight);
+  border-color: var(--fight);
+  color: var(--fight-contrast);
+}
+
 /* Spell slot tracker (DESIGN.md §6.4) */
 .slot-level {
   display: inline-flex;
