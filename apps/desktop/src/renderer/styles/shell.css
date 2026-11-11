@@ -455,7 +455,9 @@ body.resizing {
   flex-shrink: 0;
 }
 
-.dock-ib {
+/* Two classes, so .chrome-btn's `all: unset` (later in this file) cannot reset the position and
+   send the pip to the dock's corner. */
+.chrome-btn.dock-ib {
   position: relative;
 }
 
