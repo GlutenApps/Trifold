@@ -13,17 +13,39 @@
 
 /* Top bar: the frameless window's title bar. Windows draws the controls over its right end, at the
    same height (titleBarOverlay in main/windows.ts); macOS centres the traffic lights on it. */
+/* Three columns: the two sides share what is left equally, so the search in the middle stays
+   centred on the window while labels beside it change. A side only pushes it off centre when
+   the window is too narrow for that side's contents. */
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 8px;
   height: 44px;
-  padding-left: 10px;
+  /* Even on both sides, so the middle column is centred on the window itself. */
+  padding: 0 10px;
   background: var(--bg-rail);
   border-bottom: 1px solid var(--border);
   -webkit-app-region: drag;
   user-select: none;
   flex-shrink: 0;
+}
+
+.topbar-start,
+.topbar-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.topbar-end {
+  justify-content: flex-end;
+}
+
+.topbar-center {
+  display: flex;
+  justify-content: center;
 }
 
 .topbar button,
@@ -99,9 +121,10 @@
   flex-shrink: 0;
 }
 
-/* macOS draws the traffic lights over the left end instead (ADR 0006). */
-:root[data-platform='mac'] .topbar {
-  padding-left: 78px;
+/* macOS draws the traffic lights over the left end instead (ADR 0006). The space comes out of
+   the left column, not the bar's padding, so the search stays centred. */
+:root[data-platform='mac'] .topbar-start {
+  padding-left: 68px;
 }
 
 :root[data-platform='mac'] .window-controls-space {
@@ -1169,7 +1192,8 @@ button.chrome-btn:disabled:not(.primary, .tally) {
 
 /* The kit's marks and lockups carry their own colours (docs/brand/BRAND.md); never tint them. */
 .brand-mark,
-.brand-lockup {
+.brand-lockup,
+.brand-wordmark {
   display: block;
 }
 
