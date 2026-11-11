@@ -8,7 +8,7 @@
 >
 > Placements today: the horizontal lockup in the top bar while in the Library and on the About card; the mark alone in the top bar inside a campaign (the campaign switcher needs the room); the README banner. Not built yet: the tray icon, a splash window and the player-window watermark (§3 lists the files for them). The Outfit font is already bundled under `apps/desktop/src/renderer/assets/fonts/` and credited on the About page, so the kit's `fonts/` folder is not copied.
 
-This folder replaces every earlier Trifold logo asset. The design masters are in `source/`: `trifold-logo-color.svg` (color mark and lockups, dark and light) and `trifold-logo-mono.svg` (one-color mark), each with a PDF copy. Every file here was generated from those masters. If the logo changes, update the masters and regenerate everything; never edit individual exports or trace a PNG.
+This folder replaces every earlier Trifold logo asset. The design master is `source/trifold-logo-color.svg` (dark mark and dark lockup), with a PDF copy. The light version is derived from it by color swap only (section 2): same shapes, light-surface colors. Every file here was generated from that master. If the logo changes, update the master and regenerate everything; never edit individual exports or trace a PNG.
 
 Copy the folder into the repo at `resources/brand/` (spec and sources) and copy `build/` into the app's build resources. Use the right file for each context below instead of one image scaled everywhere.
 
@@ -16,6 +16,7 @@ Copy the folder into the repo at `resources/brand/` (spec and sources) and copy 
 
 A sword whose crossguard is a folded three-panel DM screen. Together they form a **T**.
 
+- **Weight:** the crossguard is about 14% of the mark's height thick, matching the wordmark's stroke weight. Don't thin it; that's what keeps the mark solid at 16 px.
 - **Crossguard:** the screen. A bright center panel with two darker wings folding down and away; the wing tips are rounded.
 - **Blade:** the stem of the T. Two bevels meet at a central ridge: the left bevel is lit, the right is in shadow. It ends in a sharp point.
 - **Hilt:** a short rust grip and a rust hexagon pommel (a nod to the d20). The hilt is the mark's only accent color, and it is kept short so the mark stays nearly square.
@@ -31,8 +32,9 @@ Custom lettering, not a font. The dot on the **i** is the same rust hexagon as t
 | Version | Use |
 |---|---|
 | `mark-on-dark` | Default. Dark surfaces, the app icon at every size (holds up at 16 px). |
-| `mark-on-light` | Light surfaces. |
-| `mark-mono-*` | One-color uses only: tray template icons, print, engraving, watermarks. The crossguard and lit bevel are solid, the shadow bevel and the pommel are drawn as outlines. At 16 px the outlines thin to about a pixel; the T still reads, but prefer the color mark wherever color is allowed. |
+| `mark-on-light` | Light surfaces. Derived from the dark master by swapping colors (section 2). |
+
+There is no one-color version for now. The macOS menu-bar template icon uses the sword's solid silhouette.
 
 ## 2. Colors
 
@@ -57,9 +59,8 @@ Mark tones:
 | Wings, shadow blade bevel | `#8C846F` | `#383C3F` |
 | Grip | `#A84A30` | `#A84A30` |
 | Pommel | `#C45C45` | `#C45C45` |
-| One-color mark | `#E3D3B0` on slate | `#14181D` on paper |
 
-Note: two values in the source SVGs were snapped to the palette in every export: the grip (`#8E3923` → `#A84A30`, so the hilt doesn't vanish into the slate tile at small sizes) and bone/slate (`#E3D3B1` → `#E3D3B0`, `#14171C` → `#14181D`). Make the same changes in the masters next time they're edited.
+Note: two values in the source SVGs were snapped to the palette in every export: the grip (`#8E3923` → `#A84A30`, so the hilt doesn't vanish into the slate tile at small sizes) and bone/slate (`#E3D3B1` → `#E3D3B0`, `#14171C` → `#14181D`). Make the same changes in the master next time it's edited.
 
 ## 3. Which file for what
 
@@ -77,10 +78,9 @@ Note: two values in the source SVGs were snapped to the palette in every export:
 | Centered empty states, About hero, loading | `svg/lockup-stacked-on-dark.svg` |
 | Text-only placements | `svg/wordmark-on-dark.svg` / `-on-light` |
 | Mark inside the renderer UI | `react/TrifoldMark.tsx` (`variant="dark"` on slate surfaces) |
-| Player-window watermark | `TrifoldMark variant="mono"` at 6–10% opacity |
+| Player-window watermark | `TrifoldMark variant="dark"` at 6–10% opacity |
 | Windows tray | `png/tray/tray-for-dark-taskbar-{16,24,32}.png` and `tray-for-light-taskbar-*`; pick with `nativeTheme.shouldUseDarkColors` and update on `nativeTheme` `updated` |
-| macOS menu bar | `png/tray/trayTemplate.png` + `trayTemplate@2x.png` (template image) |
-| One-color contexts | `svg/mark-mono-white.svg` / `mark-mono-black.svg`, `svg/lockup-horizontal-mono-*` |
+| macOS menu bar | `png/tray/trayTemplate.png` + `trayTemplate@2x.png` (template image: the sword's solid silhouette) |
 
 PNG renders of every mark, tile and lockup are in `png/` (marks 16–1024, lockups 48/96/192 px tall). Each was rendered at its final size from the SVGs.
 
@@ -109,7 +109,7 @@ dmg:
 ## 5. Usage rules
 
 - **Clear space:** at least half the mark's width on every side.
-- **Minimum sizes:** color mark 16 px tall, one-color mark 24 px, horizontal lockup 24 px tall.
+- **Minimum sizes:** mark 16 px tall, horizontal lockup 24 px tall.
 - **Background match:** `-on-dark` files on dark surfaces, `-on-light` on light ones.
 - **Don't:** stretch or skew it, lengthen the hilt, add a second accent color, recolor the hilt, swap the lit and shadow sides, add outlines to the color mark, add effects (glows, bevels, shadows inside the UI), or retype the wordmark in a font. The i-dot is always the rust hexagon.
 - **App-icon tiles are only for app icons.** Inside the UI, use the bare mark or a lockup.
@@ -121,7 +121,7 @@ The UI font is Outfit (SIL Open Font License, `fonts/Outfit-OFL.txt`; the variab
 
 ## 7. Implementation checklist for Claude Code
 
-1. Remove every earlier logo asset and reference (the previous screen-and-die mark, any earlier brand kit, any single reused logo image), so nothing old is left behind.
+1. Remove every earlier logo asset and reference (the previous screen-and-die mark, any earlier brand kit, any one-color/mono assets and the `mono` variant of `TrifoldMark`, any single reused logo image), so nothing old is left behind.
 2. Copy `build/` into the app's build resources and apply the electron-builder config above.
 3. Replace the existing `TrifoldMark` component with `react/TrifoldMark.tsx` and use it for in-app marks.
 4. Replace the console header, About page, splash/setup window and empty states with the lockups in section 3.
