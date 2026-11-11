@@ -15,11 +15,21 @@ import {
  * under different hash routes (ADR 0002); only the console hosts web tabs (ADR 0011). The class
  * is `WindowManager` below.
  */
-// The dark theme's --bg, --bg-rail and --text-muted from renderer/styles/global.css, so a window
-// shows the right colour before the renderer paints. The light theme repaints on load.
+// The dark theme's --bg from renderer/styles/global.css, so a window shows the right colour
+// before the renderer paints. The light theme repaints on load.
 const WINDOW_BG = '#14181d';
-const RAIL_BG = '#11151a';
-const TEXT_MUTED = '#9aa3ad';
+
+export type Theme = 'dark' | 'light';
+
+/**
+ * Each theme's --bg-rail and --text-muted (renderer/styles/global.css): the colours Windows
+ * paints its window controls in, over the right end of the top bar. Windows cannot read CSS, so
+ * the overlay follows the Library's theme setting instead (setTheme).
+ */
+const OVERLAY: Record<Theme, { color: string; symbolColor: string }> = {
+  dark: { color: '#11151a', symbolColor: '#9aa3ad' },
+  light: { color: '#eae6dc', symbolColor: '#5c6670' },
+};
 
 export type Route = 'console' | 'player';
 
@@ -51,8 +61,17 @@ function isOnScreen(b: WindowBounds): boolean {
 export class WindowManager {
   private consoleWin: BrowserWindow | null = null;
   private playerWin: BrowserWindow | null = null;
+  private theme: Theme = 'dark';
 
   constructor(private readonly hooks: WindowHooks) {}
+
+  /** Repaints the Windows window controls for the Library's theme (no-op on macOS). */
+  setTheme(theme: Theme): void {
+    this.theme = theme;
+    const win = this.consoleWin;
+    if (process.platform === 'darwin' || !win || win.isDestroyed()) return;
+    win.setTitleBarOverlay({ ...OVERLAY[theme], height: 44 });
+  }
 
   private static webPreferences(route: Route): Electron.WebPreferences {
     return {
@@ -117,13 +136,13 @@ export class WindowManager {
     });
   }
 
-  private static titleBarOptions(): Electron.BrowserWindowConstructorOptions {
+  private static titleBarOptions(theme: Theme): Electron.BrowserWindowConstructorOptions {
     if (process.platform === 'darwin') {
       return { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 14 } };
     }
     return {
       titleBarStyle: 'hidden',
-      titleBarOverlay: { color: RAIL_BG, symbolColor: TEXT_MUTED, height: 44 },
+      titleBarOverlay: { ...OVERLAY[theme], height: 44 },
     };
   }
 
@@ -172,7 +191,7 @@ export class WindowManager {
       // The renderer draws the title bar (ADR 0004 §2.1). Windows draws the window controls
       // over its right end so snap layouts and double-click keep working; macOS draws the
       // traffic lights over its left end (ADR 0006). The renderer leaves both spaces free.
-      ...WindowManager.titleBarOptions(),
+      ...WindowManager.titleBarOptions(this.theme),
       webPreferences: WindowManager.webPreferences('console'),
     });
     WindowManager.hostWebTabs(win);

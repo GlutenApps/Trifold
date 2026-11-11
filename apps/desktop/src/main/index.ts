@@ -99,6 +99,8 @@ async function main(): Promise<void> {
   if (info.ok && config.get().libraryPath !== info.path) {
     await config.update({ libraryPath: info.path });
   }
+  // The window controls start in the Library's theme (the console opens below).
+  if (activeSession.store) windows.setTheme(activeSession.store.getSettings().theme);
   // Daily rolling backup: at start and once an hour while the app is open.
   void runDailyBackup({ session: activeSession, logger });
   setInterval(() => void runDailyBackup({ session: activeSession, logger }), 60 * 60 * 1000);
