@@ -2,7 +2,7 @@
 
 You are redesigning the console window of **Trifold**, a local Windows desktop app a Dungeon Master runs at the table for 5e-compatible games. The DM has a laptop (the console) and a TV the players see (the player window, driven from the console). Everything below is about the console only.
 
-Read `FEATURES.md` (every feature and control the design must house), `TOKENS.md` (palette, type, sizes; these are fixed), and look at `screenshots/` (what exists today). `logo.svg` is the mark.
+Read `FEATURES.md` (every feature and control the design must house), `TOKENS.md` (palette, type, sizes; these are fixed), and look at `screenshots/` (what exists today). The mark is `../brand/svg/mark-on-dark.svg` (see `../brand/BRAND.md`).
 
 ## The problem with today's shell
 

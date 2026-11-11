@@ -171,12 +171,10 @@ function Builder({
   encounter,
   onChange,
   onStart,
-  fightRunning,
 }: {
   encounter: Encounter;
   onChange(e: Encounter): void;
   onStart(): void;
-  fightRunning: boolean;
 }) {
   const pcs = useCampaignStore((s) => s.current?.pcs ?? NO_PCS);
   const npcs = useCampaignStore((s) => s.current?.npcs ?? NO_NPCS);
@@ -316,8 +314,7 @@ function Builder({
         <button
           type="button"
           className="btn primary"
-          disabled={encounter.combatants.length === 0 || fightRunning}
-          title={fightRunning ? 'End the current fight first' : undefined}
+          disabled={encounter.combatants.length === 0}
           onClick={onStart}
         >
           Start combat
@@ -392,8 +389,10 @@ function saveBuilderDraft(draft: Encounter) {
 }
 
 /**
- * Encounter list and builder (DESIGN.md §6.4). While a fight runs the tab is the combat tracker
- * instead, with the list a click away (ADR 0005); when it ends, the result shows once.
+ * Encounter list and builder (DESIGN.md §6.4). While a fight is loaded the tab is the combat
+ * tracker instead (ADR 0005). Back pauses it: the encounter lists as in progress and any number
+ * of fights can wait that way, so a split party can run two (ADR 0022). When a fight ends, the
+ * result shows once.
  */
 export function EncountersPage() {
   const current = useCampaignStore((s) => s.current);
@@ -403,9 +402,6 @@ export function EncountersPage() {
   const begin = useCombatStore((s) => s.begin);
   const resume = useCombatStore((s) => s.resume);
   const fightId = useCombatStore((s) => s.encounterId);
-  const round = useCombatStore((s) => s.state?.round ?? 0);
-  const browsing = useCombatStore((s) => s.browsing);
-  const setBrowsing = useCombatStore((s) => s.setBrowsing);
   const finished = useCombatStore((s) => s.finished);
   const dismissFinished = useCombatStore((s) => s.dismissFinished);
   const [draft, setDraft] = useState<Encounter | null>(null);
@@ -424,11 +420,9 @@ export function EncountersPage() {
       .current?.encounters.find((e) => e.id === target.id);
     if (!encounter) return true;
     const combat = useCombatStore.getState();
-    if (combat.encounterId === target.id) {
-      combat.setBrowsing(false);
-      return true;
-    }
-    if (combat.encounterId) combat.setBrowsing(true);
+    if (combat.encounterId === target.id) return true;
+    // Another fight is loaded: put it down (it stays in progress) to show this one.
+    if (combat.encounterId) void combat.pause();
     if (encounter.state) {
       setDraft(null);
       landOn(navKey('encounter', target.id));
@@ -459,9 +453,8 @@ export function EncountersPage() {
     );
   }
 
-  if (fightId && !browsing) return <CombatView />;
+  if (fightId) return <CombatView />;
 
-  const fightName = current.encounters.find((e) => e.id === fightId)?.name ?? 'Combat';
   const finishedEncounter = finished
     ? current.encounters.find((e) => e.id === finished.encounterId)
     : undefined;
@@ -477,16 +470,6 @@ export function EncountersPage() {
 
   return (
     <section className="encounters">
-      {fightId && (
-        <div className="banner" role="status">
-          <span>
-            {fightName} is running{round > 0 ? ` · round ${round}` : ''}.
-          </span>
-          <button type="button" className="btn primary" onClick={() => setBrowsing(false)}>
-            Return to fight
-          </button>
-        </div>
-      )}
       {finished && !fightId && (
         <div className="card" data-testid="fight-result">
           <div className="row">
@@ -523,12 +506,7 @@ export function EncountersPage() {
               <Icon name="left" />
             </button>
           </div>
-          <Builder
-            encounter={draft}
-            onChange={setDraft}
-            onStart={() => void startCombat()}
-            fightRunning={!!fightId}
-          />
+          <Builder encounter={draft} onChange={setDraft} onStart={() => void startCombat()} />
         </>
       ) : (
         <div className="card">
@@ -560,7 +538,9 @@ export function EncountersPage() {
                   {e.results.length ? ` · fought ${e.results.length}×` : ''}
                 </span>
                 {e.state && (
-                  <span className="badge warn">combat in progress · round {e.state.round}</span>
+                  <span className="badge in-progress">
+                    combat in progress · round {e.state.round}
+                  </span>
                 )}
               </div>
               {confirmDelete === e.id ? (
@@ -577,23 +557,12 @@ export function EncountersPage() {
               ) : (
                 <span className="encounter-row-actions">
                   <span className="row-actions">
-                    {e.id === fightId ? (
-                      <button
-                        type="button"
-                        className="chrome-btn xs"
-                        aria-label={`Return to fight: ${e.name}`}
-                        title="Return to fight"
-                        onClick={() => setBrowsing(false)}
-                      >
-                        <Icon name="play" />
-                      </button>
-                    ) : e.state ? (
+                    {e.state ? (
                       <button
                         type="button"
                         className="chrome-btn xs"
                         aria-label={`Resume combat: ${e.name}`}
-                        title={fightId ? 'End the current fight first' : 'Resume combat'}
-                        disabled={!!fightId}
+                        title="Resume combat"
                         onClick={() => void resume(e)}
                       >
                         <Icon name="play" />
@@ -603,14 +572,8 @@ export function EncountersPage() {
                         type="button"
                         className="chrome-btn xs"
                         aria-label={`Start combat: ${e.name}`}
-                        title={
-                          fightId
-                            ? 'End the current fight first'
-                            : e.combatants.length === 0
-                              ? 'Add combatants first'
-                              : 'Start combat'
-                        }
-                        disabled={e.combatants.length === 0 || !!fightId}
+                        title={e.combatants.length === 0 ? 'Add combatants first' : 'Start combat'}
+                        disabled={e.combatants.length === 0}
                         onClick={() =>
                           void begin(e, current.pcs, current.campaign.settings.initiativeMode)
                         }

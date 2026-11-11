@@ -3,7 +3,7 @@ import type { ApiContext } from './api';
 
 /**
  * Opening a Library from the app's side: the session opens it, the app config records it as
- * current and recent, and the rolling backups run (DESIGN.md §4.2, ADR 0015). Kept apart from
+ * current and recent, the window controls take its theme, and the rolling backups run (DESIGN.md §4.2, ADR 0015). Kept apart from
  * `api.ts` because the Library picker and both restore paths go through the same steps, and the
  * backup runners are shared with startup and the close sequence in `index.ts`.
  */
@@ -11,11 +11,13 @@ const RECENT_LIBRARIES = 10;
 
 /** Opens (or reopens) a Library, records it as the current and a recent one, and runs the daily backup if due. */
 export async function reopenLibrary(
-  ctx: Pick<ApiContext, 'session' | 'config' | 'logger'>,
+  ctx: Pick<ApiContext, 'session' | 'config' | 'logger' | 'windows'>,
   path: string,
 ): Promise<LibraryInfo> {
   const info = await ctx.session.open(path);
   if (info.ok) {
+    // A restored or different Library may carry the other theme; the window controls follow.
+    if (ctx.session.store) ctx.windows.setTheme(ctx.session.store.getSettings().theme);
     const recent = [
       info.path,
       ...ctx.config.get().recentLibraries.filter((p) => p !== info.path),

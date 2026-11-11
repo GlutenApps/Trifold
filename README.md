@@ -1,5 +1,7 @@
 # Trifold
 
+![Trifold](docs/brand/splash/readme-banner.png)
+
 A local desktop console (Windows and macOS) for a Dungeon Master running 5e-compatible games at a physical table: compendium, campaign notes, encounters and combat tracker, a second-screen presenter, and a music controller.
 
 Everything stays on your machine. There are no accounts, no cloud services and no telemetry. Your data lives in a plain folder of JSON files and media (the Library) that you can back up, copy or sync however you like. To play music from your phone's own apps through the laptop, open the Music tool's Phone tab: on Windows 11 Trifold is the Bluetooth audio receiver, so a paired phone connects in one click; on macOS it walks you to AirPlay Receiver. An "Audio source" toggle switches the Music tool and the live strip between Trifold's own player and the phone.

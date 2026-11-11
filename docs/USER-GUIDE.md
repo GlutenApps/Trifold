@@ -41,7 +41,7 @@ Create a campaign in **Library › Campaigns** (name, **Create campaign**) or im
 
 **Party.** One card per player character with the numbers the tracker needs: HP, AC, initiative bonus, speed, passives, saves. **Quick add** takes one PC per line as `Name, Player, Class L, HP, AC, Init, Speed, PP`. **Import into this campaign…** merges a campaign XML file, including a Fight Club GM export. **Long rest** puts everyone back to full HP and clears temp HP.
 
-**NPCs.** Named NPCs with role, location and notes. A "stat block" badge means it is tied to a compendium record and can fight. An NPC that has fought shows the HP it carried out; the refresh icon (**Restore**) sets it back to full and alive. NPCs come from imports or from **Track as NPC** in the builder and tracker.
+**NPCs.** Named NPCs with role, location and notes. An NPC tied to a compendium record (so it can fight) has a book icon among its row actions that shows its stat block under the row, with **Open in compendium**. An NPC that has fought shows the HP it carried out; the refresh icon (**Restore**) sets it back to full and alive. NPCs come from imports or from **Track as NPC** in the builder and tracker.
 
 **Notes.** A tree of notes and folders on the left, the open note on the right. The toolbar has **New note**, **New folder** and the template menu. Drag rows to reorder, onto a folder to go inside, or below the list for the top level. The editor is formatted text (headings, lists, check lists, quotes, tables, images) stored as markdown; it saves itself half a second after you stop typing and shows Saved or Unsaved beside the title. Removing a folder lifts its contents up a level unless you choose **Remove folder and contents…**. **Find in notes** swaps the tree for phrase hits with snippets; a snippet opens the note at that spot, and Enter or Shift+Enter steps through every hit. Templates are shared by all campaigns: the menu starts a note from one, saves the open note as one, and **Manage templates…** edits them.
 
@@ -63,7 +63,7 @@ Create a campaign in **Library › Campaigns** (name, **Create campaign**) or im
 
 **Attacks and saves from the stat block.** The selected creature's stat block sits beside the list. Click an attack to roll to hit and damage; the damage pop-up lets you tick who takes it, full or half, and press **Apply** (`Ctrl+Enter`). **Roll all** on Multiattack rolls every attack. A save badge rolls the save for every creature in the fight, marks each saved or failed, pre-selects half or full damage, and shows the PCs' bonuses so you can ask the players.
 
-**Mid-fight.** The `+` button or `A` opens **Add to the fight**: party members, NPCs, or a creature search with a count. **Back to list** browses other encounters while the fight runs; **Return to fight** comes back.
+**Mid-fight.** The `+` button or `A` opens **Add to the fight**: party members, NPCs, or a creature search with a count. **Back to list** pauses the fight: its encounter shows *combat in progress* with **Resume**. Any number of fights can wait like this (a split party, say), and starting or resuming one pauses the fight you were in.
 
 **Ending.** **End combat** shows a result card (rounds, XP, fallen PCs) and writes current and temp HP back to each PC card and named NPC, so the next fight starts where this one ended; compendium creatures are always fresh. Conditions do not carry over.
 

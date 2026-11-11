@@ -7,7 +7,7 @@ A self-contained pack for redesigning the console shell in a design tool (writte
 What to hand the design tool:
 
 1. Paste `PROMPT.md` as the prompt.
-2. Attach `FEATURES.md`, `../TOKENS.md`, `../tokens.json`, `logo.svg` and everything in `screenshots/`.
+2. Attach `FEATURES.md`, `../TOKENS.md`, `../tokens.json`, `../brand/svg/mark-on-dark.svg` and everything in `screenshots/`.
 3. Optionally attach the earlier palette mockup (`SlateBone.dc.html`) if the tool accepts it; `TOKENS.md` already carries its values.
 
 Screenshots, all at 1600 × 900, dark theme, from the current build:

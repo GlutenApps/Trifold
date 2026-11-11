@@ -1111,8 +1111,8 @@ export function CombatView() {
             type="button"
             className="chrome-btn"
             aria-label="Back to encounters"
-            title="Back to list (the fight keeps running)"
-            onClick={() => store.setBrowsing(true)}
+            title="Back to list (the fight stays in progress)"
+            onClick={() => void store.pause()}
           >
             <Icon name="left" />
           </button>

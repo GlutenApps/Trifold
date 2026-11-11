@@ -21,6 +21,7 @@ export function Dock() {
   const openTool = useShellStore((s) => s.openTool);
   const setDockMode = useShellStore((s) => s.setDockMode);
   const setDockWidth = useShellStore((s) => s.setDockWidth);
+  const openDock = useShellStore((s) => s.openDock);
   const [collapsed, setCollapsed] = useState<Set<MinorKind>>(new Set());
   const pips = useLivePips();
   const alerts = useAlertPips();
@@ -38,7 +39,7 @@ export function Dock() {
           aria-label="Expand dock"
           title={fit.canExpandDock ? 'Expand dock' : 'Widen the window to expand the dock'}
           disabled={!fit.canExpandDock}
-          onClick={() => (trimmed ? expandDock() : setDockMode('narrow'))}
+          onClick={() => (trimmed ? expandDock() : openDock())}
         >
           <Icon name="expand" />
         </button>

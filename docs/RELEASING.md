@@ -41,7 +41,6 @@ The same steps work on a developer machine, which is also how to test an install
 ```
 pnpm i
 pnpm fetch:content      # once per clone, or after the manifests change
-pnpm make:icon          # only if docs/design-brief/logo.svg changed
 pnpm build              # runs check:content first; writes dist/
 ```
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { AttributionEntry, IconCreditsInfo } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
+import { BrandLockup } from '../shell/Brand';
 import { BackupsCard } from './BackupsCard';
 import { SampleCampaignCard } from './SampleCampaignCard';
 
@@ -118,6 +119,9 @@ export function SettingsPage() {
 
       <div className="card span">
         <h2>About</h2>
+        <div className="about-lockup">
+          <BrandLockup layout="horizontal" height={40} />
+        </div>
         <p>
           Trifold {info?.version ?? ''} · Electron {info?.electron ?? ''} · Chromium{' '}
           {info?.chrome ?? ''} · Node {info?.node ?? ''}

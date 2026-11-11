@@ -113,8 +113,6 @@ interface CombatStoreState {
   /** XP total of enemy templates, for the encounter result. */
   enemyXp: number;
   error: string | null;
-  /** The Encounters tab shows its list over a running fight (ADR 0005). */
-  browsing: boolean;
   /** The fight that just ended, shown once in the Encounters tab until dismissed. */
   finished: { encounterId: string; result: EncounterResult } | null;
 
@@ -124,8 +122,13 @@ interface CombatStoreState {
     initiativeMode: 'perGroup' | 'perCreature',
   ): Promise<void>;
   resume(encounter: Encounter): Promise<void>;
+  /**
+   * Puts the loaded fight down without ending it (ADR 0022): its state is saved to the
+   * encounter, which lists as in progress, and the tracker unloads. Any number of fights can be
+   * paused; one is loaded at a time. False when the save failed and the fight stays loaded.
+   */
+  pause(): Promise<boolean>;
   leave(): void;
-  setBrowsing(browsing: boolean): void;
   dismissFinished(): void;
   select(id: string | null): void;
   setInitiative(id: string, value: number | null): void;
@@ -437,10 +440,12 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     pendingDamage: [],
     enemyXp: 0,
     error: null,
-    browsing: false,
     finished: null,
 
     async begin(encounter, pcs, initiativeMode) {
+      // Another loaded fight waits in progress; starting the loaded one again replaces it.
+      const loaded = get().encounterId;
+      if (loaded && loaded !== encounter.id && !(await get().pause())) return;
       // A builder edit still waiting would write the encounter without its fight.
       cancelSave(encounterSlot(encounter.id));
       const records = await loadRecords(null, encounter);
@@ -492,15 +497,18 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         concentrationPrompt: null,
         enemyXp: enemyXpOf(encounter),
         error: null,
-        browsing: false,
         finished: null,
       });
+      // Saved at once, so the encounter lists as in progress even if the DM backs out now.
+      persist();
       log('note', `Combat prepared: ${state.combatants.length} combatants`);
       rememberLinks(links);
     },
 
     async resume(encounter) {
       if (!encounter.state) return;
+      if (get().encounterId === encounter.id) return;
+      if (get().encounterId && !(await get().pause())) return;
       const records = await loadRecords(encounter.state, encounter);
       // The hold button went with ADR 0012. A fight saved before that could still carry
       // `held`, and with no way to release it Next would skip that combatant forever.
@@ -522,9 +530,26 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         concentrationPrompt: null,
         enemyXp: enemyXpOf(encounter),
         error: null,
-        browsing: false,
         finished: null,
       });
+    },
+
+    async pause() {
+      const { encounterId, state } = get();
+      if (!encounterId) return true;
+      // The settle timer would write the same state; one write, awaited, so the list is current.
+      cancelSave('combat');
+      try {
+        const saved = await window.trifold.encounters.saveState(encounterId, state);
+        useCampaignStore.getState().putEncounter(saved);
+      } catch (err) {
+        // Keep the fight loaded rather than drop state that did not reach the disk.
+        set({ error: err instanceof Error ? err.message : String(err) });
+        return false;
+      }
+      // Another fight may have loaded while the write was in flight.
+      if (get().encounterId === encounterId) get().leave();
+      return true;
     },
 
     leave() {
@@ -537,12 +562,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         saveCall: null,
         concentrationPrompt: null,
         pendingDamage: [],
-        browsing: false,
       });
-    },
-
-    setBrowsing(browsing) {
-      set({ browsing });
     },
 
     dismissFinished() {

@@ -185,9 +185,12 @@ describe('presets', () => {
     expect(isOpen(noMap, 'map')).toBe(false);
   });
 
-  it('matches on intent: a narrow dock trimmed to icons still counts', () => {
+  it('matches on intent, and a dock collapsed to icons is a change to the layout', () => {
     expect(matchesPreset(table, table)).toBe(true);
-    expect(matchesPreset({ ...table, dock: { ...table.dock, state: 'icons' } }, table)).toBe(true);
+    // A narrow window trims the dock without touching the layout, so only a deliberate collapse
+    // (or expand) reaches the saved state, and the DM must be able to overwrite with it.
+    expect(matchesPreset({ ...table, dock: { ...table.dock, state: 'icons' } }, table)).toBe(false);
+    expect(matchesPreset({ ...table, dock: { ...table.dock, state: 'wide' } }, table)).toBe(false);
     expect(matchesPreset(toggleSection(table, 'music'), table)).toBe(false);
     expect(matchesPreset(openMajor(table, 'compendium'), table)).toBe(false);
   });

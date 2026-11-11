@@ -97,7 +97,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         if (error) throw new Error(error);
       },
       async updateSettings(patch) {
-        return requireStore().updateSettings(patch);
+        const settings = await requireStore().updateSettings(patch);
+        if (patch.theme) ctx.windows.setTheme(settings.theme);
+        return settings;
       },
     },
 

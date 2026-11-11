@@ -40,6 +40,10 @@
   --tally: #d9453a;
   --tally-contrast: #fff6f4;
   --ok: #6fb08a;
+  /* A fight in progress (an encounter's pill): a faded red, apart from the amber warnings and
+     the bright on-air red, and readable on both themes. */
+  --fight: #c47a74;
+  --fight-contrast: #1f0e0c;
   --ally: #6fa4e0;
   --enemy: #e0685e;
   --radius: 10px;
@@ -107,13 +111,17 @@
   --border: #cfc7b5;
   --text: #1f2429;
   --text-muted: #5c6670;
-  --accent: #7a6430;
-  --accent-contrast: #fff8e6;
+  /* The brand's slate (docs/brand/BRAND.md, surface): the light theme keeps its paper panels and
+     takes the dark theme's blue-grey for selection and buttons instead of a darkened bone. */
+  --accent: #1c2229;
+  --accent-contrast: #f3f0e8;
   --danger: #c2483f;
   --warn: #a87a18;
   --tally: #c2362c;
   --tally-contrast: #fff6f4;
   --ok: #3f8a5e;
+  --fight: #d9a39d;
+  --fight-contrast: #4a1712;
   --ally: #3b75b8;
   --enemy: #c2483f;
   --shadow: 0 8px 24px rgba(40, 30, 10, 0.18);

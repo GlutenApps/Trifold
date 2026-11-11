@@ -671,6 +671,10 @@ input.narrow {
   padding: 6px 0;
 }
 
+.npc-statblock {
+  margin-top: 6px;
+}
+
 .entity-row summary {
   cursor: pointer;
 }
@@ -1852,6 +1856,12 @@ input[type='range'].wide {
 .badge.warn {
   background: var(--warn);
   color: var(--accent-contrast);
+}
+
+.badge.in-progress {
+  background: var(--fight);
+  border-color: var(--fight);
+  color: var(--fight-contrast);
 }
 
 /* Spell slot tracker (DESIGN.md §6.4) */

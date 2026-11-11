@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import type { PCCard } from '@trifold/schema';
+import type { MonsterRecord, NPC, PCCard } from '@trifold/schema';
 import { landOn, navKey, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { useCompendiumStore } from '../../stores/compendiumStore';
+import { useShellStore } from '../../stores/shellStore';
+import { StatBlock } from '../compendium/StatBlock';
 import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
 import { InlineConfirm } from '../shell/InlineConfirm';
@@ -317,11 +320,74 @@ function PartyTab() {
   );
 }
 
+/**
+ * An NPC's linked stat block, shown under its row. Fetched when opened, so a long NPC list costs
+ * nothing until the DM asks.
+ */
+function NpcStatBlock({ npc }: { npc: NPC }) {
+  const recordId = npc.recordRef?.recordId;
+  const [record, setRecord] = useState<MonsterRecord | null | undefined>(undefined);
+  const openRecord = useCompendiumStore((s) => s.openRecord);
+  const openByKey = useCompendiumStore((s) => s.openByKey);
+  const openMajor = useShellStore((s) => s.openMajor);
+  useEffect(() => {
+    if (!recordId) return;
+    let live = true;
+    setRecord(undefined);
+    void window.trifold.compendium
+      .get(recordId)
+      .catch(() => null)
+      .then((found) => {
+        if (live) setRecord(found?.kind === 'monster' ? found : null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [recordId]);
+  if (!recordId) return null;
+  if (record === undefined) return <p className="muted npc-statblock">Loading stat block…</p>;
+  if (record === null) {
+    return (
+      <p className="muted npc-statblock">
+        The linked stat block is not in the compendium any more ({npc.recordRef?.key}).
+      </p>
+    );
+  }
+  return (
+    <div className="npc-statblock">
+      <div className="row">
+        <span className="spacer" />
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            void openRecord(record.id).then(
+              (ok) => ok && openMajor('compendium', { avoid: 'campaign' }),
+            );
+          }}
+        >
+          <Icon name="external" />
+          Open in compendium
+        </button>
+      </div>
+      <StatBlock
+        record={record}
+        onOpenSpell={(key) => {
+          void openByKey('spell', key).then(
+            (ok) => ok && openMajor('compendium', { avoid: 'campaign' }),
+          );
+        }}
+      />
+    </div>
+  );
+}
+
 function NpcsTab() {
   const current = useCampaignStore((s) => s.current);
   const removeNpc = useCampaignStore((s) => s.removeNpc);
   const saveNpc = useCampaignStore((s) => s.saveNpc);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [shownId, setShownId] = useState<string | null>(null);
   if (!current) return null;
   return (
     <div className="card">
@@ -333,7 +399,6 @@ function NpcsTab() {
             <strong>{n.name}</strong>
             {n.role && <span className="muted">{n.role}</span>}
             {n.location && <span className="muted">· {n.location}</span>}
-            {n.recordRef && <span className="badge">stat block</span>}
             {n.hp && (
               <span className="muted" title="HP carried from the last fight">
                 HP {n.hp.current}/{n.hp.max}
@@ -353,6 +418,18 @@ function NpcsTab() {
               />
             ) : (
               <span className="row-actions">
+                {n.recordRef && (
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-label={`Stat block for ${n.name}`}
+                    aria-pressed={shownId === n.id}
+                    title={shownId === n.id ? 'Hide stat block' : 'Show stat block'}
+                    onClick={() => setShownId((id) => (id === n.id ? null : n.id))}
+                  >
+                    <Icon name="tome" />
+                  </button>
+                )}
                 {n.hp && (n.hp.current < n.hp.max || n.hp.temp > 0 || !n.isAlive) && (
                   <button
                     type="button"
@@ -383,6 +460,7 @@ function NpcsTab() {
             )}
           </div>
           {n.notes && <p className="muted">{n.notes}</p>}
+          {shownId === n.id && <NpcStatBlock npc={n} />}
         </div>
       ))}
     </div>
