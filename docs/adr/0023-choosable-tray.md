@@ -43,7 +43,9 @@ on every row, and VTT, Encounters and Music have no row to put a pin on.
 ## Consequences
 
 - A DM with no TV can give the tray to two timers and two counters; the defaults look as before.
-- Four sections and Dice fit at the CI runners' width (under 1180 px) only with the section text
-  truncating, as the Music title does today; the smoke spec checks a full tray at that width.
+- The chosen sections share the width the chooser and Dice leave. In a narrow window they shrink
+  to truncated text and then are cut off at the right; the chooser and Dice never move off screen.
+  A full tray first failed on the macOS runner at 1100 px, where Dice was the part cut off. The
+  smoke spec checks a full tray at 1100 px and at the smallest window (760 px).
 - Not done: dragging sections to reorder, a hotkey per tray slot, more than four sections,
   pinning from a timer or counter row.

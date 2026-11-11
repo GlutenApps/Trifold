@@ -107,24 +107,33 @@ test('the tray takes a timer and a counter, fits a narrow window and comes back 
         .getByRole('button', { name: /^Legendary resistance: 2/ }),
     ).toBeVisible();
 
-    // A window narrower than the CI screens still shows all four and Dice, inside the window.
-    await app.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0]!;
-      if (win.isMaximized()) win.unmaximize();
-      win.setSize(1100, 760);
-    });
-    await expect.poll(() => page.evaluate(() => window.innerWidth)).toBeLessThanOrEqual(1100);
-    const width = await page.evaluate(() => window.innerWidth);
-    const boxes = strip.locator('[data-strip]');
-    const overflow: string[] = [];
-    for (let i = 0; i < (await boxes.count()); i++) {
-      const box = await boxes.nth(i).boundingBox();
-      if (!box || box.x + box.width > width + 0.5) {
-        overflow.push((await boxes.nth(i).getAttribute('data-strip')) ?? '?');
+    // In a narrow window the chosen sections shrink and are cut off before the chooser or Dice
+    // move: those two always sit fully inside the window, at 1100 px and at the smallest window.
+    for (const asked of [1100, 600]) {
+      await app.evaluate(({ BrowserWindow }, w) => {
+        const win = BrowserWindow.getAllWindows()[0]!;
+        if (win.isMaximized()) win.unmaximize();
+        win.setSize(w, 760);
+      }, asked);
+      await expect
+        .poll(() => page.evaluate(() => window.innerWidth))
+        .toBeLessThanOrEqual(Math.max(asked, 900));
+      const width = await page.evaluate(() => window.innerWidth);
+      const boxes = strip.locator('[data-strip]');
+      const seen: string[] = [];
+      const outside: string[] = [];
+      for (let i = 0; i < (await boxes.count()); i++) {
+        const name = (await boxes.nth(i).getAttribute('data-strip')) ?? '?';
+        const box = await boxes.nth(i).boundingBox();
+        seen.push(box ? `${name} ${Math.round(box.x)}+${Math.round(box.width)}` : `${name} none`);
+        const fixed = name === 'choose' || name === 'dice';
+        // The fixed pair must be whole; a chosen section must at least start on screen.
+        if (!box || (fixed ? box.x + box.width > width + 0.5 : box.x >= width)) outside.push(name);
       }
+      expect(outside, `window ${width} px: ${seen.join(', ')}`).toEqual([]);
+      await expect(strip.getByRole('button', { name: 'Dice', exact: true })).toBeVisible();
+      await expect(strip.getByRole('button', { name: 'Choose what the tray shows' })).toBeVisible();
     }
-    expect(overflow).toEqual([]);
-    await expect(strip.getByRole('button', { name: 'Dice', exact: true })).toBeVisible();
 
     expect(rendererErrors).toEqual([]);
     await app.close();

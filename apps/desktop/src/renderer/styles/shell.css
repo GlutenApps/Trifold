@@ -851,10 +851,25 @@ body.resizing {
   max-width: 170px;
 }
 
-/* The dice keep to the strip's right end: last total, chips, Roll, then the Dice button. The
-   tray chooser (ADR 0023) stands just before them and takes the free space on its left. */
+/* The chosen sections (ADR 0023) take the width the chooser and Dice leave. When they do not
+   fit, they shrink to their truncated text and then are cut off at the right, never Dice. */
+.strip-sections {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* The last chosen section keeps its divider: the chooser follows it, after any free space. */
+.strip-sections .strip-sec:last-child {
+  border-right: 1px solid var(--border);
+}
+
+/* The dice keep to the strip's right end: last total, chips, Roll, then the Dice button, with the
+   tray chooser just before them. */
 .strip-choose {
-  margin-left: auto;
   flex-shrink: 0;
 }
 

@@ -26,19 +26,23 @@ export function LiveStrip() {
   useTraySync();
   return (
     <footer className="strip" role="contentinfo" data-testid="live-strip">
-      {tray.includes('map') && <TvSection />}
-      {tray.includes('music') && <MusicSection />}
-      {tray.includes('encounters') && <CombatSection />}
-      {counters
-        .filter((c) => tray.includes(`counter:${c.id}`))
-        .map((c) => (
-          <CounterTraySection key={c.id} counter={c} />
-        ))}
-      {timers
-        .filter((t) => tray.includes(`timer:${t.id}`))
-        .map((t) => (
-          <TimerTraySection key={t.id} timer={t} />
-        ))}
+      {/* The chosen sections share what is left of the width and are cut off first, so the
+          chooser and Dice are never pushed out of a narrow window. */}
+      <div className="strip-sections">
+        {tray.includes('map') && <TvSection />}
+        {tray.includes('music') && <MusicSection />}
+        {tray.includes('encounters') && <CombatSection />}
+        {counters
+          .filter((c) => tray.includes(`counter:${c.id}`))
+          .map((c) => (
+            <CounterTraySection key={c.id} counter={c} />
+          ))}
+        {timers
+          .filter((t) => tray.includes(`timer:${t.id}`))
+          .map((t) => (
+            <TimerTraySection key={t.id} timer={t} />
+          ))}
+      </div>
       <ChooseSection />
       <DiceSection />
     </footer>
