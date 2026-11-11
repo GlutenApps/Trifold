@@ -68,7 +68,7 @@ describe('CountersTool', () => {
     const user = userEvent.setup();
     render(<CountersTool />);
     expect(screen.getByText(/No counters yet/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add your first counter' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /first counter/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'New counter' }));
     await user.type(screen.getByLabelText('Name'), 'Ritual rounds{Enter}');
     await waitFor(() => expect(current()).toHaveLength(1));

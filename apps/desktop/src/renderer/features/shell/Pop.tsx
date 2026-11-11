@@ -6,9 +6,10 @@ import { SearchResults } from './GlobalSearch';
 import { HotkeysTool } from './HotkeysTool';
 import { Icon, type IconName } from './icons';
 import { LayoutsTool } from './LayoutsTool';
+import { TrayTool } from './TrayTool';
 
 /**
- * Pop-up tools (ADR 0009): Dice, Hotkeys and Layouts are anchored to the button that opens
+ * Pop-up tools (ADR 0009): Dice, the tray chooser (ADR 0023), Hotkeys and Layouts are anchored to the button that opens
  * them instead of taking a dock section. This file maps each kind to its body, title and icon
  * and places the one open pop-up; `Pop` below explains the anchoring. The global search's
  * results (ADR 0017) are a pop-up too, centred under the field in the top bar and without the
@@ -21,6 +22,7 @@ const POP_TITLES: Record<PopKind, string> = {
   hotkeys: 'Hotkeys',
   layouts: 'Layouts',
   search: 'Search',
+  tray: 'Tray',
 };
 
 const POP_ICON: Record<PopKind, IconName> = {
@@ -28,6 +30,7 @@ const POP_ICON: Record<PopKind, IconName> = {
   hotkeys: 'keys',
   layouts: 'layout',
   search: 'search',
+  tray: 'sliders',
 };
 
 function PopBody({ kind, compact }: { kind: PopKind; compact: boolean }) {
@@ -40,11 +43,13 @@ function PopBody({ kind, compact }: { kind: PopKind; compact: boolean }) {
       return <LayoutsTool />;
     case 'search':
       return <SearchResults withField={compact} />;
+    case 'tray':
+      return <TrayTool />;
   }
 }
 
 /**
- * A tool that pops up from its own button (ADR 0009): Dice above the strip's dice button,
+ * A tool that pops up from its own button (ADR 0009): Dice and the tray chooser above their strip buttons,
  * Hotkeys and Layouts below theirs in the top bar. The button carries `data-pop="<kind>"` and
  * the pop-up right-aligns to it. One at a time; Escape or a click elsewhere closes it.
  */
@@ -64,7 +69,7 @@ export function Pop() {
       const right = anchored
         ? Math.max(12, Math.min(window.innerWidth - anchored.right, window.innerWidth - width - 12))
         : 12;
-      if (pop === 'dice') {
+      if (pop === 'dice' || pop === 'tray') {
         setStyle({ right, bottom: anchored ? window.innerHeight - anchored.top + 6 : 42 + 10 });
       } else if (pop === 'search' && anchored && anchored.width > 60) {
         // Under the middle of the field; the icon button (compact) right-aligns like the rest.

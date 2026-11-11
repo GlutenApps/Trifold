@@ -7,6 +7,7 @@ import {
   isWebUrl,
   normalizeWebUrl,
   LibrarySettings,
+  ShellLayout,
   StageGroup,
   WebTab,
   webTabId,
@@ -48,6 +49,31 @@ describe('LibrarySettings', () => {
     const parsed = LibrarySettings.parse({ schemaVersion: 5, theme: 'light', playerDisplayId: 42 });
     expect(parsed.theme).toBe('light');
     expect(parsed.playerDisplayId).toBe(42);
+  });
+});
+
+describe('ShellLayout tray (ADR 0023)', () => {
+  const base = {
+    stage: { groups: [{ tabs: ['campaign'], active: 'campaign' }] },
+    dock: {},
+  };
+
+  it('gives a layout saved before the tray existed VTT, Music and Encounters', () => {
+    expect(ShellLayout.parse(base).tray).toEqual(['map', 'music', 'encounters']);
+  });
+
+  it('drops unknown items, repeats and anything past the fourth instead of failing', () => {
+    const tray = ['music', 'music', 'nonsense', 7, 'timer:01A', 'counter:01B', 'map', 'encounters'];
+    expect(ShellLayout.parse({ ...base, tray }).tray).toEqual([
+      'music',
+      'timer:01A',
+      'counter:01B',
+      'map',
+    ]);
+  });
+
+  it('keeps an empty tray empty', () => {
+    expect(ShellLayout.parse({ ...base, tray: [] }).tray).toEqual([]);
   });
 });
 

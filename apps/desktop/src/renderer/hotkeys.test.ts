@@ -52,6 +52,22 @@ describe('registry', () => {
     expect(plain).not.toHaveBeenCalled();
     expect(combo).toHaveBeenCalledTimes(1);
   });
+
+  it('lets plain keys through from a checkbox, which takes no text', () => {
+    const close = vi.fn();
+    cleanups.push(installHotkeys());
+    cleanups.push(
+      registerHotkey({ id: 'close', combo: 'Escape', description: 'close', run: close }),
+    );
+
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    document.body.appendChild(box);
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    box.remove();
+
+    expect(close).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('comboFromEvent on macOS', () => {

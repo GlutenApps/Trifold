@@ -1,4 +1,6 @@
 import { useAppStore } from '../../stores/appStore';
+import { useCounters } from '../../stores/countersStore';
+import { useTimers } from '../../stores/timersStore';
 import { useCombatStore } from '../../stores/combatStore';
 import type { PhoneAudioStatus } from '@trifold/api';
 import { useMusicStore } from '../../stores/musicStore';
@@ -7,21 +9,65 @@ import { usePresenterStore } from '../../stores/presenterStore';
 import { useShellStore } from '../../stores/shellStore';
 import { DicePool } from '../dice/DicePool';
 import { Icon } from './icons';
+import { CounterTraySection, TimerTraySection, useTraySync } from './TrayItems';
 import { hk } from '../../platform';
 
 /**
- * The live strip (ADR 0004, live strip): table-time state and the one-tap actions, nothing else.
- * Sections: TV, Combat, Music, then Dice at the right end. Clicking a section's text opens its
+ * The live strip, or tray (ADR 0004, live strip): table-time state and the one-tap actions,
+ * nothing else. The DM chooses up to four sections (ADR 0023): VTT, Music and Encounters, then
+ * single counters and timers, always in that order and each in its tool's order. Dice is always
+ * at the right end, after the button that chooses the rest. Clicking a section's text opens its
  * tool or tab; the dice button pops the Dice tool up from the strip (ADR 0009).
  */
 export function LiveStrip() {
+  const tray = useShellStore((s) => s.layout.tray);
+  const timers = useTimers();
+  const counters = useCounters();
+  useTraySync();
   return (
     <footer className="strip" role="contentinfo" data-testid="live-strip">
-      <TvSection />
-      <CombatSection />
-      <MusicSection />
+      {/* The chosen sections share what is left of the width and are cut off first, so the
+          chooser and Dice are never pushed out of a narrow window. */}
+      <div className="strip-sections">
+        {tray.includes('map') && <TvSection />}
+        {tray.includes('music') && <MusicSection />}
+        {tray.includes('encounters') && <CombatSection />}
+        {counters
+          .filter((c) => tray.includes(`counter:${c.id}`))
+          .map((c) => (
+            <CounterTraySection key={c.id} counter={c} />
+          ))}
+        {timers
+          .filter((t) => tray.includes(`timer:${t.id}`))
+          .map((t) => (
+            <TimerTraySection key={t.id} timer={t} />
+          ))}
+      </div>
+      <ChooseSection />
       <DiceSection />
     </footer>
+  );
+}
+
+/** The one control that chooses what the tray shows (ADR 0023). */
+function ChooseSection() {
+  const pop = useShellStore((s) => s.pop);
+  const togglePop = useShellStore((s) => s.togglePop);
+  return (
+    <div className="strip-sec strip-choose" data-strip="choose">
+      <button
+        type="button"
+        className={`chrome-btn${pop === 'tray' ? ' on' : ''}`}
+        aria-label="Choose what the tray shows"
+        aria-haspopup="dialog"
+        aria-expanded={pop === 'tray'}
+        data-pop="tray"
+        title="Choose what the tray shows"
+        onClick={() => togglePop('tray')}
+      >
+        <Icon name="sliders" />
+      </button>
+    </div>
   );
 }
 

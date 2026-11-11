@@ -113,10 +113,7 @@ export function CountersTool() {
       {counters.length === 0 && !creating ? (
         <p className="muted counters-empty">
           No counters yet. Track rounds until a ritual completes, legendary resistances, torches or
-          waves of enemies.{' '}
-          <button type="button" className="btn small" onClick={() => setCreating(true)}>
-            Add your first counter
-          </button>
+          waves of enemies. Use + above to add one.
         </p>
       ) : (
         <ul

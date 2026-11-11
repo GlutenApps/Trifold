@@ -1,5 +1,10 @@
 import {
+  DEFAULT_TRAY,
+  isTrayItem,
   MAJOR_KINDS,
+  TRAY_MAX,
+  TRAY_SECTIONS,
+  type TrayItem,
   MINOR_KINDS,
   type DockMode,
   type MajorKind,
@@ -153,6 +158,7 @@ export function defaultLayout(): ShellLayout {
       maximized: null,
     },
     dock: { state: 'wide', width: 400, sections: sections(['scenes']) },
+    tray: [...DEFAULT_TRAY],
   };
 }
 
@@ -169,6 +175,7 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
         maximized: null,
       },
       dock: { state: 'narrow', width: 360, sections: sections(['scenes']) },
+      tray: [...DEFAULT_TRAY],
     },
   },
   {
@@ -183,6 +190,7 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
         maximized: null,
       },
       dock: { state: 'narrow', width: 360, sections: sections(['scenes']) },
+      tray: [...DEFAULT_TRAY],
     },
   },
   {
@@ -197,6 +205,7 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
         maximized: null,
       },
       dock: { state: 'icons', width: 360, sections: sections(['music']) },
+      tray: [...DEFAULT_TRAY],
     },
   },
 ];
@@ -213,6 +222,7 @@ export function cloneLayout(layout: ShellLayout): ShellLayout {
       width: layout.dock.width,
       sections: layout.dock.sections.map((s) => ({ ...s })),
     },
+    tray: [...(layout.tray ?? DEFAULT_TRAY)],
   };
 }
 
@@ -251,7 +261,7 @@ export function landingGroup(
 
 /**
  * Drops empty groups (keeping one), fixes actives, clamps maximized, and makes sure every minor
- * appears exactly once in the dock.
+ * appears exactly once in the dock, in the fixed order.
  */
 export function normalize(layout: ShellLayout): ShellLayout {
   const next = cloneLayout(layout);
@@ -264,19 +274,47 @@ export function normalize(layout: ShellLayout): ShellLayout {
   if (next.stage.maximized !== null && next.stage.maximized >= next.stage.groups.length) {
     next.stage.maximized = null;
   }
-  const seen = new Set<MinorKind>();
-  const ordered = next.dock.sections.filter((s) => {
-    if (seen.has(s.tool)) return false;
-    seen.add(s.tool);
-    return true;
-  });
-  for (const tool of MINOR_KINDS) {
-    if (!seen.has(tool)) ordered.push({ tool, open: false });
-  }
-  next.dock.sections = ordered;
+  // The dock's order is fixed (MINOR_KINDS), so a layout saved in an older order takes it too.
+  next.dock.sections = MINOR_KINDS.map((tool) => ({
+    tool,
+    open: next.dock.sections.find((s) => s.tool === tool)?.open ?? false,
+  }));
   next.dock.width = Math.min(DOCK_MAX, Math.max(DOCK_MIN, next.dock.width));
   // Nothing hides the dock any more (ADR 0009); a layout saved hidden shows as icons.
   if (next.dock.state === 'hidden') next.dock.state = 'icons';
+  next.tray = [...new Set(next.tray.filter(isTrayItem))].slice(0, TRAY_MAX);
+  return next;
+}
+
+/** Whether the tray holds an item. */
+export function inTray(layout: ShellLayout, item: TrayItem): boolean {
+  return layout.tray.includes(item);
+}
+
+/**
+ * Puts an item on the tray or takes it off (ADR 0023). Adding to a full tray does nothing: the
+ * chooser disables the box and says why. The list's order does not matter: the strip draws the
+ * built-in sections, then timers, then counters, each in its tool's order.
+ */
+export function setTrayItem(layout: ShellLayout, item: TrayItem, on: boolean): ShellLayout {
+  const has = layout.tray.includes(item);
+  if (has === on) return layout;
+  if (on && layout.tray.length >= TRAY_MAX) return layout;
+  const next = cloneLayout(layout);
+  next.tray = on ? [...next.tray, item] : next.tray.filter((t) => t !== item);
+  return next;
+}
+
+/**
+ * Drops timers and counters a campaign does not have (a layout made in another campaign, or one
+ * deleted). `keep` answers for timer and counter items; the built-in sections always stay.
+ */
+export function pruneTray(layout: ShellLayout, keep: (item: TrayItem) => boolean): ShellLayout {
+  const builtIn = (t: TrayItem) => (TRAY_SECTIONS as readonly string[]).includes(t);
+  const tray = layout.tray.filter((t) => builtIn(t) || keep(t));
+  if (tray.length === layout.tray.length) return layout;
+  const next = cloneLayout(layout);
+  next.tray = tray;
   return next;
 }
 
@@ -416,15 +454,6 @@ export function toggleSection(layout: ShellLayout, tool: MinorKind): ShellLayout
   return setSection(layout, tool, !(s?.open ?? false));
 }
 
-export function reorderSection(layout: ShellLayout, tool: MinorKind, index: number): ShellLayout {
-  const next = cloneLayout(layout);
-  const i = next.dock.sections.findIndex((s) => s.tool === tool);
-  if (i < 0) return layout;
-  const [s] = next.dock.sections.splice(i, 1);
-  next.dock.sections.splice(Math.max(0, Math.min(index, next.dock.sections.length)), 0, s!);
-  return next;
-}
-
 /**
  * Applies a saved layout: it decides which tabs are open as well as where. The tabs it names
  * open in their groups; every other tab closes (its state lives on in the feature's store).
@@ -452,7 +481,13 @@ export function matchesPreset(current: ShellLayout, preset: ShellLayout): boolea
   const open = (l: ShellLayout) => l.dock.sections.filter((s) => s.open).map((s) => s.tool);
   const oa = open(a);
   const ob = open(b);
-  return oa.length === ob.length && oa.every((t, i) => ob[i] === t);
+  if (oa.length !== ob.length || oa.some((t, i) => ob[i] !== t)) return false;
+  // The tray's built-in sections are part of a layout's look; its timers and counters belong to
+  // one campaign, so a layout used in another still matches without them (ADR 0023).
+  const sectionsOf = (l: ShellLayout) => TRAY_SECTIONS.filter((t) => l.tray.includes(t));
+  const ta = sectionsOf(a);
+  const tb = sectionsOf(b);
+  return ta.length === tb.length && ta.every((t, i) => tb[i] === t);
 }
 
 /** A short "Map / Campaign ⧉ Combat · dock narrow" line for the layouts list. */

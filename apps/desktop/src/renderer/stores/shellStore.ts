@@ -7,6 +7,7 @@ import {
   type MinorKind,
   type ShellLayout,
   type TabKey,
+  type TrayItem,
   type WebTab,
   type WebTabIcon,
   type WorkspacePreset,
@@ -26,13 +27,14 @@ import {
   normalize,
   openMajor,
   pruneTabs,
-  reorderSection,
+  pruneTray,
   reorderTab,
   expandDockFromIcons,
   setDockMode,
   setDockWidth,
   setSection,
   setSplit,
+  setTrayItem,
   splitRight,
   STARTER_PRESETS,
   toggleMaximize,
@@ -52,7 +54,7 @@ import {
 export type Space = 'library' | 'console';
 /** Tools that pop up from their own button rather than living in the dock (ADR 0009), plus the
  *  global search's results under its field in the top bar (ADR 0017). */
-export type PopKind = 'dice' | 'hotkeys' | 'layouts' | 'search';
+export type PopKind = 'dice' | 'hotkeys' | 'layouts' | 'search' | 'tray';
 export type LibraryPage = 'campaigns' | 'compendium' | 'music' | 'settings';
 
 interface ShellState {
@@ -124,12 +126,18 @@ interface ShellState {
   openTool(tool: MinorKind): void;
   /** Like openTool, but never closes a flyout that is already showing the tool. */
   showTool(tool: MinorKind): void;
-  reorderSection(tool: MinorKind, index: number): void;
   closeFlyout(): void;
   /** Opens a pop-up from its button, or closes it when it is the one showing. */
   togglePop(kind: PopKind): void;
   openPop(kind: PopKind): void;
   closePop(): void;
+
+  /** Puts a section on the tray or takes it off (ADR 0023); a full tray takes nothing more. */
+  setTrayItem(item: TrayItem, on: boolean): void;
+  /** Drops the open campaign's missing timers and counters from the tray as it is now. */
+  pruneTray(keep: (item: TrayItem) => boolean): void;
+  /** A timer or counter was deleted: off the tray here, in every campaign's console and layout. */
+  forgetTrayItem(item: TrayItem): void;
 
   applyLayout(index: number): void;
   savePreset(name: string): void;
@@ -432,10 +440,6 @@ export const useShellStore = create<ShellState>((set, get) => {
       }
     },
 
-    reorderSection(tool, index) {
-      change(reorderSection(get().layout, tool, index));
-    },
-
     closeFlyout() {
       if (get().flyout) set({ flyout: null });
     },
@@ -450,6 +454,27 @@ export const useShellStore = create<ShellState>((set, get) => {
 
     closePop() {
       if (get().pop) set({ pop: null });
+    },
+
+    setTrayItem(item, on) {
+      change(setTrayItem(get().layout, item, on));
+    },
+
+    pruneTray(keep) {
+      change(pruneTray(get().layout, keep));
+    },
+
+    forgetTrayItem(item) {
+      const { layout, presets, consoles } = get();
+      const keep = (t: TrayItem) => t !== item;
+      set({
+        layout: pruneTray(layout, keep),
+        presets: presets.map((p) => ({ ...p, layout: pruneTray(p.layout, keep) })),
+        consoles: Object.fromEntries(
+          Object.entries(consoles).map(([slug, l]) => [slug, pruneTray(l, keep)]),
+        ),
+      });
+      persist(get);
     },
 
     applyLayout(index) {

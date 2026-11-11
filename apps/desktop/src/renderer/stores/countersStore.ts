@@ -188,6 +188,7 @@ export const useCountersStore = create<CountersState>((set, get) => {
           owner,
           list().filter((c) => c.id !== id),
         );
+        useShellStore.getState().forgetTrayItem(`counter:${id}`);
       } catch (err) {
         fail(err);
       }

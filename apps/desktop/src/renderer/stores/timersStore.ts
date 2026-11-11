@@ -243,6 +243,7 @@ export const useTimersStore = create<TimersState>((set, get) => {
           owner,
           list().filter((t) => t.id !== id),
         );
+        useShellStore.getState().forgetTrayItem(`timer:${id}`);
       } catch (err) {
         fail(err);
       }

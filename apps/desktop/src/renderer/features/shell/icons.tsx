@@ -91,7 +91,8 @@ export type IconName =
   | 'heart'
   | 'shield'
   | 'tally'
-  | 'hourglass'
+  | 'stopwatch'
+  | 'sliders'
   | 'bell'
   | 'bellOff';
 
@@ -188,7 +189,11 @@ const PATHS: Record<IconName, string> = {
     'M5 6a2 2 0 0 1 4 0v12a2 2 0 0 1-4 0zM7 4h11a2 2 0 0 1 2 2v1h-4M9 20h8a2 2 0 0 0 2-2v-1h-4M11 10h6M11 13h6',
   quill: 'M20 4c-6 0-11 4-13 10l-3 6 6-3c6-2 10-7 10-13zM5 19l7-7',
   tally: 'M6 5v14M10 5v14M14 5v14M18 5v14M3 16l18-8',
-  hourglass: 'M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9',
+  // A stopwatch: the Timers tool.
+  // Two sliders: the tray chooser (ADR 0023).
+  sliders:
+    'M4 7h8M16 7h4M14 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM4 17h3M11 17h9M9 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  stopwatch: 'M12 5a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM10 2h4M12 2v3M12 13l3-3M18.5 6.5L20 5',
   bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0',
   bellOff: 'M6 16V11a6 6 0 0 1 9.5-4.9M18 11v5l2 2H8M10 20a2 2 0 0 0 4 0M4 4l16 16',
   crown: 'M4 18h16l1-10-5 4-4-6-4 6-5-4zM4 18v2h16v-2',
