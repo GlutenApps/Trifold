@@ -103,6 +103,7 @@ function TvSection() {
   const blackout = usePresenterStore((s) => s.state.blackout);
   const history = usePresenterStore((s) => s.history.length);
   const toggleBlackout = usePresenterStore((s) => s.toggleBlackout);
+  const clearScene = usePresenterStore((s) => s.clearScene);
   const undo = usePresenterStore((s) => s.undo);
   const playerOpen = useAppStore((s) => s.playerOpen);
   const openPlayer = useAppStore((s) => s.openPlayer);
@@ -139,6 +140,20 @@ function TvSection() {
         title={scene ? `Blackout (${hk('Ctrl+Shift+B')})` : 'Nothing is on the TV to black out'}
       >
         Blackout
+      </button>
+      <button
+        type="button"
+        className="chrome-btn"
+        aria-label="Take the scene off the TV (tray)"
+        disabled={!scene}
+        onClick={clearScene}
+        title={
+          scene
+            ? `Take the scene off the TV; overlays stay up (${hk('Ctrl+Shift+X')})`
+            : 'No scene is on the TV'
+        }
+      >
+        <Icon name="stop" />
       </button>
       <button
         type="button"

@@ -81,7 +81,7 @@ export function TvPage() {
           </span>
         )}
         <span className="spacer" />
-        <TvControls shown={shown} isLive={isLive} />
+        <TvControls shown={shown} />
       </header>
       {!shown && <EmptyState onOpenScenes={() => openTool('scenes')} />}
       {shown && isMapScene(shown) && (
@@ -214,7 +214,7 @@ function ScenePicker({
 }
 
 /** The TV tally, what to show (Send to TV, Blackout, Break) and the tools (undo, overlays). */
-function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean }) {
+function TvControls({ shown }: { shown: Scene | null }) {
   const presenter = usePresenterStore();
   const live = presenter.state;
   const send = useSceneStore((s) => s.send);
@@ -228,6 +228,8 @@ function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean })
   const togglePop = (next: Pop) => setPop((p) => (p === next ? null : next));
   const overlayCount = Object.values(live.overlays).filter(Boolean).length;
   const canSend = !!shown && shown.kind !== 'folder';
+  // The shown scene is on the TV, even behind a blackout: it can be taken off, not sent again.
+  const onTv = !!shown && shown.id === live.scene?.id;
 
   return (
     <>
@@ -246,15 +248,26 @@ function TvControls({ shown, isLive }: { shown: Scene | null; isLive: boolean })
         {playerOpen ? 'TV on' : 'Open TV'}
       </button>
       <span className="row tv-show" role="group" aria-label="Show on the TV">
-        <button
-          type="button"
-          className="btn primary"
-          disabled={!canSend || isLive}
-          title={canSend ? 'Put the selected scene on the TV' : 'Select a scene first'}
-          onClick={() => shown && send(shown)}
-        >
-          Send to TV
-        </button>
+        {onTv ? (
+          <button
+            type="button"
+            className="btn"
+            title={`Take the scene off the TV; overlays stay up (${hk('Ctrl+Shift+X')})`}
+            onClick={presenter.clearScene}
+          >
+            Take off TV
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn primary"
+            disabled={!canSend}
+            title={canSend ? 'Put the selected scene on the TV' : 'Select a scene first'}
+            onClick={() => shown && send(shown)}
+          >
+            Send to TV
+          </button>
+        )}
         <button
           type="button"
           className={`btn${live.blackout && live.scene ? ' primary' : ''}`}
