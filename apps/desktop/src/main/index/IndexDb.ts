@@ -35,7 +35,7 @@ const SUGGEST_TIERS: Record<number, CompendiumSuggestion['tier']> = {
  * decides which sources need it from their file hash and enabled flag.
  */
 /** Bump when the derived table layout changes; the tables are dropped and rebuilt from files. */
-export const INDEX_VERSION = 2;
+export const INDEX_VERSION = 3;
 
 /** DATA-FORMATS.md §5.6. Every row is derived from `sources/<id>/records.jsonl`. */
 const SCHEMA = `
@@ -45,7 +45,9 @@ CREATE TABLE IF NOT EXISTS sources (
   kind TEXT NOT NULL,
   enabled INTEGER NOT NULL DEFAULT 1,
   file_hash TEXT,
-  record_count INTEGER NOT NULL DEFAULT 0
+  record_count INTEGER NOT NULL DEFAULT 0,
+  -- Source priority (ADR 0027), 0 highest; set by applySourceOrder after every sync.
+  priority INTEGER NOT NULL DEFAULT 1000000
 );
 CREATE TABLE IF NOT EXISTS records (
   id TEXT PRIMARY KEY,
@@ -235,10 +237,19 @@ export class IndexDb {
     return parsed.success ? parsed.data : null;
   }
 
+  /** Source priority (ADR 0027): `order[0]` answers first; sources not in it go last. */
+  applySourceOrder(order: readonly string[]): void {
+    const reset = this.db.prepare('UPDATE sources SET priority = 1000000');
+    const set = this.db.prepare('UPDATE sources SET priority = ? WHERE id = ?');
+    this.db.transaction(() => {
+      reset.run();
+      order.forEach((id, i) => set.run(i, id));
+    })();
+  }
+
+  /** Every version of a record, highest-priority source first (ADR 0027). */
   findByKey(kind: RecordKind, key: string, includeDisabled = false): CompendiumRecord[] {
-    const sql = includeDisabled
-      ? 'SELECT r.json FROM records r WHERE r.kind = ? AND r.key = ? ORDER BY r.edition DESC'
-      : 'SELECT r.json FROM records r JOIN sources s ON s.id = r.source_id WHERE r.kind = ? AND r.key = ? AND s.enabled = 1 ORDER BY r.edition DESC';
+    const sql = `SELECT r.json FROM records r JOIN sources s ON s.id = r.source_id WHERE r.kind = ? AND r.key = ?${includeDisabled ? '' : ' AND s.enabled = 1'} ORDER BY s.priority, r.edition DESC, r.id`;
     const rows = this.db.prepare(sql).all(kind, key) as Array<{ json: string }>;
     const out: CompendiumRecord[] = [];
     for (const row of rows) {

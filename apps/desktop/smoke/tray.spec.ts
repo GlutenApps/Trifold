@@ -56,8 +56,9 @@ test('the tray takes a timer and a counter, fits a narrow window and comes back 
       .getByRole('navigation', { name: 'Library' })
       .getByRole('button', { name: 'Campaigns', exact: true })
       .click();
-    await page.getByLabel('New campaign name').fill('Tray Campaign');
     await page.getByRole('button', { name: 'Create campaign' }).click();
+    await page.getByLabel('New campaign name').fill('Tray Campaign');
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.getByRole('tab', { name: 'Campaign', exact: true })).toBeVisible();
 
     // A timer and a counter to put on the tray.

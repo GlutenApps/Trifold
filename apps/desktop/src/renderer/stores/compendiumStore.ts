@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { blankRecord } from '../features/compendium/homebrew';
 import type { CompendiumFacets, CompendiumQuery, CompendiumRow } from '@trifold/api';
 import { errorMessage, type CompendiumRecord, type RecordKind } from '@trifold/schema';
 import { useCampaignStore } from './campaignStore';
@@ -41,10 +42,18 @@ interface CompendiumState {
   switchEdition(record: CompendiumRecord): void;
   back(): void;
   clearError(): void;
-  /** Homebrew (DESIGN.md §6.2): copy the selected record, save an edited copy, delete one. */
+  /**
+   * Homebrew (DESIGN.md §6.2, ADR 0026): start one blank or as a copy of any record, edit,
+   * save, delete. `editingNew` marks a blank one that is not on disk until it is saved.
+   */
   editing: CompendiumRecord | null;
+  editingNew: boolean;
   saving: boolean;
   duplicateSelected(): Promise<void>;
+  /** Copies any record into homebrew, shows its kind, and opens the copy in the editor. */
+  duplicateRecord(recordId: string): Promise<void>;
+  /** Opens the editor on a blank record of `kind`, showing that kind's list. */
+  newHomebrew(kind: RecordKind): Promise<void>;
   startEdit(): void;
   cancelEdit(): void;
   saveHomebrew(record: CompendiumRecord): Promise<boolean>;
@@ -67,6 +76,7 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
   editions: [],
   history: [],
   editing: null,
+  editingNew: false,
   saving: false,
   error: null,
 
@@ -194,31 +204,40 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
 
   async duplicateSelected() {
     const selected = get().selected;
-    if (!selected) return;
+    if (selected) await get().duplicateRecord(selected.id);
+  },
+
+  async duplicateRecord(recordId) {
     try {
-      const copy = await window.trifold.homebrew.duplicate(selected.id);
-      await get().search();
+      const copy = await window.trifold.homebrew.duplicate(recordId);
+      if (get().kind !== copy.kind) await get().setKind(copy.kind);
+      else await get().search();
       await get().select(copy.id);
-      set({ editing: copy });
+      set({ editing: copy, editingNew: false });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : String(err) });
     }
   },
 
+  async newHomebrew(kind) {
+    if (get().kind !== kind) await get().setKind(kind);
+    set({ editing: blankRecord(kind), editingNew: true });
+  },
+
   startEdit() {
     const selected = get().selected;
-    if (selected?.sourceId === 'homebrew') set({ editing: selected });
+    if (selected?.sourceId === 'homebrew') set({ editing: selected, editingNew: false });
   },
 
   cancelEdit() {
-    set({ editing: null });
+    set({ editing: null, editingNew: false });
   },
 
   async saveHomebrew(record) {
     set({ saving: true });
     try {
       const saved = await window.trifold.homebrew.save(record);
-      set({ editing: null, saving: false });
+      set({ editing: null, editingNew: false, saving: false });
       await get().search();
       await get().select(saved.id);
       return true;

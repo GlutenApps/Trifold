@@ -6,8 +6,8 @@ import { Icon } from '../shell/icons';
 import { CampaignExportPanel, useCampaignPackageImport } from './CampaignPackages';
 
 /**
- * Library › Campaigns: create a campaign, import one from campaign XML or a campaign package,
- * and a card per campaign with Open (Back to console for the open one), Import into this
+ * Library › Campaigns: one Create campaign button opens the three ways in (a blank campaign, a
+ * Trifold campaign file, a Game Master XML file), and a card per campaign with Open (Back to console for the open one), Import into this
  * campaign, Export campaign inline in the card (ADR 0015) and a typed-DELETE removal. Opening a
  * campaign leaves the Library for the console (ADR 0004).
  */
@@ -57,17 +57,132 @@ function DeleteCampaignConfirm({
   );
 }
 
+/**
+ * The panel under Create campaign: a name and Create for a blank campaign, then the two
+ * imports. Game Master has a help button, since many DMs have never heard of it.
+ */
+function CreateCampaignPanel({
+  onClose,
+  importPackage,
+  packageBusy,
+}: {
+  onClose: () => void;
+  importPackage: () => void;
+  packageBusy: boolean;
+}) {
+  const create = useCampaignStore((s) => s.create);
+  const importXml = useCampaignStore((s) => s.importXml);
+  const importing = useCampaignStore((s) => s.importing);
+  const [name, setName] = useState('');
+  const [help, setHelp] = useState(false);
+  return (
+    <div
+      className="card campaign-create"
+      data-testid="campaign-create"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+    >
+      <form
+        className="campaign-create-way"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (name.trim()) void create(name.trim());
+        }}
+      >
+        <strong>New blank campaign</strong>
+        <p className="muted small">
+          Start empty and add the party, notes and encounters as you go.
+        </p>
+        <div className="row">
+          <input
+            type="text"
+            aria-label="New campaign name"
+            placeholder="Campaign name"
+            className="wide-input"
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button type="submit" className="btn primary" disabled={!name.trim()}>
+            Create
+          </button>
+        </div>
+      </form>
+      <div className="campaign-create-way">
+        <strong>Import a Trifold campaign</strong>
+        <p className="muted small">
+          A .trifold-campaign file exported from Trifold, on this computer or another one.
+        </p>
+        <div className="row">
+          <button
+            type="button"
+            className="btn"
+            disabled={packageBusy}
+            onClick={() => {
+              onClose();
+              importPackage();
+            }}
+          >
+            Choose Trifold file…
+          </button>
+        </div>
+      </div>
+      <div className="campaign-create-way">
+        <div className="row">
+          <strong>Import from Game Master</strong>
+          <button
+            type="button"
+            className="chrome-btn xs"
+            aria-label="What is Game Master?"
+            title="What is Game Master?"
+            aria-expanded={help}
+            onClick={() => setHelp((v) => !v)}
+          >
+            <Icon name="help" />
+          </button>
+        </div>
+        <p className="muted small">
+          A campaign XML file exported from the Game Master app: its party, NPCs, notes and
+          encounters.
+        </p>
+        {help && (
+          <p className="small campaign-create-help" data-testid="game-master-help">
+            Game Master 5th Edition is a separate app for DMs, made by Lion’s Den. If you kept a
+            campaign in it, export the campaign there as an XML file and choose that file here.
+            Trifold only reads the file; nothing in Game Master changes. Compendium XML for the same
+            app goes in Compendium › Sources, and a Fight Club GM export of one character goes into
+            a campaign from its Party tab.
+          </p>
+        )}
+        <div className="row">
+          <button
+            type="button"
+            className="btn"
+            disabled={importing}
+            onClick={() => {
+              onClose();
+              void importXml('new');
+            }}
+          >
+            Choose XML file…
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Library › Campaigns: create, import, open. Opening one enters the console. */
 export function CampaignsPage() {
   const campaigns = useCampaignStore((s) => s.campaigns);
   const current = useCampaignStore((s) => s.current);
-  const create = useCampaignStore((s) => s.create);
   const importXml = useCampaignStore((s) => s.importXml);
   const importing = useCampaignStore((s) => s.importing);
   const lastImport = useCampaignStore((s) => s.lastImport);
   const error = useCampaignStore((s) => s.error);
   const clearError = useCampaignStore((s) => s.clearError);
-  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
   const packageImport = useCampaignPackageImport();
@@ -77,16 +192,23 @@ export function CampaignsPage() {
       <div className="row">
         <h1>Campaigns</h1>
         <span className="spacer" />
-        {packageImport.button}
         <button
           type="button"
-          className="btn"
-          disabled={importing}
-          onClick={() => void importXml('new')}
+          className={`btn primary${creating ? ' on' : ''}`}
+          aria-expanded={creating}
+          onClick={() => setCreating((v) => !v)}
         >
-          Import campaign XML…
+          <Icon name="plus" />
+          Create campaign
         </button>
       </div>
+      {creating && (
+        <CreateCampaignPanel
+          onClose={() => setCreating(false)}
+          importPackage={() => void packageImport.pick()}
+          packageBusy={packageImport.busy}
+        />
+      )}
       {packageImport.panel}
       {error && (
         <div className="banner error" role="alert">
@@ -107,30 +229,8 @@ export function CampaignsPage() {
             : ''}
         </p>
       )}
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (newName.trim()) {
-            void create(newName.trim());
-            setNewName('');
-          }
-        }}
-      >
-        <input
-          type="text"
-          aria-label="New campaign name"
-          placeholder="New campaign name"
-          className="wide-input"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-        />
-        <button type="submit" className="btn primary" disabled={!newName.trim()}>
-          Create campaign
-        </button>
-      </form>
       {campaigns.length === 0 ? (
-        <p className="muted">No campaigns yet. Create one above.</p>
+        <p className="muted">No campaigns yet. Start one, or bring one in, with Create campaign.</p>
       ) : (
         <div className="campaign-grid">
           {campaigns.map((c) => {
@@ -160,9 +260,10 @@ export function CampaignsPage() {
                       type="button"
                       className="btn"
                       disabled={importing}
+                      title="Merge a Game Master campaign XML, or a Fight Club GM export, into this campaign"
                       onClick={() => void importXml('merge')}
                     >
-                      Import into this campaign…
+                      Import Game Master XML…
                     </button>
                   )}
                   <span className="spacer" />

@@ -1,56 +1,69 @@
 import { useState } from 'react';
-import { useCompendiumStore } from '../../stores/compendiumStore';
+import { useAppStore } from '../../stores/appStore';
+import { useSourcesStore } from '../../stores/sourcesStore';
 import { CompendiumPage } from '../compendium/CompendiumPage';
 import { SourcesCard } from '../settings/SourcesCard';
+import { Icon } from '../shell/icons';
+import { NewHomebrewPanel } from './NewHomebrewPanel';
 
 /**
- * Library › Compendium (ADR 0004): the same browser as the console's Compendium tab, the
- * Sources card, and a Homebrew view that is the browser narrowed to the homebrew source.
+ * Library › Compendium (ADR 0004, ADR 0025, ADR 0026): the same browser as the console's
+ * Compendium tab with New homebrew beside it, and one button at the top right that swaps the
+ * browser for the Sources card and back. On Sources the import button sits beside it. Homebrew
+ * is the browser's Source filter, not a view of its own.
  */
-type Segment = 'browse' | 'sources' | 'homebrew';
+type View = 'browse' | 'sources';
 
-/** Library › Compendium: Browse (the same search as the console tab), Sources, Homebrew. */
 export function CompendiumLibraryPage() {
-  const [segment, setSegment] = useState<Segment>('browse');
-  const setFilters = useCompendiumStore((s) => s.setFilters);
-
-  const pick = (next: Segment) => {
-    setSegment(next);
-    // Homebrew is the same browser narrowed to the homebrew source.
-    if (next === 'homebrew') setFilters({ sourceIds: ['homebrew'] });
-    if (next === 'browse') setFilters({ sourceIds: undefined });
-  };
+  const [view, setView] = useState<View>('browse');
+  const [adding, setAdding] = useState(false);
+  const importing = useSourcesStore((s) => s.importing);
+  const importFromDialog = useSourcesStore((s) => s.importFromDialog);
+  const libraryOk = useAppStore((s) => !!s.library?.ok);
+  const sources = view === 'sources';
 
   return (
-    <section className="compendium-library" data-segment={segment}>
+    <section className="compendium-library" data-segment={view}>
       <div className="row">
-        <h1>Compendium</h1>
-        <span className="seg" role="group" aria-label="Compendium section">
-          {(
-            [
-              ['browse', 'Browse'],
-              ['sources', 'Sources'],
-              ['homebrew', 'Homebrew'],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              className="btn"
-              aria-pressed={segment === id}
-              onClick={() => pick(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </span>
+        <h1>{sources ? 'Compendium sources' : 'Compendium'}</h1>
+        <span className="spacer" />
+        {sources ? (
+          <button
+            type="button"
+            className="btn primary"
+            disabled={importing || !libraryOk}
+            onClick={() => void importFromDialog()}
+          >
+            Import Game Master XML…
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`btn primary${adding ? ' on' : ''}`}
+            aria-expanded={adding}
+            disabled={!libraryOk}
+            onClick={() => setAdding((v) => !v)}
+          >
+            <Icon name="plus" />
+            New homebrew
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn"
+          aria-label={sources ? 'Back to the compendium' : 'Sources'}
+          title={sources ? 'Back to the compendium' : 'Sources: bundled and imported books'}
+          onClick={() => {
+            setAdding(false);
+            setView(sources ? 'browse' : 'sources');
+          }}
+        >
+          <Icon name={sources ? 'compendium' : 'layers'} />
+          {sources ? 'Compendium' : 'Sources'}
+        </button>
       </div>
-      {segment === 'sources' ? <SourcesCard /> : <CompendiumPage />}
-      {segment === 'homebrew' && (
-        <p className="muted small">
-          Showing homebrew only. Duplicate a record from Browse to start a new one.
-        </p>
-      )}
+      {!sources && adding && <NewHomebrewPanel onClose={() => setAdding(false)} />}
+      {sources ? <SourcesCard /> : <CompendiumPage />}
     </section>
   );
 }

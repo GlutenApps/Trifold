@@ -17,6 +17,7 @@ export type IconName =
   | 'maximize'
   | 'restore'
   | 'menu'
+  | 'grip'
   | 'left'
   | 'right'
   | 'up'
@@ -66,6 +67,7 @@ export type IconName =
   | 'rule'
   | 'link'
   | 'search'
+  | 'help'
   | 'template'
   | 'globe'
   | 'external'
@@ -113,6 +115,7 @@ const PATHS: Record<IconName, string> = {
   maximize: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
   restore: 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5',
   menu: 'M5 12h.01M12 12h.01M19 12h.01',
+  grip: 'M9 4.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 1 0 0-2.4zM15 4.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 1 0 0-2.4zM9 10.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 1 0 0-2.4zM15 10.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 1 0 0-2.4zM9 16.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 1 0 0-2.4zM15 16.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 1 0 0-2.4z',
   left: 'M15 5l-7 7 7 7',
   right: 'M9 5l7 7-7 7',
   up: 'M5 15l7-7 7 7',
@@ -174,6 +177,8 @@ const PATHS: Record<IconName, string> = {
   rule: 'M4 12h16M9 6h6M9 18h6',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
+  // A question mark in a circle: what this is, explained in place.
+  help: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5v.7M12 17v.5',
   // A page with a folded corner and ruled lines: a note that starts filled in.
   template: 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 16h6',
   // A globe: the web tab's mark on the stage (ADR 0011).

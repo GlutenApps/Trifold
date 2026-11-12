@@ -387,6 +387,14 @@ export interface SourceSummary extends Source {
   stale: boolean;
   /** Ships with the app (SRD); cannot be removed or re-parsed, only switched off. */
   bundled: boolean;
+  /**
+   * Imported files only (ADR 0028): the books the file names, and per kind how many names
+   * appear twice from different books with nothing marking which copy is 2024 rules.
+   */
+  review?: {
+    books: Array<{ name: string; records: number }>;
+    duplicates: Partial<Record<string, number>>;
+  };
 }
 
 /** One attribution block for the About page (DESIGN.md §6.1). */
@@ -459,6 +467,11 @@ export interface CompendiumRow {
   edition: string;
   /** Every edition the row stands for, this record's first; more than one means a switch. */
   editions: string[];
+  /**
+   * The other records behind a collapsed row, highest-priority source first (ADR 0027): the
+   * list's "+" says they exist. Empty when the row stands alone or collapsing is off.
+   */
+  otherVersions: Array<{ sourceName: string; edition: string }>;
   cr: string | null;
   type: string | null;
   size: string | null;
@@ -642,6 +655,11 @@ export interface TrifoldApi {
     /** Re-parses a source from its stored original.xml with the current importer. */
     reimport(sourceId: string): Promise<ImportReport>;
     /**
+     * Saves which of an imported file's books use 2024 rules and re-parses it from its stored
+     * original.xml, keeping record ids (ADR 0028).
+     */
+    setEdition2024Books(sourceId: string, books: string[]): Promise<ImportReport>;
+    /**
      * Switches a source in or out of search; bundled sources are recorded in `disabledSourceIds`,
      * imported ones in their `source.json`. Resolves to the updated source.
      */
@@ -670,6 +688,11 @@ export interface TrifoldApi {
     open(campaignId: string): Promise<CampaignBundle>;
     /** The campaign opened last time, reopened on start; null when none. */
     current(): Promise<CampaignBundle | null>;
+    /**
+     * Every campaign's bundle, read without opening any: what the Library's search looks in.
+     * A campaign that cannot be read is left out and logged.
+     */
+    bundles(): Promise<CampaignBundle[]>;
     /** Forgets the open campaign; nothing in its folder changes. */
     close(): Promise<void>;
     /** Shallow patch of `campaign.json`; `id` and `slug` cannot change, `updatedAt` is set. */
@@ -678,7 +701,7 @@ export interface TrifoldApi {
     remove(campaignId: string): Promise<void>;
     /** Native file picker for campaign XML. Resolves to null when cancelled. */
     chooseXmlFile(): Promise<string | null>;
-    /** Imports a Game Master campaign XML or a Fight Club GM export (DATA-FORMATS.md §3). */
+    /** Imports a Game Master 5e campaign XML or a Fight Club 5e GM export (DATA-FORMATS.md §3). */
     importXml(path: string, mode: 'new' | 'merge'): Promise<CampaignImportReport>;
     /** Counts what an export with these options would carry, writing nothing. */
     exportPreview(
@@ -904,6 +927,7 @@ export const API_METHODS = {
     'chooseFile',
     'importFile',
     'reimport',
+    'setEdition2024Books',
     'setEnabled',
     'remove',
     'rebuildIndex',
@@ -914,6 +938,7 @@ export const API_METHODS = {
     'create',
     'open',
     'current',
+    'bundles',
     'close',
     'update',
     'remove',

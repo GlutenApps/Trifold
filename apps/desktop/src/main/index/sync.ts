@@ -2,6 +2,7 @@ import type { IndexStats } from '@trifold/api';
 import type { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 import type { SourceCatalog } from '../sources/catalog';
+import { sourceOrder } from '@trifold/rules';
 import { INDEX_VERSION, type IndexDb } from './IndexDb';
 
 /**
@@ -43,6 +44,9 @@ export async function syncIndex(
       logger.info(`index: dropped stale source ${id}`);
     }
   }
+
+  // Source priority (ADR 0027): the DM's order, then any source it does not name.
+  index.applySourceOrder(sourceOrder(available, store.getSettings().sourcePriority));
 
   if (store.getSettings().indexVersion !== INDEX_VERSION) {
     await store.updateSettings({ indexVersion: INDEX_VERSION });

@@ -184,4 +184,20 @@ describe('tray', () => {
     expect(useShellStore.getState().presets[0]!.layout.tray).toEqual([]);
     expect(vi.mocked(window.trifold.counters.remove)).toHaveBeenCalledWith('01C1');
   });
+
+  it('in the Library shows VTT, Music and Dice only, with no chooser, and keeps the console tray', () => {
+    setTray(['encounters', 'counter:01C1']);
+    useShellStore.setState({ space: 'library' });
+    render(<LiveStrip />);
+    expect(sections()).toEqual(['tv', 'music', 'dice']);
+    expect(screen.queryByRole('button', { name: 'Choose what the tray shows' })).toBeNull();
+    expect(useShellStore.getState().layout.tray).toEqual(['encounters', 'counter:01C1']);
+  });
+
+  it('in the Library, the VTT text goes back to the console', () => {
+    useShellStore.setState({ space: 'library' });
+    render(<LiveStrip />);
+    fireEvent.click(within(strip()).getByTitle(/^VTT/));
+    expect(useShellStore.getState().space).toBe('console');
+  });
 });

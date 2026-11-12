@@ -16,6 +16,7 @@ import {
   type SceneKind,
   type WebTab,
 } from '@trifold/schema';
+import { switchCampaign } from '../features/shell/campaignFlow';
 import type { IconName } from '../features/shell/icons';
 import { navigate, navKey, type NavTarget } from '../navigate';
 import { useCampaignStore } from './campaignStore';
@@ -31,6 +32,12 @@ import { useShellStore } from './shellStore';
  * answer is dropped by sequence number. Picking a result goes through `navigate` and nothing
  * else. The store keeps the query and the active row; the field and the results pop-up in
  * features/shell/GlobalSearch.tsx render it.
+ *
+ * In the Library the same field searches every campaign (`searchCampaigns`): the same name and
+ * text matches, each row saying which campaign it is in. The bundles are read from main once
+ * per search (`campaigns.bundles`) and dropped when the field is cleared or the space changes.
+ * Picking a row opens that campaign, then lands on the item (`openResult`). The compendium and
+ * web tabs belong to the console and are not searched there.
  */
 export type SearchGroup =
   | 'notes'
@@ -94,6 +101,8 @@ export interface SearchResult {
   snippet?: SearchSnippet;
   /** Breaks ties inside a tier, higher first: how often the phrase occurs. */
   weight?: number;
+  /** Library search: the campaign the item is in, opened before landing on it. */
+  campaignId?: string;
 }
 
 export interface SearchGroupView {
@@ -363,6 +372,24 @@ export function searchMentions(query: string, bundle: CampaignBundle | null): Se
 }
 
 /**
+ * The Library's search: name and text matches in every campaign. Each row's key starts with the
+ * campaign's id, so the same note in two copies of a campaign lists twice, and its detail starts
+ * with the campaign's name.
+ */
+export function searchCampaigns(query: string, bundles: readonly CampaignBundle[]): SearchResult[] {
+  return bundles.flatMap((b) =>
+    searchLocal(query, b, [])
+      .concat(searchMentions(query, b))
+      .map((r) => ({
+        ...r,
+        key: `${b.campaign.id}:${r.key}`,
+        detail: joinDetail([b.campaign.name, r.detail]),
+        campaignId: b.campaign.id,
+      })),
+  );
+}
+
+/**
  * Results in display order: fixed group order, best tier first inside, capped per group. With
  * `expanded` (Show all), only that group, every row. `capped` names the groups whose answer
  * stopped at the index's limit.
@@ -411,6 +438,29 @@ function localResults(query: string, bundle: CampaignBundle | null): SearchResul
   );
 }
 
+const inLibrary = () => useShellStore.getState().space === 'library';
+
+/**
+ * The campaigns the Library searches: what main read, with the open campaign swapped for the
+ * console's copy, which may hold edits not yet re-read.
+ */
+function libraryBundles(read: readonly CampaignBundle[]): CampaignBundle[] {
+  const current = useCampaignStore.getState().current;
+  return read.map((b) => (current && b.campaign.id === current.campaign.id ? current : b));
+}
+
+/**
+ * Opens a result: in the console, `navigate`; from the Library, its campaign first (through the
+ * same stop-sharing warning as switching), then the item once the console is showing.
+ */
+export function openResult(result: SearchResult): void {
+  if (result.campaignId && inLibrary()) {
+    switchCampaign(result.campaignId, () => navigate(result.target));
+  } else {
+    navigate(result.target);
+  }
+}
+
 interface SearchState {
   query: string;
   local: SearchResult[];
@@ -428,6 +478,8 @@ interface SearchState {
   activeKey: string | null;
   /** Bumped by Ctrl+F; the field focuses itself when it changes. */
   summoned: number;
+  /** Library search: every campaign as main last read it, or null until it is asked for. */
+  bundles: CampaignBundle[] | null;
 
   setQuery(query: string): void;
   /** Lists one group in full (Show all), or every group again with null. */
@@ -460,9 +512,43 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   error: null,
   activeKey: null,
   summoned: 0,
+  bundles: null,
 
   setQuery(query) {
     const trimmed = query.trim();
+    if (inLibrary()) {
+      if (timer) window.clearTimeout(timer);
+      const mine = ++seq;
+      const read = get().bundles;
+      const answer = (bundles: readonly CampaignBundle[]) =>
+        trimmed ? searchCampaigns(trimmed, libraryBundles(bundles)) : [];
+      set({
+        query,
+        local: read ? answer(read) : [],
+        compendium: [],
+        compendiumText: [],
+        capped: new Set(),
+        ...(trimmed ? {} : { expanded: null }),
+        loading: !!trimmed && !read,
+        error: null,
+      });
+      if (read || !trimmed) return;
+      window.trifold.campaigns
+        .bundles()
+        .then((bundles) => {
+          if (mine !== seq) return;
+          set({
+            bundles,
+            local: answer(bundles),
+            loading: false,
+          });
+        })
+        .catch((err: unknown) => {
+          if (mine !== seq) return;
+          set({ local: [], loading: false, error: errorMessage(err) });
+        });
+      return;
+    }
     const bundle = useCampaignStore.getState().current;
     const local = trimmed ? localResults(trimmed, bundle) : [];
     if (timer) window.clearTimeout(timer);
@@ -546,7 +632,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   activate() {
     const result = get().active();
     if (!result) return false;
-    navigate(result.target);
+    openResult(result);
     return true;
   },
 
@@ -563,6 +649,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       loading: false,
       error: null,
       activeKey: null,
+      bundles: null,
     });
   },
 
@@ -571,9 +658,14 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   },
 }));
 
+// The console and the Library search different things: a change of space starts clean.
+useShellStore.subscribe((s, prev) => {
+  if (s.space !== prev.space) useSearchStore.getState().clear();
+});
+
 // A rename or a new note while the list is open shows at once; another campaign starts clean.
 useCampaignStore.subscribe((s, prev) => {
-  if (s.current === prev.current) return;
+  if (s.current === prev.current || inLibrary()) return;
   const { query } = useSearchStore.getState();
   if (!s.current || s.current.campaign.id !== prev.current?.campaign.id) {
     if (query) useSearchStore.getState().clear();

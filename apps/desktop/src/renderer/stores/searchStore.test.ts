@@ -7,6 +7,7 @@ import {
   flattenGroups,
   fromSuggestion,
   groupResults,
+  searchCampaigns,
   searchLocal,
   searchMentions,
   useSearchStore,
@@ -109,6 +110,21 @@ describe('searchLocal', () => {
     expect(searchLocal('alex', bundle(), [])[0]).toMatchObject({ title: 'Bram', group: 'party' });
     expect(searchLocal('', bundle(), [])).toEqual([]);
     expect(searchLocal('hesper', null, [])).toEqual([]);
+  });
+});
+
+describe('searchCampaigns', () => {
+  it('searches every campaign and says which one each row is in', () => {
+    const other = bundle();
+    other.campaign = { ...other.campaign, id: 'c2', name: 'Brinewood' };
+    const results = searchCampaigns('hesper', [bundle(), other]);
+    const npcs = results.filter((r) => r.group === 'npcs');
+    expect(npcs.map((r) => [r.key, r.detail, r.campaignId])).toEqual([
+      ['c1:npc:npc1', 'Greyford · Innkeeper · Greyford', 'c1'],
+      ['c2:npc:npc1', 'Brinewood · Innkeeper · Greyford', 'c2'],
+    ]);
+    expect(npcs[0]!.target).toEqual({ type: 'npc', id: 'npc1' });
+    expect(results.some((r) => r.group === 'webTabs')).toBe(false);
   });
 });
 

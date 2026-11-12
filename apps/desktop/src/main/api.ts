@@ -1,4 +1,6 @@
 import { app, dialog, shell } from 'electron';
+import { reviewBooks, sourceOrder, type BookReview } from '@trifold/rules';
+import type { Source } from '@trifold/schema';
 import { reopenLibrary } from './libraryOpen';
 import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
@@ -44,6 +46,23 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     return store;
   };
   let importing = false;
+  // An imported file's books and clashes (ADR 0028), read once per import of it.
+  const reviews = new Map<string, BookReview>();
+  const reviewSource = async (source: Source): Promise<BookReview | undefined> => {
+    const repo = ctx.session.sources;
+    if (!repo) return undefined;
+    const cacheKey = `${source.id}:${source.importedAt}`;
+    const cached = reviews.get(cacheKey);
+    if (cached) return cached;
+    try {
+      const review = reviewBooks(await repo.readAllRecords(source.id));
+      reviews.set(cacheKey, review);
+      return review;
+    } catch (err) {
+      ctx.logger.warn(`could not review the books in source ${source.id}: ${String(err)}`);
+      return undefined;
+    }
+  };
   const requireBackups = () => {
     const backups = ctx.session.backups;
     if (!backups) throw new Error('No Library is open');
@@ -99,6 +118,10 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async updateSettings(patch) {
         const settings = await requireStore().updateSettings(patch);
         if (patch.theme) ctx.windows.setTheme(settings.theme);
+        if (patch.sourcePriority) {
+          const { index, catalog } = ctx.session.require();
+          index.applySourceOrder(sourceOrder(await catalog.list(), settings.sourcePriority));
+        }
         return settings;
       },
     },
@@ -135,18 +158,24 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async list() {
         const catalog = ctx.session.catalog;
         if (!catalog) return [];
-        return (await catalog.list()).map((s) => ({
-          ...s,
-          stale: s.kind !== 'srd' && s.kind !== 'homebrew' && isStale(s),
-          bundled: s.kind === 'srd' || s.kind === 'homebrew',
-        }));
+        const out = [];
+        for (const s of await catalog.list()) {
+          const bundled = s.kind === 'srd' || s.kind === 'homebrew';
+          out.push({
+            ...s,
+            stale: !bundled && isStale(s),
+            bundled,
+            ...(bundled ? {} : { review: await reviewSource(s) }),
+          });
+        }
+        return out;
       },
       async chooseFile() {
         const result = await dialog.showOpenDialog({
-          title: 'Import a compendium XML file',
+          title: 'Import a Game Master compendium XML file',
           properties: ['openFile'],
           filters: [
-            { name: 'Compendium XML', extensions: ['xml'] },
+            { name: 'Game Master compendium XML', extensions: ['xml'] },
             { name: 'All files', extensions: ['*'] },
           ],
         });
@@ -166,6 +195,26 @@ export function createApi(ctx: ApiContext): TrifoldApi {
               onProgress: (p) => ctx.windows.sendToConsole(EVENT_CHANNELS.importProgress, p),
             },
             path,
+          );
+        } finally {
+          importing = false;
+        }
+      },
+      async setEdition2024Books(sourceId, books) {
+        if (importing) throw new Error('An import is already running');
+        const { store, sources, index } = ctx.session.require();
+        importing = true;
+        try {
+          return await reimportSource(
+            {
+              store,
+              sources,
+              index,
+              logger: ctx.logger,
+              onProgress: (p) => ctx.windows.sendToConsole(EVENT_CHANNELS.importProgress, p),
+            },
+            sourceId,
+            books,
           );
         } finally {
           importing = false;

@@ -261,9 +261,11 @@ export function AppShell() {
       registerHotkey({
         id: 'nav.search',
         combo: 'Ctrl+F',
-        description: 'Search the campaign and compendium',
+        description: 'Search the campaign and compendium; in the Library, every campaign',
         run: () => {
-          if (shell().space === 'console') useSearchStore.getState().summon();
+          if (shell().space === 'console' || useCampaignStore.getState().campaigns.length > 0) {
+            useSearchStore.getState().summon();
+          }
         },
       }),
       registerHotkey({

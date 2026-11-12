@@ -542,9 +542,10 @@ export function CampaignPage() {
               type="button"
               className="btn"
               disabled={importing}
+              title="Merge a Game Master campaign XML, or a Fight Club GM export, into this campaign"
               onClick={() => void importXml('merge')}
             >
-              Import into this campaign…
+              Import Game Master XML…
             </button>
           </div>
 

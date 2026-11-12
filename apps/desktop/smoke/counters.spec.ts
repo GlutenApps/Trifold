@@ -62,8 +62,9 @@ test('counters are made, changed, held at their bounds, shown on the TV and kept
       .getByRole('navigation', { name: 'Library' })
       .getByRole('button', { name: 'Campaigns', exact: true })
       .click();
-    await page.getByLabel('New campaign name').fill('Counter Campaign');
     await page.getByRole('button', { name: 'Create campaign' }).click();
+    await page.getByLabel('New campaign name').fill('Counter Campaign');
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(page.getByRole('tab', { name: 'Campaign', exact: true })).toBeVisible();
 
     await openCounters(page);

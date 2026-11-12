@@ -21,9 +21,10 @@ interface SourcesState {
   importFromDialog(): Promise<void>;
   importPath(path: string): Promise<ImportReport | null>;
   reimport(sourceId: string): Promise<void>;
+  /** Marks which of an imported file's books use 2024 rules and re-tags it (ADR 0028). */
+  setEdition2024Books(sourceId: string, books: string[]): Promise<boolean>;
   setEnabled(sourceId: string, enabled: boolean): Promise<void>;
   remove(sourceId: string): Promise<void>;
-  rebuildIndex(): Promise<void>;
   setProgress(progress: ImportProgress | null): void;
   clearError(): void;
 }
@@ -79,6 +80,19 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
     }
   },
 
+  async setEdition2024Books(sourceId, books) {
+    set({ importing: true, progress: null, lastReport: null, error: null });
+    try {
+      const report = await window.trifold.sources.setEdition2024Books(sourceId, books);
+      set({ lastReport: report, importing: false, progress: null });
+      await get().load();
+      return true;
+    } catch (err) {
+      set({ error: errorMessage(err), importing: false, progress: null });
+      return false;
+    }
+  },
+
   async setEnabled(sourceId, enabled) {
     try {
       const updated = await window.trifold.sources.setEnabled(sourceId, enabled);
@@ -94,15 +108,6 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
     try {
       await window.trifold.sources.remove(sourceId);
       set({ sources: get().sources.filter((s) => s.id !== sourceId) });
-    } catch (err) {
-      set({ error: errorMessage(err) });
-    }
-  },
-
-  async rebuildIndex() {
-    try {
-      await window.trifold.sources.rebuildIndex();
-      await get().load();
     } catch (err) {
       set({ error: errorMessage(err) });
     }

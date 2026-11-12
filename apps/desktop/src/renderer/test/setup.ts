@@ -145,6 +145,14 @@ export function installBridgeMock(): TrifoldBridge {
     sources: {
       list: vi.fn(async () => []),
       chooseFile: vi.fn(async () => null),
+      setEdition2024Books: vi.fn(async () => ({
+        sourceId: 'src',
+        name: 'src',
+        status: 'updated' as const,
+        counts: {},
+        warnings: [],
+        durationMs: 0,
+      })),
       reimport: vi.fn(async () => ({
         sourceId: 'src',
         name: 'src',
@@ -182,6 +190,7 @@ export function installBridgeMock(): TrifoldBridge {
         throw new Error('not mocked');
       }),
       remove: vi.fn(async () => undefined),
+      bundles: vi.fn(async () => []),
       chooseXmlFile: vi.fn(async () => null),
       importXml: vi.fn(async () => {
         throw new Error('not mocked');

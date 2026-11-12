@@ -15,8 +15,8 @@ import { InlineConfirm } from '../shell/InlineConfirm';
 
 /**
  * Campaign export and import (ADR 0015). `CampaignExportPanel` sits inline in a campaign's card;
- * `useCampaignPackageImport` gives Library › Campaigns its Import campaign… button and the
- * panel that shows what a picked file holds before anything is written, offering Replace or
+ * `useCampaignPackageImport` gives Library › Campaigns' create panel its Import a Trifold
+ * campaign… action (`pick`) and the panel that shows what a picked file holds before anything is written, offering Replace or
  * Import as a copy when the Library already has the campaign.
  */
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -175,7 +175,11 @@ function resultText(r: CampaignPackageResult): string {
  * Import campaign (ADR 0015): pick a `.trifold-campaign`, see what it is, choose how. The button
  * goes in the page's header row and the panel below it.
  */
-export function useCampaignPackageImport(): { button: JSX.Element; panel: JSX.Element | null } {
+export function useCampaignPackageImport(): {
+  pick: () => Promise<void>;
+  busy: boolean;
+  panel: JSX.Element | null;
+} {
   const [picked, setPicked] = useState<CampaignPackageInfo | null>(null);
   const [confirmReplace, setConfirmReplace] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -215,11 +219,6 @@ export function useCampaignPackageImport(): { button: JSX.Element; panel: JSX.El
   };
 
   const m = picked?.manifest?.campaign;
-  const button = (
-    <button type="button" className="btn" disabled={busy} onClick={() => void pick()}>
-      Import campaign…
-    </button>
-  );
   const panel =
     picked || message ? (
       <div className="card campaign-panel" data-testid="campaign-package" role="status">
@@ -319,5 +318,5 @@ export function useCampaignPackageImport(): { button: JSX.Element; panel: JSX.El
         )}
       </div>
     ) : null;
-  return { button, panel };
+  return { pick, busy, panel };
 }

@@ -5,7 +5,7 @@ import { importSceneImage } from './campaign/images';
 import { importCampaignXml } from './campaign/importCampaign';
 import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
-import type { Logger } from './log';
+import { errorMessage, type Logger } from './log';
 
 /**
  * Campaign, PC card, encounter, note, NPC, scene, counter and timer namespaces, backed by `CampaignRepository`,
@@ -41,6 +41,17 @@ export function createCampaignApi(
         if (!campaigns) return null;
         return campaigns.current ? campaigns.bundle() : campaigns.reopenLast();
       },
+      async bundles() {
+        const out = [];
+        for (const summary of await repo().list()) {
+          try {
+            out.push(await repo().bundleOf(summary.slug));
+          } catch (err) {
+            logger.warn(`Search skipped campaign ${summary.slug}: ${errorMessage(err)}`);
+          }
+        }
+        return out;
+      },
       async close() {
         await repo().close();
       },
@@ -52,10 +63,10 @@ export function createCampaignApi(
       },
       async chooseXmlFile() {
         const result = await dialog.showOpenDialog({
-          title: 'Import a campaign XML file',
+          title: 'Import a Game Master campaign XML file',
           properties: ['openFile'],
           filters: [
-            { name: 'Campaign XML', extensions: ['xml'] },
+            { name: 'Game Master campaign XML', extensions: ['xml'] },
             { name: 'All files', extensions: ['*'] },
           ],
         });

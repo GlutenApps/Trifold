@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AttributionEntry, IconCreditsInfo } from '@trifold/api';
+import { errorMessage } from '@trifold/schema';
 import { useAppStore } from '../../stores/appStore';
 import { BrandLockup } from '../shell/Brand';
 import { BackupsCard } from './BackupsCard';
@@ -9,8 +10,52 @@ import { SampleCampaignCard } from './SampleCampaignCard';
  * Library › Settings: the Library folder, the display the TV opens on, the theme, the sample
  * campaign (ADR 0016), the Backups card and About. About carries the SRD and game-icons attribution the content policy requires
  * (DESIGN.md §6.1 and §8); the statements and license texts come from main, never from this
- * file. The Sources card lives under Library › Compendium, not here.
+ * file. The Sources card lives under Library › Compendium, not here; Rebuild index lives here
+ * (ADR 0026), since the index keeps itself in step and the button is only a repair.
  */
+
+/** Rebuild index: throws the search index away and builds it again from the source files. */
+function RebuildIndex({ disabled }: { disabled: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const stats = await window.trifold.sources.rebuildIndex();
+      setMessage(
+        `Rebuilt: ${stats.records} records from ${stats.sources} sources in ${(stats.tookMs / 1000).toFixed(1)} s.`,
+      );
+    } catch (err) {
+      setMessage(`Could not rebuild the index: ${errorMessage(err)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <p className="muted small">
+        The search index is how the compendium and search find records quickly. Trifold keeps it up
+        to date on its own; rebuild it only if a record you know is there does not show up.
+      </p>
+      <div className="row">
+        <button
+          type="button"
+          className="btn"
+          disabled={disabled || busy}
+          onClick={() => void run()}
+        >
+          {busy ? 'Rebuilding…' : 'Rebuild index'}
+        </button>
+        {message && (
+          <span className="muted small" role="status" data-testid="rebuild-status">
+            {message}
+          </span>
+        )}
+      </div>
+    </>
+  );
+}
 export function SettingsPage() {
   const info = useAppStore((s) => s.info);
   const library = useAppStore((s) => s.library);
@@ -63,6 +108,7 @@ export function SettingsPage() {
             Open folder
           </button>
         </div>
+        <RebuildIndex disabled={!library?.index.ok} />
       </div>
 
       <div className="card">

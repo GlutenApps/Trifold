@@ -1,8 +1,8 @@
 import { forwardRef, useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
-import { navigate } from '../../navigate';
 import { hk } from '../../platform';
 import {
   flattenGroups,
+  openResult,
   SEARCH_COMPACT_BELOW,
   useSearchStore,
   viewGroups,
@@ -16,7 +16,8 @@ import { Icon } from './icons';
  * Global search (ADR 0017): `GlobalSearch` is the field in the middle of the top bar, or a
  * search button when the window is narrow; `SearchResults` fills the `search` pop-up under it
  * with the grouped results (and, when narrow, the field itself). Arrows move, Enter opens the
- * active result through `navigate`, Escape clears. Every row is a `navigate` target and nothing
+ * active result through `navigate`, Escape clears. In the Library the same field searches every
+ * campaign, and a row opens its campaign before it lands (`openResult`). Every row is a `navigate` target and nothing
  * else, so what search can reach is exactly what deep links can reach.
  */
 const RESULTS_ID = 'global-search-results';
@@ -46,6 +47,7 @@ export const SearchField = forwardRef<HTMLInputElement, { autoFocus?: boolean }>
     const open = useShellStore((s) => s.pop === 'search');
     const openPop = useShellStore((s) => s.openPop);
     const closePop = useShellStore((s) => s.closePop);
+    const library = useShellStore((s) => s.space === 'library');
     const { active } = useResults();
 
     const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -77,12 +79,12 @@ export const SearchField = forwardRef<HTMLInputElement, { autoFocus?: boolean }>
           ref={ref}
           type="search"
           role="combobox"
-          aria-label="Search the campaign and compendium"
+          aria-label={library ? 'Search every campaign' : 'Search the campaign and compendium'}
           aria-expanded={open}
           aria-controls={RESULTS_ID}
           aria-autocomplete="list"
           aria-activedescendant={open && active ? optionId(active.key) : undefined}
-          placeholder={`Search ${hk('Ctrl+F')}`}
+          placeholder={`${library ? 'Search every campaign' : 'Search'} ${hk('Ctrl+F')}`}
           autoFocus={autoFocus}
           value={query}
           onChange={(e) => {
@@ -121,6 +123,7 @@ export function GlobalSearch() {
   const openPop = useShellStore((s) => s.openPop);
   const togglePop = useShellStore((s) => s.togglePop);
   const summoned = useSearchStore((s) => s.summoned);
+  const library = useShellStore((s) => s.space === 'library');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Ctrl+F: focus the field, or open the pop-up that holds it.
@@ -146,7 +149,7 @@ export function GlobalSearch() {
         aria-haspopup="dialog"
         aria-expanded={open}
         data-pop="search"
-        title={`Search the campaign and compendium (${hk('Ctrl+F')})`}
+        title={`${library ? 'Search every campaign' : 'Search the campaign and compendium'} (${hk('Ctrl+F')})`}
         onClick={() => togglePop('search')}
       >
         <Icon name="search" />
@@ -169,6 +172,7 @@ export function SearchResults({ withField }: { withField: boolean }) {
   const expanded = useSearchStore((s) => s.expanded);
   const setExpanded = useSearchStore((s) => s.setExpanded);
   const closePop = useShellStore((s) => s.closePop);
+  const library = useShellStore((s) => s.space === 'library');
   const { groups, active } = useResults();
   /** Buttons in the list keep the cursor in the field, so the arrows still move. */
   const keepFocus = (e: { preventDefault(): void }) => e.preventDefault();
@@ -247,7 +251,7 @@ export function SearchResults({ withField }: { withField: boolean }) {
                 className={`search-result${active?.key === r.key ? ' active' : ''}${r.snippet ? ' has-snippet' : ''}`}
                 data-testid="search-result"
                 onMouseEnter={() => setActive(r.key)}
-                onClick={() => navigate(r.target)}
+                onClick={() => openResult(r)}
               >
                 <Icon name={r.icon} size={14} />
                 <span className="search-title">{r.title}</span>
@@ -264,11 +268,13 @@ export function SearchResults({ withField }: { withField: boolean }) {
           </div>
         ))}
         {trimmed && loading && !groups.some((g) => g.group === 'compendium') && (
-          <p className="muted small search-status">Searching the compendium…</p>
+          <p className="muted small search-status">
+            {library ? 'Reading your campaigns…' : 'Searching the compendium…'}
+          </p>
         )}
         {error && (
           <p className="muted small search-status" role="alert">
-            Compendium search failed: {error}
+            {library ? 'Could not read the campaigns' : 'Compendium search failed'}: {error}
           </p>
         )}
         {trimmed && !loading && groups.length === 0 && !error && (
@@ -276,8 +282,9 @@ export function SearchResults({ withField }: { withField: boolean }) {
         )}
         {!trimmed && (
           <p className="muted search-status">
-            Type a name or a phrase: notes, NPCs, encounters, scenes, creatures, spells, and the
-            text inside your notes.
+            {library
+              ? 'Type a name or a phrase: notes, NPCs, the party, encounters and scenes in every campaign, and the text inside your notes.'
+              : 'Type a name or a phrase: notes, NPCs, encounters, scenes, creatures, spells, and the text inside your notes.'}
           </p>
         )}
       </div>

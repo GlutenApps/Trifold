@@ -27,6 +27,7 @@ describe('LibrarySettings', () => {
       checkForUpdates: false,
       edition2024Books: [],
       disabledSourceIds: [],
+      sourcePriority: [],
       backups: { enabled: true, keepDays: 14 },
       music: {
         outputDeviceId: null,

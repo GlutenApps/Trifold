@@ -11,6 +11,7 @@ import {
   indexText,
   likeEscape,
   parseEditions,
+  parseVersions,
   recordColumns,
   splitSnippet,
 } from './query';
@@ -75,9 +76,11 @@ describe('buildSearch', () => {
     expect(q.countParams).toEqual(['monster']);
   });
 
-  it('collapses records sharing a key to one row headed by the preferred edition', () => {
+  it('collapses records sharing a key to one row headed by the top source, then the preferred edition', () => {
     const q = buildSearch({ kind: 'monster', preferEdition: '2014' });
-    expect(q.sql).toContain('PARTITION BY key ORDER BY (edition = ?) DESC');
+    expect(q.sql).toContain('s.priority AS source_priority');
+    expect(q.sql).toContain('PARTITION BY key ORDER BY source_priority, (edition = ?) DESC');
+    expect(q.sql).toContain('AS versions');
     expect(q.sql).toContain('GROUP_CONCAT(edition) OVER (PARTITION BY key) AS editions');
     expect(q.sql).toContain('WHERE rn = 1');
     expect(q.countSql).toContain('COUNT(DISTINCT r.key)');
@@ -141,6 +144,21 @@ describe('parseEditions', () => {
     expect(parseEditions('2024', '2014,2024,2014')).toEqual(['2024', '2014']);
     expect(parseEditions('2014', '2014')).toEqual(['2014']);
     expect(parseEditions('2014', null)).toEqual(['2014']);
+  });
+});
+
+describe('parseVersions', () => {
+  it('lists the other versions by priority, the row’s own left out once', () => {
+    const v = (p: number, s: string, e: string) => `${p}\u001f${s}\u001f${e}`;
+    const joined = [v(2, 'SRD 5.1', '2014'), v(0, 'Mine', '2024'), v(1, 'SRD 5.2', '2024')].join(
+      '\u001e',
+    );
+    expect(parseVersions('Mine', '2024', joined)).toEqual([
+      { sourceName: 'SRD 5.2', edition: '2024' },
+      { sourceName: 'SRD 5.1', edition: '2014' },
+    ]);
+    expect(parseVersions('Mine', '2024', v(0, 'Mine', '2024'))).toEqual([]);
+    expect(parseVersions('Mine', '2024', null)).toEqual([]);
   });
 });
 
