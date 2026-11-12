@@ -125,7 +125,11 @@ interface PresenterStore {
   /** Authoritative presenter state (DESIGN.md §4.1). Every change is pushed to main. */
   state: PresenterState;
   /** Previous live scenes for the undo-last-scene hotkey. */
-  history: Array<{ scene: LiveScene | null; override: boolean | null }>;
+  history: Array<{
+    scene: LiveScene | null;
+    override: boolean | null;
+    source: { scene: Scene; campaignSlug: string } | null;
+  }>;
   /** Scene ids most recently sent to the TV, newest first. */
   recent: string[];
   /** The live scene's per-scene title override, so the global toggle can be re-applied. */
@@ -142,6 +146,12 @@ interface PresenterStore {
    */
   syncLiveScene(scene: Scene): void;
   setLiveOptions(options: Partial<Pick<LiveOptions, 'aspect' | 'tokenStyle'>>): void;
+  /**
+   * Takes the live scene off the TV and leaves nothing in its place. Unlike a blackout, the
+   * overlays (initiative, timers, counters, handouts) stay up, so a blackout in force lifts
+   * with it; undo puts the scene back.
+   */
+  clearScene(): void;
   undo(): void;
   setBlackout(on: boolean): void;
   toggleBlackout(): void;
@@ -205,11 +215,11 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
     showScene(scene, campaignSlug) {
       const live = liveSceneFrom(scene, campaignSlug, optionsFor(get().state.combat));
       if (!live) return false;
-      const { state, history, recent, liveOverride } = get();
+      const { state, history, recent, liveOverride, liveSource } = get();
       set({
         history: [
           ...history.slice(-(HISTORY_LIMIT - 1)),
-          { scene: state.scene, override: liveOverride },
+          { scene: state.scene, override: liveOverride, source: liveSource },
         ],
         recent: [scene.id, ...recent.filter((id) => id !== scene.id)].slice(0, RECENT_LIMIT),
         liveOverride: scene.showTitleOverride,
@@ -247,15 +257,38 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
       }
     },
 
+    clearScene() {
+      const { state, history, liveOverride, liveSource } = get();
+      if (!state.scene) return;
+      set({
+        history: [
+          ...history.slice(-(HISTORY_LIMIT - 1)),
+          { scene: state.scene, override: liveOverride, source: liveSource },
+        ],
+        liveOverride: null,
+        liveSource: null,
+      });
+      // Nothing live with the overlays up is the point, so a blackout lifts with the scene.
+      commit({ ...state, scene: null, blackout: false, showSceneTitle: state.overlays.sceneTitle });
+    },
+
     undo() {
       const { history, state } = get();
       const previous = history[history.length - 1];
       if (!previous) return;
-      set({ history: history.slice(0, -1), liveOverride: previous.override, liveSource: null });
+      set({
+        history: history.slice(0, -1),
+        liveOverride: previous.override,
+        liveSource:
+          previous.scene && previous.source?.scene.id === previous.scene.id
+            ? previous.source
+            : null,
+      });
+      // Going back to "nothing live" leaves the overlays up, the same as taking a scene off.
       commit({
         ...state,
         scene: previous.scene,
-        blackout: previous.scene === null,
+        blackout: previous.scene ? false : state.blackout,
         showSceneTitle: previous.override ?? state.overlays.sceneTitle,
       });
     },

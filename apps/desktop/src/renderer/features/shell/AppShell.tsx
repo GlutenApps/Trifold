@@ -216,6 +216,12 @@ export function AppShell() {
         run: () => usePresenterStore.getState().toggleBlackout(),
       }),
       registerHotkey({
+        id: 'presenter.clearScene',
+        combo: 'Ctrl+Shift+X',
+        description: 'Take the scene off the TV',
+        run: () => usePresenterStore.getState().clearScene(),
+      }),
+      registerHotkey({
         id: 'presenter.undo',
         combo: 'Ctrl+Shift+Z',
         description: 'Undo the last scene change',

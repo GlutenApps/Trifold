@@ -19,7 +19,8 @@ export type FileKind =
   | 'playlist'
   | 'noteTemplate'
   | 'counter'
-  | 'timer';
+  | 'timer'
+  | 'pinnedRoll';
 
 export type JsonObject = Record<string, unknown>;
 
@@ -54,6 +55,7 @@ export const CURRENT_SCHEMA_VERSION: VersionTable = {
   noteTemplate: 1,
   counter: 1,
   timer: 1,
+  pinnedRoll: 1,
 };
 
 /** Registered migrations, oldest first. Add an entry whenever a schema version is bumped. */
@@ -105,6 +107,7 @@ export const MIGRATIONS: MigrationRegistry = {
   noteTemplate: [],
   counter: [],
   timer: [],
+  pinnedRoll: [],
 };
 
 /** Removes one minor tool from every saved layout's dock (presets and per-campaign consoles). */

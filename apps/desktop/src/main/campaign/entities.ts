@@ -18,6 +18,7 @@ import {
   Note,
   NPC,
   nowIso,
+  PinnedRoll,
   Scene,
 } from '@trifold/schema';
 import type { CampaignRepository } from './repository';
@@ -243,6 +244,27 @@ export class CampaignEntities {
     if (!changed.length) return timers;
     await this.repo.writeEntities('timers', changed);
     return this.repo.timers();
+  }
+
+  // ---------- pinned rolls ----------
+
+  /** Pins a roll (no id) or renames one; the result and what was rolled never change. */
+  async savePinnedRoll(input: PinnedRoll): Promise<PinnedRoll> {
+    const pin = PinnedRoll.parse({
+      ...input,
+      schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+      id: input.id || ulid(),
+      name: input.name.trim() || input.label || 'Roll',
+      createdAt: input.createdAt || nowIso(),
+      updatedAt: nowIso(),
+    });
+    await this.repo.writeEntity('pinnedRolls', pin.id, pin);
+    return pin;
+  }
+
+  async removePinnedRoll(id: string): Promise<void> {
+    await rm(this.repo.entityPath('pinnedRolls', id), { force: true });
+    await this.repo.touch();
   }
 
   async saveScene(input: Scene): Promise<Scene> {

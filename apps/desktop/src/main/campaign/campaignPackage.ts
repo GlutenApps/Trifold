@@ -30,6 +30,7 @@ import {
   CampaignCounter,
   CampaignExportOptions,
   CampaignTimer,
+  PinnedRoll,
   CompendiumRecord,
   Encounter,
   LIBRARY_SCHEMA_VERSION,
@@ -64,7 +65,15 @@ const MEDIA = ['images', 'tokens'] as const;
 const RECORD_ID = /^[A-Za-z0-9:_-]+$/;
 
 type EntityFolder =
-  'pcs' | 'encounters' | 'adventures' | 'notes' | 'npcs' | 'scenes' | 'counters' | 'timers';
+  | 'pcs'
+  | 'encounters'
+  | 'adventures'
+  | 'notes'
+  | 'npcs'
+  | 'scenes'
+  | 'counters'
+  | 'timers'
+  | 'pinnedRolls';
 const ENTITIES: readonly { folder: EntityFolder; kind: FileKind; schema: ZodType<unknown> }[] = [
   { folder: 'pcs', kind: 'pc', schema: PCCard },
   { folder: 'encounters', kind: 'encounter', schema: Encounter },
@@ -74,6 +83,7 @@ const ENTITIES: readonly { folder: EntityFolder; kind: FileKind; schema: ZodType
   { folder: 'scenes', kind: 'scene', schema: Scene },
   { folder: 'counters', kind: 'counter', schema: CampaignCounter },
   { folder: 'timers', kind: 'timer', schema: CampaignTimer },
+  { folder: 'pinnedRolls', kind: 'pinnedRoll', schema: PinnedRoll },
 ];
 
 /** Every file in a zip, by entry name, read into memory (campaigns are small; maps are a few MB). */
@@ -304,6 +314,7 @@ export class CampaignPackager {
       // Exports from before counters (ADR 0019) have no counters folder.
       counters: group('counters', CampaignCounter, 'counter'),
       timers: group('timers', CampaignTimer, 'timer'),
+      pinnedRolls: group('pinnedRolls', PinnedRoll, 'pinnedRoll'),
     };
 
     let safety: string | null = null;

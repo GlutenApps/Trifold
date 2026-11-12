@@ -3,6 +3,7 @@ import { mediaUrl } from '@trifold/api';
 import type { Scene } from '@trifold/schema';
 import { registerHotkey } from '../../hotkeys';
 import { landOn, navKey, useNavTarget } from '../../navigate';
+import { hk } from '../../platform';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useMusicStore } from '../../stores/musicStore';
 import { usePresenterStore } from '../../stores/presenterStore';
@@ -42,6 +43,7 @@ export function ScenesTool() {
   const setHover = useSceneStore((s) => s.setHover);
   const setDraft = useSceneStore((s) => s.setDraft);
   const send = useSceneStore((s) => s.send);
+  const clearScene = usePresenterStore((s) => s.clearScene);
   const [query, setQuery] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [editOpen, setEditOpen] = useState(false);
@@ -240,20 +242,34 @@ export function ScenesTool() {
               </span>
               {isLive && <span className="badge live">live</span>}
               <span className="scene-actions">
-                {scene.kind !== 'folder' && (
-                  <button
-                    type="button"
-                    className="chrome-btn xs"
-                    aria-label={`Send ${scene.title} to TV`}
-                    title="Send to TV (Enter)"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      send(scene);
-                    }}
-                  >
-                    <Icon name="play" />
-                  </button>
-                )}
+                {scene.kind !== 'folder' &&
+                  (scene.id === liveId ? (
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-label={`Take ${scene.title} off the TV`}
+                      title={`Take off the TV (${hk('Ctrl+Shift+X')})`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearScene();
+                      }}
+                    >
+                      <Icon name="stop" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-label={`Send ${scene.title} to TV`}
+                      title="Send to TV (Enter)"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        send(scene);
+                      }}
+                    >
+                      <Icon name="play" />
+                    </button>
+                  ))}
                 <button
                   type="button"
                   className="chrome-btn xs"

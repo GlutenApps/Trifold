@@ -238,6 +238,10 @@ export function installBridgeMock(): TrifoldBridge {
       remove: vi.fn(async () => undefined),
       move: vi.fn(async () => []),
     },
+    pinnedRolls: {
+      save: vi.fn(async (pin) => ({ ...pin, id: pin.id || `pin-${pin.createdAt}` })),
+      remove: vi.fn(async () => undefined),
+    },
     pcs: {
       save: vi.fn(async (pc) => pc),
       remove: vi.fn(async () => undefined),

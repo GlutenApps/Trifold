@@ -81,7 +81,27 @@ describe('TvPage: the screen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Send to TV' }));
     expect(usePresenterStore.getState().state.scene?.id).toBe('card');
     expect(screen.getByText('live')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Send to TV' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Send to TV' })).not.toBeInTheDocument();
+  });
+
+  it('takes the live scene off the TV, leaves the overlays alone, and undoes it', async () => {
+    useSceneStore.getState().select('card');
+    render(<TvPage />);
+    await userEvent.click(screen.getByRole('button', { name: 'Send to TV' }));
+    usePresenterStore.getState().setOverlay('initiativeStrip', true);
+    usePresenterStore.getState().setBlackout(true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Take off TV' }));
+    const after = usePresenterStore.getState().state;
+    expect(after.scene).toBeNull();
+    expect(after.blackout).toBe(false);
+    expect(after.overlays.initiativeStrip).toBe(true);
+    expect(screen.queryByText('live')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send to TV' })).toBeEnabled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Undo the last scene' }));
+    expect(usePresenterStore.getState().state.scene?.id).toBe('card');
+    expect(usePresenterStore.getState().state.blackout).toBe(false);
   });
 
   it('shows the live scene when nothing is selected, and names it when another is', async () => {
