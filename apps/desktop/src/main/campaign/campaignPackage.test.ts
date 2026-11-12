@@ -159,6 +159,20 @@ describe('CampaignPackager', () => {
       createdAt: nowIso(),
       updatedAt: nowIso(),
     });
+    await a.campaigns.writeEntity('pinnedRolls', 'PIN1', {
+      schemaVersion: 1,
+      id: 'PIN1',
+      name: "Thora's stats",
+      label: '4d6kh3',
+      expression: '4d6kh3',
+      total: 15,
+      faces: '4d6: 6, 5, 4, 1 → 6, 5, 4',
+      kind: 'dice',
+      source: 'pool',
+      rolledAt: nowIso(),
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
     await a.campaigns.writeEntity('counters', 'CTR1', {
       schemaVersion: 1,
       id: 'CTR1',
@@ -216,6 +230,7 @@ describe('CampaignPackager', () => {
     expect(imported.timers).toMatchObject([
       { id: 'TMR1', durationSec: 60, chime: false, showOnTv: true },
     ]);
+    expect(imported.pinnedRolls).toMatchObject([{ id: 'PIN1', name: "Thora's stats", total: 15 }]);
     // Music belongs to the other Library.
     expect(imported.scenes[0]).not.toHaveProperty('audio');
     const dir = join(b.root, 'campaigns', result.campaign.slug);

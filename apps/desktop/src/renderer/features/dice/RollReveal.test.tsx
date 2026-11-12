@@ -6,7 +6,7 @@ import { REVEAL_MS, RollReveal } from './RollReveal';
 function entry(total: number, outcome?: RollLogEntry['outcome'], id = 'r1'): RollLogEntry {
   return {
     id,
-    at: 0,
+    at: Date.now(),
     kind: 'dice',
     label: '1d20+5',
     expression: '1d20+5',
@@ -73,6 +73,15 @@ describe('RollReveal', () => {
     expect(reveal).toHaveAttribute('data-settled', 'false');
     act(() => vi.advanceTimersByTime(REVEAL_MS + 50));
     expect(reveal).toHaveTextContent('14');
+  });
+
+  it('shows an older roll settled, so opening a panel never looks like a re-roll', () => {
+    const old = { ...entry(17), at: Date.now() - REVEAL_MS - 1 };
+    render(<RollReveal entry={old} />);
+    const reveal = screen.getByTestId('roll-reveal');
+    expect(reveal).toHaveAttribute('data-settled', 'true');
+    expect(reveal).toHaveTextContent('17');
+    expect(reveal).not.toHaveClass('popped');
   });
 
   it('shows the placeholder with no roll', () => {

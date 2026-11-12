@@ -8,7 +8,7 @@ import type { LibrarySession } from './library/session';
 import { errorMessage, type Logger } from './log';
 
 /**
- * Campaign, PC card, encounter, note, NPC, scene, counter and timer namespaces, backed by `CampaignRepository`,
+ * Campaign, PC card, encounter, note, NPC, scene, counter, timer and pinned-roll namespaces, backed by `CampaignRepository`,
  * `CampaignEntities`, `CampaignPackager` and the campaign XML importer.
  */
 export function createCampaignApi(
@@ -16,7 +16,15 @@ export function createCampaignApi(
   logger: Logger,
 ): Pick<
   TrifoldApi,
-  'campaigns' | 'pcs' | 'encounters' | 'notes' | 'npcs' | 'scenes' | 'counters' | 'timers'
+  | 'campaigns'
+  | 'pcs'
+  | 'encounters'
+  | 'notes'
+  | 'npcs'
+  | 'scenes'
+  | 'counters'
+  | 'timers'
+  | 'pinnedRolls'
 > {
   const repo = () => {
     const campaigns = session.campaigns;
@@ -183,6 +191,14 @@ export function createCampaignApi(
       },
       async move(timerId, index) {
         return entities().moveTimer(timerId, index);
+      },
+    },
+    pinnedRolls: {
+      async save(pin) {
+        return entities().savePinnedRoll(pin);
+      },
+      async remove(id) {
+        await entities().removePinnedRoll(id);
       },
     },
     scenes: {

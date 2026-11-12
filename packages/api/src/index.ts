@@ -14,6 +14,7 @@ import type {
   NoteTemplate,
   NPC,
   PCCard,
+  PinnedRoll,
   Playlist,
   RecordKind,
   Scene,
@@ -535,6 +536,8 @@ export interface CampaignBundle {
   counters: CampaignCounter[];
   /** The Timers dock tool's timers (definitions only), in list order (ADR 0021). */
   timers: CampaignTimer[];
+  /** Rolls pinned from the roll log, in the order they were pinned. */
+  pinnedRolls: PinnedRoll[];
 }
 
 /** What `notes.remove` does with a folder's contents: move it up a level, or remove it too. */
@@ -817,6 +820,12 @@ export interface TrifoldApi {
     /** Puts a timer at `index` and renumbers the list; resolves to every timer in order. */
     move(timerId: string, index: number): Promise<CampaignTimer[]>;
   };
+  /** The open campaign's pinned rolls, one file each under `pinnedRolls/`. */
+  pinnedRolls: {
+    /** An id-less pin is created; otherwise its file is replaced (a rename). */
+    save(pin: PinnedRoll): Promise<PinnedRoll>;
+    remove(pinId: string): Promise<void>;
+  };
   backups: {
     list(): Promise<BackupInfo[]>;
     /** Writes a zip now, regardless of the daily schedule. */
@@ -957,6 +966,7 @@ export const API_METHODS = {
   scenes: ['save', 'remove', 'importImage'],
   counters: ['save', 'remove', 'move'],
   timers: ['save', 'remove', 'move'],
+  pinnedRolls: ['save', 'remove'],
   pcs: ['save', 'remove', 'quickAdd'],
   encounters: ['save', 'remove', 'saveState', 'finish'],
   backups: [

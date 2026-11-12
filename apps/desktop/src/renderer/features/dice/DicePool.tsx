@@ -159,19 +159,6 @@ export function DicePool({ compact = false }: DicePoolProps) {
       >
         Roll {label ? <span className="pool-label">{label}</span> : null}
       </button>
-      <div className="pool-result" aria-live="polite">
-        {last ? (
-          <>
-            <RollReveal entry={last} reveal={reveal} className="pool-total" />
-            <span className={`muted reveal-detail${reveal.settled ? ' settled' : ''}`}>
-              {last.label}
-              {reveal.settled ? ` · ${last.faces}` : ''}
-            </span>
-          </>
-        ) : (
-          <span className="muted">Pick some dice and roll.</span>
-        )}
-      </div>
     </div>
   );
 }

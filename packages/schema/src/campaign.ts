@@ -475,6 +475,35 @@ export const CampaignTimer = z.object({
 });
 export type CampaignTimer = z.infer<typeof CampaignTimer>;
 
+// ---------- pinned rolls ----------
+
+/**
+ * A roll the DM pinned from the roll log so it outlives the log: the result and a record of what
+ * was rolled, under a name the DM can change. Pinned rolls are kept until unpinned and listed in
+ * the order they were pinned. The log itself is memory only; only a pin is written.
+ */
+export const PinnedRoll = z.object({
+  schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+  id: z.string().min(1),
+  /** The DM's name for it; starts as the roll's label. */
+  name: z.string().min(1),
+  /** What the roll log called it (`2d6+3`, `Longsword damage`). */
+  label: z.string(),
+  expression: z.string(),
+  total: int,
+  /** Faces rolled, as the log shows them (`2d6: 4, 2`). */
+  faces: z.string(),
+  kind: z.enum(['dice', 'attack', 'damage', 'save', 'check', 'other']).default('dice'),
+  source: z.enum(['pool', 'tracker', 'compendium']).default('pool'),
+  actor: z.string().optional(),
+  outcome: z.enum(['crit', 'fumble']).optional(),
+  /** When it was rolled; `createdAt` is when it was pinned. */
+  rolledAt: IsoDateTime,
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+});
+export type PinnedRoll = z.infer<typeof PinnedRoll>;
+
 // ---------- campaign export (ADR 0015) ----------
 
 /** What a `.trifold-campaign` file was made with; recorded in its manifest. */
