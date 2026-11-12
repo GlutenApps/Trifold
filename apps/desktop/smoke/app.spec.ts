@@ -136,8 +136,8 @@ test('console, Library, import, search, stat block and player window all work en
       timeout: 30_000,
     });
     await expect(console_.getByTestId('index-status')).toHaveText('Index: ok');
+    // The page opens on the browser again.
     await libNav('Compendium').click();
-    await console_.getByRole('button', { name: 'Browse', exact: true }).click();
 
     // A second import of the same file is a no-op by hash.
     const again = await console_.evaluate(
@@ -152,28 +152,33 @@ test('console, Library, import, search, stat block and player window all work en
       .getByLabel('Source', { exact: true })
       .selectOption({ label: 'compendium-sample' });
     await expect(console_.getByRole('listbox', { name: 'Results' })).toContainText('5 results');
-    await console_.getByLabel('Search').fill('abol');
+    await console_.getByLabel('Search', { exact: true }).fill('abol');
     const abolethRow = console_.getByRole('option', { name: /Aboleth/ });
     await expect(abolethRow).toHaveCount(1);
-    await expect(abolethRow).toContainText('2024');
-    await expect(abolethRow).toContainText('legacy');
+    // One source pill, 2024 ahead of legacy inside one source, and a "+" for the other (ADR 0027).
+    await expect(abolethRow).toContainText('compendium-sample');
+    await expect(abolethRow).not.toContainText('legacy');
+    await expect(abolethRow.getByTestId('more-versions')).toHaveCount(1);
     await console_.getByLabel('Edition', { exact: true }).selectOption('2024');
     await expect(abolethRow).toHaveCount(1);
-    await expect(abolethRow).not.toContainText('legacy');
+    await expect(abolethRow.getByTestId('more-versions')).toHaveCount(0);
     await abolethRow.click();
     await expect(console_.getByRole('heading', { name: 'Aboleth' })).toBeVisible();
-    await expect(console_.getByRole('group', { name: 'Switch edition' })).toContainText('Legacy');
+    await expect(console_.getByRole('combobox', { name: 'Switch edition' })).toContainText(
+      'Legacy',
+    );
     // Roll pills work outside a fight: the attack lands in the shared log and the tray total.
     await console_
       .getByRole('button', { name: /^\+9 · 2d6\+5/ })
       .first()
       .click();
     await expect(console_.getByTestId('detail-last-roll')).toContainText('Tentacle');
-    await console_
-      .getByRole('group', { name: 'Switch edition' })
-      .getByRole('button', { name: /^Legacy/ })
+    const versions = console_.getByRole('combobox', { name: 'Switch edition' });
+    const legacyId = await versions
+      .locator('option', { hasText: /^Legacy/ })
       .first()
-      .click();
+      .getAttribute('value');
+    await versions.selectOption(legacyId!);
     await expect(console_.getByRole('heading', { name: 'Legendary actions' })).toBeVisible();
 
     // Homebrew: duplicate, edit, see the diff, delete (DESIGN.md §6.2).
@@ -191,7 +196,7 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(console_.getByRole('heading', { name: 'Aboleth Elder' })).toHaveCount(0);
 
-    await console_.getByLabel('Search').fill('');
+    await console_.getByLabel('Search', { exact: true }).fill('');
     await console_.getByLabel('Edition', { exact: true }).selectOption('all');
     await console_.getByRole('option', { name: /^Mage/ }).click();
     await console_.getByRole('button', { name: 'Fireball' }).click();
@@ -206,7 +211,9 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('tab', { name: 'Conditions', exact: true }).click();
     await console_.getByRole('option', { name: /^Blinded/ }).click();
     await expect(console_.getByRole('heading', { name: 'Blinded' })).toBeVisible();
-    await expect(console_.getByRole('group', { name: 'Switch edition' })).toContainText('Legacy');
+    await expect(console_.getByRole('combobox', { name: 'Switch edition' })).toContainText(
+      'Legacy',
+    );
     await expect(console_.getByRole('listitem').first()).toBeVisible();
     await console_.getByRole('tab', { name: 'Monsters', exact: true }).click();
     await console_
@@ -236,8 +243,9 @@ test('console, Library, import, search, stat block and player window all work en
     // sample campaign is already listed.
     await libNav('Campaigns').click();
     await expect(console_.getByText('The Lantern at Greyford').first()).toBeVisible();
-    await console_.getByLabel('New campaign name').fill('Smoke Campaign');
     await console_.getByRole('button', { name: 'Create campaign' }).click();
+    await console_.getByLabel('New campaign name').fill('Smoke Campaign');
+    await console_.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(console_.getByRole('heading', { name: 'Smoke Campaign' })).toBeVisible();
     await expect(tab('Campaign')).toHaveAttribute('aria-selected', 'true');
     await expect(strip).toBeVisible();
@@ -522,7 +530,8 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('button', { name: 'Export…' }).click();
     await expect(console_.getByText(`Exported to ${exported}`)).toBeVisible();
     await pickNext(exported);
-    await console_.getByRole('button', { name: 'Import campaign…' }).click();
+    await console_.getByRole('button', { name: 'Create campaign' }).click();
+    await console_.getByRole('button', { name: 'Choose Trifold file…' }).click();
     await console_.getByRole('button', { name: 'Import as a copy' }).click();
     await expect(console_.getByTestId('campaign-package-result')).toContainText(
       'Imported Smoke Campaign (copy)',

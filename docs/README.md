@@ -45,3 +45,9 @@ One short file per decision that deviates from or refines `DESIGN.md`. Number th
 | [0021](adr/0021-timers.md) | Timers: a dock tool (Ctrl+Alt+T) of real-world countdowns kept by timestamps; one on the TV. |
 | [0022](adr/0022-paused-fights.md) | Back pauses a fight; any number wait in progress, one is loaded in the tracker. |
 | [0023](adr/0023-choosable-tray.md) | The DM chooses the tray's sections (VTT, Encounters, Music, single timers and counters), up to four plus Dice, saved with the layout. |
+| [0024](adr/0024-library-search-tray-and-create.md) | The Library searches every campaign, its tray is fixed to VTT, Music and Dice, and one Create campaign button holds blank, Trifold file and Game Master XML. |
+| [0025](adr/0025-compendium-sources-button.md) | Library › Compendium drops the Browse, Sources, Homebrew toggle for one Sources button; on Sources the import sits beside it. |
+| [0026](adr/0026-homebrew-every-kind.md) | Homebrew editors for every kind, New homebrew in the Library, Duplicate in place of Source text, an edition dropdown, Rebuild index in Settings. |
+| [0027](adr/0027-source-priority.md) | Source priority picks a row's version and its one source pill (+ for more); homebrew editors in titled sections; the record pane fills its width. |
+| [0028](adr/0028-2024-books-per-file.md) | Each imported file's 2024 books: a warning on its row when copies clash, a checklist of its books, re-tagged in place; the text box is gone. |
+| [0029](adr/0029-beta-and-later.md) | M2 and M3 become an ordered Beta and an open Later; fog of war and the ruler join the beta; ambience and effects, note links, drag-drop art and the endpoint pre-fill are dropped. |

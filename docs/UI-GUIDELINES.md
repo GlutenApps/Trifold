@@ -103,12 +103,12 @@ One pattern each. Reuse these; do not invent a variant.
 | **Delete** (destroys data) | `trash` icon, `danger`, then the inline confirm |
 | **Remove from a list** (the thing survives elsewhere: a track from a playlist, a combatant from a fight, a folder from the music scan) | `close` icon, no confirm |
 | **Inline confirm** | Use `<InlineConfirm>` from `features/shell/InlineConfirm.tsx`; never hand-write one. The row's actions become one line: muted "Delete *name*?", `btn small danger` **Delete**, `btn small` **Keep**. Pass `verb` when the action is Remove or Restore, and `question` when the consequence needs saying ("Overwrite the Library with this backup?"). Keep takes focus; Escape or Keep cancels. No dialogs. Deleting a whole campaign keeps its stronger type-the-word confirm. |
-| **Add** | `plus` icon button (`primary` when it is the panel's main action) in the header. When the add must say what it adds (Add action, Goblin Warrior), a `btn` with a `plus` icon and the words. A text submit when it needs a typed name (Create campaign). Never a typed `+` in a label. |
+| **Add** | `plus` icon button (`primary` when it is the panel's main action) in the header. When the add must say what it adds (Add action, Goblin Warrior), a `btn` with a `plus` icon and the words. A text submit when it needs a typed name (Create, under Create campaign). Never a typed `+` in a label. |
 | **Back** | `left` icon `chrome-btn` at the start of the header, `title="Back to …"` |
 | **Close** a pop-up, flyout or drawer | `close` icon `chrome-btn xs` at the end of its header |
 | **Edit** | `pencil` icon |
 | **Start / play / resume** | `play` icon in a row; `btn primary` with words in a header (Start combat, Send to TV), always the same tier for the same action |
-| **Reorder** | `up` / `down` icons at row tier (22 px each), or drag; never squeezed |
+| **Reorder** | `up` / `down` icons at row tier (22 px each), or drag; never squeezed. Where a row is full of other controls, a `grip` handle (`chrome-btn xs drag-handle`) at its start carries the drag, and the arrow keys on the focused handle move it one place |
 | **Dismiss** an error banner | `btn small` **Dismiss** |
 
 ## 10. Panel widths and layouts

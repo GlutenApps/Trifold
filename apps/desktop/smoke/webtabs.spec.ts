@@ -49,8 +49,9 @@ test('a web tab hosts a page, follows its title and survives in the Library', as
       .getByRole('navigation', { name: 'Library' })
       .getByRole('button', { name: 'Campaigns', exact: true })
       .click();
-    await console_.getByLabel('New campaign name').fill('Web Campaign');
     await console_.getByRole('button', { name: 'Create campaign' }).click();
+    await console_.getByLabel('New campaign name').fill('Web Campaign');
+    await console_.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(console_.getByRole('tab', { name: 'Campaign', exact: true })).toBeVisible();
 
     // Add the tab from the + menu of group 1.

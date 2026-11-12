@@ -85,7 +85,8 @@ describe('Import campaign (ADR 0015)', () => {
       safety: null,
     });
     render(<CampaignsPage />);
-    await user.click(screen.getByRole('button', { name: 'Import campaign…' }));
+    await user.click(screen.getByRole('button', { name: 'Create campaign' }));
+    await user.click(screen.getByRole('button', { name: 'Choose Trifold file…' }));
     expect(await screen.findByTestId('campaign-package')).toHaveTextContent(
       'Sunken Keep · 0 PC cards · fresh start · 3 homebrew records',
     );
@@ -113,7 +114,8 @@ describe('Import campaign (ADR 0015)', () => {
       safety: '2026-11-07-120000-pre-restore.zip',
     });
     render(<CampaignsPage />);
-    await user.click(screen.getByRole('button', { name: 'Import campaign…' }));
+    await user.click(screen.getByRole('button', { name: 'Create campaign' }));
+    await user.click(screen.getByRole('button', { name: 'Choose Trifold file…' }));
     expect(await screen.findByText(/This Library already has Sunken Keep/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Import as a copy' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Replace…' }));
@@ -137,7 +139,8 @@ describe('Import campaign (ADR 0015)', () => {
       problem: 'This is a Library backup; restore it from Settings › Backups',
     });
     render(<CampaignsPage />);
-    await user.click(screen.getByRole('button', { name: 'Import campaign…' }));
+    await user.click(screen.getByRole('button', { name: 'Create campaign' }));
+    await user.click(screen.getByRole('button', { name: 'Choose Trifold file…' }));
     expect(await screen.findByTestId('campaign-package')).toHaveTextContent('Library backup');
     expect(screen.queryByRole('button', { name: 'Import' })).toBeNull();
   });

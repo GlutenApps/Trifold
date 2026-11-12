@@ -65,12 +65,21 @@ export function isStale(source: Source): boolean {
   return source.importerVersion < IMPORTER_VERSION;
 }
 
-/** Re-parses an existing source from its stored original.xml. */
-export async function reimportSource(ctx: ImportContext, sourceId: string): Promise<ImportReport> {
+/**
+ * Re-parses an existing source from its stored original.xml. With `edition2024Books`, the
+ * source's books marked as 2024 rules change first (ADR 0028): the file is re-parsed even though
+ * it is unchanged, and record ids are kept by position in the file, since a record's edition (part
+ * of the usual match) is what changes.
+ */
+export async function reimportSource(
+  ctx: ImportContext,
+  sourceId: string,
+  edition2024Books?: readonly string[],
+): Promise<ImportReport> {
   const existing = await ctx.sources.get(sourceId);
   if (!existing) throw new ImportError(`Source ${sourceId} not found`);
   const original = join(ctx.sources.dirFor(sourceId), existing.filePath ?? 'original.xml');
-  return importXmlSource(ctx, original, existing);
+  return importXmlSource(ctx, original, existing, edition2024Books);
 }
 
 /**
@@ -83,6 +92,7 @@ export async function importXmlSource(
   ctx: ImportContext,
   filePath: string,
   target?: Source,
+  retag?: readonly string[],
 ): Promise<ImportReport> {
   const started = performance.now();
   const info = await stat(filePath);
@@ -95,7 +105,7 @@ export async function importXmlSource(
   const kind = detectXmlKind(await readHead(filePath, 8192));
   if (kind === 'campaign') {
     throw new ImportError(
-      'This is a campaign file. Import it from the Campaign section (Import campaign XML); Settings → Sources is for compendium files.',
+      'This is a Game Master campaign file. Import it from Library › Campaigns (Create campaign, then Import from Game Master); Compendium › Sources is for compendium files.',
     );
   }
   if (kind !== 'compendium') {
@@ -110,7 +120,7 @@ export async function importXmlSource(
   const name = target?.name ?? basename(filePath, extname(filePath));
   const existing =
     target ?? (await ctx.sources.list()).find((s) => s.kind === 'xml' && s.name === name);
-  if (existing && existing.fileHash === fileHash && !isStale(existing)) {
+  if (existing && !retag && existing.fileHash === fileHash && !isStale(existing)) {
     ctx.logger.info(`source "${name}" unchanged (hash match); nothing to do`);
     progress('done');
     return {
@@ -129,12 +139,14 @@ export async function importXmlSource(
 
   // Keep ids stable across re-imports so campaign references survive (DESIGN.md §5.4).
   // Records are matched by kind, key and edition, then by occurrence order for duplicates.
+  // A retag re-reads the same file, so the n-th record of a kind and key is the same entry.
+  const keyOf = retag ? (r: CompendiumRecord) => `${r.kind}:${r.key}` : matchKey;
   const previous = new Map<string, Array<{ id: string; signature: string }>>();
   if (existing) {
     for await (const r of ctx.sources.readRecords(sourceId)) {
-      const list = previous.get(matchKey(r)) ?? [];
+      const list = previous.get(keyOf(r)) ?? [];
       list.push({ id: r.id, signature: recordSignature(r) });
-      previous.set(matchKey(r), list);
+      previous.set(keyOf(r), list);
     }
   }
 
@@ -154,16 +166,19 @@ export async function importXmlSource(
   progress('parsing');
   bytesRead = 0;
   const settings = ctx.store.getSettings();
+  const edition2024Books = retag
+    ? [...retag]
+    : (existing?.edition2024Books ?? settings.edition2024Books);
   const records: CompendiumRecord[] = [];
   const occurrences = new Map<string, number>();
   const importer = createCompendiumImporter(
     {
       sourceId,
       defaultEdition: existing?.defaultEdition ?? '2014',
-      edition2024Books: existing?.edition2024Books ?? settings.edition2024Books,
+      edition2024Books,
     },
     (record) => {
-      const keyed = matchKey(record);
+      const keyed = keyOf(record);
       const n = occurrences.get(keyed) ?? 0;
       occurrences.set(keyed, n + 1);
       const old = previous.get(keyed)?.[n];
@@ -186,7 +201,7 @@ export async function importXmlSource(
     let changed = 0;
     const counted = new Map<string, number>();
     for (const r of records) {
-      const keyed = matchKey(r);
+      const keyed = keyOf(r);
       const n = counted.get(keyed) ?? 0;
       counted.set(keyed, n + 1);
       const old = previous.get(keyed)?.[n];
@@ -210,7 +225,7 @@ export async function importXmlSource(
     fileHash,
     enabled: existing?.enabled ?? true,
     defaultEdition: existing?.defaultEdition ?? '2014',
-    edition2024Books: existing?.edition2024Books ?? settings.edition2024Books,
+    edition2024Books,
     license: existing?.license ?? { nonSrd: true, attribution: null },
     importedAt: nowIso(),
     importerVersion: IMPORTER_VERSION,

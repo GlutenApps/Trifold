@@ -18,8 +18,29 @@ import { hk } from '../../platform';
  * single counters and timers, always in that order and each in its tool's order. Dice is always
  * at the right end, after the button that chooses the rest. Clicking a section's text opens its
  * tool or tab; the dice button pops the Dice tool up from the strip (ADR 0009).
+ *
+ * In the Library the tray is fixed (ADR 0024): VTT and Music, what keeps running at the table
+ * while the DM is away from the console, then Dice, and no chooser. The DM's choice for the
+ * console is kept, not changed.
  */
 export function LiveStrip() {
+  const library = useShellStore((s) => s.space === 'library');
+  return library ? <LibraryStrip /> : <ConsoleStrip />;
+}
+
+function LibraryStrip() {
+  return (
+    <footer className="strip" role="contentinfo" data-testid="live-strip">
+      <div className="strip-sections">
+        <TvSection />
+        <MusicSection />
+      </div>
+      <DiceSection />
+    </footer>
+  );
+}
+
+function ConsoleStrip() {
   const tray = useShellStore((s) => s.layout.tray);
   const timers = useTimers();
   const counters = useCounters();
@@ -47,6 +68,12 @@ export function LiveStrip() {
       <DiceSection />
     </footer>
   );
+}
+
+/** From the Library, a section's text goes back to the console before opening its tool or tab. */
+function toConsole(): void {
+  const shell = useShellStore.getState();
+  if (shell.space === 'library' && shell.campaignSlug) shell.enterConsole(shell.campaignSlug);
 }
 
 /** The one control that chooses what the tray shows (ADR 0023). */
@@ -87,7 +114,10 @@ function TvSection() {
       <button
         type="button"
         className="strip-text"
-        onClick={() => openMajor('map', { avoid: 'encounters' })}
+        onClick={() => {
+          toConsole();
+          openMajor('map', { avoid: 'encounters' });
+        }}
         title={`VTT: the scene on the TV (${hk('Ctrl+T')})`}
       >
         {!scene ? (
@@ -216,7 +246,10 @@ function PhoneSection() {
       <button
         type="button"
         className="strip-text"
-        onClick={() => openTool('music')}
+        onClick={() => {
+          toConsole();
+          openTool('music');
+        }}
         title={`Phone audio (${hk('Ctrl+M')})`}
       >
         {status.state === 'failed' ? <span className="warn-text">{text}</span> : text}
@@ -230,9 +263,14 @@ function PhoneSection() {
           <button
             type="button"
             className="btn primary"
-            onClick={() =>
-              last ? void connect({ id: last.id, name: last.name }) : openTool('music')
-            }
+            onClick={() => {
+              if (last) {
+                void connect({ id: last.id, name: last.name });
+              } else {
+                toConsole();
+                openTool('music');
+              }
+            }}
           >
             {last ? (active ? 'Try again' : 'Connect') : 'Choose phone'}
           </button>
@@ -268,7 +306,10 @@ function PlayerSection() {
       <button
         type="button"
         className="strip-text"
-        onClick={() => openTool('music')}
+        onClick={() => {
+          toConsole();
+          openTool('music');
+        }}
         title={`Music (${hk('Ctrl+M')})`}
       >
         {muted ? (

@@ -52,3 +52,50 @@ describe('CampaignsPage delete', () => {
     expect(window.trifold.campaigns.remove).not.toHaveBeenCalled();
   });
 });
+
+describe('CampaignsPage create', () => {
+  it('opens one panel with a blank campaign, a Trifold file and a Game Master file', async () => {
+    const user = userEvent.setup();
+    window.trifold.campaigns.create = vi.fn(async () => {
+      throw new Error('not mocked');
+    });
+    render(<CampaignsPage />);
+    expect(screen.queryByRole('textbox', { name: 'New campaign name' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Create campaign' }));
+    const panel = screen.getByTestId('campaign-create');
+    expect(panel).toHaveTextContent('New blank campaign');
+    expect(panel).toHaveTextContent('Import a Trifold campaign');
+    expect(panel).toHaveTextContent('Import from Game Master');
+
+    const name = screen.getByRole('textbox', { name: 'New campaign name' });
+    expect(name).toHaveFocus();
+
+    // The help explains what Game Master is, and only when asked.
+    expect(screen.queryByTestId('game-master-help')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'What is Game Master?' }));
+    expect(screen.getByTestId('game-master-help')).toHaveTextContent('separate app for DMs');
+
+    await user.type(name, 'Sunken Keep{Enter}');
+    await waitFor(() =>
+      expect(window.trifold.campaigns.create).toHaveBeenCalledWith('Sunken Keep'),
+    );
+  });
+
+  it('imports Game Master XML as a new campaign and closes the panel', async () => {
+    const user = userEvent.setup();
+    render(<CampaignsPage />);
+    await user.click(screen.getByRole('button', { name: 'Create campaign' }));
+    await user.click(screen.getByRole('button', { name: 'Choose XML file…' }));
+    expect(window.trifold.campaigns.chooseXmlFile).toHaveBeenCalled();
+    expect(screen.queryByTestId('campaign-create')).toBeNull();
+  });
+
+  it('Escape closes the panel', async () => {
+    const user = userEvent.setup();
+    render(<CampaignsPage />);
+    await user.click(screen.getByRole('button', { name: 'Create campaign' }));
+    await user.keyboard('{Escape}');
+    expect(screen.queryByTestId('campaign-create')).toBeNull();
+  });
+});

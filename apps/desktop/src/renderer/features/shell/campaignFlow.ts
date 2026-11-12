@@ -59,14 +59,21 @@ export function deleteCampaign(campaignId: string, slug: string): void {
   else void run();
 }
 
-export function switchCampaign(campaignId: string): void {
+/**
+ * Opens a campaign in the console (or goes back to it when it is the open one), then runs
+ * `then`, which the Library's search uses to land on the item it picked. Leaving a campaign with
+ * something live asks first; cancelling skips `then`.
+ */
+export function switchCampaign(campaignId: string, then?: () => void): void {
   const current = useCampaignStore.getState().current;
   if (current?.campaign.id === campaignId) {
     useShellStore.getState().enterConsole(current.campaign.slug);
+    then?.();
     return;
   }
   guarded(async () => {
     if (current) await useCampaignStore.getState().close();
     await useCampaignStore.getState().open(campaignId);
+    if (useCampaignStore.getState().current?.campaign.id === campaignId) then?.();
   });
 }

@@ -68,13 +68,17 @@ describe('RecordDetail', () => {
     const legacy = record('Aboleth');
     const modern = record('Aboleth [5.5e]');
     const { onSwitchEdition } = renderDetail(modern, [modern, legacy]);
-    const group = screen.getByRole('group', { name: 'Switch edition' });
-    expect(within(group).getByRole('button', { name: '2024' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    await userEvent.click(within(group).getByRole('button', { name: 'Legacy' }));
+    const select = screen.getByRole('combobox', { name: 'Switch edition' });
+    expect(select).toHaveValue(modern.id);
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual([expect.stringMatching(/^2024 · /), expect.stringMatching(/^Legacy · /)]);
+    await userEvent.selectOptions(select, legacy.id);
     expect(onSwitchEdition).toHaveBeenCalledWith(legacy);
+    // No source-text view any more (ADR 0026).
+    expect(screen.queryByRole('button', { name: 'Source text' })).toBeNull();
   });
 
   it('rolls an attack pill into the shared log and shows the result above the block', async () => {
@@ -120,5 +124,24 @@ describe('RecordDetail', () => {
     const [entry] = useRollLogStore.getState().entries;
     expect(entry).toMatchObject({ kind: 'dice', source: 'compendium', actor: 'Fireball' });
     expect(screen.getByTestId('detail-last-roll')).toHaveTextContent(String(entry!.total));
+  });
+
+  it('offers Duplicate to homebrew on a spell, in the bar, and no homebrew bar on an original', async () => {
+    const onDuplicate = vi.fn();
+    render(
+      <RecordDetail
+        record={record('Fireball')}
+        editions={[record('Fireball')]}
+        canGoBack={false}
+        onBack={() => undefined}
+        onSwitchEdition={() => undefined}
+        onOpenSpell={() => undefined}
+        homebrew={{ onDuplicate, onEdit: () => undefined, onRemove: () => undefined }}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Duplicate to homebrew' }));
+    expect(onDuplicate).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId('homebrew-bar')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
   });
 });

@@ -159,21 +159,22 @@
    are always rendered, empty when the record lacks the fact, so nothing shifts. */
 .list-row.columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--meta-cols, auto);
+  grid-template-columns: minmax(0, 1fr) var(--meta-cols, var(--source-col));
+  --source-col: minmax(0, 168px);
   column-gap: 8px;
   align-items: baseline;
 }
 
 .list-row.columns[data-kind='monster'] {
-  --meta-cols: 46px minmax(0, 84px) 68px 36px auto;
+  --meta-cols: 46px minmax(0, 84px) 68px 36px var(--source-col);
 }
 
 .list-row.columns[data-kind='spell'] {
-  --meta-cols: 52px auto;
+  --meta-cols: 52px var(--source-col);
 }
 
 .list-row.columns[data-kind='item'] {
-  --meta-cols: minmax(0, 104px) 76px auto;
+  --meta-cols: minmax(0, 104px) 76px var(--source-col);
 }
 
 .list-row.columns .list-name,
@@ -189,27 +190,33 @@
   color: var(--text-muted);
 }
 
-/* Edition chips: one column per known ruleset, empty when a row lacks it. */
-.list-editions {
-  display: inline-flex;
+/* The source pill (ADR 0027): the source that answers for the row, and a "+" when other
+   sources or editions have it too. The pill shrinks to an ellipsis; the "+" never does. */
+.list-source {
+  display: flex;
   gap: 4px;
   align-items: baseline;
+  justify-content: flex-end;
 }
 
-.edition-slot {
-  display: inline-flex;
-  justify-content: center;
-  width: 58px;
+.list-source .source-pill {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-source .more {
+  flex: none;
 }
 
 /* In a narrow list the type and size columns go before the name does. */
 @container results (max-width: 560px) {
   .list-row.columns[data-kind='monster'] {
-    --meta-cols: 46px 36px auto;
+    --meta-cols: 46px 36px var(--source-col);
   }
 
   .list-row.columns[data-kind='item'] {
-    --meta-cols: 76px auto;
+    --meta-cols: 76px var(--source-col);
   }
 
   .list-row.columns .cell.type,
@@ -223,8 +230,21 @@
   min-height: 0;
 }
 
+/* The open record and the homebrew editors use the whole pane, however wide (no cap). */
+.inspector .statblock,
+.inspector .record-editor {
+  max-width: none;
+}
+
 .detail-bar {
   margin-bottom: 8px;
+}
+
+/* The edition dropdown (ADR 0026): long source names shrink it rather than push the bar. */
+.edition-select {
+  min-width: 0;
+  max-width: 320px;
+  text-overflow: ellipsis;
 }
 
 .seg {
@@ -1938,43 +1958,186 @@ input[type='range'].wide {
   color: var(--accent);
 }
 
-.monster-editor {
+.record-editor {
   max-width: 900px;
+  container: editor / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 16px;
 }
 
-.monster-editor .grid-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px 12px;
-  margin-bottom: 12px;
+/* The title, Cancel and Save stay at the top of the pane while the form scrolls under them. */
+.editor-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 4px 0 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
 }
 
-.monster-editor .abilities {
-  grid-template-columns: repeat(6, minmax(80px, 1fr));
+.editor-head h2 {
+  margin: 0;
+  font-size: 16px;
 }
 
-.feature-list {
+/* One titled group of fields (ADR 0027). Each sets its column count; fields line up in it. */
+.editor-section {
+  margin: 0;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 8px 12px;
-  margin: 0 0 12px;
+  background: var(--bg-panel);
 }
 
-.feature-list legend {
+.editor-section h3 {
+  margin: 0 0 10px;
   font-size: 12px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
 }
 
-.feature-edit {
-  margin-bottom: 8px;
+.editor-section .row > h3 {
+  margin: 0;
 }
 
-.feature-edit textarea,
-.monster-editor textarea {
+.editor-subhead {
+  margin: 12px 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.editor-hint {
+  margin: -4px 0 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.editor-grid {
+  display: grid;
+  gap: 10px 14px;
+  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.editor-grid.cols-1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.editor-grid.cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.editor-grid.cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.editor-grid.cols-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.editor-grid.cols-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.editor-grid .span-2 {
+  grid-column: span 2;
+}
+
+.editor-grid .span-all {
+  grid-column: 1 / -1;
+}
+
+/* A narrow pane keeps the sections but fewer columns (ADR 0014's 640 px step). */
+@container editor (width < 640px) {
+  .editor-grid.cols-3,
+  .editor-grid.cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .editor-grid.cols-5,
+  .editor-grid.cols-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Label above, input the full width of its column, left-aligned. */
+.record-editor .field {
+  align-items: stretch;
+  text-align: left;
+  min-width: 0;
+}
+
+.record-editor .field.inline {
+  align-items: center;
+}
+
+.record-editor .field > input:not([type='checkbox']),
+.record-editor .field > select,
+.record-editor textarea {
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+}
+
+.record-editor .field-with-action {
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.record-editor .field-with-action input {
+  flex: 1;
+  min-width: 0;
+}
+
+.editor-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin-top: 10px;
+}
+
+.editor-grid + .editor-checks:first-child {
+  margin-top: 0;
+}
+
+/* A feature, trait or class feature: its name and row actions, then its text. */
+.feature-edit {
+  margin-bottom: 10px;
+}
+
+.feature-edit .row {
+  margin-bottom: 4px;
+}
+
+.feature-edit .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* A roll: label, dice, (slot level,) row actions on one line. */
+.roll-edit {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.roll-edit.with-level {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) 96px auto;
+}
+
+.roll-edit input {
+  min-width: 0;
+}
+
+.roll-warning {
+  grid-column: 1 / -1;
 }
 
 /* Sub-tabs inside a panel (Campaign: Party, NPCs, Notes; Compendium: record kinds): the music

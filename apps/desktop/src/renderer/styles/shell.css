@@ -1019,10 +1019,9 @@ body.resizing {
   max-width: none;
 }
 
-/* Library › Compendium: Browse and Homebrew fill the height so the list and the stat block
-   scroll on their own; Sources is a card that scrolls with the page. */
-.compendium-library[data-segment='browse'],
-.compendium-library[data-segment='homebrew'] {
+/* Library › Compendium: the browser fills the height so the list and the stat block scroll on
+   their own; Sources is a card that scrolls with the page. */
+.compendium-library[data-segment='browse'] {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1084,6 +1083,22 @@ body.resizing {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--border);
+}
+
+/* Create campaign: the three ways in, one under the other, inline under the header. */
+.campaign-create {
+  max-width: none;
+  display: grid;
+  gap: 12px;
+}
+
+.campaign-create-way + .campaign-create-way {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.campaign-create-way p {
+  margin: 2px 0 6px;
 }
 
 .campaign-delete {
@@ -2037,4 +2052,160 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
+}
+
+/* Library › Compendium › New homebrew (ADR 0026): inline under the header, above the browser. */
+.new-homebrew {
+  max-width: none;
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.new-homebrew-ways {
+  flex-wrap: wrap;
+}
+
+/* The copy search takes what the row has left, and drops under the buttons when it is narrow. */
+.new-homebrew-find {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.new-homebrew-picks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.new-homebrew-picks .list-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Compendium › Sources (ADR 0027): each row's priority, 1 at the top. */
+.source-rank {
+  flex: none;
+  min-width: 2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* Source priority (ADR 0027): a notice that says what the order does, and rows dragged by a handle. */
+.priority-notice {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  padding: 10px 12px;
+  margin: 8px 0 12px;
+}
+
+.priority-notice p {
+  margin: 0;
+}
+
+.priority-notice p + p {
+  margin-top: 4px;
+}
+
+.source-list-end {
+  margin: 0;
+  padding: 2px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.drag-handle {
+  flex: none;
+  cursor: grab;
+  color: var(--text);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.source-row.dragging {
+  opacity: 0.4;
+}
+
+.source-row.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.source-row.drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.source-list.drop-root {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/* An imported file's 2024 books (ADR 0028): the clash line on its row, and the checklist. */
+.source-clash {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--warn) 14%, var(--bg-panel));
+  border: 1px solid color-mix(in srgb, var(--warn) 60%, transparent);
+}
+
+.books-panel {
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.books-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.books-panel > p {
+  margin: 4px 0 8px;
+}
+
+.books-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.books-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+}
+
+.books-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.books-name {
+  overflow-wrap: anywhere;
+}
+
+.books-panel-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
 }

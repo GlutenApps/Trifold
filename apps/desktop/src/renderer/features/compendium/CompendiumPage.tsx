@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, type WheelEvent } from 'react';
 import { CR_ORDER, crToNumber } from '@trifold/rules';
-import { Edition, type RecordKind } from '@trifold/schema';
+import type { RecordKind } from '@trifold/schema';
 import { landOn, navKey, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
-import { itemTypeName } from './formatting';
-import { MonsterEditor } from './MonsterEditor';
+import { itemTypeName, shortSourceName } from './formatting';
+import { HomebrewEditor } from './RecordEditor';
 import { RecordDetail } from './RecordDetail';
 
 /**
@@ -27,13 +27,6 @@ const KINDS: Array<{ id: RecordKind; label: string }> = [
   { id: 'class', label: 'Classes' },
   { id: 'condition', label: 'Conditions' },
 ];
-
-/**
- * Every known ruleset gets a chip column of its own, in the schema's order (newest first); a
- * record tagged with anything else gets an extra chip after them. Adding an edition to the
- * schema adds a column here without further changes.
- */
-const EDITION_SLOTS: readonly string[] = Edition.options.filter((e) => e !== 'unknown');
 
 function editionLabel(edition: string): string {
   return edition === '2014' ? 'legacy' : edition;
@@ -71,6 +64,7 @@ export function CompendiumPage() {
   const back = useCompendiumStore((s) => s.back);
   const clearError = useCompendiumStore((s) => s.clearError);
   const editing = useCompendiumStore((s) => s.editing);
+  const editingNew = useCompendiumStore((s) => s.editingNew);
   const saving = useCompendiumStore((s) => s.saving);
   const duplicateSelected = useCompendiumStore((s) => s.duplicateSelected);
   const startEdit = useCompendiumStore((s) => s.startEdit);
@@ -357,33 +351,35 @@ export function CompendiumPage() {
                   <span className="cell rarity">{r.rarity ?? ''}</span>
                 </>
               )}
-              <span className="cell list-editions">
-                {EDITION_SLOTS.map((e) => (
-                  <span key={e} className="edition-slot">
-                    {r.editions.includes(e) && (
-                      <span
-                        className={`badge${e === r.edition ? '' : ' alt-edition'}`}
-                        title={e === r.edition ? undefined : `Also in the ${editionLabel(e)} rules`}
-                      >
-                        {editionLabel(e)}
-                      </span>
-                    )}
+              {/* One pill: the source that answers by the DM's priority (ADR 0027), and a "+"
+                  when the record is also somewhere else. */}
+              <span className="cell list-source">
+                <span
+                  className="badge source-pill"
+                  title={`${r.sourceName} · ${editionLabel(r.edition)} rules`}
+                >
+                  {shortSourceName(r.sourceName)}
+                  {r.edition === '2014' ? ' · legacy' : ''}
+                </span>
+                {r.otherVersions.length > 0 && (
+                  <span
+                    className="badge more"
+                    data-testid="more-versions"
+                    aria-label={`Also in ${r.otherVersions.length} more`}
+                    title={`Also in: ${r.otherVersions
+                      .map((v) => `${v.sourceName} (${editionLabel(v.edition)})`)
+                      .join(', ')}`}
+                  >
+                    +
                   </span>
-                ))}
-                {r.editions
-                  .filter((e) => !EDITION_SLOTS.includes(e))
-                  .map((e) => (
-                    <span key={e} className="badge">
-                      {editionLabel(e)}
-                    </span>
-                  ))}
+                )}
               </span>
             </button>
           ))}
           {!loading && rows.length === 0 && (
             <p className="muted">
               {sources.length === 0
-                ? 'No sources yet. Import a compendium XML file on the Library’s Compendium page.'
+                ? 'No sources yet. Import a Game Master compendium XML file in the Library, under Compendium › Sources.'
                 : 'Nothing matches these filters.'}
             </p>
           )}
@@ -392,10 +388,11 @@ export function CompendiumPage() {
           className="inspector"
           data-nav={selected && !editing ? navKey('record', selected.id) : undefined}
         >
-          {editing && editing.kind === 'monster' ? (
-            <MonsterEditor
+          {editing ? (
+            <HomebrewEditor
               key={editing.id}
               record={editing}
+              isNew={editingNew}
               saving={saving}
               onCancel={cancelEdit}
               onSave={(r) => void saveHomebrew(r)}

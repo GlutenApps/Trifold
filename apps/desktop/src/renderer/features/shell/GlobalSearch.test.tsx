@@ -207,6 +207,7 @@ describe('GlobalSearch', () => {
       sourceName: 'SRD',
       edition: '2024',
       editions: ['2024'],
+      otherVersions: [],
       cr: '8',
       type: 'fiend',
       size: 'L',
@@ -234,5 +235,52 @@ describe('GlobalSearch', () => {
     expect(useNavStore.getState().pending).toBeNull();
     expect(window.trifold.compendium.get).toHaveBeenCalledWith('r1');
     expect(screen.queryByTestId('search-results')).not.toBeInTheDocument();
+  });
+
+  it('in the Library, searches every campaign and opens the one the picked row is in', async () => {
+    const greyford = bundle();
+    const other = {
+      ...bundle(),
+      campaign: { ...greyford.campaign, id: 'c2', slug: 'brinewood', name: 'Brinewood' },
+      notes: [],
+      npcs: [{ ...greyford.npcs[0]!, id: 'npc2', name: 'Hesperine', role: 'Smuggler' }],
+    } as CampaignBundle;
+    const summaries = [greyford, other].map((b) => ({
+      id: b.campaign.id,
+      slug: b.campaign.slug,
+      name: b.campaign.name,
+      pcCount: 0,
+      encounterCount: 0,
+      updatedAt: now,
+    }));
+    let opened: CampaignBundle | null = null;
+    window.trifold.campaigns.current = vi.fn(async () => opened);
+    window.trifold.campaigns.list = vi.fn(async () => summaries);
+    window.trifold.campaigns.bundles = vi.fn(async () => [greyford, other]);
+    window.trifold.campaigns.open = vi.fn(async () => (opened = other));
+    render(<AppShell />);
+    act(() => {
+      useCampaignStore.setState({ current: null, campaigns: summaries });
+    });
+
+    const field = await screen.findByRole('combobox', { name: 'Search every campaign' });
+    await userEvent.keyboard('{Control>}f{/Control}');
+    expect(field).toHaveFocus();
+    await userEvent.keyboard('hesp');
+    const results = await screen.findByTestId('search-results');
+    const npcs = await within(results).findByRole('group', { name: 'NPCs' });
+    expect(npcs).toHaveTextContent('Greyford · Innkeeper');
+    expect(npcs).toHaveTextContent('Brinewood · Smuggler');
+    // Campaigns only: the compendium is never asked from the Library.
+    expect(window.trifold.compendium.suggest).not.toHaveBeenCalled();
+    expect(window.trifold.campaigns.bundles).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(within(npcs).getByText('Hesperine'));
+    await waitFor(() => expect(window.trifold.campaigns.open).toHaveBeenCalledWith('c2'));
+    await waitFor(() => expect(useShellStore.getState().space).toBe('console'));
+    const campaign = await screen.findByRole('tabpanel', { name: 'Campaign' });
+    await waitFor(() =>
+      expect(within(campaign).getByTestId('npc-row')).toHaveAttribute('data-nav', 'npc:npc2'),
+    );
   });
 });

@@ -86,8 +86,16 @@ export function linkifySpells(
   return out;
 }
 
+/**
+ * A source's name as a pill can hold it: "System Reference Document 5.2" reads "SRD 5.2". Other
+ * names are shown as they are and cut off with an ellipsis by the pill.
+ */
+export function shortSourceName(name: string): string {
+  return name.replace(/\bSystem Reference Document\b/i, 'SRD').trim();
+}
+
 /** Lion's Den item type codes (DATA-FORMATS.md §2.8) as the words the DM reads. */
-const ITEM_TYPE_NAMES: Record<string, string> = {
+export const ITEM_TYPE_NAMES: Record<string, string> = {
   LA: 'Light armor',
   MA: 'Medium armor',
   HA: 'Heavy armor',

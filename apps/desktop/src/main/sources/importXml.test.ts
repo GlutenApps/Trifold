@@ -94,4 +94,27 @@ describe('importXmlSource (files only, no index)', () => {
     await writeFile(join(dir, 'other.xml'), '<html></html>');
     await expect(importXmlSource(ctx, join(dir, 'other.xml'))).rejects.toThrow(/not a Lion/);
   });
+
+  it('re-tags an unchanged file when its 2024 books change, keeping record ids (ADR 0028)', async () => {
+    // The same SRD item from both SRDs, the newer one not tagged [5.5e].
+    const item = (book: string) =>
+      `<item><name>Longsword</name><type>M</type><text>A martial melee weapon.</text><text>Source: ${book} p. 1</text></item>`;
+    const path = join(dir, 'Mixed.xml');
+    await writeFile(
+      path,
+      `<compendium version="5">${item('System Reference Document 5.1')}${item('System Reference Document 5.2.1')}</compendium>`,
+    );
+    const first = await importXmlSource(ctx, path);
+    const before = await ctx.sources.readAllRecords(first.sourceId);
+    expect(before.map((r) => r.edition)).toEqual(['2014', '2014']);
+
+    const report = await reimportSource(ctx, first.sourceId, ['System Reference Document 5.2.1']);
+    expect(report.status).toBe('updated');
+    const after = await ctx.sources.readAllRecords(first.sourceId);
+    expect(after.map((r) => r.edition)).toEqual(['2014', '2024']);
+    expect(after.map((r) => r.id)).toEqual(before.map((r) => r.id));
+    expect((await ctx.sources.get(first.sourceId))!.edition2024Books).toEqual([
+      'System Reference Document 5.2.1',
+    ]);
+  });
 });

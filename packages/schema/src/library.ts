@@ -194,6 +194,12 @@ export const LibrarySettings = z.object({
    * (DATA-FORMATS.md §2.10). Applied at import time; user-configured, empty by default.
    */
   edition2024Books: z.array(z.string()).default([]),
+  /**
+   * Source priority, highest first (ADR 0027): when a record is in several sources the
+   * compendium shows the one from the source nearest the top. Sources not listed follow in the
+   * default order (`sourceOrder` in @trifold/rules). Additive with a default; no schema bump.
+   */
+  sourcePriority: z.array(z.string()).default([]),
   /** Bundled sources (srd-2024, srd-2014) the user switched off; other sources carry their own flag. */
   disabledSourceIds: z.array(z.string()).default([]),
   backups: z

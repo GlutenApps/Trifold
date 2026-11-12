@@ -1,6 +1,6 @@
 # Releasing Trifold
 
-How a commit on `main` becomes the installers people download. Builds are unsigned on both platforms (code signing and notarisation are M3, `DESIGN.md` §10); the README tells users how to get past SmartScreen and Gatekeeper.
+How a commit on `main` becomes the installers people download. Builds are unsigned on both platforms (Windows signing comes before the itch beta and macOS notarisation with 1.0, `DESIGN.md` §10); the README tells users how to get past SmartScreen and Gatekeeper.
 
 ## What a release contains
 

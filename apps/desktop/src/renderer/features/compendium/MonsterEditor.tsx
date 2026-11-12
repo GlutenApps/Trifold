@@ -4,7 +4,6 @@ import {
   average,
   formatModifierPairs,
   isDiceExpression,
-  parseCommaList,
   parseModifierPairs,
   proficiencyBonusForCr,
   xpForCr,
@@ -12,6 +11,18 @@ import {
 } from '@trifold/rules';
 import type { Feature, MonsterRecord } from '@trifold/schema';
 import { Icon } from '../shell/icons';
+import {
+  Check,
+  EditorHead,
+  ListField,
+  moved,
+  NumberField,
+  RowActions,
+  Section,
+  SelectField,
+  TextBlock,
+  TextField,
+} from './editorParts';
 
 type Data = MonsterRecord['data'];
 type FeatureList = 'traits' | 'actions' | 'bonusActions' | 'reactions' | 'lair';
@@ -25,7 +36,8 @@ const ABILITY_LABEL: Record<(typeof ABILITIES)[number], string> = {
   wis: 'WIS',
   cha: 'CHA',
 };
-const SIZES: Array<[Data['size'], string]> = [
+const SIZES: Array<readonly [string, string]> = [
+  ['', '—'],
   ['T', 'Tiny'],
   ['S', 'Small'],
   ['M', 'Medium'],
@@ -33,7 +45,13 @@ const SIZES: Array<[Data['size'], string]> = [
   ['H', 'Huge'],
   ['G', 'Gargantuan'],
 ];
-const SPEEDS = ['walk', 'fly', 'swim', 'climb', 'burrow'] as const;
+const SPEEDS = [
+  ['walk', 'Walk'],
+  ['fly', 'Fly'],
+  ['swim', 'Swim'],
+  ['climb', 'Climb'],
+  ['burrow', 'Burrow'],
+] as const;
 
 function blankFeature(): Feature {
   return { name: '', displayName: '', text: '', tags: [], attacks: [], rolls: [], saves: [] };
@@ -50,59 +68,29 @@ function FeatureListEditor({
 }) {
   const update = (i: number, patch: Partial<Feature>) =>
     onChange(features.map((f, j) => (j === i ? { ...f, ...patch } : f)));
-  const move = (i: number, step: -1 | 1) => {
-    const j = i + step;
-    if (j < 0 || j >= features.length) return;
-    const next = [...features];
-    [next[i], next[j]] = [next[j]!, next[i]!];
-    onChange(next);
-  };
   const singular = label.toLowerCase().replace(/s$/, '');
   const nameOf = (f: Feature, i: number) => f.name.trim() || `${singular} ${i + 1}`;
   return (
-    <fieldset className="feature-list">
-      <legend>{label}</legend>
+    <section className="editor-section" aria-label={label}>
+      <h3>{label}</h3>
       {features.map((f, i) => (
         <div key={i} className="feature-edit">
           <div className="row">
             <input
               type="text"
+              className="grow"
               aria-label={`${label} name`}
               placeholder="Name, e.g. Bite or Fire Breath (Recharge 5–6)"
               value={f.name}
               onChange={(e) => update(i, { name: e.target.value, displayName: e.target.value })}
             />
-            <span className="row-actions">
-              <button
-                type="button"
-                className="chrome-btn xs"
-                aria-label={`Move ${nameOf(f, i)} up`}
-                title="Move up"
-                disabled={i === 0}
-                onClick={() => move(i, -1)}
-              >
-                <Icon name="up" />
-              </button>
-              <button
-                type="button"
-                className="chrome-btn xs"
-                aria-label={`Move ${nameOf(f, i)} down`}
-                title="Move down"
-                disabled={i === features.length - 1}
-                onClick={() => move(i, 1)}
-              >
-                <Icon name="down" />
-              </button>
-              <button
-                type="button"
-                className="chrome-btn xs"
-                aria-label={`Remove ${nameOf(f, i)}`}
-                title="Remove"
-                onClick={() => onChange(features.filter((_, j) => j !== i))}
-              >
-                <Icon name="close" />
-              </button>
-            </span>
+            <RowActions
+              name={nameOf(f, i)}
+              index={i}
+              count={features.length}
+              onMove={(step) => onChange(moved(features, i, step))}
+              onRemove={() => onChange(features.filter((_, j) => j !== i))}
+            />
           </div>
           <textarea
             aria-label={`${label} text`}
@@ -117,21 +105,24 @@ function FeatureListEditor({
         <Icon name="plus" />
         Add {singular}
       </button>
-    </fieldset>
+    </section>
   );
 }
 
-/** Monster editor for homebrew copies (DESIGN.md §6.2, M1 §7). Originals stay read-only. */
+/** Monster editor for homebrew records (DESIGN.md §6.2), in sections (ADR 0027). */
 export function MonsterEditor({
   record,
   onSave,
   onCancel,
   saving,
+  isNew = false,
 }: {
   record: MonsterRecord;
   onSave(record: MonsterRecord): void;
   onCancel(): void;
   saving: boolean;
+  /** A blank monster from New homebrew, not yet saved. */
+  isNew?: boolean;
 }) {
   const [name, setName] = useState(record.displayName);
   const [d, setD] = useState<Data>(record.data);
@@ -152,6 +143,8 @@ export function MonsterEditor({
   };
 
   const submit = () => {
+    const skills = parseModifierPairs(skillsText);
+    const wis = abilityModifier(d.abilities.wis);
     onSave({
       ...record,
       displayName: name,
@@ -159,154 +152,107 @@ export function MonsterEditor({
       data: {
         ...d,
         saves: parseModifierPairs(savesText) as Data['saves'],
-        skills: parseModifierPairs(skillsText),
-        passivePerception:
-          10 +
-          abilityModifier(d.abilities.wis) +
-          (parseModifierPairs(skillsText)['perception'] !== undefined
-            ? parseModifierPairs(skillsText)['perception']! - abilityModifier(d.abilities.wis)
-            : 0),
+        skills,
+        passivePerception: 10 + (skills['perception'] ?? wis),
       },
     });
   };
 
+  const crOptions: Array<readonly [string, string]> = [
+    ...(CR_ORDER.includes(d.cr as (typeof CR_ORDER)[number]) ? [] : [[d.cr, d.cr || '—'] as const]),
+    ...CR_ORDER.map((cr) => [cr, cr] as const),
+  ];
+
   return (
     <form
-      className="monster-editor"
+      className="record-editor monster-editor"
       data-testid="monster-editor"
       onSubmit={(e) => {
         e.preventDefault();
         submit();
       }}
     >
-      <div className="row">
-        <h2>Edit homebrew monster</h2>
-        <span className="spacer" />
-        <button type="button" className="btn" onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="submit" className="btn primary" disabled={saving || !name.trim()}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-      </div>
+      <EditorHead
+        title={`${isNew ? 'New' : 'Edit'} homebrew monster`}
+        saving={saving}
+        canSave={!!name.trim()}
+        onCancel={onCancel}
+      />
 
-      <div className="grid-fields">
-        <label className="field">
-          Name
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
-        <label className="field">
-          Size
-          <select
-            value={d.size ?? ''}
-            onChange={(e) => patch({ size: (e.target.value || null) as Data['size'] })}
-          >
-            <option value="">—</option>
-            {SIZES.map(([code, label]) => (
-              <option key={code ?? 'none'} value={code ?? ''}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          Type
-          <input type="text" value={d.type} onChange={(e) => patch({ type: e.target.value })} />
-        </label>
-        <label className="field">
-          Subtype
-          <input
-            type="text"
-            value={d.subtype ?? ''}
-            onChange={(e) => patch({ subtype: e.target.value || undefined })}
-          />
-        </label>
-        <label className="field">
-          Alignment
-          <input
-            type="text"
-            value={d.alignment}
-            onChange={(e) => patch({ alignment: e.target.value })}
-          />
-        </label>
-        <label className="field">
-          CR
-          <select
-            aria-label="Challenge rating"
-            value={d.cr}
-            onChange={(e) => setCr(e.target.value)}
-          >
-            {!CR_ORDER.includes(d.cr as (typeof CR_ORDER)[number]) && (
-              <option value={d.cr}>{d.cr || '—'}</option>
-            )}
-            {CR_ORDER.map((cr) => (
-              <option key={cr} value={cr}>
-                {cr}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          XP
-          <input
-            type="number"
-            value={d.xp}
-            onChange={(e) => patch({ xp: Number(e.target.value) || 0 })}
-          />
-        </label>
-        <label className="field">
-          Proficiency bonus
-          <input
-            type="number"
-            value={d.proficiencyBonus ?? ''}
-            onChange={(e) =>
-              patch({
-                proficiencyBonus: e.target.value === '' ? undefined : Number(e.target.value),
-              })
-            }
-          />
-        </label>
-      </div>
+      <Section
+        title="Basics"
+        cols={4}
+        checks={
+          <Check label="Named NPC" checked={d.isNpc} onChange={(isNpc) => patch({ isNpc })} />
+        }
+      >
+        <TextField label="Name" value={name} onChange={setName} span={2} required />
+        <SelectField
+          label="Size"
+          value={d.size ?? ''}
+          options={SIZES}
+          onChange={(v) => patch({ size: (v || null) as Data['size'] })}
+        />
+        <TextField
+          label="Alignment"
+          value={d.alignment}
+          onChange={(alignment) => patch({ alignment })}
+        />
+        <TextField
+          label="Type"
+          value={d.type}
+          placeholder="e.g. Aberration"
+          onChange={(type) => patch({ type })}
+        />
+        <TextField
+          label="Subtype"
+          value={d.subtype}
+          onChange={(v) => patch({ subtype: v || undefined })}
+        />
+      </Section>
 
-      <div className="grid-fields">
-        <label className="field">
-          AC
-          <input
-            type="number"
-            aria-label="Armor class"
-            value={d.ac?.value ?? 10}
-            onChange={(e) => patch({ ac: { ...(d.ac ?? {}), value: Number(e.target.value) || 0 } })}
-          />
-        </label>
-        <label className="field">
-          AC note
-          <input
-            type="text"
-            value={d.ac?.note ?? ''}
-            onChange={(e) =>
-              patch({
-                ac: {
-                  value: d.ac?.value ?? 10,
-                  ...(e.target.value ? { note: e.target.value } : {}),
-                },
-              })
-            }
-          />
-        </label>
-        <label className="field">
-          HP average
-          <input
-            type="number"
-            aria-label="Hit points"
-            value={d.hp?.average ?? 1}
-            onChange={(e) =>
-              patch({ hp: { ...(d.hp ?? {}), average: Number(e.target.value) || 0 } })
-            }
-          />
-        </label>
+      <Section
+        title="Challenge"
+        cols={3}
+        hint="Picking a CR fills in its XP and proficiency bonus."
+      >
+        <SelectField
+          label="CR"
+          ariaLabel="Challenge rating"
+          value={d.cr}
+          options={crOptions}
+          onChange={setCr}
+        />
+        <NumberField label="XP" value={d.xp} onChange={(xp) => patch({ xp: xp ?? 0 })} />
+        <NumberField
+          label="Proficiency bonus"
+          value={d.proficiencyBonus}
+          onChange={(proficiencyBonus) => patch({ proficiencyBonus })}
+        />
+      </Section>
+
+      <Section title="Armor class and hit points" cols={4}>
+        <NumberField
+          label="AC"
+          ariaLabel="Armor class"
+          value={d.ac?.value ?? 10}
+          onChange={(v) => patch({ ac: { ...(d.ac ?? {}), value: v ?? 0 } })}
+        />
+        <TextField
+          label="AC note"
+          value={d.ac?.note}
+          placeholder="e.g. natural armor"
+          onChange={(v) => patch({ ac: { value: d.ac?.value ?? 10, ...(v ? { note: v } : {}) } })}
+        />
+        <NumberField
+          label="HP average"
+          ariaLabel="Hit points"
+          value={d.hp?.average ?? 1}
+          onChange={(v) => patch({ hp: { ...(d.hp ?? {}), average: v ?? 0 } })}
+        />
         <label className="field">
           HP formula
-          <span className="row">
+          <span className="row field-with-action">
             <input
               type="text"
               aria-label="Hit point formula"
@@ -335,140 +281,111 @@ export function MonsterEditor({
             </button>
           </span>
         </label>
-        {SPEEDS.map((s) => (
-          <label key={s} className="field">
-            Speed {s}
-            <input
-              type="number"
-              value={d.speeds[s] ?? ''}
-              onChange={(e) =>
-                patch({
-                  speeds: {
-                    ...d.speeds,
-                    [s]: e.target.value === '' ? undefined : Number(e.target.value),
-                  },
-                })
-              }
-            />
-          </label>
-        ))}
-      </div>
+      </Section>
 
-      <div className="grid-fields abilities">
-        {ABILITIES.map((a) => (
-          <label key={a} className="field">
-            {ABILITY_LABEL[a]}{' '}
-            <span className="muted small">
-              ({abilityModifier(d.abilities[a]) >= 0 ? '+' : ''}
-              {abilityModifier(d.abilities[a])})
-            </span>
-            <input
-              type="number"
-              aria-label={ABILITY_LABEL[a]}
-              value={d.abilities[a]}
-              onChange={(e) =>
-                patch({ abilities: { ...d.abilities, [a]: Number(e.target.value) || 0 } })
-              }
-            />
-          </label>
-        ))}
-      </div>
-
-      <div className="grid-fields">
-        <label className="field">
-          Saves <span className="muted small">(e.g. dex +4, wis +2)</span>
-          <input type="text" value={savesText} onChange={(e) => setSavesText(e.target.value)} />
-        </label>
-        <label className="field">
-          Skills <span className="muted small">(e.g. stealth +6)</span>
-          <input type="text" value={skillsText} onChange={(e) => setSkillsText(e.target.value)} />
-        </label>
-        <label className="field">
-          Senses
-          <input type="text" value={d.senses} onChange={(e) => patch({ senses: e.target.value })} />
-        </label>
-        <label className="field">
-          Languages
-          <input
-            type="text"
-            value={d.languages}
-            onChange={(e) => patch({ languages: e.target.value })}
-          />
-        </label>
-        <label className="field">
-          Damage vulnerabilities
-          <input
-            type="text"
-            value={d.damageVulnerabilities.join(', ')}
-            onChange={(e) => patch({ damageVulnerabilities: parseCommaList(e.target.value) })}
-          />
-        </label>
-        <label className="field">
-          Damage resistances
-          <input
-            type="text"
-            value={d.damageResistances.join(', ')}
-            onChange={(e) => patch({ damageResistances: parseCommaList(e.target.value) })}
-          />
-        </label>
-        <label className="field">
-          Damage immunities
-          <input
-            type="text"
-            value={d.damageImmunities.join(', ')}
-            onChange={(e) => patch({ damageImmunities: parseCommaList(e.target.value) })}
-          />
-        </label>
-        <label className="field">
-          Condition immunities
-          <input
-            type="text"
-            value={d.conditionImmunities.join(', ')}
-            onChange={(e) => patch({ conditionImmunities: parseCommaList(e.target.value) })}
-          />
-        </label>
-        <label className="field">
-          Environment
-          <input
-            type="text"
-            value={d.environment.join(', ')}
-            onChange={(e) => patch({ environment: parseCommaList(e.target.value) })}
-          />
-        </label>
-        <label className="field">
-          Legendary actions per turn
-          <input
-            type="number"
+      <Section title="Speed (feet)" cols={5}>
+        {SPEEDS.map(([key, label]) => (
+          <NumberField
+            key={key}
+            label={label}
+            ariaLabel={`Speed ${key}`}
             min={0}
-            value={d.legendary.perTurn ?? ''}
-            onChange={(e) =>
-              patch({
-                legendary: {
-                  ...d.legendary,
-                  perTurn: e.target.value === '' ? undefined : Number(e.target.value),
-                },
-              })
-            }
+            value={d.speeds[key]}
+            onChange={(v) => patch({ speeds: { ...d.speeds, [key]: v } })}
           />
-        </label>
-        <label className="field inline">
-          <input
-            type="checkbox"
-            checked={d.isNpc}
-            onChange={(e) => patch({ isNpc: e.target.checked })}
-          />
-          Named NPC
-        </label>
-      </div>
+        ))}
+      </Section>
 
-      <label className="field">
-        Description
-        <textarea
+      <Section title="Ability scores" cols={6}>
+        {ABILITIES.map((a) => {
+          const mod = abilityModifier(d.abilities[a]);
+          return (
+            <NumberField
+              key={a}
+              ariaLabel={ABILITY_LABEL[a]}
+              label={
+                <span>
+                  {ABILITY_LABEL[a]} <span className="muted">{mod >= 0 ? `+${mod}` : mod}</span>
+                </span>
+              }
+              value={d.abilities[a]}
+              onChange={(v) => patch({ abilities: { ...d.abilities, [a]: v ?? 0 } })}
+            />
+          );
+        })}
+      </Section>
+
+      <Section title="Proficiencies and senses" cols={2}>
+        <TextField
+          label="Saves"
+          value={savesText}
+          placeholder="e.g. dex +4, wis +2"
+          onChange={setSavesText}
+        />
+        <TextField
+          label="Skills"
+          value={skillsText}
+          placeholder="e.g. stealth +6"
+          onChange={setSkillsText}
+        />
+        <TextField
+          label="Senses"
+          value={d.senses}
+          placeholder="e.g. darkvision 60 ft."
+          onChange={(senses) => patch({ senses })}
+        />
+        <TextField
+          label="Languages"
+          value={d.languages}
+          onChange={(languages) => patch({ languages })}
+        />
+      </Section>
+
+      <Section title="Damage and conditions" cols={2}>
+        <ListField
+          label="Damage vulnerabilities"
+          value={d.damageVulnerabilities}
+          onChange={(damageVulnerabilities) => patch({ damageVulnerabilities })}
+        />
+        <ListField
+          label="Damage resistances"
+          value={d.damageResistances}
+          onChange={(damageResistances) => patch({ damageResistances })}
+        />
+        <ListField
+          label="Damage immunities"
+          value={d.damageImmunities}
+          onChange={(damageImmunities) => patch({ damageImmunities })}
+        />
+        <ListField
+          label="Condition immunities"
+          value={d.conditionImmunities}
+          onChange={(conditionImmunities) => patch({ conditionImmunities })}
+        />
+      </Section>
+
+      <Section title="Where it lives" cols={2}>
+        <ListField
+          label="Environment"
+          value={d.environment}
+          onChange={(environment) => patch({ environment })}
+        />
+        <NumberField
+          label="Legendary actions per turn"
+          min={0}
+          value={d.legendary.perTurn}
+          onChange={(perTurn) => patch({ legendary: { ...d.legendary, perTurn } })}
+        />
+      </Section>
+
+      <Section title="Description" cols={1}>
+        <TextBlock
+          label="Description"
           rows={3}
           value={d.description ?? ''}
-          onChange={(e) => patch({ description: e.target.value || undefined })}
+          onChange={(v) => patch({ description: v || undefined })}
         />
-      </label>
+      </Section>
 
       <FeatureListEditor
         label="Traits"
@@ -500,15 +417,6 @@ export function MonsterEditor({
         features={d.lair}
         onChange={(f) => setFeatures('lair', f)}
       />
-
-      <div className="row">
-        <button type="button" className="btn" onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="submit" className="btn primary" disabled={saving || !name.trim()}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-      </div>
     </form>
   );
 }

@@ -10,11 +10,11 @@ import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
 
 /**
- * One open compendium record (DESIGN.md §6.1): a bar with Back, the edition switch and the
- * source citation, then either the record laid out by kind (monsters as the 2024 stat block)
- * or its source text with any unknown elements the importer preserved. Rolls made from the
- * record land in the shared log through compendiumRolls; the homebrew bar (DESIGN.md §6.2) is
- * for monsters only in M1.
+ * One open compendium record (DESIGN.md §6.1): a bar with Back, the edition dropdown, the source
+ * citation and Duplicate to homebrew (ADR 0026), then the record laid out by kind (monsters as
+ * the 2024 stat block). Rolls made from the record land in the shared log through
+ * compendiumRolls. A homebrew record also gets the homebrew bar: Edit, Changes from original
+ * and Delete (DESIGN.md §6.2).
  */
 interface Props {
   record: CompendiumRecord;
@@ -36,7 +36,7 @@ interface Props {
   };
 }
 
-/** Duplicate / Edit / Delete / Changes (DESIGN.md §6.2). Monsters only in M1. */
+/** Edit / Changes from original / Delete, on homebrew records (DESIGN.md §6.2). */
 function HomebrewBar({
   record,
   actions,
@@ -51,7 +51,7 @@ function HomebrewBar({
     setConfirm(false);
     setDiff(null);
   }, [record.id]);
-  if (record.kind !== 'monster') return null;
+  if (!isHomebrew) return null;
   const showDiff = async () => {
     if (diff) {
       setDiff(null);
@@ -65,41 +65,32 @@ function HomebrewBar({
   return (
     <div className="homebrew-bar" data-testid="homebrew-bar">
       <div className="row">
-        {isHomebrew && (
-          <button type="button" className="btn primary" onClick={actions.onEdit}>
-            <Icon name="pencil" />
-            Edit
-          </button>
-        )}
-        <button type="button" className="btn" onClick={actions.onDuplicate}>
-          Duplicate to homebrew
+        <button type="button" className="btn primary" onClick={actions.onEdit}>
+          <Icon name="pencil" />
+          Edit
         </button>
-        {isHomebrew && record.basedOn && (
+        {record.basedOn && (
           <button type="button" className="btn" onClick={() => void showDiff()}>
             {diff ? 'Hide changes' : 'Changes from original'}
           </button>
         )}
-        {isHomebrew && (
-          <>
-            <span className="spacer" />
-            {confirm ? (
-              <InlineConfirm
-                name={record.displayName}
-                onConfirm={() => actions.onRemove(record.id)}
-                onKeep={() => setConfirm(false)}
-              />
-            ) : (
-              <button
-                type="button"
-                className="chrome-btn danger"
-                aria-label={`Delete ${record.displayName}`}
-                title="Delete this homebrew record"
-                onClick={() => setConfirm(true)}
-              >
-                <Icon name="trash" />
-              </button>
-            )}
-          </>
+        <span className="spacer" />
+        {confirm ? (
+          <InlineConfirm
+            name={record.displayName}
+            onConfirm={() => actions.onRemove(record.id)}
+            onKeep={() => setConfirm(false)}
+          />
+        ) : (
+          <button
+            type="button"
+            className="chrome-btn danger"
+            aria-label={`Delete ${record.displayName}`}
+            title="Delete this homebrew record"
+            onClick={() => setConfirm(true)}
+          >
+            <Icon name="trash" />
+          </button>
         )}
       </div>
       {diff && (
@@ -380,37 +371,6 @@ function Body({
   }
 }
 
-function sourceText(record: CompendiumRecord): string {
-  switch (record.kind) {
-    case 'monster':
-      return [
-        record.data.description ?? '',
-        ...[
-          ...record.data.traits,
-          ...record.data.actions,
-          ...record.data.bonusActions,
-          ...record.data.reactions,
-          ...record.data.legendary.actions,
-          ...record.data.lair,
-        ].map((f) => `${f.name}\n${f.text}`),
-      ]
-        .filter(Boolean)
-        .join('\n\n');
-    case 'spell':
-    case 'item':
-    case 'feat':
-    case 'condition':
-      return record.data.text;
-    case 'species':
-    case 'background':
-      return record.data.traits.map((t) => `${t.name}\n${t.text}`).join('\n\n');
-    case 'class':
-      return record.data.levels
-        .flatMap((l) => l.features.map((f) => `Level ${l.level}: ${f.name}\n${f.text}`))
-        .join('\n\n');
-  }
-}
-
 export function RecordDetail({
   record,
   editions,
@@ -423,8 +383,8 @@ export function RecordDetail({
   sourceNames = {},
   homebrew,
 }: Props) {
-  const [tab, setTab] = useState<'block' | 'source'>('block');
-  const extra = Object.keys(record.data.extra);
+  const editionName = (e: CompendiumRecord) =>
+    `${e.edition === '2014' ? 'Legacy' : e.edition} · ${sourceNames[e.sourceId] ?? e.sourceBook ?? e.sourceId}`;
 
   return (
     <div className="detail">
@@ -451,67 +411,46 @@ export function RecordDetail({
             <Icon name="left" />
           </button>
         )}
-        {editions.length > 1 && (
-          <span className="seg" role="group" aria-label="Switch edition">
+        {editions.length > 1 ? (
+          // A dropdown, not a toggle: the list can grow and source names can be long (ADR 0026).
+          <select
+            className="edition-select"
+            aria-label="Switch edition"
+            title="Other versions of this record"
+            value={record.id}
+            onChange={(ev) => {
+              const next = editions.find((e) => e.id === ev.target.value);
+              if (next) onSwitchEdition(next);
+            }}
+          >
             {editions.map((e) => (
-              <button
-                key={e.id}
-                type="button"
-                className="btn"
-                aria-pressed={e.id === record.id}
-                onClick={() => onSwitchEdition(e)}
-              >
-                {e.edition === '2014' ? 'Legacy' : e.edition}
-                {editions.filter((o) => o.edition === e.edition).length > 1
-                  ? ` · ${sourceNames[e.sourceId] ?? e.sourceBook ?? e.sourceId}`
-                  : ''}
-              </button>
+              <option key={e.id} value={e.id}>
+                {editionName(e)}
+              </option>
             ))}
-          </span>
+          </select>
+        ) : (
+          <span className="badge">{record.edition === '2014' ? 'legacy' : record.edition}</span>
         )}
-        <span className="badge">{record.edition === '2014' ? 'legacy' : record.edition}</span>
-        {record.sourceBook && (
-          <span className="muted">
-            {record.sourceBook}
-            {record.sourcePage !== undefined ? ` p. ${record.sourcePage}` : ''}
-          </span>
-        )}
+        {record.sourceBook &&
+          !(editions.length > 1 && record.sourceBook === sourceNames[record.sourceId]) && (
+            <span className="muted">
+              {record.sourceBook}
+              {record.sourcePage !== undefined ? ` p. ${record.sourcePage}` : ''}
+            </span>
+          )}
         <span className="spacer" />
-        <span className="seg" role="group" aria-label="View">
-          <button
-            type="button"
-            className="btn"
-            aria-pressed={tab === 'block'}
-            onClick={() => setTab('block')}
-          >
-            Stat block
+        {homebrew && (
+          <button type="button" className="btn" onClick={homebrew.onDuplicate}>
+            <Icon name="plus" />
+            Duplicate to homebrew
           </button>
-          <button
-            type="button"
-            className="btn"
-            aria-pressed={tab === 'source'}
-            onClick={() => setTab('source')}
-          >
-            Source text
-          </button>
-        </span>
+        )}
       </div>
 
-      {tab === 'block' ? (
-        <>
-          {homebrew && <HomebrewBar record={record} actions={homebrew} />}
-          <LastRoll actor={record.displayName} />
-          <Body record={record} onOpenSpell={onOpenSpell} />
-        </>
-      ) : (
-        <article className="statblock">
-          <h2>{record.name}</h2>
-          <pre className="source-text">{sourceText(record)}</pre>
-          {extra.length > 0 && (
-            <p className="muted">Unknown elements preserved from the file: {extra.join(', ')}</p>
-          )}
-        </article>
-      )}
+      {homebrew && <HomebrewBar record={record} actions={homebrew} />}
+      <LastRoll actor={record.displayName} />
+      <Body record={record} onOpenSpell={onOpenSpell} />
     </div>
   );
 }

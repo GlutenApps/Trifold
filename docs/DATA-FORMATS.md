@@ -138,7 +138,7 @@ into `sourceBook` and `sourcePage`, and remove the line from the displayed text.
 
 - A trailing `[5.5e]` on `name` marks a 2024 record (626 of 5,034 monsters; 727 of 1,420 spells in the community file). Strip it into `displayName`; set `edition = "2024"`.
 - Names may also carry `(Legacy)`, `(UA)`, `(TP)` and similar tags in classes/subclasses; strip to `tags` (`legacy`, `unearthed-arcana`, `third-party`).
-- Source book in a configurable 2024 list (e.g. `Monster Manual (2025)`, `Player's Handbook (2024)`, `Dungeon Master's Guide (2024)`) → `edition = "2024"` even without the suffix (78 5.5e monsters lack `init`; 6 non-5.5e have it — do not use `init` as the edition signal).
+- Source book in the source's own 2024 list (`edition2024Books` in `source.json`, chosen per imported file on Library › Compendium › Sources, ADR 0028; e.g. `Monster Manual (2025)`, `Player's Handbook (2024)`, `Dungeon Master's Guide (2024)`) → `edition = "2024"` even without the suffix (78 5.5e monsters lack `init`; 6 non-5.5e have it — do not use `init` as the edition signal).
 - Otherwise the source's default edition (community files: 2014).
 - The same creature commonly exists twice (`Aboleth` and `Aboleth [5.5e]`); both share `key = "aboleth"` and are presented as one entry with an edition switch.
 
@@ -158,7 +158,7 @@ Feat: `name`, `prerequisite`, `text`, `modifier`, `proficiency`, `special`, `rol
 
 `<modifier category="bonus|ability score|ability modifier|saving throw|skill">value</modifier>`, e.g. `ac +2`, `speed +10`, `melee attacks +1`, `ranged damage +3`, `saving throws +1`, `strength +2`. Store as `{ category, target, value }` by splitting on the last signed integer. `<roll description="Fire Damage" level="8">8d8</roll>` — `level` scales the roll by character or spell level; keep as-is.
 
-### 2.15 Export **(not built; DESIGN.md §10 M2)**
+### 2.15 Export **(not built; DESIGN.md §10 beta)**
 
 Trifold will write the same schema: `<compendium version="5" auto_indent="NO">`, one element per record, fields in the documented order, `text` paragraphs as separate `<text>` elements, `Source: Trifold Homebrew` appended to descriptions of homebrew. Names must be unique per kind. Records with `basedOn` pointing at a `nonSrd` source trigger the export warning (`DESIGN.md` §8).
 

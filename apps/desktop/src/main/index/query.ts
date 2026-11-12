@@ -157,7 +157,8 @@ const MAX_LIMIT = 2000;
 /**
  * The search SQL for a `CompendiumQuery`: `sql` and `params` for the page of rows, `countSql`
  * and `countParams` for the total. By default records sharing a key (the 2024 and legacy
- * Goblin, or one monster from two sources) collapse to a single row headed by `preferEdition`,
+ * Goblin, or one monster from two sources) collapse to a single row headed by the record from
+ * the highest-priority source (ADR 0027), `preferEdition` breaking ties inside one source,
  * which needs a window function, and bm25() ranking only works in the inner query, never beside
  * that window function; hence the nested shape. `collapse: false` returns every record.
  */
@@ -215,10 +216,11 @@ export function buildSearch(query: CompendiumQuery): SearchSql {
   // Records sharing a key (the 2024 and legacy Goblin, or the same monster from two sources)
   // collapse to one row (DESIGN.md §7.2). The plain inner query filters and scores (bm25 only
   // works at that level, never beside a window function); the middle one ranks each key's
-  // records, preferred edition first, and gathers every edition behind the row; the outer one
+  // records, highest-priority source first, then the preferred edition, and gathers every
+  // edition and every version (source and edition) behind the row; the outer one
   // keeps rank 1. The `?` in the middle SELECT list binds first, before the WHERE params.
   const rank = match ? 'bm25(records_fts)' : '0';
-  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, ${rank} AS rank ${from}`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, ${rank} AS rank ${from}`;
   if (query.collapse === false) {
     const plainOrder = match
       ? 'ORDER BY rank, r.display_name COLLATE NOCASE, r.edition DESC'
@@ -230,7 +232,7 @@ export function buildSearch(query: CompendiumQuery): SearchSql {
       countParams: params,
     };
   }
-  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY key ORDER BY (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY key) AS editions FROM (${base})`;
+  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY key) AS versions FROM (${base})`;
   const order = match
     ? 'ORDER BY rank, display_name COLLATE NOCASE, edition DESC'
     : 'ORDER BY display_name COLLATE NOCASE, edition DESC';
@@ -247,6 +249,35 @@ export function buildSearch(query: CompendiumQuery): SearchSql {
 export function parseEditions(own: string, concatenated: string | null): string[] {
   const rest = new Set((concatenated ?? '').split(',').filter((e) => e && e !== own));
   return [own, ...[...rest].sort().reverse()];
+}
+
+/**
+ * The other versions behind a collapsed row (ADR 0027), highest priority first: every
+ * source-and-edition pair except the row's own. `versions` is the GROUP_CONCAT of
+ * `priority \x1f source name \x1f edition`, joined by `\x1e`.
+ */
+export function parseVersions(
+  ownSource: string,
+  ownEdition: string,
+  versions: string | null,
+): Array<{ sourceName: string; edition: string }> {
+  if (!versions) return [];
+  const all = versions
+    .split('\u001e')
+    .map((v) => v.split('\u001f'))
+    .filter((p): p is [string, string, string] => p.length === 3)
+    .map(([priority, sourceName, edition]) => ({ priority: Number(priority), sourceName, edition }))
+    .sort((a, b) => a.priority - b.priority || b.edition.localeCompare(a.edition));
+  let ownSkipped = false;
+  const out: Array<{ sourceName: string; edition: string }> = [];
+  for (const v of all) {
+    if (!ownSkipped && v.sourceName === ownSource && v.edition === ownEdition) {
+      ownSkipped = true;
+      continue;
+    }
+    out.push({ sourceName: v.sourceName, edition: v.edition });
+  }
+  return out;
 }
 
 export interface RawRow {
@@ -268,6 +299,8 @@ export interface RawRow {
   rarity: string | null;
   /** Comma-joined editions of every record behind the row (GROUP_CONCAT); absent uncollapsed. */
   editions?: string | null;
+  /** Every record behind the row as priority, source name and edition (GROUP_CONCAT). */
+  versions?: string | null;
 }
 
 /** A `CompendiumRow` from a raw result row; `editions` is expanded from the GROUP_CONCAT column. */
@@ -282,6 +315,7 @@ export function toRow(raw: RawRow): CompendiumRow {
     sourceName: raw.source_name,
     edition: raw.edition,
     editions: parseEditions(raw.edition, raw.editions ?? null),
+    otherVersions: parseVersions(raw.source_name, raw.edition, raw.versions ?? null),
     cr: raw.cr,
     type: raw.type,
     size: raw.size,
@@ -315,8 +349,8 @@ export function buildSuggest(
 ): { sql: string; params: unknown[] } {
   const term = likeEscape(text.trim().toLowerCase());
   const tier = `CASE WHEN lower(r.display_name) = ? THEN 0 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 1 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 2 ELSE 3 END`;
-  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, ${tier} AS tier FROM records r JOIN sources s ON s.id = r.source_id WHERE s.enabled = 1 AND r.display_name LIKE ? ESCAPE '\\'`;
-  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, key ORDER BY (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, key) AS editions FROM (${base})`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, ${tier} AS tier FROM records r JOIN sources s ON s.id = r.source_id WHERE s.enabled = 1 AND r.display_name LIKE ? ESCAPE '\\'`;
+  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY kind, key) AS versions FROM (${base})`;
   return {
     sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ORDER BY tier, display_name COLLATE NOCASE, kind LIMIT ?`,
     params: [
@@ -358,8 +392,8 @@ export function buildTextSearch(
   const match = buildPhraseMatch(text);
   if (!match) return null;
   const term = likeEscape(text.trim().toLowerCase());
-  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, snippet(records_fts, 2, char(1), char(2), '…', 12) AS snip, bm25(records_fts) AS rank FROM records r JOIN records_fts f ON f.id = r.id JOIN sources s ON s.id = r.source_id WHERE records_fts MATCH ? AND s.enabled = 1 AND r.display_name NOT LIKE ? ESCAPE '\\'`;
-  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, key ORDER BY (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, key) AS editions FROM (${base})`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, snippet(records_fts, 2, char(1), char(2), '…', 12) AS snip, bm25(records_fts) AS rank FROM records r JOIN records_fts f ON f.id = r.id JOIN sources s ON s.id = r.source_id WHERE records_fts MATCH ? AND s.enabled = 1 AND r.display_name NOT LIKE ? ESCAPE '\\'`;
+  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY kind, key) AS versions FROM (${base})`;
   return {
     sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ORDER BY rank, display_name COLLATE NOCASE LIMIT ?`,
     params: [preferEdition, match, `%${term}%`, Math.min(Math.max(limit, 1), TEXT_LIMIT)],
