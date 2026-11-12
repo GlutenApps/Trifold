@@ -79,7 +79,7 @@ In **Library › Campaigns**, **Create campaign** opens three ways in: **New bla
 
 **Scenes** (dock) is the list. The new-scene row makes a title card, an image scene, a map, a blank grid or a folder; scenes nest in folders, and rows drag to reorder or move. Click selects a scene and shows it in the VTT tab; Enter, double-click or the play icon **sends** it to the TV. **Recent** lists the last scenes sent. **Edit** sets title, subtitle, whether the title shows on the TV, music on go-live, a backdrop for title cards, and DM notes.
 
-**The VTT tab** shows the selected scene, or the live one, and carries every control: a scene picker with previous and next (`Ctrl+Alt+Up`, `Ctrl+Alt+Down`, which select but never send), **Send to TV**, **Blackout** (`Ctrl+Shift+B`, press again to bring the scene back), **Break…** (a title and a countdown; **End break** takes it down), undo (`Ctrl+Shift+Z`) and **Overlays**: scene title, initiative strip, PC health bars and round counter. `Alt+Up`, `Alt+Down`, `Alt+Left` and `Alt+Right` send the next, previous, parent or first child scene straight to the TV.
+**The VTT tab** shows the selected scene, or the live one, and carries every control: a scene picker with previous and next (`Ctrl+Alt+Up`, `Ctrl+Alt+Down`, which select but never send), **Send to TV**, which becomes **Take off TV** once the scene is on the TV (`Ctrl+Shift+X`: the scene goes, the overlays stay; the Scenes row's ■ and the strip's stop icon do the same), **Blackout** (`Ctrl+Shift+B`: hides everything, overlays too; press again to bring the scene back), **Break…** (a title and a countdown; **End break** takes it down), undo (`Ctrl+Shift+Z`) and **Overlays**: scene title, initiative strip, PC health bars and round counter. `Alt+Up`, `Alt+Down`, `Alt+Left` and `Alt+Right` send the next, previous, parent or first child scene straight to the TV.
 
 **Maps.** Drag to pan and wheel to zoom; this is your view, not the players'. The toolbar holds **Grid** (**Align grid to map** asks for two opposite corners of a block of cells; set **Cells across** to 10 or more for a printed grid; plus cell size, colour, opacity and **Show to players**), **Backgrounds** (several images for one map, switched with tokens and grid kept), **Camera** (the dashed box the TV shows: **Fit map**, **Fit tokens**, **Follow active** or **Use my view**), **Player characters** (**Place whole party**, then click the map) and **Creatures** (search and place, or a marker token).
 
@@ -97,7 +97,7 @@ Tokens snap to the grid; hold Alt for free placement; Delete removes the selecte
 
 ## Dice
 
-On the strip, click a die to add one to the pool (right-click takes one away), then **Roll**; the last total shows beside the chips. The **Dice** pop-up (`Ctrl+D`) adds a modifier, Normal, Adv and Dis (for a single d20), a typed expression (`4d6kh3`, `2d4x10`, `d20+5 adv`) and the **Roll log**: one list for pool, tracker, compendium and save rolls, each with its source, faces and time.
+On the strip, click a die to add one to the pool (right-click takes one away), then **Roll**; the last total shows beside the chips. The **Dice** pop-up (`Ctrl+D`) adds a modifier, Normal, Adv and Dis (for a single d20), a typed expression (`4d6kh3`, `2d4x10`, `d20+5 adv`) and the **Roll log**: one list for pool, tracker, compendium and save rolls, each with its source, faces and time, oldest first with the newest roll at the bottom. Pin a roll from its row to keep it with the campaign: it moves into **Pinned** above the log with its name open to type (Enter keeps it), stays there after the log is cleared or Trifold restarts, and leaves with the pin's unpin button.
 
 ## Web tabs
 
@@ -168,6 +168,7 @@ Plain letter keys do nothing while you are typing in a field.
 | Console | Close the open pop-up or flyout | `Escape` |
 | TV | Open or close the TV | `Ctrl+Shift+P` |
 | TV | Toggle blackout on the TV | `Ctrl+Shift+B` |
+| TV | Take the scene off the TV (overlays stay) | `Ctrl+Shift+X` |
 | TV | Undo the last scene change | `Ctrl+Shift+Z` |
 | TV | Select the previous or next scene on the TV tab (does not send) | `Ctrl+Alt+Up`, `Ctrl+Alt+Down` |
 | TV | Send the previous or next scene | `Alt+Up`, `Alt+Down` |

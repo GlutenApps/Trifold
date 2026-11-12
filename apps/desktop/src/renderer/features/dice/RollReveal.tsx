@@ -6,6 +6,8 @@ import type { RollLogEntry } from '../../stores/rollLogStore';
  * is stretched. The number tumbles through stand-in faces for REVEAL_MS, slowing as it lands,
  * then settles on the real total with a pop. A natural 20 glows and a natural 1 shudders.
  * Clicking the number settles it early; the system's reduced-motion setting shows it at once.
+ * Only a fresh roll tumbles: a panel that opens on an older one shows it settled, so opening the
+ * Dice pop-up never looks like a re-roll.
  */
 
 export const REVEAL_MS = 600;
@@ -55,7 +57,8 @@ export function useRollReveal(entry: RollLogEntry | null): Reveal {
       setPopped(false);
       return;
     }
-    if (prefersReducedMotion()) {
+    const fresh = entry !== null && Date.now() - entry.at < REVEAL_MS;
+    if (!fresh || prefersReducedMotion()) {
       setShown(total);
       setSettled(true);
       setPopped(false);

@@ -8,6 +8,7 @@ import type {
   Note,
   NPC,
   PCCard,
+  PinnedRoll,
   RecordRef,
   Scene,
 } from '@trifold/schema';
@@ -27,6 +28,8 @@ export interface CampaignParts {
   counters: CampaignCounter[];
   /** Definitions only: nothing about a run is stored, so a fresh start leaves them as they are. */
   timers: CampaignTimer[];
+  /** Results of play: a fresh start leaves them out. */
+  pinnedRolls: PinnedRoll[];
 }
 
 /** Bundled sources: they ship with every Trifold, so their records always resolve. */
@@ -39,7 +42,8 @@ export const HOMEBREW_SOURCE = 'homebrew';
 /**
  * Resets what play changed and keeps what the DM wrote or built: PC and NPC HP, the dead, fights
  * in progress (with their conditions), results and logs, the active adventure, and dead marks
- * on tokens, and counter values (back to each counter's initial value). Token positions stay.
+ * on tokens, counter values (back to each counter's initial value) and pinned rolls. Token
+ * positions stay.
  */
 export function freshStart(parts: CampaignParts): CampaignParts {
   return {
@@ -59,6 +63,7 @@ export function freshStart(parts: CampaignParts): CampaignParts {
       tokens: s.tokens.map((t) => ({ ...t, dead: false })),
     })),
     counters: parts.counters.map((c) => ({ ...c, value: c.initial })),
+    pinnedRolls: [],
   };
 }
 
@@ -149,6 +154,7 @@ export function withNewIds(parts: CampaignParts, newId: () => string): CampaignP
     parts.scenes,
     parts.counters,
     parts.timers,
+    parts.pinnedRolls,
   ]) {
     for (const item of group) claim(item.id);
   }

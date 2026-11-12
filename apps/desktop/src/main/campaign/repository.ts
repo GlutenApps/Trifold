@@ -15,6 +15,7 @@ import {
   NPC,
   nowIso,
   PCCard,
+  PinnedRoll,
   Scene,
   type EncounterResult,
 } from '@trifold/schema';
@@ -30,7 +31,8 @@ import type { Logger } from '../log';
  * `LibraryStore`, so they are atomic.
  */
 /** The entity folders CampaignEntities writes through the helpers here. */
-export type EntityFolder = 'adventures' | 'notes' | 'npcs' | 'scenes' | 'counters' | 'timers';
+export type EntityFolder =
+  'adventures' | 'notes' | 'npcs' | 'scenes' | 'counters' | 'timers' | 'pinnedRolls';
 
 /** Sub-folders of every campaign (DATA-FORMATS.md §5.4). */
 export const CAMPAIGN_LAYOUT = [
@@ -42,6 +44,7 @@ export const CAMPAIGN_LAYOUT = [
   'scenes',
   'counters',
   'timers',
+  'pinnedRolls',
   'images',
   'tokens',
 ];
@@ -87,7 +90,16 @@ export class CampaignRepository {
   private async readAll<T>(
     relative: string,
     schema: ZodType<T>,
-    kind: 'pc' | 'encounter' | 'adventure' | 'note' | 'npc' | 'scene' | 'counter' | 'timer',
+    kind:
+      | 'pc'
+      | 'encounter'
+      | 'adventure'
+      | 'note'
+      | 'npc'
+      | 'scene'
+      | 'counter'
+      | 'timer'
+      | 'pinnedRoll',
   ): Promise<T[]> {
     const out: T[] = [];
     for (const file of await this.listDir(relative)) {
@@ -257,7 +269,19 @@ export class CampaignRepository {
     const timers = sortCounters(
       await this.readAll(this.dir(slug, 'timers'), CampaignTimer, 'timer'),
     );
-    return { campaign, pcs, encounters, adventures, notes, npcs, scenes, counters, timers };
+    const pinnedRolls = await this.readPinnedRolls(slug);
+    return {
+      campaign,
+      pcs,
+      encounters,
+      adventures,
+      notes,
+      npcs,
+      scenes,
+      counters,
+      timers,
+      pinnedRolls,
+    };
   }
 
   /** The open campaign's notes in list order. */
@@ -279,6 +303,17 @@ export class CampaignRepository {
   async timers(): Promise<CampaignTimer[]> {
     const slug = this.requireSlug();
     return sortCounters(await this.readAll(this.dir(slug, 'timers'), CampaignTimer, 'timer'));
+  }
+
+  /** The open campaign's pinned rolls, in the order they were pinned. */
+  async pinnedRolls(): Promise<PinnedRoll[]> {
+    return this.readPinnedRolls(this.requireSlug());
+  }
+
+  private async readPinnedRolls(slug: string): Promise<PinnedRoll[]> {
+    return (await this.readAll(this.dir(slug, 'pinnedRolls'), PinnedRoll, 'pinnedRoll')).sort(
+      (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+    );
   }
 
   /** The open campaign's scenes in tree order. */

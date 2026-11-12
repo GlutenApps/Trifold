@@ -1524,22 +1524,6 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   opacity: 0.8;
 }
 
-.pool-result {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  min-height: 40px;
-  margin-bottom: 8px;
-}
-
-.pool-total {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  font-size: 26px;
-  line-height: 1;
-  color: var(--accent);
-}
-
 /* The roll reveal (DESIGN.md §6.7): the number tumbles for ~600 ms and settles with a pop; a
    natural 20 glows, a natural 1 shudders. The dice are rolled and logged at once, only the
    showing is stretched; clicking the number settles it early. */
@@ -1638,12 +1622,48 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   min-width: 0;
 }
 
+/* In the Dice pop-up the pool stays put and only the log scrolls, oldest at the top and the
+   newest roll at the bottom, so the list can sit scrolled to the end like a chat. */
+.fly.pop[data-tool='dice'] .fly-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dice-roller {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.dice-roller > * {
+  flex-shrink: 0;
+}
+
+.dice-roller > .roll-log {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The newest roll: the reveal plays here, marked so it reads as the one just rolled. */
+.dice-roller .roll-entry.latest {
+  background: var(--bg-active);
+  border-left: 2px solid var(--accent);
+  border-bottom: none;
+}
+
+.dice-roller .roll-entry.latest .roll-total {
+  font-size: 22px;
+}
+
 /* The roll log lives in the Dice pop-up: a two-line row per roll, the total down the left. */
 .dice-roller .roll-entry {
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
   grid-template-areas:
-    'total label time'
-    'total faces faces';
+    'total label time actions'
+    'total faces faces actions';
   gap: 2px 10px;
   padding: 6px 4px;
 }
@@ -1667,6 +1687,57 @@ button.chrome-btn:disabled:not(.primary, .tally) {
 .dice-roller .roll-time {
   grid-area: time;
   white-space: nowrap;
+}
+
+.dice-roller .roll-actions {
+  grid-area: actions;
+  align-self: center;
+}
+
+/* Pinned rolls sit above the log and keep to about a third of the pop-up; past that they
+   scroll on their own, so the newest roll in the log stays in view. */
+.dice-roller > .pinned-rolls {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 30vh;
+}
+
+.pinned-rolls .pinned-list {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.pinned-name {
+  font-weight: 600;
+}
+
+/* The unpin confirm needs more room than the row's action column: it takes a line of its own
+   under the roll, so the name and faces keep their width. */
+.dice-roller .pinned-roll.confirming {
+  grid-template-areas:
+    'total label time'
+    'total faces faces'
+    'confirm confirm confirm';
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+}
+
+.dice-roller .pinned-roll.confirming .roll-actions {
+  grid-area: confirm;
+  justify-self: end;
+  margin-top: 4px;
+}
+
+.pinned-roll .roll-label input[type='text'] {
+  width: 100%;
+}
+
+.pinned-roll .roll-total.crit {
+  text-shadow: 0 0 10px var(--accent);
+}
+
+.pinned-roll .roll-total.fumble {
+  color: var(--text-muted);
 }
 
 .dice-pool.compact {

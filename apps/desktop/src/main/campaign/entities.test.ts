@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CampaignCounter, CampaignTimer, Scene } from '@trifold/schema';
+import type { CampaignCounter, CampaignTimer, PinnedRoll, Scene } from '@trifold/schema';
 import { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 import { CampaignEntities } from './entities';
@@ -413,5 +413,53 @@ describe('timers (ADR 0021)', () => {
     const entities = new CampaignEntities(repo);
     await expect(entities.saveTimer(draft('Zero', { durationSec: 0 }))).rejects.toThrow();
     await expect(entities.saveTimer(draft('Long', { durationSec: 86_401 }))).rejects.toThrow();
+  });
+});
+
+describe('pinned rolls', () => {
+  const at = '2026-11-12T00:00:00.000Z';
+  const draft = (over: Partial<PinnedRoll> = {}): PinnedRoll => ({
+    schemaVersion: 1,
+    id: '',
+    name: '',
+    label: '2d6+3',
+    expression: '2d6+3',
+    total: 10,
+    faces: '2d6: 4, 3',
+    kind: 'dice',
+    source: 'pool',
+    rolledAt: at,
+    createdAt: '',
+    updatedAt: at,
+    ...over,
+  });
+
+  it('pins in order, names a pin after its roll until renamed, and keeps them through a restart', async () => {
+    const bundle = await repo.create('Keep');
+    expect(bundle.pinnedRolls).toEqual([]);
+    const entities = new CampaignEntities(repo);
+    const first = await entities.savePinnedRoll(draft());
+    expect(first.name).toBe('2d6+3');
+    await entities.savePinnedRoll(draft({ label: '1d20', total: 17, faces: '1d20: 17' }));
+    await entities.savePinnedRoll({ ...first, name: '  Ogre damage  ' });
+    const restarted = new CampaignRepository(await LibraryStore.open(join(dir, 'Library')), logger);
+    const reopened = await restarted.open(bundle.campaign.id);
+    expect(reopened.pinnedRolls.map((p) => [p.name, p.total, p.faces])).toEqual([
+      ['Ogre damage', 10, '2d6: 4, 3'],
+      ['1d20', 17, '1d20: 17'],
+    ]);
+  });
+
+  it('unpins, and opens a campaign made before pinned rolls', async () => {
+    const bundle = await repo.create('Old');
+    await rm(join(dir, 'Library', 'campaigns', bundle.campaign.slug, 'pinnedRolls'), {
+      recursive: true,
+    });
+    expect((await repo.open(bundle.campaign.id)).pinnedRolls).toEqual([]);
+    const entities = new CampaignEntities(repo);
+    const pin = await entities.savePinnedRoll(draft());
+    expect((await repo.open(bundle.campaign.id)).pinnedRolls).toHaveLength(1);
+    await entities.removePinnedRoll(pin.id);
+    expect((await repo.open(bundle.campaign.id)).pinnedRolls).toEqual([]);
   });
 });

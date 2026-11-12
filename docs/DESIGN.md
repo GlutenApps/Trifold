@@ -67,6 +67,8 @@ Settled decisions, in one place. Rationale is in the sections that follow.
 | Sample campaign | One sample campaign ships with the app (our own adventure text, SRD creatures, maps by 2-Minute Tabletop under CC BY-NC 4.0 for pre-1.0 testing, to be replaced or licensed before a release that is not free), built from `samples/` at build time as a `.trifold-campaign`. Every Library, new or existing, gets it once; deleting it is final; Settings adds it back or resets it. See ADR 0016. |
 | UI consistency | One control scale (regular 30 px, compact 26 px for window chrome, row 22 px), 6 px control radius, icon size set by the button, a 12 px type floor (11 px for keycaps and badges), and one pattern per common action. `docs/UI-GUIDELINES.md` is the rulebook for new UI. See ADR 0013. |
 | Panel widths | Every stage panel has a 480 px floor and every dock tool 360 px. The window decides what fits: the dock folds to icons first, then two groups fold into one stack (display only, the saved layout returns when the window widens). Window minimum 760 px, so Trifold can take half a screen. Feature layouts switch columns only at 640 or 960 px, and inner parts follow their own width. See ADR 0014. |
+| Taking a scene off the TV | Take off TV (the live scene's stop button, the TV tab, the strip, `Ctrl+Shift+X`) ends the scene and leaves the overlays up; Blackout stays the curtain over everything. Undoable. See ADR 0030. |
+| Roll log and pins | The Dice pop-up's log reads oldest first with the newest roll, and its reveal, at the bottom; the reveal plays only for a fresh roll. A roll can be pinned to the campaign under a name until unpinned. See ADR 0031. |
 | Web tabs | The stage `+` menu adds a web tab: an address the DM typed, hosted in a sandboxed Electron webview in one persistent session, so a hosted document or sheet sits beside the console as a tab and reopens where it was left at the next launch. Library-wide list stored with the layouts; close parks, remove forgets; modifier hotkeys reach through the page; every tab has Open in system browser. See ADR 0011. |
 
 ---
@@ -298,7 +300,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Cameras.** DM camera (free pan/zoom, mouse wheel and drag) and player camera (controlled from the console: fit map, fit tokens, follow active combatant, manual pan/zoom). The console draws the player viewport rectangle over the map. Aspect ratio of the target display is respected; letterboxing uses the scene backdrop color.
 
-**Overlays on the TV.** Scene title (global toggle, per-scene override), initiative strip (top or side), PC health bars, round counter, handout (image or text card that overlays the live scene; rendered by the player but with no console control yet, ADR 0008), break screen (title + optional countdown; music continues), blackout.
+**Overlays on the TV.** Scene title (global toggle, per-scene override), initiative strip (top or side), PC health bars, round counter, handout (image or text card that overlays the live scene; rendered by the player but with no console control yet, ADR 0008), break screen (title + optional countdown; music continues), blackout. Take off TV ends the live scene and leaves the overlays up (ADR 0030).
 
 **Transitions.** Scene changes fade over 300 ms in the player window. A per-scene "cut" setting is **(not built; later)**.
 
@@ -324,7 +326,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 ### 6.7 Dice and reference
 
-- Roller: a dice pool built by clicking (each click on d4…d100 adds one; right-click takes one away), a modifier stepper, advantage/disadvantage for a lone d20, then Roll. One pool is shared app-wide: the Dice pop-up and the live strip's pool show and edit the same selection (ADR 0009). A typed expression (`2d6+3`, `4d6kh3`, `d20 adv`) remains as a secondary field. Roll log shared with combat and the compendium. Roll sounds are **(not built; later)**.
+- Roller: a dice pool built by clicking (each click on d4…d100 adds one; right-click takes one away), a modifier stepper, advantage/disadvantage for a lone d20, then Roll. One pool is shared app-wide: the Dice pop-up and the live strip's pool show and edit the same selection (ADR 0009). A typed expression (`2d6+3`, `4d6kh3`, `d20 adv`) remains as a secondary field. Roll log shared with combat and the compendium, oldest first with the newest roll at the bottom; any roll can be pinned to the campaign under a name until it is unpinned (ADR 0031). Roll sounds are **(not built; later)**.
 - Rules **(not built; beta, ADR 0029)**: the SRD rules text (actions, cover, travel, exhaustion, etc.) as a Rules kind in the compendium, one per edition like conditions, searchable and reachable by deep link. Custom pages are what notes are for. Verify the SRD documents carry the rules as separate sections before building.
 
 ### 6.8 Token art pipeline

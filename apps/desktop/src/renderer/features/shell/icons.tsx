@@ -96,7 +96,8 @@ export type IconName =
   | 'stopwatch'
   | 'sliders'
   | 'bell'
-  | 'bellOff';
+  | 'bellOff'
+  | 'pin';
 
 /** Hand-drawn 24 px stroke glyphs; no icon dependency, so the chrome stays small and ours. */
 const PATHS: Record<IconName, string> = {
@@ -201,6 +202,8 @@ const PATHS: Record<IconName, string> = {
   stopwatch: 'M12 5a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM10 2h4M12 2v3M12 13l3-3M18.5 6.5L20 5',
   bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0',
   bellOff: 'M6 16V11a6 6 0 0 1 9.5-4.9M18 11v5l2 2H8M10 20a2 2 0 0 0 4 0M4 4l16 16',
+  // A push pin: keeps a roll from the roll log.
+  pin: 'M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8',
   crown: 'M4 18h16l1-10-5 4-4-6-4 6-5-4zM4 18v2h16v-2',
   potion: 'M10 3h4M11 3v5l-5 8a3 3 0 0 0 2.6 4.5h6.8A3 3 0 0 0 18 16l-5-8V3M8 15h8',
   coin: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9z',

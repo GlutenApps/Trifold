@@ -7,6 +7,7 @@ import {
   Note,
   NPC,
   PCCard,
+  PinnedRoll,
   Scene,
   type CombatState,
   type RecordRef,
@@ -175,6 +176,20 @@ function parts(): CampaignParts {
         updatedAt: now,
       }),
     ],
+    pinnedRolls: [
+      PinnedRoll.parse({
+        schemaVersion: 1,
+        id: 'PIN',
+        name: "Kael's stats",
+        label: '4d6kh3',
+        expression: '4d6kh3',
+        total: 15,
+        faces: '4d6: 6, 5, 4, 1 → 6, 5, 4',
+        rolledAt: now,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ],
   };
 }
 
@@ -203,6 +218,12 @@ describe('freshStart', () => {
     });
     // Timers are definitions only; a fresh start keeps them.
     expect(fresh.timers).toMatchObject([{ id: 'TMR', durationSec: 60, chime: true }]);
+    // Pinned rolls are results of play.
+    expect(fresh.pinnedRolls).toEqual([]);
+    expect(
+      prepareExport(parts(), { state: 'asIs', party: true, homebrew: true, layout: false })
+        .pinnedRolls,
+    ).toHaveLength(1);
   });
 });
 
