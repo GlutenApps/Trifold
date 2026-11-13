@@ -63,6 +63,22 @@ they differ.
     show the TV nothing while the token is under fog. If the DM fogs over a player's own token,
     its owner still sees it and can only drag it out into a revealed area; other phones and the
     TV do not see it.
+13. **Claiming after the 2026-11-13 roadmap changes** (campaign-only stat blocks, copying, the
+    NPC form, creature art, "Named"):
+    - **Which role counts.** An NPC can be claimed while it is flagged player-controllable and is
+      not marked enemy on the live scene or in the running fight. An NPC with no token and in no
+      fight is decided by the flag alone. NPC tokens and combatants start as **enemy** (encounter
+      templates, Track as NPC), so a friendly NPC is claimable once the DM marks it ally or
+      neutral, which is the safe default.
+    - **Named stat blocks are not NPCs.** A compendium stat block marked Named and placed straight
+      on the map is a creature token, not a campaign NPC, so it cannot be claimed. To hand one to
+      a player, the DM makes a campaign NPC that points at it.
+    - **Copies start unclaimed.** From another campaign… copies the player-controllable flag and
+      summon presets but never a claim, a device or a version: devices belong to a campaign.
+    - **Portraits are creature art.** A portrait a player sets from a phone is the PC's or NPC's
+      creature art (campaign `tokens/`, shrunk to 512 px like every other art, ADR 0033), so it
+      shows on every token of that character. A token-only art the DM set still wins on that token.
+    - **Summon presets** offer only creatures from sources enabled in this campaign (Beta 5).
 
 ## Goals and non-goals
 
