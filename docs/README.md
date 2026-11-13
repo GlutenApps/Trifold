@@ -9,6 +9,7 @@ Start here. Each document has one job; when two disagree, `DESIGN.md` wins on pr
 | [DATA-FORMATS.md](DATA-FORMATS.md)         | You are touching an importer, a schema or a file in the Library: every XML convention, JSON format and index table.         |
 | [UI-GUIDELINES.md](UI-GUIDELINES.md)       | You are adding or changing UI: control tiers, patterns for common actions, panel widths (ADR 0013, 0014).                   |
 | [DEEP-LINKS.md](DEEP-LINKS.md)             | You are opening one feature's item from another (search, note links): the `navigate` contract and how a panel lands it.    |
+| [PLAYER-CONNECTOR.md](PLAYER-CONNECTOR.md) | You are working on the player connector (Beta 14): the spec, and where it and the repo still disagree.                     |
 | [TOKENS.md](TOKENS.md)                     | You need the palette, type and size tokens behind `global.css` (`tokens.json` has the same values for tools).               |
 | [RELEASING.md](RELEASING.md)               | You are cutting a build: content fetch, icon, version, tag, the release workflow, what to check on each platform.           |
 | [brand/BRAND.md](brand/BRAND.md)           | You need the logo: which version (mark, lockup, icon) goes where, the colours, and the usage rules.                         |
@@ -51,3 +52,5 @@ One short file per decision that deviates from or refines `DESIGN.md`. Number th
 | [0027](adr/0027-source-priority.md) | Source priority picks a row's version and its one source pill (+ for more); homebrew editors in titled sections; the record pane fills its width. |
 | [0028](adr/0028-2024-books-per-file.md) | Each imported file's 2024 books: a warning on its row when copies clash, a checklist of its books, re-tagged in place; the text box is gone. |
 | [0029](adr/0029-beta-and-later.md) | M2 and M3 become an ordered Beta and an open Later; fog of war and the ruler join the beta; ambience and effects, note links, drag-drop art and the endpoint pre-fill are dropped. |
+| [0032](adr/0032-player-connector-in-the-beta.md) | The player connector (players claim and run their creatures from a local-network page) is Beta item 14, replacing the LAN player view in Later. |
+| [0033](adr/0033-creature-art.md) | Creature art replaces bulk matching: Set art… for one token or every copy, an Images section in the Library, images shrunk to 512 px. |
