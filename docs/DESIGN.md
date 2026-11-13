@@ -23,7 +23,7 @@ The app is a **DM console**. Players are not users. They build characters wherev
 ### 1.2 Non-goals (explicit)
 
 - No character builder or player-facing character sheets.
-- No accounts, no cloud backend, no sync between users, no web client (v1). The app never phones home; the only pages it loads from the network are the web tabs the DM opens (ADR 0011).
+- No accounts, no cloud backend, no sync between users, no web client (v1; the beta's player connector will amend this, ADR 0032). The app never phones home; the only pages it loads from the network are the web tabs the DM opens (ADR 0011).
 - No virtual tabletop features beyond what §6.5 specifies (no dynamic lighting, no line-of-sight).
 - No bundled non-SRD content, ever. No links to community repositories baked into the app.
 - No map making. Maps are images the DM supplies.
@@ -54,6 +54,7 @@ Settled decisions, in one place. Rationale is in the sections that follow.
 | Phone audio | On Windows, Trifold is the Bluetooth audio receiver (the OS's AudioPlaybackConnection API driven by a bundled PowerShell helper, no native module): paired phones are listed, remembered once used, and connect in one click, never automatically. On macOS the Phone tab is an AirPlay Receiver guide with deep links. Both state what Trifold cannot control from there. An "Audio source" toggle on the Music tool and the live strip switches between Trifold's player and the phone. See ADR 0007. |
 | Name | Trifold. No WotC trademarks in name, UI, or marketing. Described as "5e-compatible". |
 | Fog of war | Beta: a shape mask per scene (ADR 0029). A brush later. |
+| Player connector | Beta, last item: a local-network page players open to claim and run their own creatures, off until the DM starts it (ADR 0032, `docs/PLAYER-CONNECTOR.md`). Not built; §1.2 and ground rule 1 are amended before it is. |
 | Copyright posture | Lion's Den model: ship SRD only; import anything the user supplies; export flags records derived from non-SRD content. |
 | Native module pins | `electron` and `better-sqlite3` are pinned together to versions with prebuilt binaries (currently Electron 42 / better-sqlite3 12.11.1); no compiler on install. Window routes use the URL hash. See ADR 0001 and ADR 0002. |
 | Console layout | Library space plus a console per open campaign: a tabbed stage (one or two groups) for the majors, a right dock for the minor tools, a live strip for table state. Palette "Slate and bone", type Outfit + IBM Plex Mono (bundled, OFL). See ADR 0004 (supersedes 0003). The presenter is two pieces: Scenes (the list, dock) and TV (the screen, stage); the live strip mirrors one-tap actions and is never a control's only home. See ADR 0008. Dice, Hotkeys and Layouts pop up from their own buttons (strip, top bar) and the dock keeps the tall tools, Music and Scenes. See ADR 0009. |
@@ -461,6 +462,7 @@ What the beta adds, built top to bottom (ADR 0029). M2 and M3 became this list a
 11. **Rules in the compendium:** the SRD rules text as a Rules kind, per edition (§6.7).
 12. **Bulk art matching** from a folder by filename (§6.8).
 13. **XML export** of homebrew or any source (§6.2, `DATA-FORMATS.md` §2.15).
+14. **Player connector:** players on the same Wi-Fi open a browser page the DM's Trifold serves, claim a PC or a non-enemy NPC, and edit its HP, AC and conditions, submit initiative, move its token and spawn summons; started from the VTT tab, off until the DM starts it, local network only, the DM keeps authority. Four phases (ADR 0032, `docs/PLAYER-CONNECTOR.md`).
 
 ### Later
 May come after the beta; new ideas land here first. Not in priority order.
@@ -468,7 +470,6 @@ May come after the beta; new ideas land here first. Not in priority order.
 - Fog of war, phase 2: a freehand brush and soft edges.
 - Subclass editors (subclasses need a data model first, ADR 0026).
 - Hex grids.
-- LAN player view: an opt-in "host on local network"; phones and tablets on the same Wi-Fi join by QR code and a join code and see the player view in a browser; later, players keep a simple sheet that sends rolls and HP to the DM. Local network only, never the internet. Needs its own design and an ADR amending §1.2 and CLAUDE.md ground rule 1.
 - Character import from the PDF character sheet a player exports from their character builder, read locally (verify the PDF carries form fields first).
 - Optional open third-party content (§6.1), each document's license checked (OGL 1.0a, CC-BY, ORC) and shipped with its notices.
 
