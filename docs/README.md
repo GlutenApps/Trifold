@@ -53,3 +53,4 @@ One short file per decision that deviates from or refines `DESIGN.md`. Number th
 | [0028](adr/0028-2024-books-per-file.md) | Each imported file's 2024 books: a warning on its row when copies clash, a checklist of its books, re-tagged in place; the text box is gone. |
 | [0029](adr/0029-beta-and-later.md) | M2 and M3 become an ordered Beta and an open Later; fog of war and the ruler join the beta; ambience and effects, note links, drag-drop art and the endpoint pre-fill are dropped. |
 | [0032](adr/0032-player-connector-in-the-beta.md) | The player connector (players claim and run their creatures from a local-network page) is Beta item 14, replacing the LAN player view in Later. |
+| [0033](adr/0033-creature-art.md) | Creature art replaces bulk matching: Set art… for one token or every copy, an Images section in the Library, images shrunk to 512 px. |
