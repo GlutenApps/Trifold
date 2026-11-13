@@ -44,7 +44,7 @@ Importance comes from colour and placement, not from mixing sizes.
 ## 3. Icons or words
 
 - Prefer an icon button with a `title` tooltip and a matching `aria-label` (name the target: `Remove Goblin`, not just `Remove`).
-- Use words when the action has no clear icon, when it is table-critical (above), or when it is a form submit (Create campaign, Add PCs).
+- Use words when the action has no clear icon, when it is table-critical (above), or when it is a form submit (Create campaign, Save and add another).
 - Within one group, use one or the other. A toolbar of icons with one text button in the middle is a mistake unless that button is primary or table-critical.
 - Show hotkeys through `hk()` in the tooltip, never as literal text.
 

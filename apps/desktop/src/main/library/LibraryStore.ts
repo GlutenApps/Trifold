@@ -112,4 +112,20 @@ export class LibraryStore {
     await writeFileAtomic(this.resolvePath(relative), text);
     this.lastWriteAt = Date.now();
   }
+
+  /**
+   * Copies one Library file to another Library path with the same atomic write. Resolves to
+   * false, writing nothing, when the source cannot be read.
+   */
+  async copyFile(fromRelative: string, toRelative: string): Promise<boolean> {
+    let data: Buffer;
+    try {
+      data = await readFile(this.resolvePath(fromRelative));
+    } catch {
+      return false;
+    }
+    await writeFileAtomic(this.resolvePath(toRelative), data);
+    this.lastWriteAt = Date.now();
+    return true;
+  }
 }

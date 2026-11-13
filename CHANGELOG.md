@@ -17,6 +17,9 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Fixed
 
+- NPCs can be added and edited on the NPCs tab (**New NPC**, and Edit on every row); before, an NPC came only from an import or Track as NPC and could not be changed afterwards.
+- The PC card form is in titled sections: Name, Max HP and AC are required and start empty (they used to default to 10 without saying so); Basics, Senses, Combat and Notes are optional and folded on a new card. **Save and add another** replaces the one-line Quick add box, which is removed.
+- **From another campaign…** on the Party and NPCs tabs copies a PC or NPC from any other campaign in the Library, at full HP, independent of the original.
 - A save made while a backup was running (the daily one at start, or the one at close) could stop the app with a "JavaScript error occurred in the main process" box. A file that changes during a backup is now read as it is when its turn comes, and a backup that hits a missing file tries again instead. Campaign export reads its media the same way.
 
 ## [0.3.0] - 2026-11-07

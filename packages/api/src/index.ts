@@ -760,6 +760,11 @@ export interface TrifoldApi {
     /** An id-less NPC is created; otherwise its file is replaced. `updatedAt` is set either way. */
     save(npc: NPC): Promise<NPC>;
     remove(npcId: string): Promise<void>;
+    /**
+     * Copies an NPC from another campaign into the open one: new id, carried HP cleared and
+     * alive, stat block link and portrait kept. The original is untouched.
+     */
+    copyFrom(campaignId: string, npcId: string): Promise<NPC>;
   };
   pcs: {
     /**
@@ -767,8 +772,11 @@ export interface TrifoldApi {
      */
     save(pc: PCCard): Promise<PCCard>;
     remove(pcId: string): Promise<void>;
-    /** One PC per line: `Name, Player, Class L, HP, AC, Init, Speed, PP`. */
-    quickAdd(text: string): Promise<PCCard[]>;
+    /**
+     * Copies a PC card from another campaign into the open one: new id, full HP, portrait kept.
+     * The original is untouched.
+     */
+    copyFrom(campaignId: string, pcId: string): Promise<PCCard>;
   };
   encounters: {
     /**
@@ -962,12 +970,12 @@ export const API_METHODS = {
   ],
   notes: ['save', 'remove', 'move', 'capture'],
   noteTemplates: ['list', 'save', 'remove'],
-  npcs: ['save', 'remove'],
+  npcs: ['save', 'remove', 'copyFrom'],
   scenes: ['save', 'remove', 'importImage'],
   counters: ['save', 'remove', 'move'],
   timers: ['save', 'remove', 'move'],
   pinnedRolls: ['save', 'remove'],
-  pcs: ['save', 'remove', 'quickAdd'],
+  pcs: ['save', 'remove', 'copyFrom'],
   encounters: ['save', 'remove', 'saveState', 'finish'],
   backups: [
     'list',
