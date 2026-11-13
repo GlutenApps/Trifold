@@ -468,6 +468,11 @@ What the beta adds, built top to bottom (ADR 0029). M2 and M3 became this list a
 13. **XML export** of homebrew or any source (§6.2, `DATA-FORMATS.md` §2.15).
 14. **Player connector:** players on the same Wi-Fi open a browser page the DM's Trifold serves, claim a PC or a non-enemy NPC, and edit its HP, AC and conditions, submit initiative, move its token and spawn summons; started from the VTT tab, off until the DM starts it, local network only, the DM keeps authority. Four phases (ADR 0032, `docs/PLAYER-CONNECTOR.md`).
 
+### Bugs
+Gaps in what is already built, fixed before the beta ships. Not in priority order.
+
+- **NPCs can't be added or edited on the NPCs tab.** Today an NPC is made only by Track as NPC in a fight or by importing a campaign, and the tab offers stat block, restore and delete but no way to change name, role, location or notes. Add **New NPC** (name, role, location, notes, an optional compendium stat block) and an edit form, matching the Party tab's New PC card (§6.3).
+
 ### Later
 May come after the beta; new ideas land here first. Not in priority order.
 
