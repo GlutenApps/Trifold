@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { CompendiumRow } from '@trifold/api';
-import type { NPC, PCCard, RecordRef } from '@trifold/schema';
+import type { MonsterRecord, NPC, PCCard, RecordRef } from '@trifold/schema';
+import { MonsterFields } from '../compendium/MonsterEditor';
+import { InlineConfirm } from '../shell/InlineConfirm';
 import {
   Check,
   NumberField,
@@ -338,11 +340,15 @@ export function blankNpc(): NPC {
 /** Picks a compendium creature for an NPC's stat block, or shows and clears the linked one. */
 function StatBlockPicker({
   value,
+  dirty = false,
   onChange,
 }: {
   value: RecordRef | undefined;
+  /** The stat block below has unsaved changes, so Unlink asks first. */
+  dirty?: boolean;
   onChange(ref: RecordRef | undefined): void;
 }) {
+  const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [name, setName] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState<CompendiumRow[]>([]);
@@ -380,6 +386,22 @@ function StatBlockPicker({
   }, [query]);
 
   if (value) {
+    if (confirmUnlink) {
+      return (
+        <div className="span-all">
+          <InlineConfirm
+            name={name ?? value.key}
+            question="Unlink this stat block and drop your changes to it?"
+            verb="Unlink"
+            onConfirm={() => {
+              setConfirmUnlink(false);
+              onChange(undefined);
+            }}
+            onKeep={() => setConfirmUnlink(false)}
+          />
+        </div>
+      );
+    }
     return (
       <div className="row span-all">
         <span>
@@ -391,7 +413,7 @@ function StatBlockPicker({
           className="chrome-btn xs"
           aria-label="Unlink stat block"
           title="Unlink stat block"
-          onClick={() => onChange(undefined)}
+          onClick={() => (dirty ? setConfirmUnlink(true) : onChange(undefined))}
         >
           <Icon name="close" />
         </button>
@@ -442,14 +464,56 @@ function StatBlockPicker({
   );
 }
 
+/** A changed stat block waiting for the NPC's Save: the record opened, and as edited. */
+export interface StatBlockEdit {
+  original: MonsterRecord;
+  edited: MonsterRecord;
+  /** Updated where it is, as the form's note said; else copied into this campaign. */
+  inPlace: boolean;
+}
+
+/** The linked stat block, loaded for the form: undefined while loading, null when not found. */
+function useLinkedMonster(recordId: string | undefined): MonsterRecord | null | undefined {
+  const [record, setRecord] = useState<MonsterRecord | null | undefined>(undefined);
+  useEffect(() => {
+    if (!recordId) {
+      setRecord(null);
+      return;
+    }
+    let live = true;
+    setRecord(undefined);
+    void window.trifold.compendium
+      .get(recordId)
+      .catch(() => null)
+      .then((found) => {
+        if (live) setRecord(found?.kind === 'monster' ? found : null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [recordId]);
+  return record;
+}
+
+/**
+ * The NPC form (ADR 0039): the NPC first, then its stat block's own sections, so one pencil
+ * edits both and scaling is a scroll away. Save hands up the stat block only when it changed.
+ */
 export function NpcEditor({
   npc,
   onSave,
   onCancel,
+  saving = false,
+  error = null,
+  inPlace = true,
 }: {
   npc: NPC;
-  onSave(npc: NPC, another: boolean): void;
+  onSave(npc: NPC, another: boolean, statBlock: StatBlockEdit | null): void;
   onCancel(): void;
+  saving?: boolean;
+  error?: string | null;
+  /** Whether a changed stat block is updated where it is (else copied into this campaign). */
+  inPlace?: boolean;
 }) {
   const isNew = !npc.id;
   const [draft, setDraft] = useState<NPC>(npc);
@@ -458,10 +522,25 @@ export function NpcEditor({
     statBlock: !isNew && npc.recordRef !== undefined,
     notes: !isNew && npc.notes.trim() !== '',
   }));
+  const linked = useLinkedMonster(draft.recordRef?.recordId);
+  const [edit, setEdit] = useState<{ edited: MonsterRecord; dirty: boolean } | null>(null);
+  const dirty = !!edit?.dirty;
+  // A stat block linked in this form is not the one the NPC had: a change to it is always copied.
+  const linkedHere = draft.recordRef?.recordId !== npc.recordRef?.recordId;
   const patch = (p: Partial<NPC>) => setDraft((d) => ({ ...d, ...p }));
-  const canSave = draft.name.trim() !== '';
+  const canSave = draft.name.trim() !== '' && !saving && (!dirty || !!edit?.edited.name.trim());
   const save = (another: boolean) => {
-    if (canSave) onSave({ ...draft, name: draft.name.trim() }, another);
+    if (!canSave) return;
+    const statBlock =
+      linked && edit?.dirty
+        ? { original: linked, edited: edit.edited, inPlace: inPlace && !linkedHere }
+        : null;
+    onSave({ ...draft, name: draft.name.trim() }, another, statBlock);
+  };
+  const setLink = (recordRef: RecordRef | undefined) => {
+    const { recordRef: _was, ...rest } = draft;
+    setEdit(null);
+    setDraft(recordRef ? { ...rest, recordRef } : rest);
   };
 
   return (
@@ -479,6 +558,11 @@ export function NpcEditor({
         onCancel={onCancel}
         {...(isNew ? { onSaveAnother: () => save(true) } : {})}
       />
+      {error && (
+        <div className="banner error" role="alert">
+          <span>{error}</span>
+        </div>
+      )}
       <Section title="Required" cols={1} hint="Everything below is optional and can wait.">
         <TextField label="Name" required value={draft.name} onChange={(name) => patch({ name })} />
       </Section>
@@ -504,20 +588,6 @@ export function NpcEditor({
         </div>
       </FoldSection>
       <FoldSection
-        title="Stat block"
-        cols={1}
-        open={open.statBlock}
-        onToggle={(o) => setOpen({ ...open, statBlock: o })}
-      >
-        <StatBlockPicker
-          value={draft.recordRef}
-          onChange={(recordRef) => {
-            const { recordRef: _was, ...rest } = draft;
-            setDraft(recordRef ? { ...rest, recordRef } : rest);
-          }}
-        />
-      </FoldSection>
-      <FoldSection
         title="Notes"
         cols={1}
         open={open.notes}
@@ -530,6 +600,31 @@ export function NpcEditor({
           onChange={(notes) => patch({ notes })}
         />
       </FoldSection>
+      <FoldSection
+        title="Stat block"
+        cols={1}
+        open={open.statBlock}
+        onToggle={(o) => setOpen({ ...open, statBlock: o })}
+      >
+        <StatBlockPicker value={draft.recordRef} dirty={dirty} onChange={setLink} />
+        {linked && (
+          <p className="muted small span-all" data-testid="statblock-home-note">
+            {inPlace && !linkedHere
+              ? 'Changes below update this NPC’s stat block, kept in this campaign.'
+              : 'Changes below make a copy for this NPC in this campaign; the original stays as it is.'}
+          </p>
+        )}
+      </FoldSection>
+      {open.statBlock && linked && (
+        <div className="npc-statblock-fields" data-testid="npc-statblock-editor">
+          <MonsterFields
+            key={linked.id}
+            record={linked}
+            nameLabel="Stat block name"
+            onChange={(edited, isDirty) => setEdit({ edited, dirty: isDirty })}
+          />
+        </div>
+      )}
     </form>
   );
 }

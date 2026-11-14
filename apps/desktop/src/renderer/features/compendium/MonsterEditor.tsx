@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   abilityModifier,
   average,
@@ -125,6 +125,41 @@ export function MonsterEditor({
   /** A blank monster from New homebrew, not yet saved. */
   isNew?: boolean;
 }) {
+  const [latest, setLatest] = useState<MonsterRecord>(record);
+  return (
+    <form
+      className="record-editor monster-editor"
+      data-testid="monster-editor"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave(latest);
+      }}
+    >
+      <EditorHead
+        title={`${isNew ? 'New' : 'Edit'} homebrew monster`}
+        saving={saving}
+        canSave={!!latest.displayName.trim()}
+        onCancel={onCancel}
+      />
+      <MonsterFields record={record} onChange={setLatest} />
+    </form>
+  );
+}
+
+/**
+ * The monster editor's sections without a form of their own, so the NPC form can hold them
+ * (ADR 0039). `onChange` hands back the whole record as it would be saved: once on mount with
+ * `dirty` false, then on every edit.
+ */
+export function MonsterFields({
+  record,
+  onChange,
+  nameLabel = 'Name',
+}: {
+  record: MonsterRecord;
+  onChange(record: MonsterRecord, dirty: boolean): void;
+  nameLabel?: string;
+}) {
   const [name, setName] = useState(record.displayName);
   const [d, setD] = useState<Data>(record.data);
   const [savesText, setSavesText] = useState(
@@ -132,6 +167,9 @@ export function MonsterEditor({
   );
   const [skillsText, setSkillsText] = useState(formatModifierPairs(d.skills));
   const patch = (p: Partial<Data>) => setD((x) => ({ ...x, ...p }));
+  const [start] = useState(() => ({ savesText, skillsText }));
+  const report = useRef(onChange);
+  report.current = onChange;
   const setFeatures = (key: FeatureList, features: Feature[]) =>
     patch({ [key]: features } as Partial<Data>);
 
@@ -146,21 +184,28 @@ export function MonsterEditor({
     });
   };
 
-  const submit = () => {
+  // The record as Save would write it, handed up after each change.
+  useEffect(() => {
     const skills = parseModifierPairs(skillsText);
     const wis = abilityModifier(d.abilities.wis);
-    onSave({
-      ...record,
-      displayName: name,
-      name,
-      data: {
-        ...d,
-        saves: parseModifierPairs(savesText) as Data['saves'],
-        skills,
-        passivePerception: 10 + (skills['perception'] ?? wis),
+    report.current(
+      {
+        ...record,
+        displayName: name,
+        name,
+        data: {
+          ...d,
+          saves: parseModifierPairs(savesText) as Data['saves'],
+          skills,
+          passivePerception: 10 + (skills['perception'] ?? wis),
+        },
       },
-    });
-  };
+      name !== record.displayName ||
+        d !== record.data ||
+        savesText !== start.savesText ||
+        skillsText !== start.skillsText,
+    );
+  }, [record, start, name, d, savesText, skillsText]);
 
   const crOptions: Array<readonly [string, string]> = [
     ...(CR_ORDER.includes(d.cr as (typeof CR_ORDER)[number]) ? [] : [[d.cr, d.cr || '—'] as const]),
@@ -168,21 +213,7 @@ export function MonsterEditor({
   ];
 
   return (
-    <form
-      className="record-editor monster-editor"
-      data-testid="monster-editor"
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit();
-      }}
-    >
-      <EditorHead
-        title={`${isNew ? 'New' : 'Edit'} homebrew monster`}
-        saving={saving}
-        canSave={!!name.trim()}
-        onCancel={onCancel}
-      />
-
+    <>
       <Section
         title="Basics"
         cols={4}
@@ -190,7 +221,7 @@ export function MonsterEditor({
           <Check label="Named character" checked={d.isNpc} onChange={(isNpc) => patch({ isNpc })} />
         }
       >
-        <TextField label="Name" value={name} onChange={setName} span={2} required />
+        <TextField label={nameLabel} value={name} onChange={setName} span={2} required />
         <SelectField
           label="Size"
           value={d.size ?? ''}
@@ -438,6 +469,6 @@ export function MonsterEditor({
         features={d.lair}
         onChange={(f) => setFeatures('lair', f)}
       />
-    </form>
+    </>
   );
 }

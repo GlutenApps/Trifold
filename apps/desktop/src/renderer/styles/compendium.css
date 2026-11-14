@@ -2201,11 +2201,15 @@ input[type='range'].wide {
 /* The title, Cancel and Save stay at the top of the pane while the form scrolls under them. */
 .editor-head {
   position: sticky;
-  top: 0;
+  /* Sticky stops below a scroll pane's top padding, which let the scrolled form show above the
+     header; pinning it that much higher puts it flush with the pane's top edge instead. */
+  top: calc(-1 * var(--pane-pad-top, 0px));
   z-index: 2;
   /* Inset from the pane's edges: the pane itself has none, so the title and buttons touched them. */
   padding: 6px 12px 8px;
-  background: var(--bg);
+  /* The surface it sits on (a workspace panel sets --surface; the Library page is --bg), so
+     the header reads as a title over a rule, never a slab of another colour. */
+  background: var(--surface, var(--bg));
   border-bottom: 1px solid var(--border);
 }
 

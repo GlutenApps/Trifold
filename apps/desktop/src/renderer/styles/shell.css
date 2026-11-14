@@ -233,7 +233,9 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-panel);
+  /* What sticky headers inside paint behind them, so they read as part of the panel. */
+  --surface: var(--bg-panel);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -248,7 +250,9 @@
 .grp-body {
   height: 100%;
   overflow: auto;
-  padding: 10px 12px;
+  /* Read by sticky headers inside (.editor-head), which pin flush with the top edge. */
+  --pane-pad-top: 10px;
+  padding: var(--pane-pad-top) 12px 10px;
   container: panel / inline-size;
 }
 

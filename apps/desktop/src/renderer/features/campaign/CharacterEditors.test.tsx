@@ -2,8 +2,24 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { CampaignBundle, CompendiumRow } from '@trifold/api';
-import type { NPC, PCCard } from '@trifold/schema';
-import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './CharacterEditors';
+import { parseCompendiumXml } from '@trifold/importers';
+import type { MonsterRecord, NPC, PCCard } from '@trifold/schema';
+import fixture from '../../../../../../fixtures/compendium-sample.xml?raw';
+import {
+  blankNpc,
+  blankPc,
+  CopyFromCampaign,
+  NpcEditor,
+  PcEditor,
+  type StatBlockEdit,
+} from './CharacterEditors';
+
+const goblin = parseCompendiumXml(fixture, {
+  sourceId: 'srd',
+  defaultEdition: '2014',
+}).records.find(
+  (r): r is MonsterRecord => r.kind === 'monster' && r.name === 'Goblin Warrior [5.5e]',
+)!;
 
 const thora: PCCard = {
   ...blankPc(),
@@ -100,6 +116,62 @@ describe('NpcEditor', () => {
       sourceId: 's1',
       key: 'bandit captain',
       edition: '2014',
+    });
+  });
+
+  describe('its stat block, in the same form (ADR 0039)', () => {
+    const vex: NPC = {
+      ...blankNpc(),
+      id: 'n1',
+      name: 'Captain Vex',
+      recordRef: {
+        recordId: goblin.id,
+        sourceId: goblin.sourceId,
+        key: goblin.key,
+        edition: '2024',
+      },
+    };
+    const setup = (inPlace: boolean) => {
+      vi.mocked(window.trifold.compendium.get).mockResolvedValue(goblin);
+      const onSave = vi.fn();
+      render(<NpcEditor npc={vex} inPlace={inPlace} onSave={onSave} onCancel={() => undefined} />);
+      return onSave;
+    };
+
+    it('shows the stat block below the NPC and hands it up only when it changed', async () => {
+      const onSave = setup(true);
+      const editor = await screen.findByTestId('npc-statblock-editor');
+      expect(within(editor).getByLabelText('Stat block name')).toHaveValue(goblin.displayName);
+      expect(screen.getByTestId('statblock-home-note')).toHaveTextContent('update this NPC');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      expect(onSave.mock.calls[0]![2]).toBeNull();
+
+      // Scale it: the scaler sits at the top of the stat block's Challenge section.
+      await userEvent.click(within(editor).getByRole('button', { name: 'One CR higher' }));
+      await userEvent.click(within(editor).getByRole('button', { name: /^Apply CR/ }));
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+      const edit = onSave.mock.calls[1]![2] as StatBlockEdit;
+      expect(edit.inPlace).toBe(true);
+      expect(edit.original.id).toBe(goblin.id);
+      expect(edit.edited.data.cr).toBe('1/2');
+      expect(onSave.mock.calls[1]![0]).toMatchObject({ name: 'Captain Vex' });
+    });
+
+    it('says a shared stat block is copied, and asks before unlinking over changes', async () => {
+      setup(false);
+      const editor = await screen.findByTestId('npc-statblock-editor');
+      expect(screen.getByTestId('statblock-home-note')).toHaveTextContent('make a copy');
+
+      await userEvent.clear(within(editor).getByLabelText('Hit points'));
+      await userEvent.type(within(editor).getByLabelText('Hit points'), '40');
+      await userEvent.click(screen.getByRole('button', { name: 'Unlink stat block' }));
+      expect(screen.getByText('Unlink this stat block and drop your changes to it?')).toBeVisible();
+      await userEvent.click(screen.getByRole('button', { name: 'Keep' }));
+      expect(screen.getByTestId('npc-statblock-editor')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Unlink stat block' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Unlink' }));
+      await waitFor(() => expect(screen.queryByTestId('npc-statblock-editor')).toBeNull());
     });
   });
 });
