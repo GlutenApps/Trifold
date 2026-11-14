@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ulid } from 'ulid';
 import type { CompendiumRow } from '@trifold/api';
-import { difficultyBand, partyBudget } from '@trifold/rules';
 import type { CombatantTemplate, Encounter, NPC, PCCard } from '@trifold/schema';
 import { landOn, navKey, selectPhrase, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
@@ -11,10 +10,12 @@ import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
 import { AddPanel } from './AddPanel';
 import { CombatView } from './CombatView';
-import { registerBuilderDraft } from './builderDraft';
+import { builderDraftFor, registerBuilderDraft } from './builderDraft';
+import { DifficultyBar } from './DifficultyBar';
+import { retargetScaled, scaleRows } from './quickScale';
 import { CreatureEditor } from '../compendium/CreatureEditor';
-import { editRow, useCreatureEditStore } from './creatureEdits';
-import { retargetToNpc } from './templates';
+import { editRow, retargetTokens, useCreatureEditStore } from './creatureEdits';
+import { retargetToNpc, templateTokenIds } from './templates';
 
 /**
  * The Encounters major (DESIGN.md §6.4, ADR 0005): the encounter list and builder while no
@@ -313,11 +314,56 @@ function Builder({
   const partyLevels = encounter.combatants
     .filter((t) => t.ref.kind === 'pc')
     .map((t) => pcs.find((p) => t.ref.kind === 'pc' && p.id === t.ref.pcId)?.level ?? 1);
-  const budget = partyBudget(partyLevels);
-  const enemyXp = encounter.combatants
-    .filter((t) => t.role === 'enemy')
-    .reduce((n, t) => n + (t.cache?.xp ?? 0) * t.quantity, 0);
-  const band = partyLevels.length ? difficultyBand(enemyXp, budget) : null;
+
+  // Quick scale (ADR 0038 §7): picks wait here, and the difficulty follows them, until Apply.
+  const [scaling, setScaling] = useState(false);
+  const [pending, setPending] = useState<Record<string, string>>({});
+  const [scaleBusy, setScaleBusy] = useState(false);
+  const [scaleError, setScaleError] = useState<string | null>(null);
+  const stopScaling = () => {
+    setScaling(false);
+    setPending({});
+    setScaleError(null);
+  };
+  const applyScale = async () => {
+    const campaign = useCampaignStore.getState().current;
+    if (!campaign) return;
+    setScaleBusy(true);
+    setScaleError(null);
+    try {
+      const { targets, unused } = await scaleRows(
+        encounter.combatants,
+        pending,
+        {
+          slug: campaign.campaign.slug,
+          encounters: campaign.encounters,
+          npcs: campaign.npcs,
+          scenes: campaign.scenes,
+        },
+        encounter.id,
+        {
+          get: (id) => window.trifold.compendium.get(id),
+          draft: (id) => window.trifold.homebrew.draft(id, 'campaign'),
+          save: (record) => window.trifold.homebrew.save(record),
+        },
+      );
+      const draft = builderDraftFor(encounter.id);
+      if (draft) draft.editTemplates((ts) => retargetScaled(ts, targets));
+      else set({ combatants: retargetScaled(encounter.combatants, targets) });
+      // Tokens these rows placed follow them, as they do after Edit (ADR 0035).
+      for (const t of encounter.combatants) {
+        const target = targets.get(t.id);
+        if (target) await retargetTokens(new Set(templateTokenIds(t)), target);
+      }
+      // A copy scaled back to its original and used nowhere else goes.
+      for (const id of unused) await window.trifold.homebrew.remove(id);
+      stopScaling();
+    } catch (err) {
+      setScaleError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setScaleBusy(false);
+    }
+  };
 
   return (
     <div className="card builder" data-nav={navKey('encounter', encounter.id)}>
@@ -339,6 +385,19 @@ function Builder({
         </button>
       </div>
 
+      <DifficultyBar
+        templates={encounter.combatants}
+        partyLevels={partyLevels}
+        pending={pending}
+        scaling={scaling}
+        busy={scaleBusy}
+        error={scaleError}
+        onToggleScale={() => (scaling ? stopScaling() : setScaling(true))}
+        onPick={setPending}
+        onApply={() => void applyScale()}
+        onCancel={stopScaling}
+      />
+
       <h2 className="mt">Combatants</h2>
       {encounter.combatants.length === 0 ? (
         <p className="muted">Add the party and some creatures below.</p>
@@ -358,21 +417,6 @@ function Builder({
           ))}
         </div>
       )}
-      {partyLevels.length === 0 ? (
-        <p className="muted small">Add PCs to see the 2024 difficulty budget.</p>
-      ) : (
-        <div className="difficulty" data-testid="difficulty">
-          <span>
-            Enemy XP {enemyXp.toLocaleString()} · <strong>{band}</strong> ·{' '}
-            {Math.round(enemyXp / partyLevels.length).toLocaleString()} XP per PC
-          </span>
-          <span className="muted small">
-            2024 budget: low {budget.low.toLocaleString()} · moderate{' '}
-            {budget.moderate.toLocaleString()} · high {budget.high.toLocaleString()}
-          </span>
-        </div>
-      )}
-
       <h2 className="mt">Add</h2>
       <AddPanel
         pcs={pcs.filter((p) => !presentPcs.has(p.id))}
@@ -578,7 +622,12 @@ export function EncountersPage() {
               <Icon name="left" />
             </button>
           </div>
-          <Builder encounter={draft} onChange={setDraft} onStart={() => void startCombat()} />
+          <Builder
+            key={draft.id}
+            encounter={draft}
+            onChange={setDraft}
+            onStart={() => void startCombat()}
+          />
         </>
       ) : (
         <div className="card">

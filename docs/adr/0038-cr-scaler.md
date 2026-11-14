@@ -44,6 +44,19 @@ CRs (a tough, slow hitter stays one). Tools that let you change a monster's CR d
    records it, kept from the first CR across repeated scaling and dropped when scaled back; the
    stat block shows a **Scaled CR 1/4 → 3** tag beside its CR.
 
+7. **Quick scale in the encounter builder.** The encounter's difficulty sits in one row at the
+   top of the builder: the 2024 band in colour, the enemies' XP and XP per PC, and a meter with
+   the party's Low, Moderate and High budgets marked. **Scale** opens a list of every compendium
+   creature in the encounter with a CR picker beside it (and **All −/+** to step them together);
+   the band and meter follow the picks before anything is written. **Apply** scales each stat
+   block with every part on (no attack offer), saves it to this campaign's creatures under the
+   same name with the Scaled tag, and points the rows (and the tokens they placed) at it; rows on
+   the same creature going to the same CR share one copy, and a label stays while an HP override
+   gives way. A copy only this encounter uses is rescaled in place rather than copied again, and
+   one scaled back to its original CR returns the rows to the original and is removed when
+   nothing else uses it. Named NPCs are left out: scaling one goes through its stat block (Edit),
+   since it is the same NPC everywhere.
+
 ## Consequences
 
 - `scaleCr` in `packages/rules` is pure and tested; the panel only shows and applies it.

@@ -104,7 +104,10 @@ export async function applySavedRecord(
 }
 
 /** Tokens a row or fighter placed follow it to the new record, so a later link finds it. */
-async function retargetTokens(tokenIds: ReadonlySet<string>, target: RecordTarget): Promise<void> {
+export async function retargetTokens(
+  tokenIds: ReadonlySet<string>,
+  target: RecordTarget,
+): Promise<void> {
   if (tokenIds.size === 0) return;
   for (const scene of useCampaignStore.getState().current?.scenes ?? []) {
     if (!scene.tokens.some((t) => tokenIds.has(t.id) && t.ref.kind === 'record')) continue;

@@ -261,7 +261,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 ### 6.4 Encounters and combat tracker
 
-**Encounter builder.** Add PCs (all, or a subset) and creatures from the compendium or from a scene's placed tokens. Quantity, label, role, hidden flag per row. Difficulty uses the **2024 XP budget** (§7.4): sum creature XP (no multiplier) against the party's Low / Moderate / High budget and show which band the encounter lands in, plus XP per PC. **Encounter assistant** **(not built; beta)**: pick environment(s), CR range, edition filter, budget band → generate a set; re-roll individual rows.
+**Encounter builder.** Add PCs (all, or a subset) and creatures from the compendium or from a scene's placed tokens. Quantity, label, role, hidden flag per row. Difficulty uses the **2024 XP budget** (§7.4): sum creature XP (no multiplier) against the party's Low / Moderate / High budget and show which band the encounter lands in, plus XP per PC, in one row at the top of the builder with a meter against the budgets. **Scale** there lists each compendium creature with a CR picker; the band follows the picks, and Apply saves same-named scaled copies to the campaign (ADR 0038 §7). **Encounter assistant** **(not built; beta)**: pick environment(s), CR range, edition filter, budget band → generate a set; re-roll individual rows.
 
 **Starting combat.** Roll initiative per creature or per group (setting); PCs prompt for their rolled initiative (or roll from the card's bonus). Surprise flag = disadvantage on that combatant's initiative roll (2024). Lair actions insert a "Lair" entry at initiative 20 when any combatant has lair actions. Ties: Dex, then DM drag.
 
