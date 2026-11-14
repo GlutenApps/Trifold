@@ -541,6 +541,47 @@ export const PinnedRoll = z.object({
 });
 export type PinnedRoll = z.infer<typeof PinnedRoll>;
 
+// ---------- session log (Beta 10, ADR 0040) ----------
+
+/** Something that happened in a session, recorded as it happened. */
+export const SessionEvent = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('fight'),
+    at: IsoDateTime,
+    encounterId: z.string(),
+    /** The encounter's name when the fight ended. */
+    name: z.string(),
+    xp: int.min(0),
+    rounds: int.min(0),
+    /** PCs who went down for good. */
+    casualties: z.array(z.string()).default([]),
+    /** PCs in the fight, so the log can show XP per PC; 0 when none were. */
+    pcs: int.min(0).default(0),
+  }),
+  z.object({ kind: z.literal('scene'), at: IsoDateTime, sceneId: z.string(), title: z.string() }),
+  z.object({ kind: z.literal('death'), at: IsoDateTime, npcId: z.string(), name: z.string() }),
+]);
+export type SessionEvent = z.infer<typeof SessionEvent>;
+
+/**
+ * One session of play: what happened (fights, scenes shown, NPCs who died), filled in as it
+ * happens, and the DM's recap in markdown (ADR 0040). One file per session under `sessions/`.
+ */
+export const Session = z.object({
+  schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+  id: z.string().min(1),
+  /** The DM's name for it; empty shows "Session N". */
+  title: z.string().default(''),
+  recap: z.string().default(''),
+  events: z.array(SessionEvent).default([]),
+  startedAt: IsoDateTime,
+  /** The last thing recorded; a session takes new events while this is recent. */
+  lastActivityAt: IsoDateTime,
+  createdAt: IsoDateTime,
+  updatedAt: IsoDateTime,
+});
+export type Session = z.infer<typeof Session>;
+
 // ---------- campaign export (ADR 0015) ----------
 
 /** What a `.trifold-campaign` file was made with; recorded in its manifest. */

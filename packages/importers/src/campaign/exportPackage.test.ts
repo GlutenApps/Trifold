@@ -8,6 +8,7 @@ import {
   NPC,
   PCCard,
   PinnedRoll,
+  Session,
   Scene,
   type CombatState,
   type RecordRef,
@@ -190,6 +191,18 @@ function parts(): CampaignParts {
         updatedAt: now,
       }),
     ],
+    sessions: [
+      Session.parse({
+        schemaVersion: 1,
+        id: 'SES',
+        recap: 'The party reached the keep.',
+        events: [{ kind: 'scene', at: now, sceneId: 'SC', title: 'The keep' }],
+        startedAt: now,
+        lastActivityAt: now,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ],
   };
 }
 
@@ -223,6 +236,12 @@ describe('freshStart', () => {
     expect(
       prepareExport(parts(), { state: 'asIs', party: true, homebrew: true, layout: false })
         .pinnedRolls,
+    ).toHaveLength(1);
+    // The session log is a result of play too (ADR 0040).
+    expect(fresh.sessions).toEqual([]);
+    expect(
+      prepareExport(parts(), { state: 'asIs', party: true, homebrew: true, layout: false })
+        .sessions,
     ).toHaveLength(1);
   });
 });

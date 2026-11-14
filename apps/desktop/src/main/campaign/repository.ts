@@ -16,6 +16,7 @@ import {
   nowIso,
   PCCard,
   PinnedRoll,
+  Session,
   Scene,
   type EncounterResult,
 } from '@trifold/schema';
@@ -32,7 +33,7 @@ import type { Logger } from '../log';
  */
 /** The entity folders CampaignEntities writes through the helpers here. */
 export type EntityFolder =
-  'adventures' | 'notes' | 'npcs' | 'scenes' | 'counters' | 'timers' | 'pinnedRolls';
+  'adventures' | 'notes' | 'npcs' | 'scenes' | 'counters' | 'timers' | 'pinnedRolls' | 'sessions';
 
 /** Sub-folders of every campaign (DATA-FORMATS.md §5.4). */
 export const CAMPAIGN_LAYOUT = [
@@ -45,6 +46,7 @@ export const CAMPAIGN_LAYOUT = [
   'counters',
   'timers',
   'pinnedRolls',
+  'sessions',
   'images',
   'tokens',
 ];
@@ -105,7 +107,8 @@ export class CampaignRepository {
       | 'scene'
       | 'counter'
       | 'timer'
-      | 'pinnedRoll',
+      | 'pinnedRoll'
+      | 'session',
   ): Promise<T[]> {
     const out: T[] = [];
     for (const file of await this.listDir(relative)) {
@@ -279,6 +282,7 @@ export class CampaignRepository {
       await this.readAll(this.dir(slug, 'timers'), CampaignTimer, 'timer'),
     );
     const pinnedRolls = await this.readPinnedRolls(slug);
+    const sessions = await this.readSessions(slug);
     return {
       campaign,
       pcs,
@@ -290,6 +294,7 @@ export class CampaignRepository {
       counters,
       timers,
       pinnedRolls,
+      sessions,
     };
   }
 
@@ -322,6 +327,17 @@ export class CampaignRepository {
   private async readPinnedRolls(slug: string): Promise<PinnedRoll[]> {
     return (await this.readAll(this.dir(slug, 'pinnedRolls'), PinnedRoll, 'pinnedRoll')).sort(
       (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+    );
+  }
+
+  /** The open campaign's sessions, newest first (ADR 0040). */
+  async sessions(): Promise<Session[]> {
+    return this.readSessions(this.requireSlug());
+  }
+
+  private async readSessions(slug: string): Promise<Session[]> {
+    return (await this.readAll(this.dir(slug, 'sessions'), Session, 'session')).sort(
+      (a, b) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id),
     );
   }
 

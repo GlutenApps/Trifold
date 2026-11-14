@@ -31,6 +31,7 @@ import {
   CampaignExportOptions,
   CampaignTimer,
   PinnedRoll,
+  Session,
   CompendiumRecord,
   Encounter,
   LIBRARY_SCHEMA_VERSION,
@@ -79,7 +80,8 @@ type EntityFolder =
   | 'scenes'
   | 'counters'
   | 'timers'
-  | 'pinnedRolls';
+  | 'pinnedRolls'
+  | 'sessions';
 const ENTITIES: readonly { folder: EntityFolder; kind: FileKind; schema: ZodType<unknown> }[] = [
   { folder: 'pcs', kind: 'pc', schema: PCCard },
   { folder: 'encounters', kind: 'encounter', schema: Encounter },
@@ -90,6 +92,7 @@ const ENTITIES: readonly { folder: EntityFolder; kind: FileKind; schema: ZodType
   { folder: 'counters', kind: 'counter', schema: CampaignCounter },
   { folder: 'timers', kind: 'timer', schema: CampaignTimer },
   { folder: 'pinnedRolls', kind: 'pinnedRoll', schema: PinnedRoll },
+  { folder: 'sessions', kind: 'session', schema: Session },
 ];
 
 /** Every file in a zip, by entry name, read into memory (campaigns are small; maps are a few MB). */
@@ -321,6 +324,8 @@ export class CampaignPackager {
       counters: group('counters', CampaignCounter, 'counter'),
       timers: group('timers', CampaignTimer, 'timer'),
       pinnedRolls: group('pinnedRolls', PinnedRoll, 'pinnedRoll'),
+      // Exports from before the session log (ADR 0040) have no sessions folder.
+      sessions: group('sessions', Session, 'session'),
     };
 
     // The campaign's creatures (ADR 0035): a copy gives them new ids, swapped wherever the
