@@ -249,11 +249,47 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(console_.getByRole('heading', { name: 'Smoke Campaign' })).toBeVisible();
     await expect(tab('Campaign')).toHaveAttribute('aria-selected', 'true');
     await expect(strip).toBeVisible();
-    await console_
-      .getByLabel('Quick add')
-      .fill('Thora, Sam, Fighter 5, 44, 18, +1, 30, 12\nZed, Kim, Wizard 5, 28, 12, +2, 30, 10');
-    await console_.getByRole('button', { name: 'Add PCs' }).click();
+    // Party: New PC card, the required three plus the optional sections, Save and add another
+    // for the second card, then Save.
+    const party = [
+      { name: 'Thora', player: 'Sam', cls: 'Fighter', hp: '44', ac: '18', init: '1', pp: '12' },
+      { name: 'Zed', player: 'Kim', cls: 'Wizard', hp: '28', ac: '12', init: '2', pp: '10' },
+    ];
+    await console_.getByRole('button', { name: 'New PC card' }).click();
+    for (const [i, pc] of party.entries()) {
+      const form = console_.getByRole('form', { name: 'New PC card' });
+      // The blank form replaces the saved one only once the save lands.
+      await expect(form.getByLabel('Name', { exact: true })).toHaveValue('');
+      await form.getByLabel('Name', { exact: true }).fill(pc.name);
+      await form.getByLabel('Max HP', { exact: true }).fill(pc.hp);
+      await form.getByLabel('AC', { exact: true }).fill(pc.ac);
+      await form.getByLabel('Basics, optional').click();
+      await form.getByLabel('Player', { exact: true }).fill(pc.player);
+      await form.getByLabel('Class', { exact: true }).fill(pc.cls);
+      await form.getByLabel('Level', { exact: true }).fill('5');
+      await form.getByLabel('Initiative bonus', { exact: true }).fill(pc.init);
+      await form.getByLabel('Senses, optional').click();
+      await form.getByLabel('Passive Perception', { exact: true }).fill(pc.pp);
+      const last = i === party.length - 1;
+      await form
+        .getByRole('button', { name: last ? 'Save' : 'Save and add another', exact: true })
+        .click();
+    }
     await expect(console_.getByTestId('pc-row')).toHaveCount(2);
+    await expect(console_.getByTestId('pc-row').filter({ hasText: 'Thora' })).toContainText(
+      'Sam · Fighter 5 · HP 44/44 · AC 18 · Init +1 · PP 12',
+    );
+
+    // NPCs: a name is all a new NPC needs.
+    await console_.getByRole('tab', { name: /^NPCs/ }).click();
+    await console_.getByRole('button', { name: 'New NPC' }).click();
+    await console_
+      .getByRole('form', { name: 'New NPC' })
+      .getByLabel('Name', { exact: true })
+      .fill('Pell Marsh');
+    await console_.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(console_.getByTestId('npc-row')).toHaveCount(1);
+    await console_.getByRole('tab', { name: /^Party/ }).click();
     await expect(
       stat(join(library, 'campaigns', 'smoke-campaign', 'campaign.json')),
     ).resolves.toBeTruthy();

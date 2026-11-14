@@ -9,7 +9,6 @@ import {
   damageMultiplier,
   grantTempHp,
   numberedNames,
-  parseQuickAdd,
   parseRollRequest,
   rewindTurn,
   rollAttack,
@@ -146,26 +145,7 @@ describe('initiative order and death saves', () => {
   });
 });
 
-describe('quick add and masking', () => {
-  it('parses the one-line PC format leniently', () => {
-    expect(
-      parseQuickAdd('Thora, Sam, Fighter 5, 44, 18, +1, 30, 12\nZed, , Wizard L3\n# comment\n'),
-    ).toEqual([
-      {
-        name: 'Thora',
-        playerName: 'Sam',
-        classText: 'Fighter',
-        level: 5,
-        maxHp: 44,
-        ac: 18,
-        initiativeBonus: 1,
-        speed: 30,
-        passivePerception: 12,
-      },
-      { name: 'Zed', classText: 'Wizard', level: 3 },
-    ]);
-  });
-
+describe('masking', () => {
   it('numbers groups', () => {
     expect(numberedNames('Goblin', 3)).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3']);
     expect(numberedNames('Goblin', 1)).toEqual(['Goblin']);

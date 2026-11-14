@@ -2101,6 +2101,45 @@ input[type='range'].wide {
   margin-top: 10px;
 }
 
+/* An Optional section of the PC and NPC forms: its heading folds the fields away, and says the
+   section can be skipped. */
+.fold-section > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--text-muted);
+}
+
+.fold-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold-section > summary h3 {
+  margin: 0;
+}
+
+.fold-section[open] > summary {
+  margin-bottom: 10px;
+}
+
+.character-editor .editor-subhead {
+  margin: 4px 0 0;
+}
+
+/* "From another campaign…": the header with Back, a note, the search and the list. */
+.copy-from-campaign {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.copy-from-campaign h2,
+.copy-from-campaign p {
+  margin: 0;
+}
+
 .editor-grid + .editor-checks:first-child {
   margin-top: 0;
 }

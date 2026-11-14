@@ -2,7 +2,7 @@ import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { ulid } from 'ulid';
 import type { ZodType } from 'zod';
 import type { CampaignBundle, CampaignSummary } from '@trifold/api';
-import { normalizeKey, parseQuickAdd, sortCounters } from '@trifold/rules';
+import { normalizeKey, sortCounters } from '@trifold/rules';
 import {
   Adventure,
   CAMPAIGN_SCHEMA_VERSION,
@@ -403,31 +403,52 @@ export class CampaignRepository {
     await this.touch();
   }
 
-  async quickAdd(text: string): Promise<PCCard[]> {
-    const out: PCCard[] = [];
-    for (const q of parseQuickAdd(text)) {
-      const now = nowIso();
-      out.push(
-        await this.savePc(
-          PCCard.parse({
-            schemaVersion: CAMPAIGN_SCHEMA_VERSION,
-            id: ulid(),
-            name: q.name,
-            playerName: q.playerName ?? '',
-            classText: q.classText ?? '',
-            level: q.level ?? 1,
-            maxHp: q.maxHp ?? 10,
-            ac: q.ac ?? 10,
-            initiativeBonus: q.initiativeBonus ?? 0,
-            speed: q.speed ?? 30,
-            passives: { perception: q.passivePerception ?? 10 },
-            createdAt: now,
-            updatedAt: now,
-          }),
-        ),
-      );
-    }
-    return out;
+  /**
+   * Copies another campaign's PC card into the open one (DESIGN.md §10 Bugs, "From another
+   * campaign…"): a new id, full HP, and its portrait file copied across. The original is
+   * untouched and the two are independent afterwards.
+   */
+  async copyPcFrom(campaignId: string, pcId: string): Promise<PCCard> {
+    const fromSlug = await this.slugFor(campaignId);
+    const source = await this.store.readJson(
+      this.dir(fromSlug, 'pcs', `${pcId}.json`),
+      PCCard,
+      'pc',
+    );
+    const { currentHp: _hp, tempHp: _temp, portrait, ...rest } = source;
+    const copied = portrait ? await this.copyAssetFrom(fromSlug, portrait) : null;
+    return this.savePc({ ...rest, id: '', createdAt: '', ...(copied ? { portrait: copied } : {}) });
+  }
+
+  /** Reads one entity file from any campaign, open or not. */
+  async readEntityFrom<T>(
+    campaignId: string,
+    folder: EntityFolder,
+    id: string,
+    schema: ZodType<T>,
+    kind: 'npc' | 'pc',
+  ): Promise<{ slug: string; value: T }> {
+    const slug = await this.slugFor(campaignId);
+    const value = await this.store.readJson(this.dir(slug, folder, `${id}.json`), schema, kind);
+    return { slug, value };
+  }
+
+  /**
+   * Copies a campaign-relative file (a portrait) from another campaign into the open one under
+   * a new name in the same folder. Null when the file is missing, so a copy never points at a
+   * picture its campaign does not have.
+   */
+  async copyAssetFrom(fromSlug: string, relative: string): Promise<string | null> {
+    const slash = relative.lastIndexOf('/');
+    const folder = slash >= 0 ? relative.slice(0, slash) : 'tokens';
+    const dot = relative.lastIndexOf('.');
+    const ext = dot > slash ? relative.slice(dot) : '';
+    const target = `${folder}/${ulid()}${ext}`;
+    const ok = await this.store.copyFile(
+      this.dir(fromSlug, relative),
+      this.dir(this.requireSlug(), target),
+    );
+    return ok ? target : null;
   }
 
   // ---------- encounters ----------

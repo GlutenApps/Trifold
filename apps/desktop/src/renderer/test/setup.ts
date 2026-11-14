@@ -222,6 +222,9 @@ export function installBridgeMock(): TrifoldBridge {
     npcs: {
       save: vi.fn(async (n) => n),
       remove: vi.fn(async () => undefined),
+      copyFrom: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
     },
     scenes: {
       save: vi.fn(async (scene) => scene),
@@ -245,7 +248,9 @@ export function installBridgeMock(): TrifoldBridge {
     pcs: {
       save: vi.fn(async (pc) => pc),
       remove: vi.fn(async () => undefined),
-      quickAdd: vi.fn(async () => []),
+      copyFrom: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
     },
     encounters: {
       save: vi.fn(async (e) => e),
