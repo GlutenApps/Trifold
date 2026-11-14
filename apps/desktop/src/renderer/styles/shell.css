@@ -2274,6 +2274,11 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   overflow-wrap: anywhere;
 }
 
+/* The campaigns a source shows in (ADR 0036), under Only these campaigns. */
+.campaigns-list {
+  margin-left: 24px;
+}
+
 .books-panel-foot {
   display: flex;
   justify-content: flex-end;

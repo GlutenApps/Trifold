@@ -19,6 +19,11 @@ import {
   type RawRow,
 } from './query';
 
+/** `Source.campaignIds` as the sources table stores it: a JSON array, or NULL for every campaign. */
+export function campaignsColumn(campaignIds: readonly string[] | null | undefined): string | null {
+  return campaignIds ? JSON.stringify(campaignIds) : null;
+}
+
 /** `buildSuggest`'s numeric tier column as the API names it. */
 const SUGGEST_TIERS: Record<number, CompendiumSuggestion['tier']> = {
   0: 'exact',
@@ -35,7 +40,7 @@ const SUGGEST_TIERS: Record<number, CompendiumSuggestion['tier']> = {
  * decides which sources need it from their file hash and enabled flag.
  */
 /** Bump when the derived table layout changes; the tables are dropped and rebuilt from files. */
-export const INDEX_VERSION = 3;
+export const INDEX_VERSION = 4;
 
 /** DATA-FORMATS.md §5.6. Every row is derived from `sources/<id>/records.jsonl`. */
 const SCHEMA = `
@@ -46,6 +51,8 @@ CREATE TABLE IF NOT EXISTS sources (
   enabled INTEGER NOT NULL DEFAULT 1,
   file_hash TEXT,
   record_count INTEGER NOT NULL DEFAULT 0,
+  -- The campaigns this source shows in (ADR 0036): a JSON array of campaign ids, NULL for all.
+  campaigns TEXT,
   -- Source priority (ADR 0027), 0 highest; set by applySourceOrder after every sync.
   priority INTEGER NOT NULL DEFAULT 1000000
 );
@@ -84,6 +91,7 @@ export interface SourceRow {
   enabled: number;
   file_hash: string | null;
   record_count: number;
+  campaigns: string | null;
 }
 
 /**
@@ -149,9 +157,9 @@ export class IndexDb {
     );
     const insertFts = this.db.prepare('INSERT INTO records_fts (id, name, text) VALUES (?, ?, ?)');
     const upsertSource = this.db.prepare(
-      `INSERT INTO sources (id, name, kind, enabled, file_hash, record_count) VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO sources (id, name, kind, enabled, file_hash, record_count, campaigns) VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET name = excluded.name, kind = excluded.kind, enabled = excluded.enabled,
-         file_hash = excluded.file_hash, record_count = excluded.record_count`,
+         file_hash = excluded.file_hash, record_count = excluded.record_count, campaigns = excluded.campaigns`,
     );
 
     const run = this.db.transaction((rows: Iterable<CompendiumRecord>) => {
@@ -169,6 +177,7 @@ export class IndexDb {
         source.enabled ? 1 : 0,
         source.fileHash ?? null,
         count,
+        campaignsColumn(source.campaignIds),
       );
       return count;
     });
@@ -193,6 +202,13 @@ export class IndexDb {
     this.db.prepare('UPDATE sources SET enabled = ? WHERE id = ?').run(enabled ? 1 : 0, sourceId);
   }
 
+  /** Which campaigns a source shows in (ADR 0036); null for every campaign. */
+  setSourceCampaigns(sourceId: string, campaignIds: readonly string[] | null | undefined): void {
+    this.db
+      .prepare('UPDATE sources SET campaigns = ? WHERE id = ?')
+      .run(campaignsColumn(campaignIds), sourceId);
+  }
+
   clearAll(): void {
     this.db.exec('DELETE FROM records_fts; DELETE FROM records; DELETE FROM sources;');
   }
@@ -213,10 +229,17 @@ export class IndexDb {
       limit?: number;
       preferEdition?: '2024' | '2014';
       campaignSourceId?: string | null;
+      campaignId?: string | null;
     } = {},
   ): CompendiumSuggestion[] {
     if (!text.trim()) return [];
-    const built = buildSuggest(text, opts.limit, opts.preferEdition, opts.campaignSourceId ?? null);
+    const built = buildSuggest(
+      text,
+      opts.limit,
+      opts.preferEdition,
+      opts.campaignSourceId ?? null,
+      opts.campaignId ?? null,
+    );
     return (this.db.prepare(built.sql).all(...built.params) as (RawRow & { tier: number })[]).map(
       (raw) => ({ ...toRow(raw), tier: SUGGEST_TIERS[raw.tier] ?? 'substring' }),
     );
@@ -228,6 +251,7 @@ export class IndexDb {
       limit?: number;
       preferEdition?: '2024' | '2014';
       campaignSourceId?: string | null;
+      campaignId?: string | null;
     } = {},
   ): CompendiumTextHit[] {
     const built = buildTextSearch(
@@ -235,6 +259,7 @@ export class IndexDb {
       opts.limit,
       opts.preferEdition,
       opts.campaignSourceId ?? null,
+      opts.campaignId ?? null,
     );
     if (!built) return [];
     return (this.db.prepare(built.sql).all(...built.params) as (RawRow & { snip: string })[]).map(
@@ -262,11 +287,21 @@ export class IndexDb {
 
   /**
    * Every version of a record, highest-priority source first (ADR 0027). Campaign creatures are
-   * never versions of a Library record (ADR 0035).
+   * never versions of a Library record (ADR 0035). With `campaignId`, a source limited to other
+   * campaigns is left out (ADR 0036).
    */
-  findByKey(kind: RecordKind, key: string, includeDisabled = false): CompendiumRecord[] {
-    const sql = `SELECT r.json FROM records r JOIN sources s ON s.id = r.source_id WHERE r.kind = ? AND r.key = ? AND s.kind != 'campaign'${includeDisabled ? '' : ' AND s.enabled = 1'} ORDER BY s.priority, r.edition DESC, r.id`;
-    const rows = this.db.prepare(sql).all(kind, key) as Array<{ json: string }>;
+  findByKey(
+    kind: RecordKind,
+    key: string,
+    includeDisabled = false,
+    campaignId: string | null = null,
+  ): CompendiumRecord[] {
+    const limit = campaignId
+      ? ' AND (s.campaigns IS NULL OR EXISTS (SELECT 1 FROM json_each(s.campaigns) WHERE value = ?))'
+      : '';
+    const sql = `SELECT r.json FROM records r JOIN sources s ON s.id = r.source_id WHERE r.kind = ? AND r.key = ? AND s.kind != 'campaign'${includeDisabled ? '' : ' AND s.enabled = 1'}${limit} ORDER BY s.priority, r.edition DESC, r.id`;
+    const params = campaignId ? [kind, key, campaignId] : [kind, key];
+    const rows = this.db.prepare(sql).all(...params) as Array<{ json: string }>;
     const out: CompendiumRecord[] = [];
     for (const row of rows) {
       const parsed = CompendiumRecord.safeParse(JSON.parse(row.json));

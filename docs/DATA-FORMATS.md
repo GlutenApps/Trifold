@@ -206,13 +206,15 @@ All JSON files: UTF-8, 2-space indent, `schemaVersion` integer, ULID ids, ISO ti
 ### 5.1 `sources/<id>/source.json`
 ```json
 { "schemaVersion": 1, "id": "01J…", "name": "Complete Compendium 5.5e", "kind": "xml",
-  "filePath": "original.xml", "fileHash": "sha256:…", "enabled": true,
+  "filePath": "original.xml", "fileHash": "sha256:…", "enabled": true, "campaignIds": null,
   "defaultEdition": "2014", "edition2024Books": ["Monster Manual (2025)", "Player's Handbook (2024)"],
   "license": { "nonSrd": true, "attribution": null },
   "importedAt": "2026-09-27T18:42:00Z",
   "recordCounts": { "monster": 5034, "spell": 1420, "item": 6296, "feat": 700, "species": 276, "background": 238, "class": 25 },
   "warnings": ["12 monsters missing cr", "…"] }
 ```
+
+`campaignIds` (ADR 0036): null or absent for every campaign, or the ids of the only campaigns that show the source. A campaign file's stat blocks start as `[<its campaign>]`.
 
 ### 5.2 `sources/<id>/records.jsonl`
 One `Record` (see `DESIGN.md` §5.1) per line. Order = file order. Rewritten in full on re-import.

@@ -224,6 +224,8 @@ export async function importXmlSource(
     filePath: 'original.xml',
     fileHash,
     enabled: existing?.enabled ?? true,
+    // The campaigns it shows in (ADR 0036) survive a re-import.
+    ...(existing?.campaignIds !== undefined ? { campaignIds: existing.campaignIds } : {}),
     defaultEdition: existing?.defaultEdition ?? '2014',
     edition2024Books,
     license: existing?.license ?? { nonSrd: true, attribution: null },

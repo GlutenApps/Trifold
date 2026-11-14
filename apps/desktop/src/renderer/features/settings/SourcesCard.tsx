@@ -1,14 +1,16 @@
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import type { SourceSummary } from '@trifold/api';
+import type { CampaignSummary, SourceSummary } from '@trifold/api';
 import { moveInOrder, placeInOrder, sourceOrder } from '@trifold/rules';
 import { useTreeDnd, type TreeDnd } from '../../treeDnd';
 import { useAppStore } from '../../stores/appStore';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { Icon } from '../shell/icons';
+import { useCampaignStore } from '../../stores/campaignStore';
 import { BooksPanel, clashLine } from './BooksPanel';
+import { CampaignsPanel, campaignsLine } from './CampaignsPanel';
 
 /**
  * The Sources card, shown under Library › Compendium › Sources (DESIGN.md §6.1): every bundled
@@ -38,8 +40,11 @@ function SourceRow({
   rank,
   dnd,
   onStep,
+  campaigns,
 }: {
   source: Ordered;
+  /** Every campaign in the Library, for the campaigns a source shows in (ADR 0036). */
+  campaigns: readonly CampaignSummary[];
   /** 1 is the highest priority (ADR 0027). */
   rank: number;
   dnd: TreeDnd<Ordered>;
@@ -53,6 +58,15 @@ function SourceRow({
   const [showWarnings, setShowWarnings] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [showBooks, setShowBooks] = useState(false);
+  const [showCampaigns, setShowCampaigns] = useState(false);
+  const setCampaigns = useSourcesStore((s) => s.setCampaigns);
+  const openCampaignId = useCampaignStore((s) => s.current?.campaign.id ?? null);
+  // Only an imported file can be limited to some campaigns (ADR 0036).
+  const limitable = !source.bundled && (source.kind === 'xml' || source.kind === 'open5e');
+  const changeCampaigns = async (ids: string[] | null) => {
+    // The open campaign's lists may gain or lose this source's records.
+    if (await setCampaigns(source.id, ids)) void useCompendiumStore.getState().search();
+  };
   const clash = clashLine(source);
   const rowRef = useRef<HTMLDivElement>(null);
   // The handle starts the drag; the whole row takes the drop.
@@ -146,6 +160,18 @@ function SourceRow({
                 <Icon name="eye" />
               </button>
             )}
+            {limitable && (
+              <button
+                type="button"
+                className={`chrome-btn xs${showCampaigns ? ' on' : ''}`}
+                title="Choose the campaigns it shows in"
+                aria-label={`Campaigns for ${source.name}`}
+                aria-pressed={showCampaigns}
+                onClick={() => setShowCampaigns((v) => !v)}
+              >
+                <Icon name="campaign" />
+              </button>
+            )}
             {source.review && (
               <button
                 type="button"
@@ -174,9 +200,21 @@ function SourceRow({
       </div>
       <p className="muted small">
         {source.kind === 'homebrew'
-          ? 'Records you made or copied with New homebrew and Duplicate to homebrew'
+          ? 'Records you made or copied with New homebrew and Edit'
           : `${source.bundled ? 'Snapshot taken' : 'Imported'} ${new Date(source.importedAt).toLocaleString()} · default edition ${source.defaultEdition}`}
+        {limitable && (
+          <span data-testid="source-campaigns"> · {campaignsLine(source, campaigns)}</span>
+        )}
       </p>
+      {showCampaigns && (
+        <CampaignsPanel
+          source={source}
+          campaigns={campaigns}
+          openCampaignId={openCampaignId}
+          onChange={(ids) => void changeCampaigns(ids)}
+          onClose={() => setShowCampaigns(false)}
+        />
+      )}
       {clash && !showBooks && (
         <p className="source-clash" data-testid="source-clash">
           <span>⚠ {clash}</span>
@@ -213,6 +251,17 @@ export function SourcesCard() {
     .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
     .map((s, i) => ({ ...s, parentId: null, order: i, createdAt: s.importedAt }));
   const listRef = useRef<HTMLDivElement>(null);
+  const [campaigns, setCampaignList] = useState<CampaignSummary[]>([]);
+  useEffect(() => {
+    let live = true;
+    window.trifold.campaigns
+      .list()
+      .then((list) => live && setCampaignList(list))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
   const save = async (next: string[]) => {
     await updateSettings({ sourcePriority: next });
     // The list and the open record may now answer from another source.
@@ -308,6 +357,7 @@ export function SourcesCard() {
                 rank={i + 1}
                 dnd={dnd}
                 onStep={(by) => void step(s.id, by)}
+                campaigns={campaigns}
               />
             ))}
             <p className="source-list-end muted small" aria-hidden="true">

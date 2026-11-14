@@ -74,6 +74,11 @@ describe('importCampaignXml', () => {
     expect(bundle.npcs.map((n) => n.name)).toEqual(['Keep Warden', 'Old Marla']);
     expect(bundle.npcs[0]?.recordRef?.key).toBe('keep warden');
     expect(bundle.npcs[1]?.recordRef).toBeUndefined();
+    // The file's stat blocks show in this campaign only (ADR 0036).
+    const [statBlocks] = await sources.list();
+    expect(statBlocks?.name).toBe('Sample One-Shot (campaign file)');
+    expect(statBlocks?.campaignIds).toEqual([bundle.campaign.id]);
+    expect(bundle.npcs[0]?.recordRef?.sourceId).toBe(statBlocks?.id);
     expect(bundle.notes.map((n) => n.title).sort()).toEqual([
       'Items from import',
       'Read-aloud: the gate',
