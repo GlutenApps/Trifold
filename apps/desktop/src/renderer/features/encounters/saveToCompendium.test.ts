@@ -4,7 +4,8 @@ import type { CombatantTemplate, CompendiumRecord, Encounter, Scene } from '@tri
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { useCompendiumStore } from '../../stores/compendiumStore';
-import { draftFromRow, registerBuilderDraft, saveToCompendium } from './saveToCompendium';
+import { registerBuilderDraft } from './builderDraft';
+import { draftFromRow, saveToCompendium } from './saveToCompendium';
 
 const now = '2026-11-14T00:00:00.000Z';
 
@@ -105,14 +106,20 @@ describe('saveToCompendium', () => {
     vi.mocked(window.trifold.scenes.save).mockImplementation(async (s) => s);
   });
 
-  it('opens the copy in the editor, unsaved, offering to use it in the encounter', async () => {
+  it('opens the copy in the editor, unsaved, offering three ways to use it', async () => {
     await saveToCompendium(ambush, row);
-    const { editing, editingNew, draftFrom, draftApply } = useCompendiumStore.getState();
+    const { editing, editingNew, draftFrom, draftChoice } = useCompendiumStore.getState();
     expect(editing).toMatchObject({ displayName: 'Grik', sourceId: 'homebrew' });
     expect(editingNew).toBe(true);
-    expect(draftApply).toBe(true);
-    expect(draftFrom?.label).toBe('Use it in Bridge ambush');
-    expect(draftFrom?.detail).toBe('Every Grik in that row. Other encounters keep the original.');
+    expect(draftChoice).toBe('encounter');
+    expect(draftFrom?.choices.map((c) => c.label)).toEqual([
+      'Use it in Bridge ambush',
+      'Use it everywhere in this campaign',
+      'Just save it',
+    ]);
+    expect(draftFrom?.choices[0]!.detail).toBe(
+      'Every Grik in that row. Other encounters keep the original.',
+    );
     expect(window.trifold.homebrew.save).not.toHaveBeenCalled();
   });
 
@@ -136,23 +143,55 @@ describe('saveToCompendium', () => {
     expect(useCompendiumStore.getState().draftFrom).toBeNull();
   });
 
-  it('leaves the encounter alone when the DM unticks Use it', async () => {
+  it('leaves the encounter alone with Just save it', async () => {
     await saveToCompendium(ambush, row);
-    useCompendiumStore.getState().setDraftApply(false);
+    useCompendiumStore.getState().setDraftChoice('none');
     await useCompendiumStore.getState().saveHomebrew(useCompendiumStore.getState().editing!);
     expect(window.trifold.homebrew.save).toHaveBeenCalled();
     expect(window.trifold.encounters.save).not.toHaveBeenCalled();
   });
 
+  it('with Use it everywhere, replaces the original in every encounter and keeps row tweaks', async () => {
+    const other: Encounter = {
+      ...ambush,
+      id: 'e2',
+      name: 'Mill raid',
+      combatants: [{ ...row, id: 'row2', label: undefined, hpOverride: undefined }],
+    };
+    useCampaignStore.setState({
+      current: {
+        ...useCampaignStore.getState().current!,
+        encounters: [ambush, other],
+      },
+    });
+    await saveToCompendium(ambush, row);
+    useCompendiumStore.getState().setDraftChoice('campaign');
+    await useCompendiumStore.getState().saveHomebrew(useCompendiumStore.getState().editing!);
+
+    const saved = vi.mocked(window.trifold.encounters.save).mock.calls.map((c) => c[0]);
+    expect(saved.map((e) => e.id).sort()).toEqual(['e1', 'e2']);
+    for (const e of saved) {
+      expect(e.combatants[0]!.ref.kind === 'record' && e.combatants[0]!.ref.ref.recordId).toBe(
+        'homebrew:monster:new',
+      );
+    }
+    // A replace keeps the DM's per-encounter choices.
+    expect(saved.find((e) => e.id === 'e1')!.combatants[0]).toMatchObject({
+      label: 'Grik',
+      hpOverride: 12,
+    });
+    const scene = vi.mocked(window.trifold.scenes.save).mock.calls.at(-1)![0];
+    expect(scene.tokens.every((t) => t.ref.kind === 'record' && t.ref.name === 'Grik')).toBe(true);
+  });
+
   it('switches the builder’s own copy while the builder shows the encounter', async () => {
-    const retarget = vi.fn();
-    registerBuilderDraft({ encounterId: 'e1', retarget });
+    const editTemplates = vi.fn();
+    registerBuilderDraft({ encounterId: 'e1', editTemplates });
     await saveToCompendium(ambush, row);
     await useCompendiumStore.getState().saveHomebrew(useCompendiumStore.getState().editing!);
-    expect(retarget).toHaveBeenCalledWith(
-      'row1',
-      expect.objectContaining({ cache: expect.objectContaining({ hp: 12 }) }),
-    );
+    expect(editTemplates).toHaveBeenCalledTimes(1);
+    const [moved] = editTemplates.mock.calls[0]![0]([row]) as CombatantTemplate[];
+    expect(moved).toMatchObject({ cache: { hp: 12 } });
     expect(window.trifold.encounters.save).not.toHaveBeenCalled();
   });
 });

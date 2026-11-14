@@ -8,6 +8,7 @@ import { compendiumActions, logDiceRoll } from './compendiumRolls';
 import { itemTypeName } from './formatting';
 import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
+import { ReplaceInCampaign } from './ReplaceInCampaign';
 import { UsedBy } from './UsedBy';
 
 /**
@@ -450,6 +451,7 @@ export function RecordDetail({
       </div>
 
       {homebrew && <HomebrewBar record={record} actions={homebrew} />}
+      {record.sourceId === 'homebrew' && <ReplaceInCampaign record={record} />}
       <LastRoll actor={record.displayName} />
       <Body record={record} onOpenSpell={onOpenSpell} />
       {record.kind === 'monster' && <UsedBy record={record} />}

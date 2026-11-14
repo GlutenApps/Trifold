@@ -11,8 +11,9 @@ import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
 import { AddPanel } from './AddPanel';
 import { CombatView } from './CombatView';
-import { registerBuilderDraft, saveToCompendium } from './saveToCompendium';
-import { retargetToNpc, retargetToRecord } from './templates';
+import { registerBuilderDraft } from './builderDraft';
+import { saveToCompendium } from './saveToCompendium';
+import { retargetToNpc } from './templates';
 
 /**
  * The Encounters major (DESIGN.md §6.4, ADR 0005): the encounter list and builder while no
@@ -452,19 +453,15 @@ export function EncountersPage() {
     return true;
   });
 
-  // Save to compendium's switch goes into this copy while the builder shows the encounter, so
-  // the autosave below keeps it rather than overwriting it.
+  // Save to compendium and Replace references edit this copy while the builder shows the
+  // encounter, so the autosave below keeps their switch rather than overwriting it.
   const draftId = draft?.id;
   useEffect(() => {
     if (!draftId) return;
     registerBuilderDraft({
       encounterId: draftId,
-      retarget: (templateId, target) =>
-        setDraft((d) =>
-          d && d.id === draftId
-            ? { ...d, combatants: retargetToRecord(d.combatants, templateId, target) }
-            : d,
-        ),
+      editTemplates: (edit) =>
+        setDraft((d) => (d && d.id === draftId ? { ...d, combatants: edit(d.combatants) } : d)),
     });
     return () => registerBuilderDraft(null);
   }, [draftId]);

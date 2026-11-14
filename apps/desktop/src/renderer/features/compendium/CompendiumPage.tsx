@@ -72,8 +72,8 @@ export function CompendiumPage() {
   const saveHomebrew = useCompendiumStore((s) => s.saveHomebrew);
   const removeHomebrew = useCompendiumStore((s) => s.removeHomebrew);
   const draftFrom = useCompendiumStore((s) => s.draftFrom);
-  const draftApply = useCompendiumStore((s) => s.draftApply);
-  const setDraftApply = useCompendiumStore((s) => s.setDraftApply);
+  const draftChoice = useCompendiumStore((s) => s.draftChoice);
+  const setDraftChoice = useCompendiumStore((s) => s.setDraftChoice);
   const sources = useSourcesStore((s) => s.sources);
   const loadSources = useSourcesStore((s) => s.load);
   // The open campaign's preferred edition heads each collapsed row; a change re-runs the search.
@@ -399,16 +399,26 @@ export function CompendiumPage() {
           data-nav={selected && !editing ? navKey('record', selected.id) : undefined}
         >
           {editing && draftFrom && (
-            <div className="banner draft-origin" data-testid="draft-origin">
-              <label className="row">
-                <input
-                  type="checkbox"
-                  checked={draftApply}
-                  onChange={(e) => setDraftApply(e.target.checked)}
-                />
-                {draftFrom.label}
-              </label>
-              <span className="muted small">{draftFrom.detail}</span>
+            <div
+              className="banner draft-origin"
+              role="radiogroup"
+              aria-label="After saving"
+              data-testid="draft-origin"
+            >
+              {draftFrom.choices.map((choice) => (
+                <label key={choice.id} className="draft-choice">
+                  <input
+                    type="radio"
+                    name="draft-choice"
+                    checked={draftChoice === choice.id}
+                    onChange={() => setDraftChoice(choice.id)}
+                  />
+                  <span>
+                    {choice.label}
+                    <span className="muted small"> {choice.detail}</span>
+                  </span>
+                </label>
+              ))}
             </div>
           )}
           {editing ? (

@@ -64,19 +64,25 @@ interface CompendiumState {
    * the editor closes.
    */
   draftFrom: DraftOrigin | null;
-  /** Whether Save also runs `draftFrom.apply`; on by default. */
-  draftApply: boolean;
+  /** The chosen `draftFrom.choices` id; the first by default. */
+  draftChoice: string | null;
   startDraft(draft: CompendiumRecord, from: DraftOrigin): Promise<void>;
-  setDraftApply(apply: boolean): void;
+  setDraftChoice(id: string): void;
 }
 
-/** Where a Save to compendium draft came from, and what applying it does. */
-export interface DraftOrigin {
-  /** The checkbox's words: "Use it in Bridge ambush". */
+/** One way to use a saved draft: "Use it in Bridge ambush", "Just save it". */
+export interface DraftChoice {
+  id: string;
   label: string;
-  /** A line under it: "Every Goblin in that row, now and in the fight." */
+  /** A line under it: "Every Goblin in that row, in the fight too." */
   detail: string;
-  apply(saved: CompendiumRecord): Promise<void>;
+}
+
+/** Where a Save to compendium draft came from, and what Save does next for each choice. */
+export interface DraftOrigin {
+  /** Shown above the editor, the first chosen by default. */
+  choices: DraftChoice[];
+  apply(saved: CompendiumRecord, choiceId: string): Promise<void>;
 }
 
 const EMPTY_FACETS: CompendiumFacets = { types: [], sizes: [], environments: [] };
@@ -98,7 +104,7 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
   editingNew: false,
   saving: false,
   draftFrom: null,
-  draftApply: true,
+  draftChoice: null,
   error: null,
 
   async setKind(kind) {
@@ -256,20 +262,25 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
 
   async startDraft(draft, from) {
     if (get().kind !== draft.kind) await get().setKind(draft.kind);
-    set({ editing: draft, editingNew: true, draftFrom: from, draftApply: true });
+    set({
+      editing: draft,
+      editingNew: true,
+      draftFrom: from,
+      draftChoice: from.choices[0]?.id ?? null,
+    });
   },
 
-  setDraftApply(apply) {
-    set({ draftApply: apply });
+  setDraftChoice(id) {
+    set({ draftChoice: id });
   },
 
   async saveHomebrew(record) {
     set({ saving: true });
     try {
       const saved = await window.trifold.homebrew.save(record);
-      const { draftFrom, draftApply } = get();
+      const { draftFrom, draftChoice } = get();
       set({ editing: null, editingNew: false, saving: false, draftFrom: null });
-      if (draftFrom && draftApply) await draftFrom.apply(saved);
+      if (draftFrom && draftChoice) await draftFrom.apply(saved, draftChoice);
       await get().search();
       await get().select(saved.id);
       return true;
