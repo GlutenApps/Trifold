@@ -693,8 +693,9 @@ input.narrow {
 
 /* Above the editor when Save to compendium opened it: what Save does next, one choice. */
 /* The Save step (ADR 0035): it takes the editor's pinned header once Save is pressed. */
-.save-step-head {
+.editor-head.save-step-head {
   display: block;
+  padding-bottom: 12px;
 }
 
 .save-step {
@@ -2071,7 +2072,8 @@ input[type='range'].wide {
   position: sticky;
   top: 0;
   z-index: 2;
-  padding: 4px 0 8px;
+  /* Inset from the pane's edges: the pane itself has none, so the title and buttons touched them. */
+  padding: 6px 12px 8px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
