@@ -103,4 +103,46 @@ describe('liveSceneFrom', () => {
       ['named', 'Boss'],
     ]);
   });
+
+  it('leaves fogged tokens out, sends the fog, and frames only what the players see (ADR 0029)', () => {
+    const grid = { ...DEFAULT_GRID, cellPx: 50, offsetX: 0, offsetY: 0 };
+    const tokens = [
+      token({ id: 'lit', x: 0, y: 0 }),
+      token({ id: 'dark', x: 10, y: 10 }),
+      token({ id: 'hidden', x: 1, y: 0, hidden: true }),
+    ];
+    const reveal = {
+      id: 'r',
+      mode: 'reveal' as const,
+      kind: 'rect' as const,
+      x: 0,
+      y: 0,
+      w: 100,
+      h: 100,
+    };
+    const base = {
+      grid,
+      blank: { cols: 20, rows: 20 },
+      tokens,
+      playerCamera: { mode: 'fitTokens' as const, x: 0, y: 0, zoom: 1 },
+    };
+    const live = liveSceneFrom(
+      scene('blankGrid', { ...base, fog: { enabled: true, shapes: [reveal] } }),
+      'camp',
+    );
+    if (live?.kind !== 'blankGrid') throw new Error('expected a map');
+    expect(live.tokens.map((t) => t.id)).toEqual(['lit']);
+    expect(live.fog).toEqual({ shapes: [reveal] });
+    // Fit tokens frames the one token the players can see, not the fogged one far away.
+    expect(live.camera.x + live.camera.width).toBeLessThan(400);
+
+    // Fog off: every token not hidden is sent, and no fog.
+    const off = liveSceneFrom(
+      scene('blankGrid', { ...base, fog: { enabled: false, shapes: [reveal] } }),
+      'camp',
+    );
+    if (off?.kind !== 'blankGrid') throw new Error('expected a map');
+    expect(off.tokens.map((t) => t.id)).toEqual(['lit', 'dark']);
+    expect(off.fog).toBeUndefined();
+  });
 });

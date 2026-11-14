@@ -68,6 +68,10 @@
   --tv-black: #000;
   --tv-scrim: rgba(0, 0, 0, 0.55);
   --tv-scrim-soft: rgba(0, 0, 0, 0.25);
+  /* The DM's view of fog (ADR 0029): a light mist that shows on dark maps, and dark hatching
+     that shows on light ones. Map colours, so the same in both themes. */
+  --fog-mist: #dfe4ea;
+  --fog-hatch: #1c2430;
   --tv-scrim-label: rgba(0, 0, 0, 0.65);
   --tv-scrim-strong: rgba(0, 0, 0, 0.7);
   --tv-glass: rgba(255, 255, 255, 0.25);

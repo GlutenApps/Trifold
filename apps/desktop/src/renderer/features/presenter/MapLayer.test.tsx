@@ -42,3 +42,34 @@ describe('MapLayer backgrounds', () => {
     expect(images()).toEqual(['trifold-media://c/cave.jpg']);
   });
 });
+
+describe('MapLayer fog (ADR 0029)', () => {
+  it('draws the fog opaque over the map, each shape cutting it or painting it back', () => {
+    const { container, rerender } = render(<MapLayer scene={scene} combat={null} />);
+    expect(screen.queryByTestId('fog')).toBeNull();
+    rerender(
+      <MapLayer
+        scene={{
+          ...scene,
+          fog: {
+            shapes: [
+              { id: 'a', mode: 'reveal', kind: 'rect', x: 0, y: 0, w: 700, h: 500 },
+              { id: 'b', mode: 'hide', kind: 'poly', points: [10, 10, 60, 10, 10, 60] },
+            ],
+          },
+        }}
+        combat={null}
+      />,
+    );
+    const fog = screen.getByTestId('fog');
+    expect(fog).not.toHaveClass('dm');
+    const mask = container.querySelector('mask')!;
+    // The whole fog first, then the reveal (black) and the hide (white), in order.
+    expect([...mask.children].map((c) => `${c.tagName}:${c.getAttribute('fill')}`)).toEqual([
+      'rect:white',
+      'rect:black',
+      'polygon:white',
+    ]);
+    expect(fog.querySelector('.fog-fill')).toHaveAttribute('mask', `url(#${mask.id})`);
+  });
+});

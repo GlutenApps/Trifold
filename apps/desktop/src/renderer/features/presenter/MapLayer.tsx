@@ -1,5 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CombatSummary, MapScene } from '@trifold/api';
+import type { FogShape } from '@trifold/schema';
+import { svgPoints } from './fog';
 import { TokenDisc } from './TokenDisc';
 import { viewTransform } from './mapMath';
 
@@ -42,6 +44,71 @@ export function GridLines({
         </pattern>
       </defs>
       <rect width={width} height={height} fill={`url(#${id})`} />
+    </svg>
+  );
+}
+
+/**
+ * Fog of war (ADR 0029) as an SVG mask in map pixels: the fog is whole, then each shape in order
+ * cuts it away (reveal) or paints it back (hide). The TV draws it opaque. The console's editor
+ * passes `dm`: a light mist with dark diagonal hatching, so fogged areas read on dark maps and
+ * light ones alike; `zoom` keeps the hatching the same size on screen at any DM zoom.
+ */
+export function FogLayer({
+  width,
+  height,
+  shapes,
+  dm = false,
+  zoom = 1,
+}: {
+  width: number;
+  height: number;
+  shapes: readonly FogShape[];
+  dm?: boolean;
+  zoom?: number;
+}) {
+  const id = `fog-${useId().replace(/:/g, '')}`;
+  return (
+    <svg
+      className={`fog-layer${dm ? ' dm' : ''}`}
+      data-testid={dm ? 'fog-dm' : 'fog'}
+      width={width}
+      height={height}
+      aria-hidden="true"
+    >
+      <defs>
+        <mask id={id} maskUnits="userSpaceOnUse" x={0} y={0} width={width} height={height}>
+          <rect width={width} height={height} fill="white" />
+          {shapes.map((s) => {
+            const fill = s.mode === 'reveal' ? 'black' : 'white';
+            if (s.kind === 'all')
+              return <rect key={s.id} width={width} height={height} fill={fill} />;
+            if (s.kind === 'rect')
+              return <rect key={s.id} x={s.x} y={s.y} width={s.w} height={s.h} fill={fill} />;
+            return <polygon key={s.id} points={svgPoints(s.points)} fill={fill} />;
+          })}
+        </mask>
+      </defs>
+      {dm && (
+        <pattern
+          id={`${id}-hatch`}
+          width={14 / zoom}
+          height={14 / zoom}
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45)"
+        >
+          <line
+            x1={0}
+            y1={0}
+            x2={0}
+            y2={14 / zoom}
+            className="fog-hatch"
+            strokeWidth={1.5 / zoom}
+          />
+        </pattern>
+      )}
+      <rect className="fog-fill" width={width} height={height} mask={`url(#${id})`} />
+      {dm && <rect width={width} height={height} fill={`url(#${id}-hatch)`} mask={`url(#${id})`} />}
     </svg>
   );
 }
@@ -155,6 +222,9 @@ export function MapLayer({ scene, combat }: { scene: MapScene; combat: CombatSum
         )}
         {scene.grid.visible && (
           <GridLines width={scene.width} height={scene.height} grid={scene.grid} />
+        )}
+        {scene.fog && (
+          <FogLayer width={scene.width} height={scene.height} shapes={scene.fog.shapes} />
         )}
         {scene.tokens.map((token) => {
           const size = token.footprint * scene.grid.cellPx;

@@ -92,6 +92,9 @@ export type IconName =
   | 'linkOff'
   | 'heart'
   | 'shield'
+  | 'fog'
+  | 'square'
+  | 'polygon'
   | 'tally'
   | 'stopwatch'
   | 'sliders'
@@ -225,6 +228,9 @@ const PATHS: Record<IconName, string> = {
   // Heal and temporary HP in the combat drawer.
   heart: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z',
   shield: 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z',
+  fog: 'M7 15h10a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 6.6 9.2 3 3 0 0 0 7 15zM5 19h14M8 22h8',
+  square: 'M5 5h14v14H5z',
+  polygon: 'M5 8l6-4 9 3-3 6 2 6-8 1-7-5z',
 };
 
 export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {

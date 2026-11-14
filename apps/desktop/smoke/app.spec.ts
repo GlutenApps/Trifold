@@ -569,6 +569,27 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(player.getByTestId('player-token')).toHaveCount(2);
     await expect(player.getByTestId('map-layer')).toContainText('Thora');
 
+    // Fog of war (ADR 0029): fog on hides the party from the TV until the DM reveals where they
+    // stand; tokens under fog never reach the player window. Hide all, then undo.
+    await console_.getByRole('button', { name: 'Fog of war' }).click();
+    const fogTools = console_.getByRole('toolbar', { name: 'Fog tools' });
+    await fogTools.getByRole('checkbox', { name: 'Fog on' }).check();
+    await expect(player.getByTestId('fog')).toBeVisible();
+    await expect(player.getByTestId('player-token')).toHaveCount(0);
+    const mid = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    await console_.mouse.move(mid.x - 80, mid.y - 80);
+    await console_.mouse.down();
+    await console_.mouse.move(mid.x + 80, mid.y + 80, { steps: 5 });
+    await console_.mouse.up();
+    await expect(player.getByTestId('player-token')).toHaveCount(2);
+    await fogTools.getByRole('button', { name: 'Hide all' }).click();
+    await expect(player.getByTestId('player-token')).toHaveCount(0);
+    await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z');
+    await expect(player.getByTestId('player-token')).toHaveCount(2);
+    await fogTools.getByRole('checkbox', { name: 'Fog on' }).uncheck();
+    await expect(player.getByTestId('fog')).toHaveCount(0);
+    await fogTools.getByRole('button', { name: 'Done' }).click();
+
     // Music: a folder is scanned in place, the track lists, and Play reaches the tray.
     const songs = await mkdtemp(join(tmpdir(), 'trifold-songs-'));
     await writeFile(join(songs, 'Tavern Night.wav'), silentWav(2));

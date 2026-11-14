@@ -231,6 +231,8 @@ Note templates are Library-level, not per campaign: `templates/notes/<id>.json` 
 
 Scene token coordinates are in grid units (floats) relative to the grid origin (`offsetX/Y` in image pixels). Pixel position = `offset + coord × cellPx`. Footprint is in cells.
 
+A map or blank-grid scene may carry `fog: { enabled, shapes[] }` (ADR 0029); absent means no fog. Shapes are in map pixels (not grid units) and apply in order over a fog that starts whole: each is `{ id, mode: "reveal" | "hide", kind }` with `kind: "rect"` and `x, y, w, h`, `kind: "poly"` and `points` as a flat `[x0, y0, x1, y1, …]` (at least three corners), or `kind: "all"` for the whole map. A point is visible when the last shape covering it reveals it. Reveal all and Hide all drop the shapes before them. `enabled: false` keeps the shapes and shows the whole map. A token is under fog when its centre is.
+
 ### 5.5 Music
 `music/library.json`: `{ folders: [path], tracks: Track[] }`; `music/playlists/<id>.json`: Playlist. Paths are absolute. A rescan relinks a renamed or moved file to its track (same `sizeBytes` and length; tracks without a stored size match on length within the same folder; ambiguous matches are left alone), so tags, gain and playlist membership follow the file. A track whose file is gone from a readable folder is removed, along with its playlist entries. When a folder cannot be read at all (an unplugged drive), its tracks stay listed as unavailable. Kind (`music`/`ambience`/`sfx`) is edited as a tag: the first kind word among the tags (`ambience`/`ambiance`/`ambient`, `effect`/`effects`/`sfx`, `music`) sets `kind`, and a track with none is music.
 
