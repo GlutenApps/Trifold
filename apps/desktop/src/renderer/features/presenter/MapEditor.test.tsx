@@ -6,6 +6,7 @@ import type { CampaignBundle } from '@trifold/api';
 import type { Combatant, Encounter, NPC, PCCard, Scene, Token } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
+import { usePresenterStore } from '../../stores/presenterStore';
 import { MapEditor } from './MapEditor';
 
 const now = '2026-09-28T00:00:00.000Z';
@@ -607,5 +608,84 @@ describe('MapEditor: fog of war (ADR 0029)', () => {
     expect(latest.fog?.shapes).toHaveLength(1);
     await userEvent.click(within(tools).getByRole('button', { name: 'Done' }));
     expect(screen.queryByRole('toolbar', { name: 'Fog tools' })).toBeNull();
+  });
+});
+
+describe('MapEditor: movement ruler (Beta 9)', () => {
+  beforeEach(() => {
+    latest = blank;
+    useCampaignStore.setState({
+      current: {
+        campaign: { settings: { initiativeMode: 'perGroup' } },
+        pcs: [],
+        encounters: [],
+        scenes: [blank],
+      } as unknown as CampaignBundle,
+    });
+    useCombatStore.setState({ encounterId: null, state: null });
+    // The scene is live, so the ruler mirrors to the TV.
+    usePresenterStore.setState((s) => ({
+      state: { ...s.state, scene: { kind: 'blankGrid', id: 's1' } as never, ruler: null },
+    }));
+  });
+
+  it('measures from square to square, shows it on the TV, and Escape clears it', async () => {
+    render(<Harness />);
+    const canvas = screen.getByTestId('map-canvas');
+    await userEvent.click(screen.getByRole('button', { name: 'Ruler' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Drag from one square to another');
+
+    // Client px × 4 = map px; 70 px squares. Square (0,0) to square (5,3): 5 squares.
+    fireEvent.pointerDown(canvas, { button: 0, clientX: 5, clientY: 5 });
+    fireEvent.pointerMove(canvas, { clientX: 95, clientY: 60 });
+    fireEvent.pointerUp(canvas, { clientX: 95, clientY: 60 });
+    expect(screen.getByTestId('ruler-label')).toHaveTextContent('5 squares · 25 ft');
+    expect(screen.getByRole('status')).toHaveTextContent('5 squares · 25 ft');
+    await waitFor(() =>
+      expect(usePresenterStore.getState().state.ruler).toEqual({
+        sceneId: 's1',
+        from: { x: 35, y: 35 },
+        to: { x: 385, y: 245 },
+        squares: 5,
+      }),
+    );
+
+    fireEvent.keyDown(canvas, { key: 'Escape' });
+    expect(screen.queryByTestId('ruler-label')).toBeNull();
+    await waitFor(() => expect(usePresenterStore.getState().state.ruler).toBeNull());
+    // Still measuring; a second Escape leaves the ruler.
+    expect(screen.getByRole('button', { name: 'Ruler' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.keyDown(canvas, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Ruler' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('keeps a measurement that ends under fog off the TV', async () => {
+    const fogged: Scene = {
+      ...blank,
+      fog: {
+        enabled: true,
+        shapes: [{ id: 'r', mode: 'reveal', kind: 'rect', x: 0, y: 0, w: 140, h: 140 }],
+      },
+    };
+    render(<Harness initial={fogged} />);
+    const canvas = screen.getByTestId('map-canvas');
+    await userEvent.click(screen.getByRole('button', { name: 'Ruler' }));
+    fireEvent.pointerDown(canvas, { button: 0, clientX: 5, clientY: 5 });
+    fireEvent.pointerMove(canvas, { clientX: 30, clientY: 5 });
+    await waitFor(() => expect(usePresenterStore.getState().state.ruler?.squares).toBe(1));
+    fireEvent.pointerMove(canvas, { clientX: 95, clientY: 60 });
+    expect(screen.getByTestId('ruler-label')).toHaveTextContent('5 squares');
+    await waitFor(() => expect(usePresenterStore.getState().state.ruler).toBeNull());
+  });
+
+  it('shows how far a token has moved while it is dragged', () => {
+    render(<Harness />);
+    const wolfToken = screen.getAllByTestId('console-token')[0]!;
+    // The wolf is at square (1,1); drag it 3 squares right and 2 down.
+    fireEvent.pointerDown(wolfToken, { button: 0, clientX: 25, clientY: 25 });
+    fireEvent.pointerMove(wolfToken, { clientX: 25 + 52.5, clientY: 25 + 35 });
+    expect(screen.getByTestId('ruler-label')).toHaveTextContent('3 squares · 15 ft');
+    fireEvent.pointerUp(wolfToken);
+    expect(screen.queryByTestId('ruler-label')).toBeNull();
   });
 });

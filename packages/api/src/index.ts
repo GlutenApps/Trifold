@@ -229,8 +229,21 @@ export interface PresenterState {
   counters: LiveCounter[];
   /** The one timer marked Show on TV, or null (ADR 0021). */
   timer: LiveTimer | null;
+  /**
+   * The movement ruler the DM is drawing on the live map (Beta 9), or null. Only one the players
+   * may see is sent: never one that starts or ends under fog, nor one on a hidden token.
+   */
+  ruler?: LiveRuler | null;
   /** Milliseconds since epoch; lets the player ignore stale updates. */
   updatedAt: number;
+}
+
+/** A measurement on the live map: a line in map pixels and its length. */
+export interface LiveRuler {
+  sceneId: string;
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  squares: number;
 }
 
 export const initialPresenterState: PresenterState = {
@@ -251,6 +264,7 @@ export const initialPresenterState: PresenterState = {
   combat: null,
   counters: [],
   timer: null,
+  ruler: null,
   updatedAt: 0,
 };
 
