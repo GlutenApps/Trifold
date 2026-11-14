@@ -72,8 +72,8 @@ describe('buildSearch', () => {
     expect(q.sql).toContain('s.enabled = 1');
     expect(q.sql).not.toContain('records_fts');
     expect(q.sql).toContain('ORDER BY display_name COLLATE NOCASE');
-    expect(q.params).toEqual(['2024', 'monster', '', 200, 0]);
-    expect(q.countParams).toEqual(['monster', '']);
+    expect(q.params).toEqual(['2024', 'monster', '', '', '', 200, 0]);
+    expect(q.countParams).toEqual(['monster', '', '', '']);
   });
 
   it('collapses records sharing a key to one row headed by the top source, then the preferred edition', () => {
@@ -92,7 +92,7 @@ describe('buildSearch', () => {
     expect(q.sql).not.toContain('ROW_NUMBER');
     expect(q.sql).toContain('ORDER BY rank, r.display_name COLLATE NOCASE');
     expect(q.countSql).toContain('COUNT(*)');
-    expect(q.params).toEqual(['monster', '"mage"*', '', 200, 0]);
+    expect(q.params).toEqual(['monster', '"mage"*', '', '', '', 200, 0]);
   });
 
   it('adds the FTS join and every filter', () => {
@@ -120,6 +120,8 @@ describe('buildSearch', () => {
       'monster',
       '"gob"*',
       '',
+      '',
+      '',
       'a',
       'b',
       '2024',
@@ -139,10 +141,20 @@ describe('buildSearch', () => {
       '2024',
       'spell',
       '',
+      '',
+      '',
       2000,
       0,
     ]);
-    expect(buildSearch({ kind: 'spell', limit: 0 }).params).toEqual(['2024', 'spell', '', 1, 0]);
+    expect(buildSearch({ kind: 'spell', limit: 0 }).params).toEqual([
+      '2024',
+      'spell',
+      '',
+      '',
+      '',
+      1,
+      0,
+    ]);
   });
 });
 
@@ -153,7 +165,7 @@ describe('campaign creatures in every query (ADR 0035)', () => {
     expect(q.sql).toContain(
       "CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key",
     );
-    expect(q.params).toEqual(['2024', 'monster', 'campaign:greyford', 200, 0]);
+    expect(q.params).toEqual(['2024', 'monster', 'campaign:greyford', '', '', 200, 0]);
     expect(buildSuggest('gob', 12, '2024', 'campaign:greyford').params[5]).toBe(
       'campaign:greyford',
     );
@@ -161,6 +173,29 @@ describe('campaign creatures in every query (ADR 0035)', () => {
       'campaign:greyford',
     );
     expect(buildSuggest('gob').sql).toContain('PARTITION BY kind, group_key');
+  });
+});
+
+describe('sources limited to some campaigns in every query (ADR 0036)', () => {
+  it('binds the open campaign’s id twice after its creature source', () => {
+    const q = buildSearch({
+      kind: 'monster',
+      campaignSourceId: 'campaign:greyford',
+      campaignId: 'C1',
+    });
+    expect(q.sql).toContain(
+      "(s.campaigns IS NULL OR ? = '' OR EXISTS (SELECT 1 FROM json_each(s.campaigns) WHERE value = ?))",
+    );
+    expect(q.params).toEqual(['2024', 'monster', 'campaign:greyford', 'C1', 'C1', 200, 0]);
+    expect(q.countParams).toEqual(['monster', 'campaign:greyford', 'C1', 'C1']);
+    expect(buildSuggest('gob', 12, '2024', 'campaign:greyford', 'C1').params.slice(5, 8)).toEqual([
+      'campaign:greyford',
+      'C1',
+      'C1',
+    ]);
+    expect(
+      buildTextSearch('gob', 12, '2024', 'campaign:greyford', 'C1')!.params.slice(3, 6),
+    ).toEqual(['campaign:greyford', 'C1', 'C1']);
   });
 });
 
@@ -195,7 +230,7 @@ describe('buildSuggest', () => {
     expect(q.sql).toContain('WHERE rn = 1 ORDER BY tier, display_name COLLATE NOCASE');
     expect(q.sql).not.toContain('r.kind = ?');
     expect(q.sql).toContain('s.enabled = 1');
-    expect(q.params).toEqual(['2014', 'gob', 'gob%', '% gob%', '%gob%', '', 12]);
+    expect(q.params).toEqual(['2014', 'gob', 'gob%', '% gob%', '%gob%', '', '', '', 12]);
   });
 
   it('escapes LIKE wildcards, folds case and clamps the limit', () => {
@@ -203,8 +238,8 @@ describe('buildSuggest', () => {
     const q = buildSuggest('  Ring_of 50% ', 500);
     expect(q.params[1]).toBe('ring_of 50%');
     expect(q.params[4]).toBe('%ring\\_of 50\\%%');
-    expect(q.params[6]).toBe(100);
-    expect(buildSuggest('x', 0).params[6]).toBe(1);
+    expect(q.params[8]).toBe(100);
+    expect(buildSuggest('x', 0).params[8]).toBe(1);
   });
 });
 
@@ -218,8 +253,8 @@ describe('buildTextSearch', () => {
     expect(q.sql).toContain("r.display_name NOT LIKE ? ESCAPE '\\'");
     expect(q.sql).toContain('PARTITION BY kind, group_key');
     expect(q.sql).toContain('WHERE rn = 1 ORDER BY rank');
-    expect(q.params).toEqual(['2014', 'text : "Mucous cloud"*', '%mucous cloud%', '', 12]);
-    expect(buildTextSearch('x', 999)!.params[4]).toBe(100);
+    expect(q.params).toEqual(['2014', 'text : "Mucous cloud"*', '%mucous cloud%', '', '', '', 12]);
+    expect(buildTextSearch('x', 999)!.params[6]).toBe(100);
     expect(buildTextSearch('  ')).toBeNull();
   });
 });

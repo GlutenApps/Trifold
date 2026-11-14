@@ -65,6 +65,7 @@ function slugify(name: string): string {
  */
 export class CampaignRepository {
   private currentSlug: string | null = null;
+  private currentCampaignId: string | null = null;
 
   constructor(
     private readonly store: LibraryStore,
@@ -73,6 +74,11 @@ export class CampaignRepository {
 
   get current(): string | null {
     return this.currentSlug;
+  }
+
+  /** The open campaign's id (ADR 0036: what a source limited to some campaigns checks). */
+  get currentId(): string | null {
+    return this.currentCampaignId;
   }
 
   private dir(slug: string, ...rest: string[]): string {
@@ -200,7 +206,9 @@ export class CampaignRepository {
     const slug = await this.slugFor(campaignId);
     this.currentSlug = slug;
     await this.store.updateSettings({ lastOpenCampaignSlug: slug });
-    return this.bundle();
+    const bundle = await this.bundle();
+    this.currentCampaignId = bundle.campaign.id;
+    return bundle;
   }
 
   async reopenLast(): Promise<CampaignBundle | null> {
@@ -218,6 +226,7 @@ export class CampaignRepository {
 
   async close(): Promise<void> {
     this.currentSlug = null;
+    this.currentCampaignId = null;
     await this.store.updateSettings({ lastOpenCampaignSlug: null });
   }
 

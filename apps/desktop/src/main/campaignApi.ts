@@ -4,6 +4,7 @@ import { CampaignEntities } from './campaign/entities';
 import { importSceneImage } from './campaign/images';
 import { importCampaignXml } from './campaign/importCampaign';
 import { syncIndex } from './index/sync';
+import { bringStatBlock, shareUsedSources } from './sources/campaignScope';
 import type { LibrarySession } from './library/session';
 import { errorMessage, type Logger } from './log';
 
@@ -118,6 +119,9 @@ export function createCampaignApi(
       },
       async importPackage(path, mode) {
         const imported = await packager().importFrom(path, mode);
+        // Limited sources it uses show in it too (ADR 0036).
+        const { store, sources, index } = session.require();
+        await shareUsedSources({ store, sources, index, logger }, imported.campaign);
         // New homebrew, and the campaign's own creatures (ADR 0035); cheap when nothing changed.
         await resync();
         return imported;
@@ -178,7 +182,22 @@ export function createCampaignApi(
         await entities().removeNpc(id);
       },
       async copyFrom(campaignId, npcId) {
-        return entities().copyNpcFrom(campaignId, npcId);
+        const copied = await entities().copyNpcFrom(campaignId, npcId);
+        // A stat block this campaign cannot see comes along as one of its creatures (ADR 0036).
+        const view = session.openCampaignView();
+        const creatures = view ? await session.creaturesFor(view.sourceId) : null;
+        if (!view || !creatures) return copied;
+        const { index, catalog } = session.require();
+        const { value, copied: added } = await bringStatBlock(copied, {
+          index,
+          sourceOf: async (id) => (await catalog.list()).find((s) => s.id === id) ?? null,
+          creatures,
+          view,
+        });
+        if (value === copied) return copied;
+        const saved = await entities().saveNpc(value);
+        if (added) await resync();
+        return saved;
       },
     },
     counters: {

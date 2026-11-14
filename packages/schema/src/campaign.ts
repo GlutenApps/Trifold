@@ -31,7 +31,10 @@ export const Campaign = z.object({
   slug: z.string().min(1),
   preferredEdition: Edition.default('2024'),
   allowLegacy: z.boolean().default(true),
-  /** Null means every enabled source; otherwise the subset this campaign uses. */
+  /**
+   * Unused: superseded by `Source.campaignIds` (ADR 0036), which says per source which campaigns
+   * see it. Kept so older files still parse.
+   */
   enabledSourceIds: z.array(z.string()).nullable().default(null),
   settings: CampaignSettings.prefault({}),
   activeAdventureId: z.string().nullable().default(null),

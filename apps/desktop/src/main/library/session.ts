@@ -11,6 +11,7 @@ import { errorMessage, type Logger } from '../log';
 import { BundledSources } from '../sources/bundled';
 import { CombinedCatalog } from '../sources/catalog';
 import { campaignCreatures, campaignSourceId, HomebrewRepository } from '../sources/homebrew';
+import { linkCampaignFileSources, type CampaignView } from '../sources/campaignScope';
 import { SourceRepository } from '../sources/repository';
 import { LibraryStore } from './LibraryStore';
 
@@ -101,6 +102,12 @@ export class LibrarySession {
         this.logger.info(
           `index ready: ${stats.records} records from ${stats.sources} sources (${stats.tookMs} ms)`,
         );
+        if (this.sources && this.campaigns) {
+          await linkCampaignFileSources(
+            { store: this.store, sources: this.sources, index: this.index, logger: this.logger },
+            await this.campaigns.list(),
+          );
+        }
         await this.sample.seedOnce(this.store, this.packager());
       } catch (err) {
         this.index = null;
@@ -139,6 +146,18 @@ export class LibrarySession {
   openCampaignSourceId(): string | null {
     const slug = this.campaigns?.current;
     return slug ? campaignSourceId(slug) : null;
+  }
+
+  /** The open campaign's id (ADR 0036), for sources limited to some campaigns. */
+  openCampaignId(): string | null {
+    return this.campaigns?.currentId ?? null;
+  }
+
+  /** The open campaign as source visibility sees it (ADR 0036), or null when none is open. */
+  openCampaignView(): CampaignView | null {
+    const id = this.openCampaignId();
+    const sourceId = this.openCampaignSourceId();
+    return id && sourceId ? { id, sourceId } : null;
   }
 
   /** The creature folder behind a campaign source id, when that campaign exists. */

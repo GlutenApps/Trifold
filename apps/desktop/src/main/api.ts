@@ -15,6 +15,7 @@ import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 import type { PresenterHub } from './presenter';
+import { canLimitToCampaigns } from './sources/campaignScope';
 import { importXmlSource, isStale, reimportSource } from './sources/importXml';
 import { systemPageUrl } from './systemPages';
 import { isWebUrl } from './webTabs';
@@ -305,6 +306,20 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         index.setSourceEnabled(sourceId, enabled);
         return next;
       },
+      async setCampaigns(sourceId, campaignIds) {
+        const { sources, bundled, index } = ctx.session.require();
+        const source = bundled.has(sourceId) ? null : await sources.get(sourceId);
+        if (!source || !canLimitToCampaigns(source, false)) {
+          throw new Error('Only an imported file can be limited to some campaigns');
+        }
+        if (campaignIds && campaignIds.length === 0) {
+          throw new Error('Choose at least one campaign, or every campaign');
+        }
+        const next = { ...source, campaignIds: campaignIds ? [...new Set(campaignIds)] : null };
+        await sources.write(next);
+        index.setSourceCampaigns(sourceId, next.campaignIds);
+        return next;
+      },
       async remove(sourceId) {
         const { sources, bundled, index } = ctx.session.require();
         if (bundled.has(sourceId))
@@ -432,28 +447,35 @@ export function createApi(ctx: ApiContext): TrifoldApi {
 
     compendium: {
       async search(query) {
-        return ctx.session
-          .require()
-          .index.search({ ...query, campaignSourceId: ctx.session.openCampaignSourceId() });
+        return ctx.session.require().index.search({
+          ...query,
+          campaignSourceId: ctx.session.openCampaignSourceId(),
+          campaignId: ctx.session.openCampaignId(),
+        });
       },
       async get(recordId) {
         return ctx.session.require().index.get(recordId);
       },
       async findByKey(kind, key) {
-        return ctx.session.require().index.findByKey(kind, key);
+        return ctx.session
+          .require()
+          .index.findByKey(kind, key, false, ctx.session.openCampaignId());
       },
       async facets(kind) {
         return ctx.session.require().index.facets(kind);
       },
       async suggest(text, opts) {
-        return ctx.session
-          .require()
-          .index.suggest(text, { ...opts, campaignSourceId: ctx.session.openCampaignSourceId() });
+        return ctx.session.require().index.suggest(text, {
+          ...opts,
+          campaignSourceId: ctx.session.openCampaignSourceId(),
+          campaignId: ctx.session.openCampaignId(),
+        });
       },
       async searchText(text, opts) {
         return ctx.session.require().index.searchText(text, {
           ...opts,
           campaignSourceId: ctx.session.openCampaignSourceId(),
+          campaignId: ctx.session.openCampaignId(),
         });
       },
     },

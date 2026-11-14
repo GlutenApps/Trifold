@@ -470,6 +470,11 @@ export interface CompendiumQuery {
    */
   campaignSourceId?: string | null;
   /**
+   * The open campaign's id (ADR 0036): a source limited to some campaigns shows only in those.
+   * Main sets it like `campaignSourceId`.
+   */
+  campaignId?: string | null;
+  /**
    * Records sharing a key collapse to one row (DESIGN.md §7.2) unless `collapse` is false;
    * pickers that must reach one exact record turn it off. `preferEdition` names the edition
    * whose record heads a collapsed row when it exists; defaults to 2024.
@@ -709,6 +714,12 @@ export interface TrifoldApi {
      * imported ones in their `source.json`. Resolves to the updated source.
      */
     setEnabled(sourceId: string, enabled: boolean): Promise<Source>;
+    /**
+     * The campaigns an imported source shows in (ADR 0036): null for every campaign, or a
+     * non-empty list of campaign ids. Bundled, homebrew and campaign sources show everywhere they
+     * apply and refuse. Resolves to the updated source.
+     */
+    setCampaigns(sourceId: string, campaignIds: string[] | null): Promise<Source>;
     /**
      * Deletes `sources/<id>/` (original.xml and records) and its index rows; refuses bundled
      * sources.
@@ -1002,6 +1013,7 @@ export const API_METHODS = {
     'reimport',
     'setEdition2024Books',
     'setEnabled',
+    'setCampaigns',
     'remove',
     'rebuildIndex',
     'attribution',

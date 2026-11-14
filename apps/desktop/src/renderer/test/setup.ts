@@ -200,6 +200,9 @@ export function installBridgeMock(): TrifoldBridge {
       setEnabled: vi.fn(async () => {
         throw new Error('not mocked');
       }),
+      setCampaigns: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
       remove: vi.fn(async () => undefined),
       rebuildIndex: vi.fn(async () => ({ records: 0, sources: 0, version: 1, tookMs: 0 })),
       attribution: vi.fn(async () => []),

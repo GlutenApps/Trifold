@@ -27,6 +27,12 @@ export const Source = z.object({
   filePath: z.string().optional(),
   fileHash: z.string().optional(),
   enabled: z.boolean().default(true),
+  /**
+   * The campaigns this source shows in (ADR 0036): null or absent means every campaign; a list
+   * means only those campaigns (by id). A campaign file's stat blocks start as its campaign only.
+   * Absent on a campaign-file source written before ADR 0036 until the Library links it.
+   */
+  campaignIds: z.array(z.string()).nullable().optional(),
   defaultEdition: Edition.default('2014'),
   edition2024Books: z.array(z.string()).default([]),
   license: SourceLicense,

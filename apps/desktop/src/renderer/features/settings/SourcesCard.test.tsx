@@ -132,3 +132,60 @@ describe('SourcesCard 2024 books (ADR 0028)', () => {
     expect(screen.queryByTestId('books-panel')).toBeNull();
   });
 });
+
+describe('SourcesCard campaigns (ADR 0036)', () => {
+  const campaigns = [
+    { id: 'C1', name: 'Silt Springs', slug: 'silt', updatedAt: '', pcCount: 0, encounterCount: 0 },
+    { id: 'C2', name: 'Greyford', slug: 'greyford', updatedAt: '', pcCount: 0, encounterCount: 0 },
+  ];
+
+  beforeEach(() => {
+    vi.mocked(window.trifold.campaigns.list).mockResolvedValue(campaigns);
+    vi.mocked(window.trifold.sources.list).mockResolvedValue([
+      { ...source('file', 'Silt Springs (campaign file)', 'xml'), campaignIds: ['C1'] },
+      source('srd-2024', 'SRD 5.2', 'srd'),
+    ]);
+    vi.mocked(window.trifold.sources.setCampaigns).mockImplementation(async (id, campaignIds) => ({
+      ...source(id, 'Silt Springs (campaign file)', 'xml'),
+      campaignIds,
+    }));
+    useAppStore.setState({
+      library: { ok: true, settings: defaultLibrarySettings(), index: { ok: true } } as never,
+    });
+  });
+
+  it('says where an imported file shows and changes it from its row', async () => {
+    const user = userEvent.setup();
+    render(<SourcesCard />);
+    await waitFor(() =>
+      expect(screen.getByTestId('source-campaigns')).toHaveTextContent('Only Silt Springs'),
+    );
+    // The SRD always shows; only an imported file has the control.
+    expect(screen.queryByRole('button', { name: 'Campaigns for SRD 5.2' })).toBeNull();
+
+    await user.click(
+      screen.getByRole('button', { name: 'Campaigns for Silt Springs (campaign file)' }),
+    );
+    const panel = screen.getByTestId('campaigns-panel');
+    // The last ticked campaign stays ticked: a limited source always shows somewhere.
+    expect(screen.getByRole('checkbox', { name: 'Silt Springs' })).toBeDisabled();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Greyford' }));
+    expect(window.trifold.sources.setCampaigns).toHaveBeenLastCalledWith('file', ['C1', 'C2']);
+    await waitFor(() =>
+      expect(screen.getByTestId('source-campaigns')).toHaveTextContent(
+        'Only Silt Springs, Greyford',
+      ),
+    );
+
+    await user.click(screen.getByRole('radio', { name: 'Every campaign' }));
+    expect(window.trifold.sources.setCampaigns).toHaveBeenLastCalledWith('file', null);
+    await waitFor(() =>
+      expect(screen.getByTestId('source-campaigns')).toHaveTextContent('Every campaign'),
+    );
+    expect(screen.queryByRole('checkbox', { name: 'Greyford' })).toBeNull();
+
+    fireEvent.keyDown(panel, { key: 'Escape' });
+    expect(screen.queryByTestId('campaigns-panel')).toBeNull();
+  });
+});

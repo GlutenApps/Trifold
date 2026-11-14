@@ -148,6 +148,8 @@ export async function importCampaignXml(
       name: `${name} (campaign file)`,
       kind: 'xml',
       enabled: true,
+      // An adventure's own stat blocks stay in its campaign (ADR 0036); the DM can widen it.
+      campaignIds: [bundle.campaign.id],
       defaultEdition: '2014',
       edition2024Books: [],
       license: { nonSrd: true, attribution: null },
@@ -162,7 +164,13 @@ export async function importCampaignXml(
   }
 
   const findRecord = async (nameOrKey: string): Promise<MonsterRecord | null> => {
-    const matches = ctx.index.findByKey('monster', normalizeKey(nameOrKey));
+    // Only stat blocks this campaign can see (ADR 0036), its own file's first.
+    const matches = ctx.index.findByKey(
+      'monster',
+      normalizeKey(nameOrKey),
+      false,
+      bundle.campaign.id,
+    );
     const preferred = bundle.campaign.preferredEdition;
     const pick =
       matches.find((m) => m.sourceId === statBlockSourceId) ??

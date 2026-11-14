@@ -202,24 +202,7 @@ export class HomebrewRepository {
     if (!ID.test(record.id)) throw new Error('Bad record id');
     const displayName = record.displayName.trim();
     if (!displayName) throw new Error('A name is required');
-    const prepared: CompendiumRecord =
-      record.kind === 'monster'
-        ? {
-            ...record,
-            data: {
-              ...record.data,
-              traits: reparse(record.data.traits),
-              actions: reparse(record.data.actions),
-              bonusActions: reparse(record.data.bonusActions),
-              reactions: reparse(record.data.reactions),
-              legendary: {
-                ...record.data.legendary,
-                actions: reparse(record.data.legendary.actions),
-              },
-              lair: reparse(record.data.lair),
-            },
-          }
-        : record;
+    const prepared = withParsedFeatures(record);
     const saved = CompendiumRecord.parse({
       ...prepared,
       name: displayName,
@@ -244,6 +227,29 @@ export class HomebrewRepository {
 /** `homebrew/<this>`: a record's file name (ids hold colons, which Windows refuses). */
 export function fileName(recordId: string): string {
   return `${recordId.replace(/:/g, '_')}.json`;
+}
+
+/**
+ * A monster's features re-derived from their name and text, as `save` writes them, so the
+ * tracker's attack, save and recharge buttons follow the DM's edits. Other kinds as they are.
+ */
+export function withParsedFeatures(record: CompendiumRecord): CompendiumRecord {
+  if (record.kind !== 'monster') return record;
+  return {
+    ...record,
+    data: {
+      ...record.data,
+      traits: reparse(record.data.traits),
+      actions: reparse(record.data.actions),
+      bonusActions: reparse(record.data.bonusActions),
+      reactions: reparse(record.data.reactions),
+      legendary: {
+        ...record.data.legendary,
+        actions: reparse(record.data.legendary.actions),
+      },
+      lair: reparse(record.data.lair),
+    },
+  };
 }
 
 function reparse(features: Feature[]): Feature[] {

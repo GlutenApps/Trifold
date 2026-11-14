@@ -3,7 +3,7 @@ import type { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 import type { SourceCatalog } from '../sources/catalog';
 import { sourceOrder } from '@trifold/rules';
-import { INDEX_VERSION, type IndexDb } from './IndexDb';
+import { campaignsColumn, INDEX_VERSION, type IndexDb } from './IndexDb';
 
 /**
  * Brings the derived index in line with the files (DATA-FORMATS.md §5.6): every source whose
@@ -29,7 +29,12 @@ export async function syncIndex(
       row !== undefined &&
       (row.file_hash ?? null) === (source.fileHash ?? null) &&
       row.enabled === (source.enabled ? 1 : 0);
-    if (upToDate) continue;
+    if (upToDate) {
+      const campaigns = campaignsColumn(source.campaignIds);
+      if ((row.campaigns ?? null) !== campaigns)
+        index.setSourceCampaigns(source.id, source.campaignIds);
+      continue;
+    }
     const t = performance.now();
     const count = index.replaceSource(source, await catalog.readAllRecords(source.id));
     logger.info(

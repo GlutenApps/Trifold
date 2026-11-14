@@ -24,6 +24,8 @@ interface SourcesState {
   /** Marks which of an imported file's books use 2024 rules and re-tags it (ADR 0028). */
   setEdition2024Books(sourceId: string, books: string[]): Promise<boolean>;
   setEnabled(sourceId: string, enabled: boolean): Promise<void>;
+  /** The campaigns an imported source shows in (ADR 0036); null for every campaign. */
+  setCampaigns(sourceId: string, campaignIds: string[] | null): Promise<boolean>;
   remove(sourceId: string): Promise<void>;
   setProgress(progress: ImportProgress | null): void;
   clearError(): void;
@@ -101,6 +103,19 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
       });
     } catch (err) {
       set({ error: errorMessage(err) });
+    }
+  },
+
+  async setCampaigns(sourceId, campaignIds) {
+    try {
+      const updated = await window.trifold.sources.setCampaigns(sourceId, campaignIds);
+      set({
+        sources: get().sources.map((s) => (s.id === sourceId ? { ...s, ...updated } : s)),
+      });
+      return true;
+    } catch (err) {
+      set({ error: errorMessage(err) });
+      return false;
     }
   },
 

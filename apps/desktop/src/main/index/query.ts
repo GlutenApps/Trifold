@@ -175,7 +175,7 @@ export function buildSearch(query: CompendiumQuery): SearchSql {
   }
   if (!query.includeDisabled) where.push('s.enabled = 1');
   where.push(CAMPAIGN_FILTER);
-  params.push(query.campaignSourceId ?? '');
+  params.push(...campaignParams(query.campaignSourceId, query.campaignId));
   if (query.sourceIds && query.sourceIds.length > 0) {
     where.push(`r.source_id IN (${query.sourceIds.map(() => '?').join(', ')})`);
     params.push(...query.sourceIds);
@@ -330,10 +330,20 @@ export function toRow(raw: RawRow): CompendiumRow {
 }
 
 /**
- * Campaign creatures (ADR 0035) show only for the open campaign; `openCampaign` is its source id,
- * or null when none is open. Binds one parameter.
+ * What the open campaign sees. Campaign creatures (ADR 0035) show only for their own campaign; a
+ * source limited to some campaigns (ADR 0036, `sources.campaigns`) shows only in those, and in
+ * every one while no campaign is open. Binds three parameters: `campaignParams` below.
  */
-const CAMPAIGN_FILTER = "(s.kind != 'campaign' OR r.source_id = ?)";
+const CAMPAIGN_FILTER =
+  "(s.kind != 'campaign' OR r.source_id = ?) AND (s.campaigns IS NULL OR ? = '' OR EXISTS (SELECT 1 FROM json_each(s.campaigns) WHERE value = ?))";
+
+/** The open campaign's creature source and id, in `CAMPAIGN_FILTER`'s order. */
+function campaignParams(
+  campaignSourceId: string | null | undefined,
+  campaignId: string | null | undefined,
+): string[] {
+  return [campaignSourceId ?? '', campaignId ?? '', campaignId ?? ''];
+}
 
 /** `text` as a LIKE pattern body: its own `%`, `_` and `\` escaped (ESCAPE '\\'). */
 export function likeEscape(text: string): string {
@@ -355,6 +365,7 @@ export function buildSuggest(
   limit = 12,
   preferEdition: '2024' | '2014' = '2024',
   campaignSourceId: string | null = null,
+  campaignId: string | null = null,
 ): { sql: string; params: unknown[] } {
   const term = likeEscape(text.trim().toLowerCase());
   const tier = `CASE WHEN lower(r.display_name) = ? THEN 0 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 1 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 2 ELSE 3 END`;
@@ -368,7 +379,7 @@ export function buildSuggest(
       `${term}%`,
       `% ${term}%`,
       `%${term}%`,
-      campaignSourceId ?? '',
+      ...campaignParams(campaignSourceId, campaignId),
       Math.min(Math.max(limit, 1), SUGGEST_LIMIT),
     ],
   };
@@ -399,6 +410,7 @@ export function buildTextSearch(
   limit = 12,
   preferEdition: '2024' | '2014' = '2024',
   campaignSourceId: string | null = null,
+  campaignId: string | null = null,
 ): { sql: string; params: unknown[] } | null {
   const match = buildPhraseMatch(text);
   if (!match) return null;
@@ -411,7 +423,7 @@ export function buildTextSearch(
       preferEdition,
       match,
       `%${term}%`,
-      campaignSourceId ?? '',
+      ...campaignParams(campaignSourceId, campaignId),
       Math.min(Math.max(limit, 1), TEXT_LIMIT),
     ],
   };
