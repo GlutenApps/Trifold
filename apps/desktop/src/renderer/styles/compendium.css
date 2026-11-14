@@ -691,6 +691,41 @@ input.narrow {
   padding: 6px 0;
 }
 
+/* Above the editor when Save to compendium opened it: what Save does next, one choice. */
+.draft-origin {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.draft-choice {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+/* A homebrew monster's Replace references (DESIGN.md §6.2): its original across the campaign. */
+.replace-in-campaign {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.replace-in-campaign h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.replace-in-campaign p {
+  margin: 0;
+}
+
 /* Under a stat block: the campaign NPCs that use it, each a link. */
 .used-by {
   margin-top: 12px;

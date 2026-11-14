@@ -46,10 +46,13 @@ import {
   customCombatant,
 } from '../features/encounters/build';
 import {
+  replaceInCombatants,
+  replaceInTemplates,
   retargetCombatants,
   retargetToNpc,
   retargetToRecord,
   withTokenLink,
+  type RecordIdentity,
   type RecordTarget,
 } from '../features/encounters/templates';
 import { autoLink, sceneInPlay, type TokenLink } from '../features/presenter/tokenLinks';
@@ -177,6 +180,11 @@ interface CombatStoreState {
    * fighters point at the saved record; HP, conditions and turn order stay.
    */
   retargetToRecord(templateId: string, target: RecordTarget): void;
+  /**
+   * Replace references while this fight is loaded: every row and fighter that uses `from` uses
+   * `to` instead; labels, HP overrides, HP, conditions and turn order stay.
+   */
+  replaceRecord(from: RecordIdentity, to: RecordTarget): void;
   remove(id: string): void;
   move(id: string, direction: -1 | 1): void;
   useCounter(id: string, counterId: string, delta: number): void;
@@ -897,6 +905,12 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       update((s) => ({ ...s, combatants: retargetCombatants(s.combatants, templateId, target) }));
       const encounter = currentEncounter();
       if (encounter) saveTemplates(retargetToRecord(encounter.combatants, templateId, target));
+    },
+
+    replaceRecord(from, to) {
+      update((s) => ({ ...s, combatants: replaceInCombatants(s.combatants, from, to) }));
+      const encounter = currentEncounter();
+      if (encounter) saveTemplates(replaceInTemplates(encounter.combatants, from, to));
     },
 
     remove(id) {

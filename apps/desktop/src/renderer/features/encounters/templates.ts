@@ -1,5 +1,5 @@
 import { ulid } from 'ulid';
-import type { Combatant, CombatantTemplate, NPC } from '@trifold/schema';
+import type { Combatant, CombatantTemplate, EntityRef, NPC, Token } from '@trifold/schema';
 
 /** Edits to an encounter's templates that the running fight makes on its own (ADR 0012). */
 
@@ -124,5 +124,52 @@ export function retargetCombatants(
 export function templateTokenIds(template: CombatantTemplate): string[] {
   return [...(template.tokenIds ?? []), ...(template.tokenId ? [template.tokenId] : [])].filter(
     Boolean,
+  );
+}
+
+/** What identifies a record wherever it is referenced. */
+export interface RecordIdentity {
+  id: string;
+  sourceId: string;
+  key: string;
+}
+
+/**
+ * Whether a reference points at this record: the same id, or the same key in the same source (a
+ * re-imported source gives its records new ids but keeps their keys).
+ */
+export function refersTo(ref: EntityRef, record: RecordIdentity): boolean {
+  if (ref.kind !== 'record') return false;
+  return (
+    ref.ref.recordId === record.id ||
+    (ref.ref.sourceId === record.sourceId && !!record.key && ref.ref.key === record.key)
+  );
+}
+
+export function replaceInTemplates(
+  templates: readonly CombatantTemplate[],
+  from: RecordIdentity,
+  to: RecordTarget,
+): CombatantTemplate[] {
+  return templates.map((t) => (refersTo(t.ref, from) ? { ...t, ref: to.ref, cache: to.cache } : t));
+}
+
+export function replaceInCombatants(
+  combatants: readonly Combatant[],
+  from: RecordIdentity,
+  to: RecordTarget,
+): Combatant[] {
+  return combatants.map((c) =>
+    refersTo(c.ref, from) ? { ...c, ref: to.ref, recordId: to.ref.ref.recordId } : c,
+  );
+}
+
+export function replaceInTokens(
+  tokens: readonly Token[],
+  from: RecordIdentity,
+  to: RecordTarget,
+): Token[] {
+  return tokens.map((t) =>
+    t.kind !== 'marker' && refersTo(t.ref, from) ? { ...t, ref: to.ref } : t,
   );
 }

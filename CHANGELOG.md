@@ -6,6 +6,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Added
 
+- **Replace references**: a homebrew copy's page offers **Replace <original> in this campaign…**, which shows what will change and then switches every encounter row, fight and map token that uses the original (labels and HP overrides stay), and **Put <original> back…** to undo it. Save to compendium can also use the copy everywhere in the campaign (DESIGN.md §6.2).
 - **Save to compendium** on a creature row in the encounter builder and on a creature in the tracker: opens the homebrew monster editor on an unsaved copy named after the row's label and with its HP override; Save keeps it in homebrew and, with **Use it in …** ticked, puts it in that encounter's row, fight and tokens in place of the original (DESIGN.md §6.2).
 - An opt-in update check (ADR 0034): the Campaigns page asks once, Settings › Updates has the switch and Check now, and with it on Trifold reads the project's public releases list at most once a day and shows an **Update available** button in the top bar. Download opens the release page; nothing is installed for you.
 - Global search in the middle of the top bar (`Ctrl+F`): notes, folders, NPCs, party, encounters and their members, scenes, compendium records and web tabs by name, grouped and ranked, with keyboard navigation (ADR 0017).
