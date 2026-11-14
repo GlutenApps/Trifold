@@ -148,6 +148,7 @@ describe('Cancel on an NPC just added from the compendium (ADR 0037)', () => {
       counters: [],
       timers: [],
       pinnedRolls: [],
+      sessions: [],
     };
     vi.mocked(window.trifold.campaigns.current).mockResolvedValue(bundle as never);
     vi.mocked(window.trifold.campaigns.bundles).mockResolvedValue([]);

@@ -279,6 +279,10 @@ export function installBridgeMock(): TrifoldBridge {
       save: vi.fn(async (pin) => ({ ...pin, id: pin.id || `pin-${pin.createdAt}` })),
       remove: vi.fn(async () => undefined),
     },
+    sessions: {
+      save: vi.fn(async (session) => ({ ...session, id: session.id || `session-${Date.now()}` })),
+      remove: vi.fn(async () => undefined),
+    },
     pcs: {
       save: vi.fn(async (pc) => pc),
       remove: vi.fn(async () => undefined),

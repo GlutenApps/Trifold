@@ -19,6 +19,7 @@ import {
   NPC,
   nowIso,
   PinnedRoll,
+  Session,
   Scene,
 } from '@trifold/schema';
 import type { CampaignRepository } from './repository';
@@ -282,6 +283,29 @@ export class CampaignEntities {
 
   async removePinnedRoll(id: string): Promise<void> {
     await rm(this.repo.entityPath('pinnedRolls', id), { force: true });
+    await this.repo.touch();
+  }
+
+  // ---------- sessions (ADR 0040) ----------
+
+  /** Starts a session (no id) or replaces one: its events, title and recap. */
+  async saveSession(input: Session): Promise<Session> {
+    const now = nowIso();
+    const session = Session.parse({
+      ...input,
+      schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+      id: input.id || ulid(),
+      startedAt: input.startedAt || now,
+      lastActivityAt: input.lastActivityAt || now,
+      createdAt: input.createdAt || now,
+      updatedAt: now,
+    });
+    await this.repo.writeEntity('sessions', session.id, session);
+    return session;
+  }
+
+  async removeSession(id: string): Promise<void> {
+    await rm(this.repo.entityPath('sessions', id), { force: true });
     await this.repo.touch();
   }
 
