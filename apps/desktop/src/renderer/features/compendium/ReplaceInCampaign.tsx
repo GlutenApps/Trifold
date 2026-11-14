@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CompendiumRecord } from '@trifold/schema';
 import { describePlan, planReplace, replaceInCampaign } from '../encounters/replaceReferences';
-import { recordTarget } from '../encounters/saveToCompendium';
+import { recordTarget } from '../encounters/creatureEdits';
 import type { RecordIdentity } from '../encounters/templates';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';

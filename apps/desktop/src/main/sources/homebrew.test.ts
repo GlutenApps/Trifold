@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -7,7 +7,7 @@ import type { MonsterRecord } from '@trifold/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
-import { HomebrewRepository } from './homebrew';
+import { campaignCreatures, HomebrewRepository } from './homebrew';
 
 const logger: Logger = { log: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 const fixture = readFileSync(
@@ -98,6 +98,77 @@ describe('HomebrewRepository', () => {
     expect(after.recordCounts).toEqual({ monster: 1 });
     await repo.remove(copy.id);
     expect(await repo.list()).toEqual([]);
-    await expect(repo.save({ ...goblin })).rejects.toThrow('Only homebrew records');
+    await expect(repo.save({ ...goblin })).rejects.toThrow(/Only Homebrew records/);
+  });
+});
+
+describe('a campaign’s creatures (ADR 0035)', () => {
+  let root: string;
+  let store: LibraryStore;
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), 'trifold-creatures-'));
+    store = await LibraryStore.open(root);
+  });
+
+  afterEach(() => rm(root, { recursive: true, force: true }));
+
+  it('keeps them in the campaign folder as the campaign’s own source', async () => {
+    const creatures = new HomebrewRepository(
+      store,
+      logger,
+      campaignCreatures('greyford', 'Greyford'),
+    );
+    const draft = creatures.copyOf(goblin);
+    expect(draft.sourceId).toBe('campaign:greyford');
+    expect(draft.id).toMatch(/^creature:monster:/);
+    expect(draft.sourceBook).toBe('Greyford');
+    const saved = await creatures.save({ ...draft, displayName: 'Grik' });
+    expect(await readdir(join(root, 'campaigns', 'greyford', 'creatures'))).toEqual([
+      `${saved.id.replace(/:/g, '_')}.json`,
+    ]);
+    const source = await creatures.source();
+    expect(source).toMatchObject({ id: 'campaign:greyford', name: 'Greyford', kind: 'campaign' });
+    expect(source.recordCounts).toEqual({ monster: 1 });
+    // The Library's homebrew does not see them, and will not save one.
+    const library = new HomebrewRepository(store, logger);
+    expect(await library.list()).toEqual([]);
+    await expect(library.save(saved)).rejects.toThrow(/Homebrew records/);
+  });
+
+  it('takes a file copied in from another campaign as its own', async () => {
+    const elsewhere = new HomebrewRepository(store, logger, campaignCreatures('old', 'Old'));
+    const saved = await elsewhere.save(elsewhere.copyOf(goblin));
+    const raw = await readFile(
+      join(root, 'campaigns', 'old', 'creatures', `${saved.id.replace(/:/g, '_')}.json`),
+      'utf8',
+    );
+    await mkdir(join(root, 'campaigns', 'new', 'creatures'), { recursive: true });
+    await writeFile(
+      join(root, 'campaigns', 'new', 'creatures', `${saved.id.replace(/:/g, '_')}.json`),
+      raw,
+    );
+    const mine = new HomebrewRepository(store, logger, campaignCreatures('new', 'New'));
+    expect((await mine.list())[0]!.sourceId).toBe('campaign:new');
+    expect((await mine.get(saved.id))!.sourceId).toBe('campaign:new');
+  });
+
+  it('adds one to the Library’s homebrew under its own name, still based on the stock creature', async () => {
+    const creatures = new HomebrewRepository(
+      store,
+      logger,
+      campaignCreatures('greyford', 'Greyford'),
+    );
+    const grik = await creatures.save({ ...creatures.copyOf(goblin), displayName: 'Grik' });
+    const library = new HomebrewRepository(store, logger);
+    const added = await library.adopt(grik);
+    expect(added).toMatchObject({
+      sourceId: 'homebrew',
+      displayName: 'Grik',
+      basedOn: { recordId: goblin.id, sourceId: goblin.sourceId },
+    });
+    expect(added.id).not.toBe(grik.id);
+    expect(added.id).toMatch(/^homebrew:monster:/);
+    expect((await creatures.list()).map((r) => r.id)).toEqual([grik.id]);
   });
 });

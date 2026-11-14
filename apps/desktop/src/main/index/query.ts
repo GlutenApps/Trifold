@@ -174,6 +174,8 @@ export function buildSearch(query: CompendiumQuery): SearchSql {
     params.push(match);
   }
   if (!query.includeDisabled) where.push('s.enabled = 1');
+  where.push(CAMPAIGN_FILTER);
+  params.push(query.campaignSourceId ?? '');
   if (query.sourceIds && query.sourceIds.length > 0) {
     where.push(`r.source_id IN (${query.sourceIds.map(() => '?').join(', ')})`);
     params.push(...query.sourceIds);
@@ -220,7 +222,7 @@ export function buildSearch(query: CompendiumQuery): SearchSql {
   // edition and every version (source and edition) behind the row; the outer one
   // keeps rank 1. The `?` in the middle SELECT list binds first, before the WHERE params.
   const rank = match ? 'bm25(records_fts)' : '0';
-  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, ${rank} AS rank ${from}`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key, ${rank} AS rank ${from}`;
   if (query.collapse === false) {
     const plainOrder = match
       ? 'ORDER BY rank, r.display_name COLLATE NOCASE, r.edition DESC'
@@ -232,14 +234,14 @@ export function buildSearch(query: CompendiumQuery): SearchSql {
       countParams: params,
     };
   }
-  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY key) AS versions FROM (${base})`;
+  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY group_key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY group_key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY group_key) AS versions FROM (${base})`;
   const order = match
     ? 'ORDER BY rank, display_name COLLATE NOCASE, edition DESC'
     : 'ORDER BY display_name COLLATE NOCASE, edition DESC';
 
   return {
     sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ${order} LIMIT ? OFFSET ?`,
-    countSql: `SELECT COUNT(DISTINCT r.key) AS n ${from}`,
+    countSql: `SELECT COUNT(DISTINCT CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END) AS n ${from}`,
     params: [query.preferEdition ?? '2024', ...params, limit, offset],
     countParams: params,
   };
@@ -327,6 +329,12 @@ export function toRow(raw: RawRow): CompendiumRow {
   };
 }
 
+/**
+ * Campaign creatures (ADR 0035) show only for the open campaign; `openCampaign` is its source id,
+ * or null when none is open. Binds one parameter.
+ */
+const CAMPAIGN_FILTER = "(s.kind != 'campaign' OR r.source_id = ?)";
+
 /** `text` as a LIKE pattern body: its own `%`, `_` and `\` escaped (ESCAPE '\\'). */
 export function likeEscape(text: string): string {
   return text.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -346,11 +354,12 @@ export function buildSuggest(
   text: string,
   limit = 12,
   preferEdition: '2024' | '2014' = '2024',
+  campaignSourceId: string | null = null,
 ): { sql: string; params: unknown[] } {
   const term = likeEscape(text.trim().toLowerCase());
   const tier = `CASE WHEN lower(r.display_name) = ? THEN 0 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 1 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 2 ELSE 3 END`;
-  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, ${tier} AS tier FROM records r JOIN sources s ON s.id = r.source_id WHERE s.enabled = 1 AND r.display_name LIKE ? ESCAPE '\\'`;
-  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY kind, key) AS versions FROM (${base})`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key, ${tier} AS tier FROM records r JOIN sources s ON s.id = r.source_id WHERE s.enabled = 1 AND r.display_name LIKE ? ESCAPE '\\' AND ${CAMPAIGN_FILTER}`;
+  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, group_key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, group_key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY kind, group_key) AS versions FROM (${base})`;
   return {
     sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ORDER BY tier, display_name COLLATE NOCASE, kind LIMIT ?`,
     params: [
@@ -359,6 +368,7 @@ export function buildSuggest(
       `${term}%`,
       `% ${term}%`,
       `%${term}%`,
+      campaignSourceId ?? '',
       Math.min(Math.max(limit, 1), SUGGEST_LIMIT),
     ],
   };
@@ -388,15 +398,22 @@ export function buildTextSearch(
   text: string,
   limit = 12,
   preferEdition: '2024' | '2014' = '2024',
+  campaignSourceId: string | null = null,
 ): { sql: string; params: unknown[] } | null {
   const match = buildPhraseMatch(text);
   if (!match) return null;
   const term = likeEscape(text.trim().toLowerCase());
-  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, snippet(records_fts, 2, char(1), char(2), '…', 12) AS snip, bm25(records_fts) AS rank FROM records r JOIN records_fts f ON f.id = r.id JOIN sources s ON s.id = r.source_id WHERE records_fts MATCH ? AND s.enabled = 1 AND r.display_name NOT LIKE ? ESCAPE '\\'`;
-  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY kind, key) AS versions FROM (${base})`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key, snippet(records_fts, 2, char(1), char(2), '…', 12) AS snip, bm25(records_fts) AS rank FROM records r JOIN records_fts f ON f.id = r.id JOIN sources s ON s.id = r.source_id WHERE records_fts MATCH ? AND s.enabled = 1 AND r.display_name NOT LIKE ? ESCAPE '\\' AND ${CAMPAIGN_FILTER}`;
+  const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, group_key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, group_key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY kind, group_key) AS versions FROM (${base})`;
   return {
     sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ORDER BY rank, display_name COLLATE NOCASE LIMIT ?`,
-    params: [preferEdition, match, `%${term}%`, Math.min(Math.max(limit, 1), TEXT_LIMIT)],
+    params: [
+      preferEdition,
+      match,
+      `%${term}%`,
+      campaignSourceId ?? '',
+      Math.min(Math.max(limit, 1), TEXT_LIMIT),
+    ],
   };
 }
 

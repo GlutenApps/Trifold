@@ -15,7 +15,7 @@ const FIXTURE = resolve(__dirname, '..', '..', '..', 'fixtures', 'compendium-sam
  * The end-to-end smoke test (DESIGN.md §10) against the real Electron app, in one long session
  * on a fresh Library: first-run files and the native index; importing the SRD fixture through
  * the API, a no-op re-import, search with filters, a stat block, a spell link and an edition
- * switch; a roll pill into the shared log; homebrew duplicate, edit and delete; backups to the
+ * switch; a roll pill into the shared log; homebrew edit as a copy, save and delete; backups to the
  * Library and a second location with restore from file (ADR 0015); a campaign, an encounter
  * from the party and the fixture, and a fight with spell slots and rolled damage; the Dice
  * pop-up (ADR 0009); the player window, a title card sent from Scenes, the break screen from
@@ -181,13 +181,16 @@ test('console, Library, import, search, stat block and player window all work en
     await versions.selectOption(legacyId!);
     await expect(console_.getByRole('heading', { name: 'Legendary actions' })).toBeVisible();
 
-    // Homebrew: duplicate, edit, see the diff, delete (DESIGN.md §6.2).
-    await console_.getByRole('button', { name: 'Duplicate to homebrew' }).click();
+    // Homebrew (DESIGN.md §6.2, ADR 0035): Edit a stock record as a copy, Save then Confirm in the
+    // Save step (no campaign is open yet, so it goes to the compendium), see the diff, delete.
+    await console_.getByRole('button', { name: 'Edit', exact: true }).click();
     const editor = console_.getByTestId('monster-editor');
     await expect(editor).toBeVisible();
     await editor.getByLabel('Name', { exact: true }).fill('Aboleth Elder');
     await editor.getByLabel('Challenge rating').selectOption('12');
-    await editor.getByRole('button', { name: 'Save' }).first().click();
+    await editor.getByRole('button', { name: 'Save', exact: true }).first().click();
+    await expect(editor.getByRole('heading', { name: 'Save Aboleth Elder' })).toBeVisible();
+    await editor.getByRole('button', { name: 'Confirm' }).click();
     await expect(console_.getByRole('heading', { name: 'Aboleth Elder' })).toBeVisible();
     await console_.getByRole('button', { name: 'Changes from original' }).click();
     await expect(console_.getByTestId('record-diff')).toContainText('Aboleth Elder');

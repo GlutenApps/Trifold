@@ -11,7 +11,7 @@ import { CompendiumLibraryPage } from './CompendiumLibraryPage';
 describe('CompendiumLibraryPage', () => {
   beforeEach(() => {
     useAppStore.setState({ library: { ok: true } as never });
-    useCompendiumStore.setState({ kind: 'monster', editing: null, editingNew: false });
+    useCompendiumStore.setState({ kind: 'monster', editing: null, editingOwn: false });
   });
 
   it('opens on the browser, shows Sources with the import beside the button, and goes back', async () => {
@@ -37,13 +37,17 @@ describe('CompendiumLibraryPage', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Homebrew kind' }), 'spell');
     await user.click(screen.getByRole('button', { name: 'Start a blank spell' }));
     expect(screen.queryByTestId('new-homebrew')).toBeNull();
-    expect(await screen.findByRole('heading', { name: 'New homebrew spell' })).toBeInTheDocument();
-    expect(useCompendiumStore.getState()).toMatchObject({ kind: 'spell', editingNew: true });
+    expect(await screen.findByRole('heading', { name: 'New spell' })).toBeInTheDocument();
+    expect(useCompendiumStore.getState()).toMatchObject({
+      kind: 'spell',
+      editingOwn: false,
+      editingFrom: null,
+    });
     // Nothing is written until Save.
     expect(window.trifold.homebrew.save).not.toHaveBeenCalled();
   });
 
-  it('New homebrew copies an existing record found by name', async () => {
+  it('New homebrew opens an unsaved copy of an existing record found by name', async () => {
     const user = userEvent.setup();
     const row = {
       id: 'srd:item:1',
@@ -58,13 +62,20 @@ describe('CompendiumLibraryPage', () => {
         : { rows: [], total: 0, tookMs: 0 },
     );
     const copy = { ...blankRecord('item'), name: 'Copy of Bag', displayName: 'Copy of Bag' };
-    vi.mocked(window.trifold.homebrew.duplicate).mockResolvedValue(copy);
+    vi.mocked(window.trifold.homebrew.draft).mockResolvedValue(copy);
+    vi.mocked(window.trifold.compendium.get).mockResolvedValue({
+      ...blankRecord('item'),
+      id: 'srd:item:1',
+      displayName: 'Bag of Holding',
+    });
     render(<CompendiumLibraryPage />);
     await user.click(screen.getByRole('button', { name: 'New homebrew' }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Homebrew kind' }), 'item');
     await user.type(screen.getByRole('searchbox', { name: 'Find a item to copy' }), 'bag');
     await user.click(await screen.findByRole('button', { name: /Bag of Holding/ }));
-    expect(window.trifold.homebrew.duplicate).toHaveBeenCalledWith('srd:item:1');
-    expect(await screen.findByRole('heading', { name: 'Edit homebrew item' })).toBeInTheDocument();
+    expect(window.trifold.homebrew.draft).toHaveBeenCalledWith('srd:item:1');
+    expect(await screen.findByRole('heading', { name: 'Edit Bag of Holding' })).toBeInTheDocument();
+    // A copy is written only at Confirm.
+    expect(window.trifold.homebrew.save).not.toHaveBeenCalled();
   });
 });

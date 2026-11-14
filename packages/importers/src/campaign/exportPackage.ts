@@ -113,7 +113,11 @@ export function recordRefsIn(value: unknown): RecordRef[] {
 /** The records an export cannot carry: from sources the DM imported (never bundled, ADR 0015). */
 export function importedSourceRefs(parts: CampaignParts): RecordRef[] {
   return recordRefsIn(parts).filter(
-    (r) => r.sourceId !== HOMEBREW_SOURCE && !isBundledSource(r.sourceId),
+    // A campaign's own creatures (ADR 0035) travel inside the campaign, not as a source.
+    (r) =>
+      r.sourceId !== HOMEBREW_SOURCE &&
+      !isBundledSource(r.sourceId) &&
+      !r.sourceId.startsWith('campaign:'),
   );
 }
 

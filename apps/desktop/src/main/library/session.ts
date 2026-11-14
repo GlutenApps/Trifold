@@ -10,7 +10,7 @@ import { MusicRepository } from '../music/repository';
 import { errorMessage, type Logger } from '../log';
 import { BundledSources } from '../sources/bundled';
 import { CombinedCatalog } from '../sources/catalog';
-import { HomebrewRepository } from '../sources/homebrew';
+import { campaignCreatures, campaignSourceId, HomebrewRepository } from '../sources/homebrew';
 import { SourceRepository } from '../sources/repository';
 import { LibraryStore } from './LibraryStore';
 
@@ -69,8 +69,14 @@ export class LibrarySession {
       this.sources = new SourceRepository(this.store, this.logger);
       await this.bundled.load();
       this.homebrew = new HomebrewRepository(this.store, this.logger);
-      this.catalog = new CombinedCatalog(this.bundled, this.sources, this.store, this.homebrew);
       this.campaigns = new CampaignRepository(this.store, this.logger);
+      this.catalog = new CombinedCatalog(
+        this.bundled,
+        this.sources,
+        this.store,
+        this.homebrew,
+        () => this.allCreatureFolders(),
+      );
       this.music = new MusicRepository(this.store, this.logger);
       this.backups = new BackupService(this.store, this.logger, this.backupOptions);
       this.error = null;
@@ -118,6 +124,26 @@ export class LibrarySession {
       catalog: this.catalog,
       index: this.index,
     };
+  }
+
+  /** Every campaign's creature folder (ADR 0035), for the index. */
+  async allCreatureFolders(): Promise<HomebrewRepository[]> {
+    const { store, campaigns, logger } = this;
+    if (!store || !campaigns) return [];
+    return (await campaigns.list()).map(
+      (c) => new HomebrewRepository(store, logger, campaignCreatures(c.slug, c.name)),
+    );
+  }
+
+  /** The open campaign's creature source id, the one campaign source the compendium shows. */
+  openCampaignSourceId(): string | null {
+    const slug = this.campaigns?.current;
+    return slug ? campaignSourceId(slug) : null;
+  }
+
+  /** The creature folder behind a campaign source id, when that campaign exists. */
+  async creaturesFor(sourceId: string): Promise<HomebrewRepository | null> {
+    return (await this.allCreatureFolders()).find((f) => f.sourceId === sourceId) ?? null;
   }
 
   /** Campaign export and import (ADR 0015) for the open Library. */

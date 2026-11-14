@@ -12,7 +12,8 @@ import { Icon } from '../shell/icons';
 import { AddPanel } from './AddPanel';
 import { CombatView } from './CombatView';
 import { registerBuilderDraft } from './builderDraft';
-import { saveToCompendium } from './saveToCompendium';
+import { CreatureEditor } from '../compendium/CreatureEditor';
+import { editRow, useCreatureEditStore } from './creatureEdits';
 import { retargetToNpc } from './templates';
 
 /**
@@ -48,13 +49,14 @@ function TemplateRow({
   onChange,
   onRemove,
   onTrackAsNpc,
-  onSaveToCompendium,
+  onEdit,
 }: {
   t: CombatantTemplate;
   onChange(patch: Partial<CombatantTemplate>): void;
   onRemove(): void;
   onTrackAsNpc(): void;
-  onSaveToCompendium(): void;
+  /** A compendium creature's row: opens the editor on a copy of it (ADR 0035). */
+  onEdit(): void;
 }) {
   const [editing, setEditing] = useState(false);
   const name = t.label || t.ref.name;
@@ -137,15 +139,27 @@ function TemplateRow({
         >
           <Icon name={t.hidden ? 'eyeOff' : 'eye'} />
         </button>
-        <button
-          type="button"
-          className="chrome-btn"
-          aria-label={`Label ${t.ref.name}`}
-          title="Give it a label (players still see the masked name)"
-          onClick={() => setEditing(true)}
-        >
-          <Icon name="pencil" />
-        </button>
+        {t.ref.kind === 'record' ? (
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label={`Edit ${name}`}
+            title="Edit this creature: change anything, then Save asks where it lives and where to use it"
+            onClick={onEdit}
+          >
+            <Icon name="pencil" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label={`Label ${t.ref.name}`}
+            title="Give it a label (players still see the masked name)"
+            onClick={() => setEditing(true)}
+          >
+            <Icon name="pencil" />
+          </button>
+        )}
         {creature && (
           <button
             type="button"
@@ -155,17 +169,6 @@ function TemplateRow({
             onClick={onTrackAsNpc}
           >
             <Icon name="person" />
-          </button>
-        )}
-        {t.ref.kind === 'record' && (
-          <button
-            type="button"
-            className="chrome-btn"
-            aria-label={`Save ${name} to compendium`}
-            title="Save to compendium: open a homebrew copy with this label and HP, to edit and keep"
-            onClick={onSaveToCompendium}
-          >
-            <Icon name="compendium" />
           </button>
         )}
         <button
@@ -350,7 +353,7 @@ function Builder({
                 set({ combatants: encounter.combatants.filter((x) => x.id !== t.id) })
               }
               onTrackAsNpc={() => void trackAsNpc(t)}
-              onSaveToCompendium={() => void saveToCompendium(encounter, t)}
+              onEdit={() => void editRow(encounter, t)}
             />
           ))}
         </div>
@@ -418,6 +421,9 @@ export function EncountersPage() {
   const begin = useCombatStore((s) => s.begin);
   const resume = useCombatStore((s) => s.resume);
   const fightId = useCombatStore((s) => s.encounterId);
+  const creatureEdit = useCreatureEditStore((s) => s.edit);
+  const creatureEditError = useCreatureEditStore((s) => s.error);
+  const closeCreatureEdit = useCreatureEditStore((s) => s.close);
   const finished = useCombatStore((s) => s.finished);
   const dismissFinished = useCombatStore((s) => s.dismissFinished);
   const [draft, setDraft] = useState<Encounter | null>(null);
@@ -482,7 +488,43 @@ export function EncountersPage() {
     );
   }
 
-  if (fightId) return <CombatView />;
+  // Edit on a row or a fighter (ADR 0035): the editor takes the panel until Cancel or Confirm;
+  // the builder's copy and the fight stay as they were underneath.
+  if (creatureEdit) {
+    return (
+      <section className="creature-edit">
+        <CreatureEditor
+          key={creatureEdit.record.id}
+          record={creatureEdit.record}
+          own={false}
+          original={creatureEdit.original}
+          origin={creatureEdit.origin}
+          title={creatureEdit.title}
+          onCancel={closeCreatureEdit}
+          onSaved={closeCreatureEdit}
+        />
+      </section>
+    );
+  }
+
+  // A copy that could not be opened says why in this panel (CLAUDE.md: never a silent no-op).
+  const editError = creatureEditError && (
+    <div className="banner error" role="alert">
+      <span>{creatureEditError}</span>
+      <button type="button" className="btn small" onClick={closeCreatureEdit}>
+        Dismiss
+      </button>
+    </div>
+  );
+
+  if (fightId) {
+    return (
+      <>
+        {editError}
+        <CombatView />
+      </>
+    );
+  }
 
   const finishedEncounter = finished
     ? current.encounters.find((e) => e.id === finished.encounterId)
@@ -499,6 +541,7 @@ export function EncountersPage() {
 
   return (
     <section className="encounters">
+      {editError}
       {finished && !fightId && (
         <div className="card" data-testid="fight-result">
           <div className="row">

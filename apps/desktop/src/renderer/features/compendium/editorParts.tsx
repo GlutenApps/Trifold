@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { parseCommaList } from '@trifold/rules';
 import { Icon } from '../shell/icons';
 
@@ -254,7 +254,14 @@ export function moved<T>(list: readonly T[], i: number, step: -1 | 1): T[] {
   return next;
 }
 
-/** The pinned header of every editor: its title, Cancel and Save. */
+/**
+ * What the editor that wraps a record editor puts in its pinned header (ADR 0035): a title in
+ * place of the editor's own, and, once Save was pressed, the Save step in place of the buttons.
+ * The record editors themselves never know.
+ */
+export const EditorHeadContext = createContext<{ title?: string; step?: ReactNode }>({});
+
+/** The pinned header of every editor: its title, Cancel and Save, or the Save step. */
 export function EditorHead({
   title,
   saving,
@@ -266,9 +273,11 @@ export function EditorHead({
   canSave: boolean;
   onCancel(): void;
 }) {
+  const around = useContext(EditorHeadContext);
+  if (around.step) return <div className="editor-head save-step-head">{around.step}</div>;
   return (
     <div className="row editor-head">
-      <h2>{title}</h2>
+      <h2>{around.title ?? title}</h2>
       <span className="spacer" />
       <button type="button" className="btn" onClick={onCancel}>
         Cancel

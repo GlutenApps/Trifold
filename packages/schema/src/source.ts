@@ -4,7 +4,11 @@ import { Edition, IsoDateTime, RecordKind } from './common';
 /** `sources/<id>/source.json`. DATA-FORMATS.md §5.1, DESIGN.md §5.1. */
 export const SOURCE_SCHEMA_VERSION = 1;
 
-export const SourceKind = z.enum(['srd', 'xml', 'open5e', 'homebrew']);
+/**
+ * `campaign`: a campaign's own creatures (ADR 0035), one virtual source per campaign, shown only
+ * while that campaign is open.
+ */
+export const SourceKind = z.enum(['srd', 'xml', 'open5e', 'homebrew', 'campaign']);
 export type SourceKind = z.infer<typeof SourceKind>;
 
 export const SourceLicense = z.object({

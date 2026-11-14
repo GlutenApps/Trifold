@@ -6,6 +6,7 @@ import { RollReveal, useRollReveal } from '../dice/RollReveal';
 import { Icon } from '../shell/icons';
 import { compendiumActions, logDiceRoll } from './compendiumRolls';
 import { itemTypeName } from './formatting';
+import { isCampaignSource, isOwnRecord } from './homebrew';
 import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
 import { ReplaceInCampaign } from './ReplaceInCampaign';
@@ -13,7 +14,7 @@ import { UsedBy } from './UsedBy';
 
 /**
  * One open compendium record (DESIGN.md §6.1): a bar with Back, the edition dropdown, the source
- * citation and Duplicate to homebrew (ADR 0026), then the record laid out by kind (monsters as
+ * citation and Edit (ADR 0035; a record that is not the DM's own is edited as a copy), then the record laid out by kind (monsters as
  * the 2024 stat block). Rolls made from the record land in the shared log through
  * compendiumRolls. A homebrew record also gets the homebrew bar: Edit, Changes from original
  * and Delete (DESIGN.md §6.2).
@@ -32,13 +33,18 @@ interface Props {
   /** Source names by id, used to tell apart editions that come from different sources. */
   sourceNames?: Record<string, string>;
   homebrew?: {
-    onDuplicate(): void;
+    /** Edit: the DM's own record in place, any other as a copy (ADR 0035). */
     onEdit(): void;
     onRemove(recordId: string): void;
+    /** A campaign creature into the Library's homebrew (ADR 0035). */
+    onAddToLibrary(): void;
   };
 }
 
-/** Edit / Changes from original / Delete, on homebrew records (DESIGN.md §6.2). */
+/**
+ * Edit / Changes from original / Delete on the DM's own records (DESIGN.md §6.2): homebrew, and
+ * the open campaign's creatures, which also offer Add to my compendium (ADR 0035).
+ */
 function HomebrewBar({
   record,
   actions,
@@ -48,12 +54,13 @@ function HomebrewBar({
 }) {
   const [confirm, setConfirm] = useState(false);
   const [diff, setDiff] = useState<DiffLine[] | null>(null);
-  const isHomebrew = record.sourceId === 'homebrew';
+  const own = isOwnRecord(record);
+  const campaignCreature = isCampaignSource(record.sourceId);
   useEffect(() => {
     setConfirm(false);
     setDiff(null);
   }, [record.id]);
-  if (!isHomebrew) return null;
+  if (!own) return null;
   const showDiff = async () => {
     if (diff) {
       setDiff(null);
@@ -76,6 +83,17 @@ function HomebrewBar({
             {diff ? 'Hide changes' : 'Changes from original'}
           </button>
         )}
+        {campaignCreature && (
+          <button
+            type="button"
+            className="btn"
+            title="Copy it into your compendium, for every campaign; this campaign keeps its own"
+            onClick={actions.onAddToLibrary}
+          >
+            <Icon name="plus" />
+            Add to my compendium
+          </button>
+        )}
         <span className="spacer" />
         {confirm ? (
           <InlineConfirm
@@ -88,7 +106,9 @@ function HomebrewBar({
             type="button"
             className="chrome-btn danger"
             aria-label={`Delete ${record.displayName}`}
-            title="Delete this homebrew record"
+            title={
+              campaignCreature ? 'Delete this campaign creature' : 'Delete this homebrew record'
+            }
             onClick={() => setConfirm(true)}
           >
             <Icon name="trash" />
@@ -442,16 +462,21 @@ export function RecordDetail({
             </span>
           )}
         <span className="spacer" />
-        {homebrew && (
-          <button type="button" className="btn" onClick={homebrew.onDuplicate}>
-            <Icon name="plus" />
-            Duplicate to homebrew
+        {homebrew && !isOwnRecord(record) && (
+          <button
+            type="button"
+            className="btn"
+            title="Edit a copy; Save asks where it lives and where to use it"
+            onClick={homebrew.onEdit}
+          >
+            <Icon name="pencil" />
+            Edit
           </button>
         )}
       </div>
 
       {homebrew && <HomebrewBar record={record} actions={homebrew} />}
-      {record.sourceId === 'homebrew' && <ReplaceInCampaign record={record} />}
+      {isOwnRecord(record) && <ReplaceInCampaign record={record} />}
       <LastRoll actor={record.displayName} />
       <Body record={record} onOpenSpell={onOpenSpell} />
       {record.kind === 'monster' && <UsedBy record={record} />}
