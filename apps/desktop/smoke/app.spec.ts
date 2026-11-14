@@ -264,7 +264,8 @@ test('console, Library, import, search, stat block and player window all work en
       { name: 'Thora', player: 'Sam', cls: 'Fighter', hp: '44', ac: '18', init: '1', pp: '12' },
       { name: 'Zed', player: 'Kim', cls: 'Wizard', hp: '28', ac: '12', init: '2', pp: '10' },
     ];
-    await console_.getByRole('button', { name: 'New PC card' }).click();
+    await console_.getByRole('button', { name: 'Add PC' }).click();
+    await console_.getByRole('menuitem', { name: 'Start blank' }).click();
     for (const [i, pc] of party.entries()) {
       const form = console_.getByRole('form', { name: 'New PC card' });
       // The blank form replaces the saved one only once the save lands.
@@ -293,7 +294,7 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('tab', { name: /^NPCs/ }).click();
     // One Add NPC (ADR 0037): blank, another campaign's NPC or a compendium creature.
     await console_.getByRole('button', { name: 'Add NPC' }).click();
-    await console_.getByRole('button', { name: 'Start a blank NPC' }).click();
+    await console_.getByRole('menuitem', { name: 'Start blank' }).click();
     await console_
       .getByRole('form', { name: 'New NPC' })
       .getByLabel('Name', { exact: true })
