@@ -19,6 +19,7 @@ import { importXmlSource, isStale, reimportSource } from './sources/importXml';
 import { systemPageUrl } from './systemPages';
 import { isWebUrl } from './webTabs';
 import type { SaveFlush } from './saveFlush';
+import { HOMEBREW_SOURCE_ID } from './sources/homebrew';
 import type { UpdateService } from './updates';
 import { WindowManager } from './windows';
 
@@ -64,6 +65,27 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       ctx.logger.warn(`could not review the books in source ${source.id}: ${String(err)}`);
       return undefined;
     }
+  };
+  const requireHomebrew = () => {
+    const homebrew = ctx.session.homebrew;
+    if (!homebrew) throw new Error('No Library is open');
+    return homebrew;
+  };
+  /** The open campaign's creatures (ADR 0035). */
+  const openCampaignCreatures = async () => {
+    const sourceId = ctx.session.openCampaignSourceId();
+    const folder = sourceId ? await ctx.session.creaturesFor(sourceId) : null;
+    if (!folder) throw new Error('Open a campaign first');
+    return folder;
+  };
+  /** Where a record of this source is saved: the Library's homebrew or a campaign's creatures. */
+  const folderFor = async (sourceId: string) => {
+    if (sourceId === HOMEBREW_SOURCE_ID) return requireHomebrew();
+    const folder = sourceId.startsWith('campaign:')
+      ? await ctx.session.creaturesFor(sourceId)
+      : null;
+    if (!folder) throw new Error('Only your own records can be changed');
+    return folder;
   };
   const requireBackups = () => {
     const backups = ctx.session.backups;
@@ -182,6 +204,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         if (!catalog) return [];
         const out = [];
         for (const s of await catalog.list()) {
+          if (s.kind === 'campaign') continue;
           const bundled = s.kind === 'srd' || s.kind === 'homebrew';
           out.push({
             ...s,
@@ -315,27 +338,33 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         await syncIndex(index, catalog, store, ctx.logger);
         return copy;
       },
-      async draft(recordId) {
-        const homebrew = ctx.session.homebrew;
-        if (!homebrew) throw new Error('No Library is open');
+      async draft(recordId, home = 'library') {
         const original = ctx.session.require().index.get(recordId);
         if (!original) throw new Error('Record not found');
-        return homebrew.copyOf(original);
+        const folder = home === 'campaign' ? await openCampaignCreatures() : requireHomebrew();
+        return folder.copyOf(original);
       },
       async save(record) {
         const { index, catalog, store } = ctx.session.require();
-        const homebrew = ctx.session.homebrew;
-        if (!homebrew) throw new Error('No Library is open');
-        const saved = await homebrew.save(record);
+        const saved = await (await folderFor(record.sourceId)).save(record);
         await syncIndex(index, catalog, store, ctx.logger);
         return saved;
       },
       async remove(recordId) {
         const { index, catalog, store } = ctx.session.require();
-        const homebrew = ctx.session.homebrew;
-        if (!homebrew) throw new Error('No Library is open');
-        await homebrew.remove(recordId);
+        const record = index.get(recordId);
+        await (await folderFor(record?.sourceId ?? HOMEBREW_SOURCE_ID)).remove(recordId);
         await syncIndex(index, catalog, store, ctx.logger);
+      },
+      async addToLibrary(recordId) {
+        const { index, catalog, store } = ctx.session.require();
+        const record = index.get(recordId);
+        if (!record) throw new Error('Record not found');
+        if (!record.sourceId.startsWith('campaign:'))
+          throw new Error('Only a campaign creature can be added to the compendium');
+        const added = await requireHomebrew().adopt(record);
+        await syncIndex(index, catalog, store, ctx.logger);
+        return added;
       },
     },
 
@@ -413,7 +442,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
 
     compendium: {
       async search(query) {
-        return ctx.session.require().index.search(query);
+        return ctx.session
+          .require()
+          .index.search({ ...query, campaignSourceId: ctx.session.openCampaignSourceId() });
       },
       async get(recordId) {
         return ctx.session.require().index.get(recordId);
@@ -425,10 +456,15 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         return ctx.session.require().index.facets(kind);
       },
       async suggest(text, opts) {
-        return ctx.session.require().index.suggest(text, opts);
+        return ctx.session
+          .require()
+          .index.suggest(text, { ...opts, campaignSourceId: ctx.session.openCampaignSourceId() });
       },
       async searchText(text, opts) {
-        return ctx.session.require().index.searchText(text, opts);
+        return ctx.session.require().index.searchText(text, {
+          ...opts,
+          campaignSourceId: ctx.session.openCampaignSourceId(),
+        });
       },
     },
   };

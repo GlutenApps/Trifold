@@ -71,6 +71,7 @@ export function CompendiumPage() {
   const cancelEdit = useCompendiumStore((s) => s.cancelEdit);
   const saveHomebrew = useCompendiumStore((s) => s.saveHomebrew);
   const removeHomebrew = useCompendiumStore((s) => s.removeHomebrew);
+  const addToLibrary = useCompendiumStore((s) => s.addToLibrary);
   const draftFrom = useCompendiumStore((s) => s.draftFrom);
   const draftChoice = useCompendiumStore((s) => s.draftChoice);
   const setDraftChoice = useCompendiumStore((s) => s.setDraftChoice);
@@ -445,6 +446,7 @@ export function CompendiumPage() {
                 onDuplicate: () => void duplicateSelected(),
                 onEdit: startEdit,
                 onRemove: (id) => void removeHomebrew(id),
+                onAddToLibrary: () => void addToLibrary(),
               }}
             />
           ) : (

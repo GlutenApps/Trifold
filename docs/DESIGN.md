@@ -128,6 +128,7 @@ Trifold Library/
       timers/<id>.json         the Timers dock tool's timer definitions (ADR 0021)
       images/                  scene images (copied in) + generated display-size versions
       tokens/                  custom token art for this campaign's PCs/NPCs
+      creatures/<id>.json      the campaign's own creatures (ADR 0035), its own compendium source
   templates/
     notes/<id>.json            note templates (name + markdown body), shared by every campaign
   music/

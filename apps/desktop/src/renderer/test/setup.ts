@@ -156,6 +156,9 @@ export function installBridgeMock(): TrifoldBridge {
       }),
       save: vi.fn(async (r: CompendiumRecord) => r),
       remove: vi.fn(async () => undefined),
+      addToLibrary: vi.fn(async () => {
+        throw new Error('not in tests');
+      }),
     },
     icons: {
       tables: vi.fn(async () => ({

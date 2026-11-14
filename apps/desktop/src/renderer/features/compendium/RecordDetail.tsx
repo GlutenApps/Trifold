@@ -6,6 +6,7 @@ import { RollReveal, useRollReveal } from '../dice/RollReveal';
 import { Icon } from '../shell/icons';
 import { compendiumActions, logDiceRoll } from './compendiumRolls';
 import { itemTypeName } from './formatting';
+import { isCampaignSource, isOwnRecord } from './homebrew';
 import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
 import { ReplaceInCampaign } from './ReplaceInCampaign';
@@ -35,10 +36,15 @@ interface Props {
     onDuplicate(): void;
     onEdit(): void;
     onRemove(recordId: string): void;
+    /** A campaign creature into the Library's homebrew (ADR 0035). */
+    onAddToLibrary(): void;
   };
 }
 
-/** Edit / Changes from original / Delete, on homebrew records (DESIGN.md §6.2). */
+/**
+ * Edit / Changes from original / Delete on the DM's own records (DESIGN.md §6.2): homebrew, and
+ * the open campaign's creatures, which also offer Add to my compendium (ADR 0035).
+ */
 function HomebrewBar({
   record,
   actions,
@@ -48,12 +54,13 @@ function HomebrewBar({
 }) {
   const [confirm, setConfirm] = useState(false);
   const [diff, setDiff] = useState<DiffLine[] | null>(null);
-  const isHomebrew = record.sourceId === 'homebrew';
+  const own = isOwnRecord(record);
+  const campaignCreature = isCampaignSource(record.sourceId);
   useEffect(() => {
     setConfirm(false);
     setDiff(null);
   }, [record.id]);
-  if (!isHomebrew) return null;
+  if (!own) return null;
   const showDiff = async () => {
     if (diff) {
       setDiff(null);
@@ -76,6 +83,17 @@ function HomebrewBar({
             {diff ? 'Hide changes' : 'Changes from original'}
           </button>
         )}
+        {campaignCreature && (
+          <button
+            type="button"
+            className="btn"
+            title="Copy it into your compendium, for every campaign; this campaign keeps its own"
+            onClick={actions.onAddToLibrary}
+          >
+            <Icon name="plus" />
+            Add to my compendium
+          </button>
+        )}
         <span className="spacer" />
         {confirm ? (
           <InlineConfirm
@@ -88,7 +106,9 @@ function HomebrewBar({
             type="button"
             className="chrome-btn danger"
             aria-label={`Delete ${record.displayName}`}
-            title="Delete this homebrew record"
+            title={
+              campaignCreature ? 'Delete this campaign creature' : 'Delete this homebrew record'
+            }
             onClick={() => setConfirm(true)}
           >
             <Icon name="trash" />
@@ -451,7 +471,7 @@ export function RecordDetail({
       </div>
 
       {homebrew && <HomebrewBar record={record} actions={homebrew} />}
-      {record.sourceId === 'homebrew' && <ReplaceInCampaign record={record} />}
+      {isOwnRecord(record) && <ReplaceInCampaign record={record} />}
       <LastRoll actor={record.displayName} />
       <Body record={record} onOpenSpell={onOpenSpell} />
       {record.kind === 'monster' && <UsedBy record={record} />}

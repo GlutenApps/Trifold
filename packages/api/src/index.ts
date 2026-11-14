@@ -465,6 +465,11 @@ export interface CompendiumQuery {
   level?: number;
   includeDisabled?: boolean;
   /**
+   * The open campaign's creature source (ADR 0035): the one campaign source a search shows. Main
+   * sets it from the open campaign; whatever the renderer sends is replaced.
+   */
+  campaignSourceId?: string | null;
+  /**
    * Records sharing a key collapse to one row (DESIGN.md §7.2) unless `collapse` is false;
    * pickers that must reach one exact record turn it off. `preferEdition` names the edition
    * whose record heads a collapsed row when it exists; defaults to 2024.
@@ -929,10 +934,19 @@ export interface TrifoldApi {
      * The same copy as `duplicate`, not written: Save to compendium opens it in the editor and
      * it reaches disk only through `save` (DESIGN.md §6.2).
      */
-    draft(recordId: string): Promise<CompendiumRecord>;
-    /** Validates, re-derives monster feature buttons from text, writes, and re-indexes. */
+    draft(recordId: string, home?: 'library' | 'campaign'): Promise<CompendiumRecord>;
+    /**
+     * Validates, re-derives monster feature buttons from text, writes, and re-indexes. A record
+     * of the Library's `homebrew` source goes to `homebrew/`; one of a campaign source to that
+     * campaign's `creatures/` (ADR 0035). Stock records cannot be saved.
+     */
     save(record: CompendiumRecord): Promise<CompendiumRecord>;
     remove(recordId: string): Promise<void>;
+    /**
+     * Add to my compendium (ADR 0035): copies a campaign creature into the Library's homebrew
+     * under its own name, keeping its `basedOn`. The campaign keeps its own.
+     */
+    addToLibrary(recordId: string): Promise<CompendiumRecord>;
   };
   icons: {
     /** The mapping tables from resources/icons/mapping.json. */
@@ -1043,7 +1057,7 @@ export const API_METHODS = {
     'removePlaylist',
   ],
   phoneAudio: ['status', 'listDevices', 'connect', 'disconnect', 'forget', 'setSource'],
-  homebrew: ['duplicate', 'draft', 'save', 'remove'],
+  homebrew: ['duplicate', 'draft', 'save', 'remove', 'addToLibrary'],
   icons: ['tables', 'available', 'credits', 'reportMiss'],
   compendium: ['search', 'get', 'findByKey', 'facets', 'suggest', 'searchText'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };

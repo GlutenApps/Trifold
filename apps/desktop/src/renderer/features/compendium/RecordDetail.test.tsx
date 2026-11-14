@@ -136,12 +136,52 @@ describe('RecordDetail', () => {
         onBack={() => undefined}
         onSwitchEdition={() => undefined}
         onOpenSpell={() => undefined}
-        homebrew={{ onDuplicate, onEdit: () => undefined, onRemove: () => undefined }}
+        homebrew={{
+          onDuplicate,
+          onEdit: () => undefined,
+          onRemove: () => undefined,
+          onAddToLibrary: () => undefined,
+        }}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Duplicate to homebrew' }));
     expect(onDuplicate).toHaveBeenCalledOnce();
     expect(screen.queryByTestId('homebrew-bar')).toBeNull();
     expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
+  });
+
+  it('treats a campaign creature as the DM’s own, with Add to my compendium (ADR 0035)', async () => {
+    const onAddToLibrary = vi.fn();
+    const onEdit = vi.fn();
+    const creature = {
+      ...record('Fireball'),
+      displayName: 'Grik',
+      sourceId: 'campaign:greyford',
+    } as CompendiumRecord;
+    render(
+      <RecordDetail
+        record={creature}
+        editions={[creature]}
+        canGoBack={false}
+        onBack={() => undefined}
+        onSwitchEdition={() => undefined}
+        onOpenSpell={() => undefined}
+        homebrew={{
+          onDuplicate: () => undefined,
+          onEdit,
+          onRemove: () => undefined,
+          onAddToLibrary,
+        }}
+      />,
+    );
+    expect(screen.getByTestId('homebrew-bar')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(onEdit).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole('button', { name: 'Add to my compendium' }));
+    expect(onAddToLibrary).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Delete Grik' })).toHaveAttribute(
+      'title',
+      'Delete this campaign creature',
+    );
   });
 });

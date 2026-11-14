@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { blankRecord } from '../features/compendium/homebrew';
+import { blankRecord, isOwnRecord } from '../features/compendium/homebrew';
 import type { CompendiumFacets, CompendiumQuery, CompendiumRow } from '@trifold/api';
 import { errorMessage, type CompendiumRecord, type RecordKind } from '@trifold/schema';
 import { useCampaignStore } from './campaignStore';
@@ -58,6 +58,8 @@ interface CompendiumState {
   cancelEdit(): void;
   saveHomebrew(record: CompendiumRecord): Promise<boolean>;
   removeHomebrew(recordId: string): Promise<void>;
+  /** Add to my compendium (ADR 0035): the selected campaign creature into the Library's homebrew. */
+  addToLibrary(): Promise<void>;
   /**
    * Save to compendium (DESIGN.md §6.2): a copy not yet on disk, opened in the editor from a
    * fight or an encounter, with what Save can do next ("Use it in Bridge ambush"). Cleared when
@@ -253,7 +255,7 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
 
   startEdit() {
     const selected = get().selected;
-    if (selected?.sourceId === 'homebrew') set({ editing: selected, editingNew: false });
+    if (selected && isOwnRecord(selected)) set({ editing: selected, editingNew: false });
   },
 
   cancelEdit() {
@@ -287,6 +289,18 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
     } catch (err) {
       set({ saving: false, error: err instanceof Error ? err.message : String(err) });
       return false;
+    }
+  },
+
+  async addToLibrary() {
+    const selected = get().selected;
+    if (!selected) return;
+    try {
+      const added = await window.trifold.homebrew.addToLibrary(selected.id);
+      await get().search();
+      await get().select(added.id);
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : String(err) });
     }
   },
 

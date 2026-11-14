@@ -209,10 +209,14 @@ export class IndexDb {
 
   suggest(
     text: string,
-    opts: { limit?: number; preferEdition?: '2024' | '2014' } = {},
+    opts: {
+      limit?: number;
+      preferEdition?: '2024' | '2014';
+      campaignSourceId?: string | null;
+    } = {},
   ): CompendiumSuggestion[] {
     if (!text.trim()) return [];
-    const built = buildSuggest(text, opts.limit, opts.preferEdition);
+    const built = buildSuggest(text, opts.limit, opts.preferEdition, opts.campaignSourceId ?? null);
     return (this.db.prepare(built.sql).all(...built.params) as (RawRow & { tier: number })[]).map(
       (raw) => ({ ...toRow(raw), tier: SUGGEST_TIERS[raw.tier] ?? 'substring' }),
     );
@@ -220,9 +224,18 @@ export class IndexDb {
 
   searchText(
     text: string,
-    opts: { limit?: number; preferEdition?: '2024' | '2014' } = {},
+    opts: {
+      limit?: number;
+      preferEdition?: '2024' | '2014';
+      campaignSourceId?: string | null;
+    } = {},
   ): CompendiumTextHit[] {
-    const built = buildTextSearch(text, opts.limit, opts.preferEdition);
+    const built = buildTextSearch(
+      text,
+      opts.limit,
+      opts.preferEdition,
+      opts.campaignSourceId ?? null,
+    );
     if (!built) return [];
     return (this.db.prepare(built.sql).all(...built.params) as (RawRow & { snip: string })[]).map(
       (raw) => ({ ...toRow(raw), snippet: splitSnippet(raw.snip ?? '') }),
@@ -247,9 +260,12 @@ export class IndexDb {
     })();
   }
 
-  /** Every version of a record, highest-priority source first (ADR 0027). */
+  /**
+   * Every version of a record, highest-priority source first (ADR 0027). Campaign creatures are
+   * never versions of a Library record (ADR 0035).
+   */
   findByKey(kind: RecordKind, key: string, includeDisabled = false): CompendiumRecord[] {
-    const sql = `SELECT r.json FROM records r JOIN sources s ON s.id = r.source_id WHERE r.kind = ? AND r.key = ?${includeDisabled ? '' : ' AND s.enabled = 1'} ORDER BY s.priority, r.edition DESC, r.id`;
+    const sql = `SELECT r.json FROM records r JOIN sources s ON s.id = r.source_id WHERE r.kind = ? AND r.key = ? AND s.kind != 'campaign'${includeDisabled ? '' : ' AND s.enabled = 1'} ORDER BY s.priority, r.edition DESC, r.id`;
     const rows = this.db.prepare(sql).all(kind, key) as Array<{ json: string }>;
     const out: CompendiumRecord[] = [];
     for (const row of rows) {

@@ -9,6 +9,16 @@ import { RECORD_SCHEMA_VERSION, type CompendiumRecord, type RecordKind } from '@
 export const HOMEBREW_SOURCE_ID = 'homebrew';
 export const HOMEBREW_BOOK = 'Trifold Homebrew';
 
+/** A campaign's own creatures (ADR 0035) have a source id of this form. */
+export const isCampaignSource = (sourceId: string) => sourceId.startsWith('campaign:');
+
+/**
+ * The DM's own records, which can be edited and deleted: the Library's homebrew and the open
+ * campaign's creatures (ADR 0035). Records from the SRD or an imported file never change.
+ */
+export const isOwnRecord = (record: Pick<CompendiumRecord, 'sourceId'>) =>
+  record.sourceId === HOMEBREW_SOURCE_ID || isCampaignSource(record.sourceId);
+
 /** The kinds as the DM reads them, singular, for "New monster" and the editors' titles. */
 export const KIND_NAMES: Record<RecordKind, string> = {
   monster: 'monster',

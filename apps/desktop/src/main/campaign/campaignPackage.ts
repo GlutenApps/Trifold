@@ -47,7 +47,11 @@ import { parseManifest, readZipSummary, type BackupService } from '../backups';
 import { writeFileAtomic } from '../library/atomicWrite';
 import type { LibraryStore } from '../library/LibraryStore';
 import { errorMessage, type Logger } from '../log';
-import { fileName as homebrewFile, type HomebrewRepository } from '../sources/homebrew';
+import {
+  campaignSourceId,
+  fileName as homebrewFile,
+  type HomebrewRepository,
+} from '../sources/homebrew';
 import { CAMPAIGN_LAYOUT, type CampaignRepository } from './repository';
 
 /**
@@ -62,6 +66,8 @@ const LAYOUT = 'layout.json';
 const ROOT = 'campaign';
 /** Campaign sub-folders that hold media, copied byte for byte. */
 const MEDIA = ['images', 'tokens'] as const;
+/** The campaign's own creatures (ADR 0035): exported as files, imported with their ids fixed up. */
+const CREATURES = 'creatures';
 const RECORD_ID = /^[A-Za-z0-9:_-]+$/;
 
 type EntityFolder =
@@ -163,7 +169,7 @@ export class CampaignPackager {
     }
 
     const skip = new Set(filesOnlyLeftOutPcsUse(parts, prepared));
-    for (const media of MEDIA) {
+    for (const media of [...MEDIA, CREATURES]) {
       for (const rel of await this.walk(`campaigns/${slug}/${media}`)) {
         const inCampaign = `${media}/${rel}`;
         if (skip.has(inCampaign)) continue;
@@ -317,6 +323,21 @@ export class CampaignPackager {
       pinnedRolls: group('pinnedRolls', PinnedRoll, 'pinnedRoll'),
     };
 
+    // The campaign's creatures (ADR 0035): a copy gives them new ids, swapped wherever the
+    // campaign names them, as withNewIds does for everything else.
+    const oldSource = campaignSourceId(parts.campaign.slug);
+    let creatures: CompendiumRecord[] = [];
+    for (const name of files.keys()) {
+      if (!name.startsWith(`${ROOT}/${CREATURES}/`) || !name.endsWith('.json')) continue;
+      const record = parse(name, CompendiumRecord, 'record');
+      if (record && RECORD_ID.test(record.id)) creatures.push(record);
+    }
+    if (mode === 'copy' && creatures.length) {
+      const renamed = new Map(creatures.map((r) => [r.id, `creature:${r.kind}:${ulid()}`]));
+      parts = swapStrings(parts, renamed);
+      creatures = creatures.map((r) => ({ ...r, id: renamed.get(r.id)! }));
+    }
+
     let safety: string | null = null;
     let slug: string;
     if (mode === 'replace' && existing) {
@@ -334,6 +355,9 @@ export class CampaignPackager {
       slug = await this.deps.campaigns.freeSlug(parts.campaign.name);
     }
     parts = { ...parts, campaign: { ...parts.campaign, slug } };
+    // References to the creatures follow the campaign to its folder's source id.
+    const newSource = campaignSourceId(slug);
+    if (newSource !== oldSource) parts = swapStrings(parts, new Map([[oldSource, newSource]]));
 
     const { store } = this.deps;
     const dir = `campaigns/${slug}`;
@@ -350,6 +374,12 @@ export class CampaignPackager {
       if (!media || name.split('/').includes('..')) continue;
       // resolvePath refuses anything that would leave the Library.
       await writeFileAtomic(store.resolvePath(`${dir}/${name.slice(ROOT.length + 1)}`), data);
+    }
+    for (const record of creatures) {
+      await store.writeJson(`${dir}/${CREATURES}/${homebrewFile(record.id)}`, {
+        ...record,
+        sourceId: newSource,
+      });
     }
 
     let homebrewAdded = 0;
@@ -385,7 +415,8 @@ export class CampaignPackager {
 
     let unresolved = 0;
     for (const ref of recordRefsIn(parts)) {
-      if (isBundledSource(ref.sourceId)) continue;
+      // Bundled records are always there; the campaign's own creatures came in with it.
+      if (isBundledSource(ref.sourceId) || ref.sourceId.startsWith('campaign:')) continue;
       const found =
         ref.sourceId === HOMEBREW_SOURCE
           ? (await this.deps.homebrew.get(ref.recordId)) !== null
@@ -400,4 +431,17 @@ export class CampaignPackager {
     );
     return { campaign: summary, mode, homebrewAdded, homebrewKept, unresolved, safety };
   }
+}
+
+/** Every string in `value` that is a key of `map` replaced by its value, at any depth. */
+function swapStrings<T>(value: T, map: ReadonlyMap<string, string>): T {
+  const swap = (v: unknown): unknown => {
+    if (typeof v === 'string') return map.get(v) ?? v;
+    if (Array.isArray(v)) return v.map(swap);
+    if (v && typeof v === 'object') {
+      return Object.fromEntries(Object.entries(v).map(([k, child]) => [k, swap(child)]));
+    }
+    return v;
+  };
+  return swap(value) as T;
 }

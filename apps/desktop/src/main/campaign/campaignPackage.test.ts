@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackupService } from '../backups';
 import { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
-import { HomebrewRepository } from '../sources/homebrew';
+import { campaignCreatures, HomebrewRepository } from '../sources/homebrew';
 import { CampaignPackager } from './campaignPackage';
 import { CampaignRepository } from './repository';
 
@@ -302,6 +302,75 @@ describe('CampaignPackager', () => {
       'Sunken Keep',
       'Sunken Keep (copy)',
     ]);
+  });
+
+  it('carries the campaign’s own creatures, renewing their ids and source for a copy (ADR 0035)', async () => {
+    const slug = (await a.campaigns.list()).find((c) => c.id === campaignId)!.slug;
+    const creatures = new HomebrewRepository(
+      a.store,
+      logger,
+      campaignCreatures(slug, 'Sunken Keep'),
+    );
+    const grik = await creatures.save({ ...creatures.copyOf(goblin), displayName: 'Grik' });
+    expect(grik.sourceId).toBe(`campaign:${slug}`);
+    await a.campaigns.open(campaignId);
+    await a.campaigns.saveEncounter({
+      schemaVersion: 1,
+      id: '',
+      name: 'Lookouts',
+      combatants: [
+        {
+          id: 'row',
+          ref: {
+            kind: 'record',
+            ref: {
+              recordId: grik.id,
+              sourceId: grik.sourceId,
+              key: grik.key,
+              edition: grik.edition,
+            },
+            name: 'Grik',
+          },
+          quantity: 1,
+          role: 'enemy',
+          hidden: false,
+        },
+      ],
+      notes: '',
+      state: null,
+      results: [],
+      createdAt: '',
+      updatedAt: '',
+    });
+    const file = join(out, 'creatures.trifold-campaign');
+    await a.packager.exportTo(campaignId, options(), file);
+
+    // Into another Library under the same name: the same creature, nothing to report missing.
+    const moved = await b.packager.importFrom(file, 'new');
+    const there = new HomebrewRepository(
+      b.store,
+      logger,
+      campaignCreatures(moved.campaign.slug, 'Sunken Keep'),
+    );
+    expect((await there.list()).map((r) => [r.id, r.displayName])).toEqual([[grik.id, 'Grik']]);
+
+    // As a copy beside the original: new ids and the copy's own source, wherever they are named.
+    const copy = await a.packager.importFrom(file, 'copy');
+    const copied = new HomebrewRepository(
+      a.store,
+      logger,
+      campaignCreatures(copy.campaign.slug, 'Sunken Keep (copy)'),
+    );
+    const [renewed] = await copied.list();
+    expect(renewed!.id).not.toBe(grik.id);
+    expect(renewed!.id).toMatch(/^creature:monster:/);
+    expect(renewed!.sourceId).toBe(`campaign:${copy.campaign.slug}`);
+    const row = (await a.campaigns.bundleOf(copy.campaign.slug)).encounters[0]!.combatants[0]!;
+    expect(row.ref.kind === 'record' && row.ref.ref).toMatchObject({
+      recordId: renewed!.id,
+      sourceId: `campaign:${copy.campaign.slug}`,
+    });
+    expect((await creatures.list()).map((r) => r.id)).toEqual([grik.id]);
   });
 
   it('keeps the Library’s own homebrew when an import carries a different version', async () => {

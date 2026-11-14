@@ -83,7 +83,10 @@ It shows only the choices that apply.
   switch, and Replace references.
 - **New:** a campaign creature store and a per-campaign source in the index. Campaign rows are
   kept out of name grouping. Schema: `CompendiumRecord.scaled` (optional, additive); the
-  `campaign` source kind; the campaign export already carries every file in the campaign folder.
+  `campaign` source kind. Campaign export carries `creatures/` beside the media folders; importing
+  as a copy gives the creatures new ids (swapped wherever the campaign names them, as for every
+  other object), and any import points references at the campaign source of the folder it lands
+  in. Deleting or importing a campaign re-syncs the index.
 - The monster editor gains a mode that runs inside the builder and the tracker, not only the
   Compendium tab.
 - Order of work: this rework, then Beta 5 (which reuses campaign creatures), then the CR scaler

@@ -33,6 +33,11 @@ export function createCampaignApi(
   };
   const entities = () => new CampaignEntities(repo());
   const packager = () => session.packager();
+  /** Brings the index in line with the files: campaign creatures come and go with campaigns. */
+  const resync = async () => {
+    const { store, catalog, index } = session.require();
+    await syncIndex(index, catalog, store, logger);
+  };
   return {
     campaigns: {
       async list() {
@@ -68,6 +73,8 @@ export function createCampaignApi(
       },
       async remove(campaignId) {
         await repo().remove(campaignId);
+        // Its creatures (ADR 0035) leave the index with it.
+        await resync();
       },
       async chooseXmlFile() {
         const result = await dialog.showOpenDialog({
@@ -111,17 +118,17 @@ export function createCampaignApi(
       },
       async importPackage(path, mode) {
         const imported = await packager().importFrom(path, mode);
-        if (imported.homebrewAdded > 0) {
-          const { store, catalog, index } = session.require();
-          await syncIndex(index, catalog, store, logger);
-        }
+        // New homebrew, and the campaign's own creatures (ADR 0035); cheap when nothing changed.
+        await resync();
         return imported;
       },
       async sample() {
         return session.sample.status(packager());
       },
       async addSample() {
-        return session.sample.add(session.require().store, packager());
+        const added = await session.sample.add(session.require().store, packager());
+        await resync();
+        return added;
       },
     },
     pcs: {
