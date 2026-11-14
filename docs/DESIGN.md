@@ -222,7 +222,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Lenient parser rules.** Unknown elements are preserved in `data.extra`. Missing fields never fail an import; they produce warnings listed on the source page. Names match case-insensitively for cross-references. See `DATA-FORMATS.md` for every field and convention found in real files.
 
-**Browse and search.** One list per kind (monsters, spells, items, feats, species, backgrounds, classes, conditions) with a persistent filter bar: text search (FTS), source, edition (2024 / legacy / all), CR range, type, size, environment, NPC flag. Monster rows show name, CR, type, size, source badge, edition badge. Detail panes render the stat block in a 2024 layout regardless of the record's edition; original text is available in a "source text" tab. Spell references inside stat blocks and item text are clickable when the spell exists in an enabled source.
+**Browse and search.** One list per kind (monsters, spells, items, feats, species, backgrounds, classes, conditions) with a persistent filter bar: text search (FTS), source, edition (2024 / legacy / all), CR range, type, size, environment, and the **Named** filter (stat blocks an imported book marks as a named character, `isNpc` in the record; the word NPC is kept for campaign characters). Monster rows show name, CR, type, size, a Named badge, source badge, edition badge. A monster's detail ends with **Used by**: the campaign NPCs in any campaign whose stat block it is (by record id, or by key in the same source after a re-import), each a link; one in another campaign opens that campaign first. Detail panes render the stat block in a 2024 layout regardless of the record's edition; original text is available in a "source text" tab. Spell references inside stat blocks and item text are clickable when the spell exists in an enabled source.
 
 **Edition handling.** See §7.
 
@@ -473,8 +473,7 @@ What the beta adds, built top to bottom (ADR 0029). M2 and M3 became this list a
 ### Bugs
 Gaps in what is already built, fixed before the beta ships. Not in priority order.
 
-- **A stat block doesn't show who uses it.** A compendium stat block that campaign NPCs point at lists them ("Used by: <NPC>, NPC in <campaign>"), each a link to the NPC.
-- **"NPC" means two things.** The compendium's NPC badge and filter (a stat block an imported book marks as a named character) share the word with the campaign's NPCs tab. Relabel them **Named** and **Named characters only**, so NPC means only a character in a campaign.
+None open. The first round (the PC and NPC forms, NPCs on the map, Used by and Named) was fixed in PRs #17 to #19.
 
 ### Later
 May come after the beta; new ideas land here first. Not in priority order.
