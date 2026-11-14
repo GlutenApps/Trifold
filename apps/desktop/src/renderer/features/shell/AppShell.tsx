@@ -22,6 +22,7 @@ import { useSearchStore } from '../../stores/searchStore';
 import { useShellStore } from '../../stores/shellStore';
 import { LibraryView } from '../library/LibraryView';
 import { useBackupEvents } from '../settings/useBackupEvents';
+import { useUpdateEvents } from '../settings/Updates';
 import { summarizeCombat } from '../presenter/combatSummary';
 import { showableAt } from '../presenter/sceneTree';
 
@@ -64,6 +65,7 @@ export function AppShell() {
     return window.trifold.on('playerWindowChanged', ({ open }) => setPlayerOpen(open));
   }, [load, setPlayerOpen]);
   useBackupEvents();
+  useUpdateEvents();
 
   // A modifier combo pressed inside a web tab's page reaches the hotkeys as if typed here
   // (ADR 0011). The page keeps its copy; only combos the console knows do anything.

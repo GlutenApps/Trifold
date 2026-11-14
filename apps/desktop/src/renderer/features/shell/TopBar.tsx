@@ -6,6 +6,7 @@ import { GlobalSearch } from './GlobalSearch';
 import { Icon } from './icons';
 import { BrandMark, BrandWordmark } from './Brand';
 import { hk } from '../../platform';
+import { UpdateTopBarButton } from '../settings/Updates';
 
 /** The mark's height in the bar, the same with or without the name beside it. */
 const MARK = 22;
@@ -162,6 +163,7 @@ export function TopBar() {
         {(inConsole || (space === 'library' && campaigns.length > 0)) && <GlobalSearch />}
       </div>
       <div className="topbar-end">
+        <UpdateTopBarButton />
         {inConsole ? (
           <>
             <button

@@ -88,7 +88,20 @@ describe('AppConfig', () => {
       audioSource: 'computer',
       phoneAudioDevices: [],
       backupCopy: { folder: null, lastCopyAt: null, lastError: null },
+      updates: {
+        enabled: false,
+        asked: false,
+        lastCheckAt: null,
+        available: null,
+        dismissedVersion: null,
+        lastError: null,
+      },
     });
+  });
+
+  it('reads a config.json written before the update check existed, with the check off', () => {
+    const old = { schemaVersion: 1, libraryPath: 'D:\\Library' };
+    expect(AppConfig.parse(old).updates).toMatchObject({ enabled: false, asked: false });
   });
 
   it('reads a config.json written before the backup copy folder existed', () => {

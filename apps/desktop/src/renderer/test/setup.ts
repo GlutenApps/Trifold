@@ -2,7 +2,12 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { discardPendingSaves } from '../stores/pendingSaves';
-import { initialPresenterState, type PhoneAudioStatus, type TrifoldBridge } from '@trifold/api';
+import {
+  initialPresenterState,
+  type PhoneAudioStatus,
+  type TrifoldBridge,
+  type UpdateStatus,
+} from '@trifold/api';
 import { defaultLibrarySettings, type CompendiumRecord, type Playlist } from '@trifold/schema';
 
 /**
@@ -34,6 +39,26 @@ export function installBridgeMock(): TrifoldBridge {
       openExternal: vi.fn(async () => true),
       savesFlushed: vi.fn(async () => undefined),
     },
+    updates: (() => {
+      // Off and already answered, so no test sees the Library's question unless it asks to.
+      const status: UpdateStatus = {
+        current: '0.3.0',
+        enabled: false,
+        asked: true,
+        checking: false,
+        lastCheckAt: null,
+        available: null,
+        dismissed: false,
+        lastError: null,
+      };
+      return {
+        status: vi.fn(async () => status),
+        setEnabled: vi.fn(async (enabled: boolean) => ({ ...status, enabled })),
+        checkNow: vi.fn(async () => status),
+        dismiss: vi.fn(async () => status),
+        openDownload: vi.fn(async () => false),
+      };
+    })(),
     library: {
       getInfo: vi.fn(async () => ({
         path: 'C:\\test\\Library',

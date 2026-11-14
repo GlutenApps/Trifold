@@ -243,6 +243,12 @@ test('console, Library, import, search, stat block and player window all work en
     // sample campaign is already listed.
     await libNav('Campaigns').click();
     await expect(console_.getByText('The Lantern at Greyford').first()).toBeVisible();
+    // The update check (ADR 0034) is off until asked; No thanks answers for good and nothing is
+    // sent. The smoke test never turns it on.
+    const updatePrompt = console_.getByRole('region', { name: 'Check for updates' });
+    await expect(updatePrompt).toBeVisible();
+    await updatePrompt.getByRole('button', { name: 'No thanks' }).click();
+    await expect(updatePrompt).toBeHidden();
     await console_.getByRole('button', { name: 'Create campaign' }).click();
     await console_.getByLabel('New campaign name').fill('Smoke Campaign');
     await console_.getByRole('button', { name: 'Create', exact: true }).click();

@@ -19,6 +19,7 @@ import { importXmlSource, isStale, reimportSource } from './sources/importXml';
 import { systemPageUrl } from './systemPages';
 import { isWebUrl } from './webTabs';
 import type { SaveFlush } from './saveFlush';
+import type { UpdateService } from './updates';
 import { WindowManager } from './windows';
 
 /**
@@ -36,6 +37,7 @@ export interface ApiContext {
   icons: IconResources;
   phoneAudio: PhoneAudioReceiver;
   saves: SaveFlush;
+  updates: UpdateService;
 }
 
 /** The main-process implementation of `TrifoldApi`. Registered by `registerIpc`. */
@@ -94,6 +96,26 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       },
       async savesFlushed() {
         ctx.saves.acknowledge();
+      },
+    },
+    updates: {
+      async status() {
+        return ctx.updates.status();
+      },
+      async setEnabled(enabled) {
+        return ctx.updates.setEnabled(enabled);
+      },
+      async checkNow() {
+        return ctx.updates.check('manual');
+      },
+      async dismiss() {
+        return ctx.updates.dismiss();
+      },
+      async openDownload() {
+        const url = ctx.updates.downloadUrl();
+        if (!url) return false;
+        await shell.openExternal(url);
+        return true;
       },
     },
 

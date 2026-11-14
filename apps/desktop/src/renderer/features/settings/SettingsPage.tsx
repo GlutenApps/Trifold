@@ -4,6 +4,7 @@ import { errorMessage } from '@trifold/schema';
 import { useAppStore } from '../../stores/appStore';
 import { BrandLockup } from '../shell/Brand';
 import { BackupsCard } from './BackupsCard';
+import { UpdatesCard } from './Updates';
 import { SampleCampaignCard } from './SampleCampaignCard';
 
 /**
@@ -162,6 +163,8 @@ export function SettingsPage() {
       <SampleCampaignCard />
 
       <BackupsCard />
+
+      <UpdatesCard />
 
       <div className="card span">
         <h2>About</h2>

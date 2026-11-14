@@ -6,6 +6,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Added
 
+- An opt-in update check (ADR 0034): the Campaigns page asks once, Settings › Updates has the switch and Check now, and with it on Trifold reads the project's public releases list at most once a day and shows an **Update available** button in the top bar. Download opens the release page; nothing is installed for you.
 - Global search in the middle of the top bar (`Ctrl+F`): notes, folders, NPCs, party, encounters and their members, scenes, compendium records and web tabs by name, grouped and ranked, with keyboard navigation (ADR 0017).
 - One deep-link contract, `navigate({ type, id, anchor? })`, that opens an item in its tab or tool, selects it and flashes it; a closed tab lands away from the VTT and a running fight. Documented in `docs/DEEP-LINKS.md` for note links and other features to reuse.
 - Global search finds text too: a Mentioned in group lists notes, encounter DM notes and NPC, PC and scene notes that contain the phrase, with a snippet, and opens a note at that occurrence.

@@ -44,6 +44,34 @@ export const AppConfig = z.object({
       lastError: z.string().nullable().default(null),
     })
     .prefault({}),
+  /**
+   * The update check (ADR 0034), the one network feature the app starts by itself. Kept here,
+   * not in a Library: it is this computer's choice. Off until the DM turns it on.
+   */
+  updates: z
+    .object({
+      /** The DM turned the daily check on. */
+      enabled: z.boolean().default(false),
+      /** The Library's one-time question was answered, either way. */
+      asked: z.boolean().default(false),
+      /** When the last check got an answer; a failed check leaves it as it was. */
+      lastCheckAt: z.string().nullable().default(null),
+      /** The newest release newer than the build that checked, from the last answer. */
+      available: z
+        .object({
+          version: z.string(),
+          name: z.string(),
+          url: z.string(),
+          publishedAt: z.string().nullable(),
+        })
+        .nullable()
+        .default(null),
+      /** The version the DM dismissed in the top bar; its button stays hidden. */
+      dismissedVersion: z.string().nullable().default(null),
+      /** The last check's failure, cleared by the next answer. */
+      lastError: z.string().nullable().default(null),
+    })
+    .prefault({}),
 });
 export type AppConfig = z.infer<typeof AppConfig>;
 
