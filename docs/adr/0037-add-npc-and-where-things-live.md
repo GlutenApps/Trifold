@@ -43,6 +43,13 @@ imported file, in the DM's homebrew (every campaign), or in the campaign's own c
    *Homebrew* or the book or file's name, cut short with its full name in the tooltip. The button under a shown stat block reads
    **Open stat block**.
 
+5. **Deleting an NPC takes it out everywhere in the campaign.** It leaves this campaign's
+   encounter rows, fights and map tokens. Its stat block is deleted with it when it is only this
+   campaign's (one of its creatures, used by no other NPC here; those rows, fighters and tokens
+   go too). A stat block from the SRD, an imported file or homebrew is never touched. The inline
+   confirm first says where it is used: "Brass Dragon is in 1 encounter and 1 token. Delete Brass
+   Dragon and its stat block and take it out of them?"
+
 ## Consequences
 
 - The NPCs tab loses **From another campaign…** and **New NPC** as separate buttons; the Party

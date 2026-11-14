@@ -11,6 +11,27 @@ import { InlineConfirm } from '../shell/InlineConfirm';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { AddNpcPanel, type AddNpcMode } from './AddNpcPanel';
 import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './CharacterEditors';
+import { describePlan } from '../encounters/replaceReferences';
+import { planNpcRemoval, removeNpcEverywhere } from './npcRemoval';
+
+/**
+ * The NPC delete confirm (ADR 0037): where it is used, which it leaves, and whether its stat
+ * block goes with it.
+ */
+export function deleteNpcQuestion(npc: NPC): string {
+  const planned = planNpcRemoval(npc);
+  if (!planned) return `Delete ${npc.name}?`;
+  const { plan, fate } = planned;
+  const used = describePlan(plan);
+  const what = fate.creatureId ? `${npc.name} and its stat block` : npc.name;
+  return [
+    used ? `${npc.name} is in ${used}.` : '',
+    `Delete ${what}${used ? ' and take it out of them' : ''}?`,
+    fate.sharedWith ? `Its stat block stays: ${fate.sharedWith} uses it.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
 
 /**
  * Where an NPC's stat block lives, in ADR 0037's words: this campaign only, the DM's homebrew
@@ -380,9 +401,10 @@ function NpcsTab() {
             {confirmId === n.id ? (
               <InlineConfirm
                 name={n.name}
+                question={deleteNpcQuestion(n)}
                 onConfirm={() => {
                   setConfirmId(null);
-                  void removeNpc(n.id);
+                  void removeNpcEverywhere(n);
                 }}
                 onKeep={() => setConfirmId(null)}
               />

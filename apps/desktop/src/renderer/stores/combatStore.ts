@@ -29,6 +29,7 @@ import type {
   CompendiumRecord,
   ConditionDuration,
   Encounter,
+  EntityRef,
   Feature,
   LogEntry,
   NPC,
@@ -53,6 +54,7 @@ import {
   retargetToNpc,
   retargetToRecord,
   withTokenLink,
+  withoutFighters,
   type RecordIdentity,
   type RecordTarget,
 } from '../features/encounters/templates';
@@ -191,6 +193,11 @@ interface CombatStoreState {
    * of its own when its row has others; HP, conditions and turn order stay.
    */
   splitToRecord(combatantId: string, target: RecordTarget): void;
+  /**
+   * Deleting an NPC (ADR 0037) while this fight is loaded: every fighter and row it matches
+   * leaves, the turn staying on the same fighter where it can.
+   */
+  removeWhere(test: (ref: EntityRef) => boolean): void;
   remove(id: string): void;
   move(id: string, direction: -1 | 1): void;
   useCounter(id: string, counterId: string, delta: number): void;
@@ -931,6 +938,12 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       update((s) => ({ ...s, combatants: replaceInCombatants(s.combatants, from, to) }));
       const encounter = currentEncounter();
       if (encounter) saveTemplates(replaceInTemplates(encounter.combatants, from, to));
+    },
+
+    removeWhere(test) {
+      update((s) => withoutFighters(s, test));
+      const encounter = currentEncounter();
+      if (encounter) saveTemplates(encounter.combatants.filter((t) => !test(t.ref)));
     },
 
     remove(id) {
