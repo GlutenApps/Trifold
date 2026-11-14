@@ -51,7 +51,7 @@ In **Library › Campaigns**, **Create campaign** opens three ways in: **New bla
 
 ## Encounters and combat
 
-**Building.** **New encounter** opens the builder. Search creatures to add them, or press a party member or NPC in the Party and NPCs lanes. Each row has a quantity, a role (enemy, ally, neutral), a hidden toggle, a label, **Track as NPC** and remove. With PCs in the encounter the builder shows enemy XP, the 2024 difficulty band and the party's low, moderate and high budgets. DM notes typed here show beside the stat block during the fight.
+**Building.** **New encounter** opens the builder. Search creatures to add them, or press a party member or NPC in the Party and NPCs lanes. Each row has a quantity, a role (enemy, ally, neutral), a hidden toggle, a label, **Track as NPC**, **Save to compendium** and remove. **Save to compendium** (the book icon, also on a creature in the running fight) opens a homebrew copy of the creature in the Compendium, named after its label and with its HP override, for you to change anything else. Save keeps it in your homebrew and, with **Use it in …** ticked, puts it in that encounter's row and fight in place of the original; Cancel throws the copy away. With PCs in the encounter the builder shows enemy XP, the 2024 difficulty band and the party's low, moderate and high budgets. DM notes typed here show beside the stat block during the fight.
 
 **Placing on a map.** On a map in the VTT tab, **Place encounter…** drops one hidden token per creature and links the encounter to the scene. Drag them into place, reveal them per token or with **Reveal creatures**, then press **Start linked encounter**. **Start combat from tokens** builds a fight from the creature tokens on an unlinked map.
 

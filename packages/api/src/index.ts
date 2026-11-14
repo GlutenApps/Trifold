@@ -925,6 +925,11 @@ export interface TrifoldApi {
   homebrew: {
     /** Copies any record into the homebrew source with `basedOn` provenance (DESIGN.md §6.2). */
     duplicate(recordId: string): Promise<CompendiumRecord>;
+    /**
+     * The same copy as `duplicate`, not written: Save to compendium opens it in the editor and
+     * it reaches disk only through `save` (DESIGN.md §6.2).
+     */
+    draft(recordId: string): Promise<CompendiumRecord>;
     /** Validates, re-derives monster feature buttons from text, writes, and re-indexes. */
     save(record: CompendiumRecord): Promise<CompendiumRecord>;
     remove(recordId: string): Promise<void>;
@@ -1038,7 +1043,7 @@ export const API_METHODS = {
     'removePlaylist',
   ],
   phoneAudio: ['status', 'listDevices', 'connect', 'disconnect', 'forget', 'setSource'],
-  homebrew: ['duplicate', 'save', 'remove'],
+  homebrew: ['duplicate', 'draft', 'save', 'remove'],
   icons: ['tables', 'available', 'credits', 'reportMiss'],
   compendium: ['search', 'get', 'findByKey', 'facets', 'suggest', 'searchText'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };

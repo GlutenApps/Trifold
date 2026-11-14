@@ -1,6 +1,13 @@
-import type { CombatantTemplate } from '@trifold/schema';
+import type { Combatant, CombatantTemplate } from '@trifold/schema';
 import { describe, expect, it } from 'vitest';
-import { retargetToNpc, withTokenLink } from './templates';
+import {
+  retargetCombatants,
+  retargetToNpc,
+  retargetToRecord,
+  templateTokenIds,
+  withTokenLink,
+  type RecordTarget,
+} from './templates';
 
 const goblins: CombatantTemplate = {
   id: 'g',
@@ -68,5 +75,63 @@ describe('retargetToNpc', () => {
 
   it('appends a template when none matches', () => {
     expect(retargetToNpc([ogre], undefined, npc)[1]).toMatchObject({ ref: { kind: 'npc' } });
+  });
+});
+
+describe('retargetToRecord and retargetCombatants', () => {
+  const target: RecordTarget = {
+    ref: {
+      kind: 'record',
+      ref: { recordId: 'homebrew:monster:1', sourceId: 'homebrew', key: 'grik', edition: '2024' },
+      name: 'Grik',
+    },
+    cache: { xp: 100, cr: '1/2', type: 'humanoid', hp: 12, ac: 16 },
+  };
+  const row: CombatantTemplate = {
+    ...goblins,
+    ref: {
+      kind: 'record',
+      ref: { recordId: 'srd:goblin', sourceId: 'srd', key: 'goblin', edition: '2024' },
+      name: 'Goblin',
+    },
+    label: 'Grik’s gang',
+    hpOverride: 12,
+  };
+
+  it('points the whole row at the new record, keeping its label, count and tokens', () => {
+    const [moved, other] = retargetToRecord([row, ogre], 'g', target);
+    expect(moved).toMatchObject({
+      ref: target.ref,
+      cache: target.cache,
+      label: 'Grik’s gang',
+      quantity: 3,
+      tokenIds: ['t1', 't2', 't3'],
+    });
+    expect(moved!.hpOverride).toBeUndefined();
+    expect(other).toBe(ogre);
+    expect(templateTokenIds(moved!)).toEqual(['t1', 't2', 't3']);
+    expect(templateTokenIds(ogre)).toEqual(['old']);
+  });
+
+  it('switches the row’s fighters and keeps what the fight did to them', () => {
+    const fighter = {
+      id: 'c1',
+      templateId: 'g',
+      name: 'Goblin 1',
+      ref: row.ref,
+      recordId: 'srd:goblin',
+      hp: { current: 3, max: 12, temp: 0 },
+      conditions: [{ id: 'x', name: 'Prone' }],
+    } as unknown as Combatant;
+    const stranger = { ...fighter, id: 'c2', templateId: 'o' } as Combatant;
+    const [switched, kept] = retargetCombatants([fighter, stranger], 'g', target);
+    expect(switched).toMatchObject({
+      ref: target.ref,
+      recordId: 'homebrew:monster:1',
+      hp: { current: 3, max: 12 },
+      name: 'Goblin 1',
+    });
+    expect(switched!.conditions).toHaveLength(1);
+    expect(kept).toBe(stranger);
   });
 });

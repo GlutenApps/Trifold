@@ -6,6 +6,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Added
 
+- **Save to compendium** on a creature row in the encounter builder and on a creature in the tracker: opens the homebrew monster editor on an unsaved copy named after the row's label and with its HP override; Save keeps it in homebrew and, with **Use it in …** ticked, puts it in that encounter's row, fight and tokens in place of the original (DESIGN.md §6.2).
 - An opt-in update check (ADR 0034): the Campaigns page asks once, Settings › Updates has the switch and Check now, and with it on Trifold reads the project's public releases list at most once a day and shows an **Update available** button in the top bar. Download opens the release page; nothing is installed for you.
 - Global search in the middle of the top bar (`Ctrl+F`): notes, folders, NPCs, party, encounters and their members, scenes, compendium records and web tabs by name, grouped and ranked, with keyboard navigation (ADR 0017).
 - One deep-link contract, `navigate({ type, id, anchor? })`, that opens an item in its tab or tool, selects it and flashes it; a closed tab lands away from the VTT and a running fight. Documented in `docs/DEEP-LINKS.md` for note links and other features to reuse.

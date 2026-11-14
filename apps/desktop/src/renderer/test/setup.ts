@@ -151,6 +151,9 @@ export function installBridgeMock(): TrifoldBridge {
       duplicate: vi.fn(async () => {
         throw new Error('not in tests');
       }),
+      draft: vi.fn(async () => {
+        throw new Error('not in tests');
+      }),
       save: vi.fn(async (r: CompendiumRecord) => r),
       remove: vi.fn(async () => undefined),
     },

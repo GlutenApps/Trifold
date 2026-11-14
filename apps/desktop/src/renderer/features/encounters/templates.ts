@@ -80,3 +80,49 @@ export function retargetToNpc(
   };
   return templates.flatMap((t) => (t.id === source.id ? [group, own] : [t]));
 }
+
+/** What a saved homebrew monster gives an encounter row: its reference and the cached numbers. */
+export interface RecordTarget {
+  ref: Extract<CombatantTemplate['ref'], { kind: 'record' }>;
+  cache: NonNullable<CombatantTemplate['cache']>;
+}
+
+/**
+ * Save to compendium's "Use it in this encounter" (DESIGN.md §6.2): the whole row, every copy in
+ * it, points at the new record. Its label, quantity, role and tokens stay; the HP override goes,
+ * since the record now carries that HP.
+ */
+export function retargetToRecord(
+  templates: readonly CombatantTemplate[],
+  templateId: string,
+  target: RecordTarget,
+): CombatantTemplate[] {
+  return templates.map((t) => {
+    if (t.id !== templateId) return t;
+    const { hpOverride: _hp, ...rest } = t;
+    return { ...rest, ref: target.ref, cache: target.cache };
+  });
+}
+
+/**
+ * The same switch for a fight in progress: the row's combatants point at the new record and its
+ * stat block, keeping their HP, conditions and everything the fight has done to them.
+ */
+export function retargetCombatants(
+  combatants: readonly Combatant[],
+  templateId: string,
+  target: RecordTarget,
+): Combatant[] {
+  return combatants.map((c) =>
+    c.templateId === templateId && c.ref.kind === 'record'
+      ? { ...c, ref: target.ref, recordId: target.ref.ref.recordId }
+      : c,
+  );
+}
+
+/** The map tokens a row placed, so they can follow it to the new record. */
+export function templateTokenIds(template: CombatantTemplate): string[] {
+  return [...(template.tokenIds ?? []), ...(template.tokenId ? [template.tokenId] : [])].filter(
+    Boolean,
+  );
+}

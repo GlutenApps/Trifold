@@ -71,6 +71,9 @@ export function CompendiumPage() {
   const cancelEdit = useCompendiumStore((s) => s.cancelEdit);
   const saveHomebrew = useCompendiumStore((s) => s.saveHomebrew);
   const removeHomebrew = useCompendiumStore((s) => s.removeHomebrew);
+  const draftFrom = useCompendiumStore((s) => s.draftFrom);
+  const draftApply = useCompendiumStore((s) => s.draftApply);
+  const setDraftApply = useCompendiumStore((s) => s.setDraftApply);
   const sources = useSourcesStore((s) => s.sources);
   const loadSources = useSourcesStore((s) => s.load);
   // The open campaign's preferred edition heads each collapsed row; a change re-runs the search.
@@ -395,6 +398,19 @@ export function CompendiumPage() {
           className="inspector"
           data-nav={selected && !editing ? navKey('record', selected.id) : undefined}
         >
+          {editing && draftFrom && (
+            <div className="banner draft-origin" data-testid="draft-origin">
+              <label className="row">
+                <input
+                  type="checkbox"
+                  checked={draftApply}
+                  onChange={(e) => setDraftApply(e.target.checked)}
+                />
+                {draftFrom.label}
+              </label>
+              <span className="muted small">{draftFrom.detail}</span>
+            </div>
+          )}
           {editing ? (
             <HomebrewEditor
               key={editing.id}

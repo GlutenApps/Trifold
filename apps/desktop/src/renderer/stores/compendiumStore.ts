@@ -58,6 +58,25 @@ interface CompendiumState {
   cancelEdit(): void;
   saveHomebrew(record: CompendiumRecord): Promise<boolean>;
   removeHomebrew(recordId: string): Promise<void>;
+  /**
+   * Save to compendium (DESIGN.md §6.2): a copy not yet on disk, opened in the editor from a
+   * fight or an encounter, with what Save can do next ("Use it in Bridge ambush"). Cleared when
+   * the editor closes.
+   */
+  draftFrom: DraftOrigin | null;
+  /** Whether Save also runs `draftFrom.apply`; on by default. */
+  draftApply: boolean;
+  startDraft(draft: CompendiumRecord, from: DraftOrigin): Promise<void>;
+  setDraftApply(apply: boolean): void;
+}
+
+/** Where a Save to compendium draft came from, and what applying it does. */
+export interface DraftOrigin {
+  /** The checkbox's words: "Use it in Bridge ambush". */
+  label: string;
+  /** A line under it: "Every Goblin in that row, now and in the fight." */
+  detail: string;
+  apply(saved: CompendiumRecord): Promise<void>;
 }
 
 const EMPTY_FACETS: CompendiumFacets = { types: [], sizes: [], environments: [] };
@@ -78,6 +97,8 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
   editing: null,
   editingNew: false,
   saving: false,
+  draftFrom: null,
+  draftApply: true,
   error: null,
 
   async setKind(kind) {
@@ -213,7 +234,7 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
       if (get().kind !== copy.kind) await get().setKind(copy.kind);
       else await get().search();
       await get().select(copy.id);
-      set({ editing: copy, editingNew: false });
+      set({ editing: copy, editingNew: false, draftFrom: null });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : String(err) });
     }
@@ -221,7 +242,7 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
 
   async newHomebrew(kind) {
     if (get().kind !== kind) await get().setKind(kind);
-    set({ editing: blankRecord(kind), editingNew: true });
+    set({ editing: blankRecord(kind), editingNew: true, draftFrom: null });
   },
 
   startEdit() {
@@ -230,14 +251,25 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
   },
 
   cancelEdit() {
-    set({ editing: null, editingNew: false });
+    set({ editing: null, editingNew: false, draftFrom: null });
+  },
+
+  async startDraft(draft, from) {
+    if (get().kind !== draft.kind) await get().setKind(draft.kind);
+    set({ editing: draft, editingNew: true, draftFrom: from, draftApply: true });
+  },
+
+  setDraftApply(apply) {
+    set({ draftApply: apply });
   },
 
   async saveHomebrew(record) {
     set({ saving: true });
     try {
       const saved = await window.trifold.homebrew.save(record);
-      set({ editing: null, editingNew: false, saving: false });
+      const { draftFrom, draftApply } = get();
+      set({ editing: null, editingNew: false, saving: false, draftFrom: null });
+      if (draftFrom && draftApply) await draftFrom.apply(saved);
       await get().search();
       await get().select(saved.id);
       return true;
