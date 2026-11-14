@@ -187,7 +187,11 @@ export const LibrarySettings = z.object({
   theme: z.enum(['dark', 'light']).default('dark'),
   /** Electron display id the player window opens on. Null = pick the first non-primary display. */
   playerDisplayId: z.number().int().nullable().default(null),
-  /** The only network feature, off by default (CLAUDE.md ground rule 1). */
+  /**
+   * Reserved before the update check was built and never read. The check's switch lives in the
+   * app's `config.json` (`AppConfig.updates`, ADR 0034), since it belongs to the computer, not
+   * a Library. Kept so existing `library.json` files parse unchanged.
+   */
   checkForUpdates: z.boolean().default(false),
   /**
    * Source book names whose records count as 2024 rules even without a `[5.5e]` suffix

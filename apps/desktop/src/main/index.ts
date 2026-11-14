@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, net } from 'electron';
 import { join } from 'node:path';
 import { EVENT_CHANNELS } from '@trifold/api';
 import { createApi } from './api';
@@ -15,6 +15,7 @@ import phoneAudioHelper from './phoneAudio/helper.ps1?raw';
 import { PhoneAudioReceiver } from './phoneAudio/receiver';
 import { PresenterHub } from './presenter';
 import { SaveFlush } from './saveFlush';
+import { UpdateService } from './updates';
 import { WindowManager } from './windows';
 
 // Test hooks: the smoke test points both at temporary folders.
@@ -114,6 +115,16 @@ async function main(): Promise<void> {
     }),
   );
 
+  // The update check (ADR 0034): off until the DM turns it on; then at most once a day.
+  const updates = new UpdateService(
+    config,
+    logger,
+    app.getVersion(),
+    (status) => windows.sendToConsole(EVENT_CHANNELS.updateStatus, status),
+    net.fetch,
+  );
+  updates.start();
+
   registerIpc(
     createApi({
       config,
@@ -124,6 +135,7 @@ async function main(): Promise<void> {
       icons,
       phoneAudio,
       saves,
+      updates,
     }),
     logger,
   );
@@ -142,6 +154,7 @@ async function main(): Promise<void> {
       return;
     }
     phoneAudio.disconnect();
+    updates.stop();
     activeSession.close();
   });
 }

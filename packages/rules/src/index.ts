@@ -18,3 +18,4 @@ export * from './counters';
 export * from './timers';
 export * from './sourceOrder';
 export * from './bookReview';
+export * from './updates';

@@ -105,6 +105,8 @@ A web tab is a page you choose, hosted inside the stage. In a group's `+` menu p
 
 ## Backups and moving data
 
+**Settings › Updates.** Trifold can check once a day whether a newer version is out. It is off until you say so: the Campaigns page asks once, and the switch here changes your answer at any time. **Check now** asks straight away, on or off. The check reads the project's public release list and sends only Trifold's version number. When a newer version is out, an **Update available** button appears in the top bar; **Download** opens the release page in your browser (Trifold never installs anything itself), and **Not now** hides the button until the next version.
+
 **Settings › Backups.** With **Daily backup** on, Trifold zips the Library into its `backups` folder once a day while open and again on close if anything changed (`<date>-quit.zip`); **Back up now** writes one on demand. A zip holds everything except the search index, logs, earlier backups and music files. **Keep** sets how many days of zips stay.
 
 **Also copy to.** **Choose folder…** names a folder on another drive, or one your cloud sync app keeps; every backup is copied there under `Trifold backups/<Library folder name>/`. The card shows when the last copy was made and the error when the folder cannot be reached. **Stop copying** turns it off.

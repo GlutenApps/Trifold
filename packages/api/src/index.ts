@@ -284,6 +284,25 @@ export interface BackupFileInfo {
   problem: string | null;
 }
 
+/** The update check (ADR 0034): the DM's choice, the last answer and what it found. */
+export interface UpdateStatus {
+  /** The running build's version. */
+  current: string;
+  /** The daily check is on. */
+  enabled: boolean;
+  /** The Library's one-time question was answered. */
+  asked: boolean;
+  /** A check is on its way. */
+  checking: boolean;
+  lastCheckAt: string | null;
+  /** A release newer than the running build, from the last answer; null when there is none. */
+  available: { version: string; name: string; url: string; publishedAt: string | null } | null;
+  /** `available` was dismissed in the top bar; Settings still shows it. */
+  dismissed: boolean;
+  /** The last check's failure, cleared by the next answer. */
+  lastError: string | null;
+}
+
 /** The second backup location (ADR 0015). */
 export interface BackupCopyStatus {
   /** The folder the DM chose; null when copying is off. */
@@ -615,6 +634,24 @@ export interface TrifoldApi {
     /** The console's answer to a `flushSaves` event: every pending save has been written. */
     savesFlushed(): Promise<void>;
   };
+  /**
+   * The update check (ADR 0034): opt-in, at most once a day, only ever reads the project's
+   * public releases list, never downloads or installs anything.
+   */
+  updates: {
+    status(): Promise<UpdateStatus>;
+    /**
+     * Turns the daily check on or off and records that the one-time question was answered.
+     * Turning it on checks at once when a check is due.
+     */
+    setEnabled(enabled: boolean): Promise<UpdateStatus>;
+    /** Checks now, on or off; the answer also arrives as an `updateStatus` event. */
+    checkNow(): Promise<UpdateStatus>;
+    /** Hides the top bar's button for the version found; a newer one shows it again. */
+    dismiss(): Promise<UpdateStatus>;
+    /** Opens the found release's page in the system browser; false when there is none. */
+    openDownload(): Promise<boolean>;
+  };
   library: {
     getInfo(): Promise<LibraryInfo>;
     /** Native folder picker. Resolves to null when cancelled. */
@@ -935,6 +972,7 @@ export type ApiNamespace = keyof TrifoldApi;
 /** Every method, by namespace. The preload and the IPC registry iterate this table. */
 export const API_METHODS = {
   app: ['getInfo', 'openSystemPage', 'openExternal', 'savesFlushed'],
+  updates: ['status', 'setEnabled', 'checkNow', 'dismiss', 'openDownload'],
   library: ['getInfo', 'chooseFolder', 'open', 'openInExplorer', 'updateSettings'],
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],
@@ -1040,6 +1078,8 @@ export interface TrifoldEvents {
   flushSaves: Record<string, never>;
   /** A copy to the second backup location finished or failed. */
   backupCopy: BackupCopyStatus;
+  /** An update check started or answered, or the DM changed the setting. */
+  updateStatus: UpdateStatus;
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -1051,6 +1091,7 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   webTabInput: 'trifold:event:web-tab-input',
   flushSaves: 'trifold:event:flush-saves',
   backupCopy: 'trifold:event:backup-copy',
+  updateStatus: 'trifold:event:update-status',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */

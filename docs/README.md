@@ -54,3 +54,4 @@ One short file per decision that deviates from or refines `DESIGN.md`. Number th
 | [0029](adr/0029-beta-and-later.md) | M2 and M3 become an ordered Beta and an open Later; fog of war and the ruler join the beta; ambience and effects, note links, drag-drop art and the endpoint pre-fill are dropped. |
 | [0032](adr/0032-player-connector-in-the-beta.md) | The player connector (players claim and run their creatures from a local-network page) is Beta item 14, replacing the LAN player view in Later. |
 | [0033](adr/0033-creature-art.md) | Creature art replaces bulk matching: Set art… for one token or every copy, an Images section in the Library, images shrunk to 512 px. |
+| [0034](adr/0034-update-check.md) | An opt-in update check: asked once, at most daily, reads the public releases list, opens the release page; the release addresses are the one place the repo names a site. |

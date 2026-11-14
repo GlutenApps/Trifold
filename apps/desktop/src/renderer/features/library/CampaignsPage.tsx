@@ -4,6 +4,7 @@ import { useCampaignStore } from '../../stores/campaignStore';
 import { deleteCampaign, switchCampaign } from '../shell/campaignFlow';
 import { Icon } from '../shell/icons';
 import { CampaignExportPanel, useCampaignPackageImport } from './CampaignPackages';
+import { UpdatePrompt } from '../settings/Updates';
 
 /**
  * Library › Campaigns: one Create campaign button opens the three ways in (a blank campaign, a
@@ -202,6 +203,7 @@ export function CampaignsPage() {
           Create campaign
         </button>
       </div>
+      <UpdatePrompt />
       {creating && (
         <CreateCampaignPanel
           onClose={() => setCreating(false)}
