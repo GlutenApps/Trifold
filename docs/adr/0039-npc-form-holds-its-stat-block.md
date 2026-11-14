@@ -45,5 +45,7 @@ that look alike. The book icon keeps showing the stat block; the pencil edits bo
   NPC's own fields stay at the top.
 - `MonsterEditor` is now a form shell around `MonsterFields`, which reports the record as Save
   would write it and whether it changed; the compendium and encounter editors behave as before.
-- Sticky editor headers fill the scroll pane's top padding with the background, so a scrolled
-  form no longer shows through above them (seen in the Campaign tab).
+- Sticky editor headers take the colour of the surface they sit on (`--surface`: a workspace
+  panel's, else the page's), so in the Campaign tab they read as a title over a rule rather than a
+  darker slab; and they pin flush with the panel's top edge (`--pane-pad-top`), so a scrolled form
+  no longer shows through above them.
