@@ -7,6 +7,7 @@ import {
   type CombatSummary,
   type Handout,
   type LiveCounter,
+  type LiveRuler,
   type LiveTimer,
   type LiveScene,
   type PresenterOverlays,
@@ -169,6 +170,11 @@ interface PresenterStore {
   setCounters(counters: LiveCounter[]): void;
   /** The timer marked Show on TV (ADR 0021), or null; the shell keeps it current. */
   setTimer(timer: LiveTimer | null): void;
+  /**
+   * The movement ruler to show on the TV, or null (Beta 9). The map editor decides whether the
+   * players may see it; pushes are coalesced to one per frame like a token drag.
+   */
+  setRuler(ruler: LiveRuler | null): void;
 }
 
 /**
@@ -358,6 +364,12 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
       const { state } = get();
       if (JSON.stringify(state.timer) === JSON.stringify(timer)) return;
       commit({ ...state, timer });
+    },
+
+    setRuler(ruler) {
+      const { state } = get();
+      if (JSON.stringify(state.ruler ?? null) === JSON.stringify(ruler)) return;
+      commitCoalesced({ ...state, ruler });
     },
   };
 });

@@ -6,7 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { ulid } from 'ulid';
-import { mediaUrl, type CompendiumRow } from '@trifold/api';
+import { mediaUrl, type CompendiumRow, type LiveRuler } from '@trifold/api';
 import { numberedNames } from '@trifold/rules';
 import {
   nowIso,
@@ -27,12 +27,14 @@ import { useIconStore } from '../../stores/iconStore';
 import { useShellStore } from '../../stores/shellStore';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
-import { FogLayer, GridLines } from './MapLayer';
+import { FogLayer, GridLines, RulerLayer } from './MapLayer';
+import { cellAt, cellCentre, rulerLabel, squaresBetween } from './ruler';
 import {
   activeFog,
   addShape,
   allShape,
   dragRect,
+  isRevealed,
   polyShape,
   rectShape,
   svgPoints,
@@ -78,7 +80,16 @@ import {
  * here belong to the editor's modes and pop-ups; `MapEditor` further down has the detail.
  */
 
-type Mode = 'select' | 'align' | 'party' | 'place' | 'fog';
+type Mode = 'select' | 'align' | 'party' | 'place' | 'fog' | 'ruler';
+
+/** A measurement on the console map (Beta 9): from and to as square centres in map pixels. */
+interface Measure {
+  from: Point;
+  to: Point;
+  squares: number;
+  /** A token being dragged, so the TV can leave out one the players cannot see. */
+  tokenId?: string;
+}
 
 /** The fog tool (ADR 0029): what a shape does, and how it is drawn. */
 interface FogTool {
@@ -180,7 +191,18 @@ export function MapEditor({
   const [fogHover, setFogHover] = useState<Point | null>(null);
   /** Earlier fogs for Undo, this session only. */
   const [fogUndo, setFogUndo] = useState<SceneFog[]>([]);
-  const drag = useRef<{ tokenId: string; dx: number; dy: number } | null>(null);
+  /** The ruler tool's measurement, kept after the drag until Escape or a new one. */
+  const [ruler, setRuler] = useState<Measure | null>(null);
+  /** Where the ruler drag started, in grid cells, while the button is down. */
+  const rulerStart = useRef<Point | null>(null);
+  /** How far the token being dragged has moved, shown only during the drag. */
+  const [tokenMeasure, setTokenMeasure] = useState<Measure | null>(null);
+  const drag = useRef<{
+    tokenId: string;
+    dx: number;
+    dy: number;
+    start: { x: number; y: number };
+  } | null>(null);
   const pan = useRef<{ startX: number; startY: number; camX: number; camY: number } | null>(null);
   const debounce = useRef<number | null>(null);
 
@@ -506,6 +528,10 @@ export function MapEditor({
       onFogDown(e);
       return;
     }
+    if (mode === 'ruler') {
+      onRulerDown(e);
+      return;
+    }
     if (e.button === 2) return;
     setMenu(null);
     const at = mapPoint(e);
@@ -554,7 +580,32 @@ export function MapEditor({
     else if (!near(fogPoints[fogPoints.length - 1])) setFogPoints([...fogPoints, at]);
   };
 
+  /** Ruler mode: the left button measures from square to square; right or middle pans. */
+  const onRulerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    setMenu(null);
+    if (e.button !== 0) {
+      pan.current = { startX: e.clientX, startY: e.clientY, camX: cam.x, camY: cam.y };
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      return;
+    }
+    const cell = cellAt(mapPoint(e), grid);
+    rulerStart.current = cell;
+    const centre = cellCentre(cell, grid);
+    setRuler({ from: centre, to: centre, squares: 0 });
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
   const onBackgroundMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (mode === 'ruler' && rulerStart.current && !pan.current) {
+      const start = rulerStart.current;
+      const cell = cellAt(mapPoint(e), grid);
+      setRuler({
+        from: cellCentre(start, grid),
+        to: cellCentre(cell, grid),
+        squares: squaresBetween(start, cell),
+      });
+      return;
+    }
     if (mode === 'fog' && !pan.current) {
       const at = mapPoint(e);
       if (fogDrag) setFogDrag({ ...fogDrag, b: at, free: e.altKey });
@@ -573,6 +624,7 @@ export function MapEditor({
 
   const onBackgroundUp = () => {
     pan.current = null;
+    rulerStart.current = null;
     if (fogDrag) {
       const r = dragRect(fogDrag.a, fogDrag.b, fogDrag.free ? null : fogGrid);
       // A click without a drag reveals one cell on a grid, nothing without one.
@@ -599,8 +651,13 @@ export function MapEditor({
     if (mode !== 'select') return;
     const at = mapPoint(e);
     const cell = pixelToGrid(at.x, at.y, grid);
-    drag.current = { tokenId: token.id, dx: cell.x - token.x, dy: cell.y - token.y };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = {
+      tokenId: token.id,
+      dx: cell.x - token.x,
+      dy: cell.y - token.y,
+      start: { x: token.x, y: token.y },
+    };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
   const onTokenMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -614,10 +671,20 @@ export function MapEditor({
       : snap(raw);
     const token = scene.tokens.find((t) => t.id === d.tokenId);
     if (token && (token.x !== next.x || token.y !== next.y)) patchToken(d.tokenId, next);
+    // The distance moved so far, from where the drag started (5 ft a square, diagonals too).
+    if (token) {
+      setTokenMeasure({
+        from: cellCentre(d.start, grid, token.footprint),
+        to: cellCentre(next, grid, token.footprint),
+        squares: squaresBetween(d.start, next),
+        tokenId: token.id,
+      });
+    }
   };
 
   const onTokenUp = () => {
     drag.current = null;
+    setTokenMeasure(null);
   };
 
   const onTokenContext = (e: React.MouseEvent<HTMLDivElement>, token: Token) => {
@@ -822,7 +889,7 @@ export function MapEditor({
       ? pan.current
         ? 'grabbing'
         : 'grab'
-      : mode === 'align' || mode === 'fog'
+      : mode === 'align' || mode === 'fog' || mode === 'ruler'
         ? 'crosshair'
         : 'copy';
 
@@ -832,15 +899,19 @@ export function MapEditor({
       ? alignFirst
         ? `Now click the opposite corner of ${alignCells > 1 ? 'that block' : 'that cell'}`
         : `Click one corner of ${block}`
-      : mode === 'party'
-        ? 'Click the map to place the party'
-        : mode === 'place'
-          ? pending?.kind === 'pc'
-            ? `Click to place ${pending.pc.name}`
-            : pending?.kind === 'npc'
-              ? `Click to place ${pending.npc.name}`
-              : `Click to place ${pending?.kind === 'creature' ? pending.row.displayName : 'a marker'} (Shift keeps placing)`
-          : null;
+      : mode === 'ruler'
+        ? ruler && ruler.squares > 0
+          ? `${rulerLabel(ruler.squares)}. Drag again to measure from elsewhere; Escape clears.`
+          : 'Drag from one square to another to measure (5 ft a square, diagonals too). Right-drag pans.'
+        : mode === 'party'
+          ? 'Click the map to place the party'
+          : mode === 'place'
+            ? pending?.kind === 'pc'
+              ? `Click to place ${pending.pc.name}`
+              : pending?.kind === 'npc'
+                ? `Click to place ${pending.npc.name}`
+                : `Click to place ${pending?.kind === 'creature' ? pending.row.displayName : 'a marker'} (Shift keeps placing)`
+            : null;
 
   const cancelMode = () => {
     setMode('select');
@@ -851,7 +922,42 @@ export function MapEditor({
     setFogPoints([]);
     setFogHover(null);
     setFogDrag(null);
+    setRuler(null);
+    rulerStart.current = null;
   };
+  const toggleRulerMode = () => {
+    if (mode === 'ruler') {
+      cancelMode();
+      return;
+    }
+    cancelMode();
+    closePop();
+    setMode('ruler');
+    containerRef.current?.focus();
+  };
+  const toggleRulerRef = useRef(toggleRulerMode);
+  toggleRulerRef.current = toggleRulerMode;
+
+  // ---------- movement ruler on the TV (Beta 9) ----------
+  /** What the console shows: a token being dragged, else the ruler tool's measurement. */
+  const measure = tokenMeasure ?? ruler;
+  const setLiveRuler = usePresenterStore((s) => s.setRuler);
+  // The TV mirrors it while this map is live, unless that would show what the players cannot
+  // see: an end under fog, or a hidden token being dragged.
+  const liveRuler: LiveRuler | null = (() => {
+    if (!measure || liveSceneId !== scene.id) return null;
+    const token = measure.tokenId ? scene.tokens.find((t) => t.id === measure.tokenId) : null;
+    if (token?.hidden) return null;
+    const shown = activeFog(scene.fog);
+    if (!isRevealed(shown, measure.from) || !isRevealed(shown, measure.to)) return null;
+    return { sceneId: scene.id, from: measure.from, to: measure.to, squares: measure.squares };
+  })();
+  const liveRulerKey = JSON.stringify(liveRuler);
+  useEffect(() => {
+    setLiveRuler(liveRulerKey === 'null' ? null : (JSON.parse(liveRulerKey) as LiveRuler));
+  }, [liveRulerKey, setLiveRuler]);
+  // Leaving the map takes its ruler off the TV.
+  useEffect(() => () => setLiveRuler(null), [setLiveRuler]);
   const toggleFogMode = () => {
     if (mode === 'fog') {
       cancelMode();
@@ -876,6 +982,18 @@ export function MapEditor({
         // A parked (hidden) panel stays mounted; only the map on screen answers.
         run: () => {
           if (containerRef.current?.getClientRects().length) toggleFogRef.current();
+        },
+      }),
+    [],
+  );
+  useEffect(
+    () =>
+      registerHotkey({
+        id: 'map.ruler',
+        combo: 'R',
+        description: 'Movement ruler on the map',
+        run: () => {
+          if (containerRef.current?.getClientRects().length) toggleRulerRef.current();
         },
       }),
     [],
@@ -1174,6 +1292,17 @@ export function MapEditor({
 
         <button
           type="button"
+          className={`chrome-btn${mode === 'ruler' ? ' on' : ''}`}
+          aria-pressed={mode === 'ruler'}
+          aria-label="Ruler"
+          title={`Ruler: drag to measure in squares and feet; the TV shows it too (${hk('R')})`}
+          onClick={toggleRulerMode}
+        >
+          <Icon name="ruler" />
+        </button>
+
+        <button
+          type="button"
           className={`chrome-btn${mode === 'fog' ? ' on' : ''}`}
           aria-pressed={mode === 'fog'}
           aria-label="Fog of war"
@@ -1383,7 +1512,7 @@ export function MapEditor({
 
       <div
         ref={containerRef}
-        className={`map-canvas${mode === 'fog' ? ' fog-mode' : ''}`}
+        className={`map-canvas${mode === 'fog' || mode === 'ruler' ? ' draw-mode' : ''}`}
         data-testid="map-canvas"
         style={{ cursor }}
         tabIndex={0}
@@ -1406,6 +1535,12 @@ export function MapEditor({
               setFogPoints([]);
               setFogHover(null);
             }
+            return;
+          }
+          // A measurement clears first; a second Escape leaves the ruler.
+          if (e.key === 'Escape' && mode === 'ruler' && ruler) {
+            e.stopPropagation();
+            setRuler(null);
             return;
           }
           if (e.key === 'Escape') {
@@ -1544,6 +1679,16 @@ export function MapEditor({
               </div>
             );
           })}
+          {measure && (
+            <RulerLayer
+              width={size.width}
+              height={size.height}
+              from={measure.from}
+              to={measure.to}
+              squares={measure.squares}
+              zoom={cam.zoom}
+            />
+          )}
         </div>
 
         {menu && (

@@ -73,3 +73,13 @@ describe('MapLayer fog (ADR 0029)', () => {
     expect(fog.querySelector('.fog-fill')).toHaveAttribute('mask', `url(#${mask.id})`);
   });
 });
+
+describe('MapLayer ruler (Beta 9)', () => {
+  it("draws the DM's measurement on its own map only", () => {
+    const ruler = { sceneId: 's1', from: { x: 35, y: 35 }, to: { x: 385, y: 245 }, squares: 5 };
+    const { rerender } = render(<MapLayer scene={scene} combat={null} ruler={ruler} />);
+    expect(screen.getByTestId('ruler-label')).toHaveTextContent('5 squares · 25 ft');
+    rerender(<MapLayer scene={scene} combat={null} ruler={{ ...ruler, sceneId: 'other' }} />);
+    expect(screen.queryByTestId('ruler-label')).toBeNull();
+  });
+});

@@ -72,6 +72,9 @@
      that shows on light ones. Map colours, so the same in both themes. */
   --fog-mist: #dfe4ea;
   --fog-hatch: #1c2430;
+  /* The movement ruler: bright with a dark casing, so it reads on any map. */
+  --ruler: #ffb347;
+  --ruler-casing: rgba(0, 0, 0, 0.6);
   --tv-scrim-label: rgba(0, 0, 0, 0.65);
   --tv-scrim-strong: rgba(0, 0, 0, 0.7);
   --tv-glass: rgba(255, 255, 255, 0.25);

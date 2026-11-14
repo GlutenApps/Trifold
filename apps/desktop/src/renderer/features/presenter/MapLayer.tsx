@@ -1,7 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import type { CombatSummary, MapScene } from '@trifold/api';
+import type { CombatSummary, LiveRuler, MapScene } from '@trifold/api';
 import type { FogShape } from '@trifold/schema';
 import { svgPoints } from './fog';
+import { rulerLabel } from './ruler';
 import { TokenDisc } from './TokenDisc';
 import { viewTransform } from './mapMath';
 
@@ -113,6 +114,46 @@ export function FogLayer({
   );
 }
 
+/**
+ * The movement ruler (Beta 9) in map pixels: a line between square centres, a dot at each end and
+ * the reading beside the far end. `zoom` is how many screen pixels one map pixel takes, so the
+ * line and the label keep their size on screen on either display.
+ */
+export function RulerLayer({
+  width,
+  height,
+  from,
+  to,
+  squares,
+  zoom,
+}: {
+  width: number;
+  height: number;
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  squares: number;
+  zoom: number;
+}) {
+  const k = 1 / (zoom || 1);
+  return (
+    <>
+      <svg className="ruler-layer" width={width} height={height} aria-hidden="true">
+        <line className="ruler-casing" x1={from.x} y1={from.y} x2={to.x} y2={to.y} />
+        <line className="ruler-line" x1={from.x} y1={from.y} x2={to.x} y2={to.y} />
+        <circle className="ruler-end" cx={from.x} cy={from.y} r={5 * k} />
+        <circle className="ruler-end" cx={to.x} cy={to.y} r={5 * k} />
+      </svg>
+      <div
+        className="ruler-label"
+        data-testid="ruler-label"
+        style={{ left: to.x, top: to.y, transform: `scale(${k}) translate(14px, -50%)` }}
+      >
+        {rulerLabel(squares)}
+      </div>
+    </>
+  );
+}
+
 const FADE_MS = 900;
 
 /**
@@ -164,7 +205,16 @@ function MapArt({ url, width, height }: { url: string; width: number; height: nu
  * The map as the TV shows it: the camera rectangle letterboxed into the window, tokens placed in
  * map pixels so a transform on the whole map moves everything at once.
  */
-export function MapLayer({ scene, combat }: { scene: MapScene; combat: CombatSummary | null }) {
+export function MapLayer({
+  scene,
+  combat,
+  ruler = null,
+}: {
+  scene: MapScene;
+  combat: CombatSummary | null;
+  /** The DM's movement ruler on this map, when the players may see it (Beta 9). */
+  ruler?: LiveRuler | null;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
 
@@ -253,6 +303,16 @@ export function MapLayer({ scene, combat }: { scene: MapScene; combat: CombatSum
             </div>
           );
         })}
+        {ruler && ruler.sceneId === scene.id && (
+          <RulerLayer
+            width={scene.width}
+            height={scene.height}
+            from={ruler.from}
+            to={ruler.to}
+            squares={ruler.squares}
+            zoom={scale}
+          />
+        )}
       </div>
     </div>
   );

@@ -78,8 +78,8 @@
   fill: var(--accent);
 }
 
-/* While drawing fog, clicks on tokens go to the map underneath. */
-.map-canvas.fog-mode .token-slot {
+/* While drawing fog or measuring, clicks on tokens go to the map underneath. */
+.map-canvas.draw-mode .token-slot {
   pointer-events: none;
 }
 
@@ -551,4 +551,54 @@
   color: var(--text-muted);
   border: 1px solid var(--border);
   line-height: 16px;
+}
+
+/* The movement ruler (Beta 9): the same line and reading on both screens, sized for the screen
+   rather than the map (the line ignores zoom; the label is scaled back by the map's zoom). */
+.ruler-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ruler-casing {
+  stroke: var(--ruler-casing);
+  stroke-width: 7;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.ruler-line {
+  stroke: var(--ruler);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 10 6;
+  vector-effect: non-scaling-stroke;
+}
+
+.ruler-end {
+  fill: var(--ruler);
+  stroke: var(--ruler-casing);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.ruler-label {
+  position: absolute;
+  transform-origin: 0 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--tv-scrim-label);
+  color: var(--tv-dark-ink);
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Read from across the table on the TV. */
+.player .ruler-label {
+  font-size: 26px;
 }

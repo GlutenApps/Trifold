@@ -590,6 +590,23 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(player.getByTestId('fog')).toHaveCount(0);
     await fogTools.getByRole('button', { name: 'Done' }).click();
 
+    // Movement ruler (Beta 9): drag to measure; the TV shows the same reading; Escape clears it.
+    await console_.getByRole('button', { name: 'Ruler' }).click();
+    await console_.mouse.move(mid.x - 100, mid.y);
+    await console_.mouse.down();
+    await console_.mouse.move(mid.x + 100, mid.y + 40, { steps: 5 });
+    await console_.mouse.up();
+    const reading = (await console_.getByTestId('ruler-label').textContent()) ?? '';
+    expect(reading).toMatch(/^\d+ squares · \d+ ft$/);
+    await expect(player.getByTestId('ruler-label')).toHaveText(reading);
+    await console_.keyboard.press('Escape');
+    await expect(player.getByTestId('ruler-label')).toHaveCount(0);
+    await console_.keyboard.press('Escape');
+    await expect(console_.getByRole('button', { name: 'Ruler' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
     // Music: a folder is scanned in place, the track lists, and Play reaches the tray.
     const songs = await mkdtemp(join(tmpdir(), 'trifold-songs-'));
     await writeFile(join(songs, 'Tavern Night.wav'), silentWav(2));

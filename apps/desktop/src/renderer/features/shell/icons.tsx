@@ -95,6 +95,7 @@ export type IconName =
   | 'fog'
   | 'square'
   | 'polygon'
+  | 'ruler'
   | 'tally'
   | 'stopwatch'
   | 'sliders'
@@ -231,6 +232,7 @@ const PATHS: Record<IconName, string> = {
   fog: 'M7 15h10a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 6.6 9.2 3 3 0 0 0 7 15zM5 19h14M8 22h8',
   square: 'M5 5h14v14H5z',
   polygon: 'M5 8l6-4 9 3-3 6 2 6-8 1-7-5z',
+  ruler: 'M3 16L16 3l5 5L8 21zM7 12l2 2M10 9l2 2M13 6l2 2',
 };
 
 export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {

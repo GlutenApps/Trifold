@@ -318,7 +318,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 
 **Fog of war** **(built; beta, ADR 0029):** a mask per scene, saved with it, made of revealed shapes in map pixels: rectangles (snapped to grid cells when the scene has a grid) and polygons, with hide as well as reveal, Reveal all and Hide all, and undo. The player window draws it opaque, the console's map as a light mist with dark hatching, which reads on dark and light maps alike; tokens whose centre is under fog are not sent to the player and the player camera ignores them. Prep and play use the same tools: **Fog of war** in the map toolbar (`F`) opens a bar under the map with **Fog on**, **Reveal** or **Hide**, **Rectangle** (drag; Alt draws freely) or **Polygon** (click the corners; the first corner, a double-click or Enter closes it), **Reveal all**, **Hide all** and **Undo** (`Ctrl+Z` while the bar is open; this session only); right-drag pans while drawing. The player camera also ignores tokens the DM has hidden, so **Fit tokens** and **Follow active** never point at what the players cannot see. A freehand brush and soft edges are **(later)**; line-of-sight reveal is a non-goal (§1.2).
 
-**Movement ruler** **(not built; beta):** drag on a map or blank grid to measure in squares and feet.
+**Movement ruler** **(built; beta):** drag on a map or blank grid to measure in squares and feet. **Ruler** in the map toolbar (`R`) measures from square centre to square centre and keeps the reading until Escape or a new drag (a second Escape leaves the ruler); right-drag pans. Dragging any token shows how far it has moved from where the drag began. Every square is 5 ft, diagonals too (the default rule in both books). While the map is live the TV shows the same line and reading, except a measurement with an end under fog or on a hidden token.
 
 **Hex grids** **(not built; later)**.
 
@@ -471,7 +471,7 @@ What the beta adds, built top to bottom (ADR 0029). M2 and M3 became this list a
 6. **Encounter assistant:** environments, CR range, edition and difficulty band in, a budget-fitting group out, any row re-rolled (§6.4).
 7. **Fog of war, phase 1 (built):** a shape mask per scene with rectangle and polygon reveal and hide (§6.5).
 8. **CR scaler** **(built, ADR 0038)**: in the monster editor, a new CR shifts AC, HP, attack bonuses, damage, save DCs, saves and skills by how much a typical monster changes, keeping dice sizes; an attack more or fewer is offered at big steps; the name stays and a Scaled tag shows (§6.2).
-9. **Movement ruler** on map and blank-grid scenes (§6.5).
+9. **Movement ruler (built)** on map and blank-grid scenes (§6.5).
 10. **Session log:** one entry per session day, filled from what happened, with the DM's recap (§6.3).
 11. **Rules in the compendium:** the SRD rules text as a Rules kind, per edition (§6.7).
 12. **Creature art:** Set art… on a token for that token or every copy of the creature, and an Images section in the Library to find what still needs art and add it one at a time or from a folder; images shrunk to 512 px on the way in (§6.8, ADR 0033).
