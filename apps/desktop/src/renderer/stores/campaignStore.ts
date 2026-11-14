@@ -48,6 +48,8 @@ interface CampaignState {
   /** Saves an NPC; a new one (no id) is created. */
   saveNpc(npc: NPC): Promise<NPC | null>;
   removeNpc(npcId: string): Promise<void>;
+  /** Copies an NPC from another campaign into this one (new id, alive, no carried HP). */
+  copyNpc(campaignId: string, npcId: string): Promise<NPC | null>;
   saveScene(scene: Scene): Promise<Scene | null>;
   saveScenes(scenes: Scene[]): Promise<void>;
   removeScene(sceneId: string): Promise<void>;
@@ -58,8 +60,10 @@ interface CampaignState {
   /** Deletes a campaign for good; resolves true when it is gone. */
   remove(campaignId: string): Promise<boolean>;
   update(patch: Partial<Campaign>): Promise<void>;
-  quickAdd(text: string): Promise<PCCard[]>;
-  savePc(pc: PCCard): Promise<void>;
+  /** Saves a PC card; a new one (no id) is created. Resolves to the saved card. */
+  savePc(pc: PCCard): Promise<PCCard | null>;
+  /** Copies a PC card from another campaign into this one (new id, full HP). */
+  copyPc(campaignId: string, pcId: string): Promise<PCCard | null>;
   removePc(pcId: string): Promise<void>;
   saveEncounter(encounter: Encounter): Promise<Encounter | null>;
   removeEncounter(encounterId: string): Promise<void>;
@@ -77,6 +81,22 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
       return null;
     }
   };
+  /** Puts a saved or copied PC card into the open bundle, sorted by name. */
+  const putPc = (pc: PCCard | null) => {
+    const current = get().current;
+    if (!pc || !current) return;
+    const pcs = [...current.pcs.filter((p) => p.id !== pc.id), pc];
+    set({ current: { ...current, pcs: pcs.sort((a, b) => a.name.localeCompare(b.name)) } });
+  };
+
+  /** Puts a saved or copied NPC into the open bundle, sorted by name. */
+  const putNpc = (npc: NPC | null) => {
+    const current = get().current;
+    if (!npc || !current) return;
+    const npcs = [...current.npcs.filter((n) => n.id !== npc.id), npc];
+    set({ current: { ...current, npcs: npcs.sort((a, b) => a.name.localeCompare(b.name)) } });
+  };
+
   const refreshList = async () => set({ campaigns: await window.trifold.campaigns.list() });
 
   return {
@@ -207,17 +227,14 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
 
     async saveNpc(npc) {
       const saved = await guard(() => window.trifold.npcs.save(npc));
-      const current = get().current;
-      if (saved && current) {
-        const others = current.npcs.filter((n) => n.id !== saved.id);
-        set({
-          current: {
-            ...current,
-            npcs: [...others, saved].sort((a, b) => a.name.localeCompare(b.name)),
-          },
-        });
-      }
+      putNpc(saved);
       return saved;
+    },
+
+    async copyNpc(campaignId, npcId) {
+      const copied = await guard(() => window.trifold.npcs.copyFrom(campaignId, npcId));
+      putNpc(copied);
+      return copied;
     },
 
     async removeNpc(npcId) {
@@ -283,34 +300,16 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
       });
     },
 
-    async quickAdd(text) {
-      const added = await guard(() => window.trifold.pcs.quickAdd(text));
-      if (added) {
-        const current = get().current;
-        if (current) {
-          set({
-            current: {
-              ...current,
-              pcs: [...current.pcs, ...added].sort((a, b) => a.name.localeCompare(b.name)),
-            },
-          });
-        }
-      }
-      return added ?? [];
-    },
-
     async savePc(pc) {
       const saved = await guard(() => window.trifold.pcs.save(pc));
-      const current = get().current;
-      if (saved && current) {
-        const others = current.pcs.filter((p) => p.id !== saved.id);
-        set({
-          current: {
-            ...current,
-            pcs: [...others, saved].sort((a, b) => a.name.localeCompare(b.name)),
-          },
-        });
-      }
+      putPc(saved);
+      return saved;
+    },
+
+    async copyPc(campaignId, pcId) {
+      const copied = await guard(() => window.trifold.pcs.copyFrom(campaignId, pcId));
+      putPc(copied);
+      return copied;
     },
 
     async removePc(pcId) {

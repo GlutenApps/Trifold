@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CampaignBundle } from '@trifold/api';
-import type { Combatant, Encounter, PCCard, Scene, Token } from '@trifold/schema';
+import type { Combatant, Encounter, NPC, PCCard, Scene, Token } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { MapEditor } from './MapEditor';
@@ -195,6 +195,89 @@ describe('MapEditor: tools and selection', () => {
     expect(latest.grid).toMatchObject({ cellPx: 40, offsetX: 8, offsetY: 8 });
     expect(screen.queryByRole('status')).toBeNull();
     expect(container.querySelector('.align-preview')).toBeNull();
+  });
+});
+
+describe('MapEditor: placing a campaign NPC', () => {
+  const npc = (extra: Partial<NPC>): NPC => ({
+    schemaVersion: 1,
+    id: 'n1',
+    name: 'Mara Venn',
+    role: 'Bandit captain',
+    location: '',
+    notes: '',
+    isAlive: true,
+    createdAt: now,
+    updatedAt: now,
+    ...extra,
+  });
+  const mara = npc({
+    recordRef: { recordId: 'r1', sourceId: 's1', key: 'ogre', edition: '2014' },
+  });
+  const gorm = npc({ id: 'n2', name: 'Gorm Tallow', role: 'Enforcer', isAlive: false });
+
+  beforeEach(() => {
+    latest = blank;
+    useCampaignStore.setState({
+      current: {
+        campaign: { settings: { initiativeMode: 'perGroup' } },
+        pcs: [],
+        npcs: [gorm, mara],
+        encounters: [],
+        scenes: [blank],
+      } as unknown as CampaignBundle,
+    });
+    useCombatStore.setState({ encounterId: null, state: null });
+    vi.mocked(window.trifold.compendium.get).mockImplementation(async (id) =>
+      id === 'r1'
+        ? ({ kind: 'monster', name: 'Ogre', data: { size: 'L', type: 'giant' } } as never)
+        : null,
+    );
+  });
+
+  const npcTokens = () => latest.tokens.filter((t) => t.ref.kind === 'npc');
+
+  it('places an NPC sized and masked from its stat block, neutral, and moves it on a second place', async () => {
+    render(<Harness />);
+    const canvas = screen.getByTestId('map-canvas');
+    await userEvent.click(screen.getByRole('button', { name: 'Add creature or marker' }));
+    const list = screen.getByRole('list', { name: 'Campaign NPCs' });
+    await userEvent.click(within(list).getByRole('button', { name: 'Place Mara Venn' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await userEvent.click(canvas);
+
+    expect(npcTokens()).toHaveLength(1);
+    const placed = npcTokens()[0]!;
+    expect(placed).toMatchObject({
+      kind: 'creature',
+      ref: { kind: 'npc', npcId: 'n1', name: 'Mara Venn' },
+      label: 'Mara Venn',
+      maskedLabel: 'Giant',
+      footprint: 2,
+      role: 'neutral',
+      nameMasked: true,
+      dead: false,
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add creature or marker' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Move Mara Venn' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await userEvent.click(canvas);
+    expect(npcTokens().map((t) => t.id)).toEqual([placed.id]);
+  });
+
+  it('places an NPC without a stat block as a one-cell creature, dead when the NPC is', async () => {
+    render(<Harness />);
+    await userEvent.click(screen.getByRole('button', { name: 'Add creature or marker' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Place Gorm Tallow' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await userEvent.click(screen.getByTestId('map-canvas'));
+    expect(npcTokens()[0]).toMatchObject({
+      label: 'Gorm Tallow',
+      maskedLabel: 'Creature',
+      footprint: 1,
+      dead: true,
+    });
   });
 });
 

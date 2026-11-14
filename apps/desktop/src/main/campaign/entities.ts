@@ -178,6 +178,24 @@ export class CampaignEntities {
     return npc;
   }
 
+  /**
+   * Copies another campaign's NPC into the open one ("From another campaign…"): a new id, no
+   * carried HP and alive again (as a fresh-start export does, ADR 0015), its stat block link
+   * kept and its portrait file copied across. Independent of the original afterwards.
+   */
+  async copyNpcFrom(campaignId: string, npcId: string): Promise<NPC> {
+    const { slug, value } = await this.repo.readEntityFrom(campaignId, 'npcs', npcId, NPC, 'npc');
+    const { hp: _hp, portrait, ...rest } = value;
+    const copied = portrait ? await this.repo.copyAssetFrom(slug, portrait) : null;
+    return this.saveNpc({
+      ...rest,
+      id: '',
+      createdAt: '',
+      isAlive: true,
+      ...(copied ? { portrait: copied } : {}),
+    });
+  }
+
   async removeNpc(id: string): Promise<void> {
     await rm(this.repo.entityPath('npcs', id), { force: true });
     await this.repo.touch();
