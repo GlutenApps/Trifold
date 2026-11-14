@@ -3250,3 +3250,19 @@ input[type='range'].wide {
 .counter-row.editing {
   border-color: var(--accent);
 }
+
+/* The CR scaler (ADR 0038): its panel under the Challenge section, and the tag on a stat block. */
+.cr-scale-target {
+  max-width: 160px;
+  margin: 4px 0 8px;
+}
+
+.cr-scale-lines {
+  list-style: none;
+  margin: 2px 0 8px 24px;
+  padding: 0;
+}
+
+.scaled-tag {
+  white-space: nowrap;
+}

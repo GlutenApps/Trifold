@@ -364,7 +364,21 @@ export function StatBlock({ record, onOpenSpell, actions }: Props) {
         <dt>Languages</dt>
         <dd>{d.languages || '—'}</dd>
         <dt>CR</dt>
-        <dd>{crText(d)}</dd>
+        <dd>
+          {crText(d)}
+          {d.scaled && (
+            <>
+              {' '}
+              <span
+                className="badge scaled-tag"
+                data-testid="scaled-tag"
+                title="Changed with the CR scaler; the name stays the same"
+              >
+                Scaled CR {d.scaled.fromCr} → {d.scaled.toCr}
+              </span>
+            </>
+          )}
+        </dd>
       </dl>
 
       <FeatureList

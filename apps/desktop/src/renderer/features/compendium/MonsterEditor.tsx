@@ -11,6 +11,7 @@ import {
 } from '@trifold/rules';
 import type { Feature, MonsterRecord } from '@trifold/schema';
 import { Icon } from '../shell/icons';
+import { CrScalePanel } from './CrScalePanel';
 import {
   Check,
   EditorHead,
@@ -130,13 +131,17 @@ export function MonsterEditor({
     formatModifierPairs(d.saves as Record<string, number>),
   );
   const [skillsText, setSkillsText] = useState(formatModifierPairs(d.skills));
+  const [scaling, setScaling] = useState(false);
   const patch = (p: Partial<Data>) => setD((x) => ({ ...x, ...p }));
   const setFeatures = (key: FeatureList, features: Feature[]) =>
     patch({ [key]: features } as Partial<Data>);
 
   const setCr = (cr: string) => {
+    // A CR typed by hand keeps the Scaled tag honest (ADR 0038).
+    const scaled = d.scaled && d.scaled.fromCr !== cr ? { ...d.scaled, toCr: cr } : undefined;
     patch({
       cr,
+      scaled,
       xp: xpForCr(cr) ?? d.xp,
       proficiencyBonus: proficiencyBonusForCr(cr) ?? d.proficiencyBonus,
     });
@@ -214,7 +219,18 @@ export function MonsterEditor({
       <Section
         title="Challenge"
         cols={3}
-        hint="Picking a CR fills in its XP and proficiency bonus."
+        hint="Picking a CR fills in its XP and proficiency bonus. To move the whole stat block to another CR, use Scale to another CR."
+        checks={
+          <button
+            type="button"
+            className={`btn${scaling ? ' on' : ''}`}
+            aria-expanded={scaling}
+            onClick={() => setScaling((v) => !v)}
+          >
+            <Icon name="sliders" />
+            Scale to another CR…
+          </button>
+        }
       >
         <SelectField
           label="CR"
@@ -230,6 +246,24 @@ export function MonsterEditor({
           onChange={(proficiencyBonus) => patch({ proficiencyBonus })}
         />
       </Section>
+
+      {scaling && (
+        <CrScalePanel
+          data={{
+            ...d,
+            saves: parseModifierPairs(savesText) as Data['saves'],
+            skills: parseModifierPairs(skillsText),
+          }}
+          name={name || 'creature'}
+          onApply={(next) => {
+            setD(next);
+            setSavesText(formatModifierPairs(next.saves as Record<string, number>));
+            setSkillsText(formatModifierPairs(next.skills));
+            setScaling(false);
+          }}
+          onClose={() => setScaling(false)}
+        />
+      )}
 
       <Section title="Armor class and hit points" cols={4}>
         <NumberField

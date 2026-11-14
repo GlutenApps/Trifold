@@ -119,6 +119,11 @@ export const MonsterData = z.object({
   languages: z.string(),
   cr: z.string(),
   xp: z.number().int(),
+  /**
+   * Scaled with the CR scaler (ADR 0038): the CR it was first written at and the CR it is now.
+   * Shown as a tag on the stat block; the name never changes.
+   */
+  scaled: z.object({ fromCr: z.string(), toCr: z.string() }).optional(),
   damageVulnerabilities: z.array(z.string()),
   damageResistances: z.array(z.string()),
   damageImmunities: z.array(z.string()),
