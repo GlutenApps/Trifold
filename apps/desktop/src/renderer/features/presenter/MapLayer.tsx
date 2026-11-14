@@ -50,19 +50,22 @@ export function GridLines({
 
 /**
  * Fog of war (ADR 0029) as an SVG mask in map pixels: the fog is whole, then each shape in order
- * cuts it away (reveal) or paints it back (hide). The TV draws it opaque; the console's editor
- * passes `dm` for the half-strength view, with a dashed outline on the in-progress shape.
+ * cuts it away (reveal) or paints it back (hide). The TV draws it opaque. The console's editor
+ * passes `dm`: a light mist with dark diagonal hatching, so fogged areas read on dark maps and
+ * light ones alike; `zoom` keeps the hatching the same size on screen at any DM zoom.
  */
 export function FogLayer({
   width,
   height,
   shapes,
   dm = false,
+  zoom = 1,
 }: {
   width: number;
   height: number;
   shapes: readonly FogShape[];
   dm?: boolean;
+  zoom?: number;
 }) {
   const id = `fog-${useId().replace(/:/g, '')}`;
   return (
@@ -86,7 +89,26 @@ export function FogLayer({
           })}
         </mask>
       </defs>
+      {dm && (
+        <pattern
+          id={`${id}-hatch`}
+          width={14 / zoom}
+          height={14 / zoom}
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45)"
+        >
+          <line
+            x1={0}
+            y1={0}
+            x2={0}
+            y2={14 / zoom}
+            className="fog-hatch"
+            strokeWidth={1.5 / zoom}
+          />
+        </pattern>
+      )}
       <rect className="fog-fill" width={width} height={height} mask={`url(#${id})`} />
+      {dm && <rect width={width} height={height} fill={`url(#${id}-hatch)`} mask={`url(#${id})`} />}
     </svg>
   );
 }

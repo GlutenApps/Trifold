@@ -6,7 +6,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Added
 
-- **Fog of war** (ADR 0029, phase 1): reveal and hide parts of a map with rectangles (snapped to the grid) and polygons, Reveal all, Hide all and undo. The TV shows the fog opaque and never receives tokens under it; you see it at half strength.
+- **Fog of war** (ADR 0029, phase 1): reveal and hide parts of a map with rectangles (snapped to the grid) and polygons, Reveal all, Hide all and undo. The TV shows the fog opaque and never receives tokens under it; you see it as a light hatched mist that shows on dark and light maps.
 - **CR scaler** (ADR 0038): **Scale to another CR**, at the top of the monster editor's Challenge section, moves hit points, armor class, attack bonuses, save DCs, damage, saving throws and skills by how much a typical monster changes between the two CRs, keeping dice sizes; offers an attack more or fewer at big jumps; shows every change before you apply it. The name stays; a **Scaled CR** tag marks it.
 - **NPC stat blocks in the NPC form** (ADR 0039): the pencil edits the NPC and its stat block together, CR scaler included; a shared stat block becomes this NPC's own copy in the campaign, and carried HP and encounters follow.
 - **Encounter difficulty and quick scale** (ADR 0038 §7): the difficulty band, XP and a budget meter sit in one row at the top of the encounter builder; **Scale** gives each creature a CR picker and the band follows your picks before you apply them.

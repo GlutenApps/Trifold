@@ -30,7 +30,8 @@
   touch-action: none;
 }
 
-/* Fog of war (ADR 0029): opaque on the TV, half strength for the DM. */
+/* Fog of war (ADR 0029): opaque on the TV; for the DM, a light mist with dark hatching, which
+   reads on dark maps (the mist) and light ones (the hatching) alike. */
 .fog-layer,
 .fog-draft {
   position: absolute;
@@ -43,8 +44,14 @@
   fill: var(--tv-dark);
 }
 
-.fog-layer.dm {
-  opacity: 0.5;
+.fog-layer.dm .fog-fill {
+  fill: var(--fog-mist);
+  fill-opacity: 0.4;
+}
+
+.fog-hatch {
+  stroke: var(--fog-hatch);
+  stroke-opacity: 0.45;
 }
 
 /* The shape being drawn: a dashed outline that stays thin at any zoom. */

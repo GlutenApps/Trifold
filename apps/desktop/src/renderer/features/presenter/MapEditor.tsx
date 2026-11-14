@@ -1440,7 +1440,13 @@ export function MapEditor({
           )}
           <GridLines width={size.width} height={size.height} grid={grid} />
           {fog.enabled && (
-            <FogLayer dm width={size.width} height={size.height} shapes={fog.shapes} />
+            <FogLayer
+              dm
+              zoom={cam.zoom}
+              width={size.width}
+              height={size.height}
+              shapes={fog.shapes}
+            />
           )}
           {(fogDrag || fogPoints.length > 0) && (
             <svg
