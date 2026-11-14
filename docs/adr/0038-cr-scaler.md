@@ -34,8 +34,9 @@ CRs (a tough, slow hitter stays one). Tools that let you change a monster's CR d
    Multiattack going up (a Multiattack is added when there was a single attack), one fewer going
    down. Each attack roll then carries its share of the damage; save effects such as a breath
    weapon scale on their own.
-5. **The DM sees and chooses.** "Scale to another CR…" in the monster editor's Challenge section
-   opens a panel: the new CR, each change as old → new, a checkbox per part (hit points, armor
+5. **The DM sees and chooses.** "Scale to another CR", always on show at the top of the
+   monster editor's Challenge section (− and + step one CR), shows
+   the new CR, each change as old → new, a checkbox per part (hit points, armor
    class, attack bonuses, save DCs, damage, saving throws and skills, the attack offer), and
    notes on what stays (spells, Legendary Resistance uses, fixed numbers in text). **Apply to
    the form** changes the form only; Save writes, through the Save step (ADR 0035).

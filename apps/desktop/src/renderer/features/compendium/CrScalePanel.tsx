@@ -6,9 +6,11 @@ import { Icon } from '../shell/icons';
 type Data = MonsterRecord['data'];
 
 /**
- * The CR scaler (DESIGN.md §6.2, Beta 8, ADR 0038), inside the monster editor: pick a CR, see
- * each change as old → new, untick any part to leave it, and Apply to the form. Nothing is
- * written until the editor's Save. The name never changes; the stat block gets a Scaled tag.
+ * The CR scaler (DESIGN.md §6.2, Beta 8, ADR 0038), always on show at the top of the monster
+ * editor's Challenge section: step the CR down or up (or pick one), see each change as old → new,
+ * untick any part to leave it, and Apply to the form. Nothing is written until the editor's Save.
+ * The name never changes; the stat block gets a Scaled tag. The editor remounts it (key = CR)
+ * whenever the CR changes, so it always starts from the form's CR.
  */
 const PART_LABEL: Record<ScalePart, string> = {
   hp: 'Hit points',
@@ -24,12 +26,10 @@ export function CrScalePanel({
   data,
   name,
   onApply,
-  onClose,
 }: {
   data: Data;
   name: string;
   onApply(next: Data): void;
-  onClose(): void;
 }) {
   const [toCr, setToCr] = useState(data.cr);
   const [skipped, setSkipped] = useState<Set<ScalePart>>(new Set());
@@ -47,6 +47,19 @@ export function CrScalePanel({
   );
   const result = useMemo(() => scaleCr(data, toCr, parts, name), [data, toCr, parts, name]);
   const same = toCr === data.cr;
+
+  const at = CR_ORDER.indexOf(toCr as (typeof CR_ORDER)[number]);
+  const pick = (cr: string) => {
+    setToCr(cr);
+    setChangeAttacks(false);
+  };
+  const step = (by: -1 | 1) => {
+    // A CR off the list (hand-typed) steps from where it would sort: 0 down, 1 up.
+    const from = at >= 0 ? at : by > 0 ? -1 : CR_ORDER.length;
+    const next = CR_ORDER[Math.min(CR_ORDER.length - 1, Math.max(0, from + by))];
+    if (next) pick(next);
+  };
+  const reset = () => pick(data.cr);
 
   const byPart = new Map<ScalePart, ScaleLine[]>();
   for (const line of offered.lines) {
@@ -67,56 +80,66 @@ export function CrScalePanel({
 
   return (
     <div
-      className="books-panel cr-scale"
+      className={`cr-scale${same ? '' : ' open'}`}
       role="group"
       aria-label="Scale to another CR"
       data-testid="cr-scale"
       onKeyDown={(e) => {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape' && !same) {
           e.stopPropagation();
-          onClose();
+          reset();
         }
       }}
     >
-      <div className="books-panel-head">
+      <div className="cr-scale-head">
+        <Icon name="sliders" />
         <strong>Scale to another CR</strong>
-        <span className="spacer" />
-        <button
-          type="button"
-          className="chrome-btn xs"
-          aria-label="Close the CR scaler"
-          title="Close"
-          onClick={onClose}
-        >
-          <Icon name="close" />
-        </button>
+        <span className="cr-scale-stepper">
+          <button
+            type="button"
+            className="btn"
+            aria-label="One CR lower"
+            title="One CR lower"
+            disabled={at === 0}
+            onClick={() => step(-1)}
+          >
+            <Icon name="minus" />
+          </button>
+          <select
+            aria-label="New challenge rating"
+            value={toCr}
+            onChange={(e) => pick(e.target.value)}
+          >
+            {at < 0 && <option value={toCr}>{toCr || '—'}</option>}
+            {CR_ORDER.map((cr) => (
+              <option key={cr} value={cr}>
+                {cr}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="btn"
+            aria-label="One CR higher"
+            title="One CR higher"
+            disabled={at === CR_ORDER.length - 1}
+            onClick={() => step(1)}
+          >
+            <Icon name="plus" />
+          </button>
+        </span>
       </div>
-      <p className="muted small">
-        Each number moves by how much a typical monster’s does between the two CRs, so this one
-        keeps its strengths. Damage keeps its dice size and adds or drops dice. Untick anything to
-        leave it as it is. The name stays the same; the stat block shows a Scaled tag.
-      </p>
-      <label className="field cr-scale-target">
-        New CR
-        <select
-          aria-label="New challenge rating"
-          value={toCr}
-          onChange={(e) => {
-            setToCr(e.target.value);
-            setChangeAttacks(false);
-          }}
-        >
-          {CR_ORDER.map((cr) => (
-            <option key={cr} value={cr}>
-              {cr}
-            </option>
-          ))}
-        </select>
-      </label>
       {same ? (
-        <p className="muted">Pick a different CR to see what would change.</p>
+        <p className="muted small">
+          Moves hit points, armor class, attack bonuses, save DCs and damage together, by how much a
+          typical monster’s change between the two CRs. You see every change before it is applied.
+        </p>
       ) : (
         <>
+          <p className="muted small">
+            Damage keeps its dice size and adds or drops dice. Untick anything to leave it as it is.
+            The name stays the same; the stat block shows a Scaled tag.
+          </p>
           {crLine && (
             <p data-testid="cr-scale-cr">
               <strong>Challenge</strong> {crLine.from} → {crLine.to}
@@ -158,21 +181,16 @@ export function CrScalePanel({
               {offered.notes.join(' ')}
             </p>
           )}
+          <div className="books-panel-foot">
+            <button type="button" className="btn" onClick={reset}>
+              Keep CR {data.cr || '—'}
+            </button>
+            <button type="button" className="btn primary" onClick={() => onApply(result.monster)}>
+              Apply CR {toCr} to the form
+            </button>
+          </div>
         </>
       )}
-      <div className="books-panel-foot">
-        <button type="button" className="btn" onClick={onClose}>
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="btn primary"
-          disabled={same}
-          onClick={() => onApply(result.monster)}
-        >
-          Apply to the form
-        </button>
-      </div>
     </div>
   );
 }

@@ -3251,10 +3251,41 @@ input[type='range'].wide {
   border-color: var(--accent);
 }
 
-/* The CR scaler (ADR 0038): its panel under the Challenge section, and the tag on a stat block. */
-.cr-scale-target {
-  max-width: 160px;
-  margin: 4px 0 8px;
+/* The CR scaler (ADR 0038): always on show at the top of the Challenge section, set off by an
+   accent edge so it is not lost among the fields; and the tag on a stat block. */
+.cr-scale {
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.cr-scale.open {
+  border-color: var(--accent);
+}
+
+.cr-scale-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cr-scale-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.cr-scale-stepper select {
+  width: 6em;
+}
+
+.cr-scale > p {
+  margin: 6px 0;
 }
 
 .cr-scale-lines {

@@ -16,11 +16,15 @@ const goblin = records.find(
 describe('CrScalePanel', () => {
   it('previews each change, leaves out an unticked part and applies to the form', async () => {
     const onApply = vi.fn();
-    render(
-      <CrScalePanel data={goblin.data} name="Goblin Warrior" onApply={onApply} onClose={vi.fn()} />,
-    );
+    render(<CrScalePanel data={goblin.data} name="Goblin Warrior" onApply={onApply} />);
     const panel = screen.getByTestId('cr-scale');
-    expect(within(panel).getByRole('button', { name: 'Apply to the form' })).toBeDisabled();
+    // Always on show; the preview and Apply appear once another CR is picked.
+    expect(within(panel).queryByRole('button', { name: /^Apply/ })).not.toBeInTheDocument();
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'One CR higher' }));
+    expect(screen.getByRole('combobox', { name: 'New challenge rating' })).toHaveValue('1/2');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Keep CR 1/4' }));
+    expect(within(panel).queryByRole('button', { name: /^Apply/ })).not.toBeInTheDocument();
 
     await userEvent.selectOptions(
       screen.getByRole('combobox', { name: 'New challenge rating' }),
@@ -31,7 +35,7 @@ describe('CrScalePanel', () => {
     );
     expect(within(panel).getByRole('checkbox', { name: 'Hit points' })).toBeChecked();
     await userEvent.click(within(panel).getByRole('checkbox', { name: 'Armor class' }));
-    await userEvent.click(within(panel).getByRole('button', { name: 'Apply to the form' }));
+    await userEvent.click(within(panel).getByRole('button', { name: 'Apply CR 3 to the form' }));
 
     const applied = onApply.mock.calls[0]![0] as MonsterRecord['data'];
     expect(applied.cr).toBe('3');

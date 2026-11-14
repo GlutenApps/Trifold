@@ -131,7 +131,6 @@ export function MonsterEditor({
     formatModifierPairs(d.saves as Record<string, number>),
   );
   const [skillsText, setSkillsText] = useState(formatModifierPairs(d.skills));
-  const [scaling, setScaling] = useState(false);
   const patch = (p: Partial<Data>) => setD((x) => ({ ...x, ...p }));
   const setFeatures = (key: FeatureList, features: Feature[]) =>
     patch({ [key]: features } as Partial<Data>);
@@ -219,17 +218,23 @@ export function MonsterEditor({
       <Section
         title="Challenge"
         cols={3}
-        hint="Picking a CR fills in its XP and proficiency bonus. To move the whole stat block to another CR, use Scale to another CR."
-        checks={
-          <button
-            type="button"
-            className={`btn${scaling ? ' on' : ''}`}
-            aria-expanded={scaling}
-            onClick={() => setScaling((v) => !v)}
-          >
-            <Icon name="sliders" />
-            Scale to another CR…
-          </button>
+        hint="Or set the CR by hand: this changes only the CR, its XP and proficiency bonus."
+        lead={
+          <CrScalePanel
+            // A new CR (applied, or set by hand) starts the scaler afresh from it.
+            key={d.cr}
+            data={{
+              ...d,
+              saves: parseModifierPairs(savesText) as Data['saves'],
+              skills: parseModifierPairs(skillsText),
+            }}
+            name={name || 'creature'}
+            onApply={(next) => {
+              setD(next);
+              setSavesText(formatModifierPairs(next.saves as Record<string, number>));
+              setSkillsText(formatModifierPairs(next.skills));
+            }}
+          />
         }
       >
         <SelectField
@@ -246,24 +251,6 @@ export function MonsterEditor({
           onChange={(proficiencyBonus) => patch({ proficiencyBonus })}
         />
       </Section>
-
-      {scaling && (
-        <CrScalePanel
-          data={{
-            ...d,
-            saves: parseModifierPairs(savesText) as Data['saves'],
-            skills: parseModifierPairs(skillsText),
-          }}
-          name={name || 'creature'}
-          onApply={(next) => {
-            setD(next);
-            setSavesText(formatModifierPairs(next.saves as Record<string, number>));
-            setSkillsText(formatModifierPairs(next.skills));
-            setScaling(false);
-          }}
-          onClose={() => setScaling(false)}
-        />
-      )}
 
       <Section title="Armor class and hit points" cols={4}>
         <NumberField
