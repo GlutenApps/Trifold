@@ -67,9 +67,9 @@ they differ.
     NPC form, creature art, "Named"):
     - **Which role counts.** An NPC can be claimed while it is flagged player-controllable and is
       not marked enemy on the live scene or in the running fight. An NPC with no token and in no
-      fight is decided by the flag alone. NPC tokens and combatants start as **enemy** (encounter
-      templates, Track as NPC), so a friendly NPC is claimable once the DM marks it ally or
-      neutral, which is the safe default.
+      fight is decided by the flag alone. An NPC placed on a map from its own list starts
+      **neutral**, so it is claimable; one that arrives in an encounter or by Track as NPC starts
+      as **enemy**, so it is claimable once the DM marks it ally or neutral.
     - **Named stat blocks are not NPCs.** A compendium stat block marked Named and placed straight
       on the map is a creature token, not a campaign NPC, so it cannot be claimed. To hand one to
       a player, the DM makes a campaign NPC that points at it.

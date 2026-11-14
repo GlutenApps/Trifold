@@ -409,10 +409,11 @@ test('console, Library, import, search, stat block and player window all work en
     const quickSave = console_.getByRole('button', { name: 'Save', exact: true });
     await expect(quickSave).toBeDisabled();
     await quickTitle.fill('Guard took the bribe');
-    await console_
-      .getByTestId('quick-capture')
-      .getByRole('textbox', { name: 'Body' })
-      .fill('He owes the party a favour.');
+    // Typed key by key: the body is a rich-text editor, which takes a `fill` in a moment later,
+    // and a slow runner could click Save first and keep an empty body.
+    const quickBody = console_.getByTestId('quick-capture').getByRole('textbox', { name: 'Body' });
+    await quickBody.click();
+    await quickBody.pressSequentially('He owes the party a favour.');
     await quickSave.click();
     await expect(tab('Compendium')).toHaveAttribute('aria-selected', 'true');
     const notesDir = join(library, 'campaigns', 'smoke-campaign', 'notes');
@@ -426,11 +427,12 @@ test('console, Library, import, search, stat block and player window all work en
           files.map(async (f) => JSON.parse(await readFile(join(notesDir, f), 'utf8'))),
         );
         const folder = all.find((n) => n.role === 'quickNotes');
-        return all.find((n) => n.title === 'Guard took the bribe')?.parentId === folder?.id
-          ? folder?.title
+        const note = all.find((n) => n.title === 'Guard took the bribe');
+        return note && note.parentId === folder?.id
+          ? { folder: folder?.title, body: String(note.body) }
           : null;
       })
-      .toBe('Quick Notes');
+      .toEqual({ folder: 'Quick Notes', body: expect.stringContaining('owes the party') });
     await tab('Campaign').click();
     await console_.getByRole('tab', { name: /^Notes/ }).click();
     // Folders start open, so the note shows under it. (Clicking the folder would select it, and
