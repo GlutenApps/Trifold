@@ -602,3 +602,13 @@
 .player .ruler-label {
   font-size: 26px;
 }
+
+/* The map toolbar's groups: play (move, ruler), map setup (grid, backgrounds), what the players
+   see (fog, camera) and tokens, split by a thin rule rather than folded away. */
+.map-toolbar .tool-sep {
+  flex: none;
+  align-self: stretch;
+  height: 1px;
+  margin: 4px 4px;
+  background: var(--border);
+}

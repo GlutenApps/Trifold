@@ -1032,6 +1032,20 @@ export function MapEditor({
           <Icon name="hand" />
         </button>
 
+        <button
+          type="button"
+          className={`chrome-btn${mode === 'ruler' ? ' on' : ''}`}
+          aria-pressed={mode === 'ruler'}
+          aria-label="Ruler"
+          title={`Ruler: drag to measure in squares and feet; the TV shows it too (${hk('R')})`}
+          onClick={toggleRulerMode}
+        >
+          <Icon name="ruler" />
+        </button>
+
+        {/* Map setup: grid and backgrounds */}
+        <span className="tool-sep" aria-hidden="true" />
+
         <MapPop
           open={pop === 'grid'}
           onClose={closePop}
@@ -1290,16 +1304,8 @@ export function MapEditor({
           </MapPop>
         )}
 
-        <button
-          type="button"
-          className={`chrome-btn${mode === 'ruler' ? ' on' : ''}`}
-          aria-pressed={mode === 'ruler'}
-          aria-label="Ruler"
-          title={`Ruler: drag to measure in squares and feet; the TV shows it too (${hk('R')})`}
-          onClick={toggleRulerMode}
-        >
-          <Icon name="ruler" />
-        </button>
+        {/* What the players see: fog and the player camera */}
+        <span className="tool-sep" aria-hidden="true" />
 
         <button
           type="button"
@@ -1361,6 +1367,9 @@ export function MapEditor({
             </button>
           </div>
         </MapPop>
+
+        {/* Tokens: the party, NPCs, creatures and markers */}
+        <span className="tool-sep" aria-hidden="true" />
 
         <MapPop
           open={pop === 'party'}
