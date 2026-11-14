@@ -27,7 +27,8 @@ imported file, in the DM's homebrew (every campaign), or in the campaign's own c
    NPC under the creature's name and copies its stat block into this campaign's creatures under
    the same name, marked named, with `basedOn` pointing at the original. The DM can then change
    the character's stat block without touching the original. The NPC form then opens on it, since
-   its name, role and notes are what the DM changes first. A creature that is already one of
+   its name, role and notes are what the DM changes first; Cancel there undoes the add (the NPC and
+   the copy made for it) and returns to the search. A creature that is already one of
    this campaign's own is linked as it is. Linking an existing stat block from the NPC form is
    unchanged, for the many minor NPCs that share a generic one.
 3. **One pair of words for where something lives: This campaign and All campaigns.**

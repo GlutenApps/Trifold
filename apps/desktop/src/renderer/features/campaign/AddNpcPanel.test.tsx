@@ -1,9 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CompendiumRow } from '@trifold/api';
 import { AddNpcPanel } from './AddNpcPanel';
-import { statBlockHome } from './CampaignPage';
+import { CampaignPage, statBlockHome } from './CampaignPage';
 
 /** Add an NPC (ADR 0037): one place for blank, another campaign's NPC, or a compendium creature. */
 const row = (id: string, displayName: string, isNpc: boolean, sourceName: string) =>
@@ -71,7 +71,7 @@ describe('AddNpcPanel', () => {
       'its own copy of the stat block, kept in this campaign only',
     );
     await userEvent.click(await screen.findByRole('button', { name: 'Add Ahmed Noke as an NPC' }));
-    expect(h.onFromRecord).toHaveBeenCalledWith('r2');
+    expect(h.onFromRecord).toHaveBeenCalledWith('r2', '');
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Named characters only' }));
     await waitFor(() =>
@@ -119,5 +119,67 @@ describe('statBlockHome', () => {
     expect(statBlockHome('homebrew', names)).toBe('Homebrew');
     expect(statBlockHome('srd', names)).toBe('SRD 5.2');
     expect(statBlockHome('gone', names)).toBe('Compendium');
+  });
+});
+
+describe('Cancel on an NPC just added from the compendium (ADR 0037)', () => {
+  it('removes the NPC and its stat block copy and goes back to that search', async () => {
+    const npc = {
+      schemaVersion: 1,
+      id: 'npc-1',
+      name: 'Ahmed Noke',
+      role: '',
+      location: '',
+      notes: '',
+      isAlive: true,
+      recordRef: {
+        recordId: 'creature:monster:1',
+        sourceId: 'campaign:here',
+        key: 'ahmed noke',
+        edition: '2024',
+      },
+      createdAt: '',
+      updatedAt: '',
+    };
+    const bundle = {
+      campaign: { id: 'here', name: 'Silt Springs', slug: 'here', settings: {} },
+      pcs: [],
+      encounters: [],
+      adventures: [],
+      notes: [],
+      npcs: [],
+      scenes: [],
+      counters: [],
+      timers: [],
+      pinnedRolls: [],
+    };
+    vi.mocked(window.trifold.campaigns.current).mockResolvedValue(bundle as never);
+    vi.mocked(window.trifold.campaigns.bundles).mockResolvedValue([]);
+    vi.mocked(window.trifold.compendium.search).mockResolvedValue({
+      rows: [row('r2', 'Ahmed Noke', true, 'Silt')],
+      total: 1,
+      tookMs: 1,
+    });
+    vi.mocked(window.trifold.npcs.fromRecord).mockResolvedValue(npc as never);
+    vi.mocked(window.trifold.homebrew.remove).mockResolvedValue(undefined);
+
+    render(<CampaignPage />);
+    await userEvent.click(await screen.findByRole('tab', { name: /^NPCs/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add NPC' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Compendium' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Find a creature' }), 'Ahmed');
+    await userEvent.click(await screen.findByRole('button', { name: 'Add Ahmed Noke as an NPC' }));
+
+    // Its form opens on it.
+    const form = await screen.findByRole('form', { name: 'Edit Ahmed Noke' });
+    await userEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(window.trifold.npcs.remove).toHaveBeenCalledWith('npc-1'));
+    expect(window.trifold.homebrew.remove).toHaveBeenCalledWith('creature:monster:1');
+    expect(await screen.findByRole('button', { name: 'Compendium' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('textbox', { name: 'Find a creature' })).toHaveValue('Ahmed');
   });
 });

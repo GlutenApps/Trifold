@@ -10,7 +10,8 @@ import { useOtherCampaignRows } from './CharacterEditors';
  * campaign with its own copy of the stat block, so it can be changed without touching the
  * original; the NPC form opens on it next. The compendium list loads a page at a time.
  */
-type Mode = 'campaigns' | 'compendium';
+export type AddNpcMode = 'campaigns' | 'compendium';
+type Mode = AddNpcMode;
 
 const SEARCH_DELAY_MS = 150;
 /** Creatures fetched at a time; more load as the list's end scrolls into view. */
@@ -81,19 +82,25 @@ function MoreRow({ shown, total, onMore }: { shown: number; total: number; onMor
 
 export function AddNpcPanel({
   currentCampaignId,
+  initialMode = 'campaigns',
+  initialQuery = '',
   onBlank,
   onCopy,
   onFromRecord,
   onBack,
 }: {
   currentCampaignId: string;
+  /** Where to start: back from a cancelled add, the compendium search as it was. */
+  initialMode?: AddNpcMode;
+  initialQuery?: string;
   onBlank(): void;
   onCopy(campaignId: string, npcId: string): void;
-  onFromRecord(recordId: string): void;
+  /** `query` is the search it was picked from, for coming back to it. */
+  onFromRecord(recordId: string, query: string): void;
   onBack(): void;
 }) {
-  const [mode, setMode] = useState<Mode>('campaigns');
-  const [query, setQuery] = useState('');
+  const [mode, setMode] = useState<Mode>(initialMode);
+  const [query, setQuery] = useState(initialQuery);
   const [namedOnly, setNamedOnly] = useState(false);
   const npcs = useOtherCampaignRows('npc', currentCampaignId);
   const found = useCompendiumCreatures(query, namedOnly, mode === 'compendium');
@@ -218,7 +225,7 @@ export function AddNpcPanel({
                 className="chrome-btn xs"
                 aria-label={`Add ${r.displayName} as an NPC`}
                 title="Make a named NPC with its own copy of this stat block"
-                onClick={() => onFromRecord(r.id)}
+                onClick={() => onFromRecord(r.id, query)}
               >
                 <Icon name="plus" />
               </button>

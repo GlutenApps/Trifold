@@ -9,7 +9,7 @@ import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { useSourcesStore } from '../../stores/sourcesStore';
-import { AddNpcPanel } from './AddNpcPanel';
+import { AddNpcPanel, type AddNpcMode } from './AddNpcPanel';
 import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './CharacterEditors';
 
 /**
@@ -31,7 +31,19 @@ export function statBlockHome(sourceId: string, sourceNames: ReadonlyMap<string,
 type CampaignTab = 'party' | 'npcs' | 'notes';
 
 /** What the Party and NPCs tabs show: their list, a form in its place, or the copy picker. */
-type TabView<T> = { kind: 'list' } | { kind: 'edit'; item: T; key: number } | { kind: 'copy' };
+type TabView<T> =
+  | { kind: 'list' }
+  | {
+      kind: 'edit';
+      item: T;
+      key: number;
+      /**
+       * Just added from the compendium (ADR 0037): Cancel removes the NPC and the stat block copy
+       * made for it, then returns to that search.
+       */
+      added?: { creatureId: string | null; query: string };
+    }
+  | { kind: 'copy'; mode?: AddNpcMode; query?: string };
 
 /** The Party tab's header buttons: copy from another campaign, then New. NPCs use Add NPC. */
 function AddButtons({ what, onCopy, onNew }: { what: 'PC'; onCopy(): void; onNew(): void }) {
@@ -273,7 +285,18 @@ function NpcsTab() {
       <NpcEditor
         key={view.key}
         npc={view.item}
-        onCancel={() => toList()}
+        onCancel={() => {
+          const added = view.added;
+          if (!added) return toList();
+          // Not saved after all: the NPC and its stat block copy go, back to the search.
+          void (async () => {
+            await removeNpc(view.item.id);
+            if (added.creatureId) {
+              await window.trifold.homebrew.remove(added.creatureId).catch(() => undefined);
+            }
+            setView({ kind: 'copy', mode: 'compendium', query: added.query });
+          })();
+        }}
         onSave={(npc, another) => {
           void saveNpc(npc).then((saved) => {
             if (!saved) return;
@@ -288,6 +311,8 @@ function NpcsTab() {
     return (
       <AddNpcPanel
         currentCampaignId={current.campaign.id}
+        initialMode={view.mode}
+        initialQuery={view.query}
         onBack={() => toList()}
         onBlank={() => setView({ kind: 'edit', item: blankNpc(), key: 0 })}
         onCopy={(campaignId, id) => {
@@ -295,10 +320,18 @@ function NpcsTab() {
             if (copied) toList(copied.id);
           });
         }}
-        onFromRecord={(recordId) => {
-          // Straight to its form: name, role and notes are what the DM changes first.
+        onFromRecord={(recordId, query) => {
+          // Straight to its form: name, role and notes are what the DM changes first. A stat
+          // block copy was made unless the creature was already this campaign's own.
           void npcFromRecord(recordId).then((made) => {
-            if (made) setView({ kind: 'edit', item: made, key: 0 });
+            if (!made) return;
+            const copied = made.recordRef && made.recordRef.recordId !== recordId;
+            setView({
+              kind: 'edit',
+              item: made,
+              key: 0,
+              added: { creatureId: copied ? made.recordRef!.recordId : null, query },
+            });
           });
         }}
       />
