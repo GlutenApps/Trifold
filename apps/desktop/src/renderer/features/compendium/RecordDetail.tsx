@@ -8,6 +8,7 @@ import { compendiumActions, logDiceRoll } from './compendiumRolls';
 import { itemTypeName } from './formatting';
 import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
+import { UsedBy } from './UsedBy';
 
 /**
  * One open compendium record (DESIGN.md §6.1): a bar with Back, the edition dropdown, the source
@@ -451,6 +452,7 @@ export function RecordDetail({
       {homebrew && <HomebrewBar record={record} actions={homebrew} />}
       <LastRoll actor={record.displayName} />
       <Body record={record} onOpenSpell={onOpenSpell} />
+      {record.kind === 'monster' && <UsedBy record={record} />}
     </div>
   );
 }

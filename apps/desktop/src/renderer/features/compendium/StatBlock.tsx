@@ -454,7 +454,7 @@ export function StatBlock({ record, onOpenSpell, actions }: Props) {
               <strong>Environment.</strong> {d.environment.join(', ')}
             </p>
           )}
-          {d.isNpc && <p className="badge">named NPC</p>}
+          {d.isNpc && <p className="badge">named character</p>}
         </section>
       )}
 

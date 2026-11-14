@@ -183,7 +183,7 @@ export function MonsterEditor({
         title="Basics"
         cols={4}
         checks={
-          <Check label="Named NPC" checked={d.isNpc} onChange={(isNpc) => patch({ isNpc })} />
+          <Check label="Named character" checked={d.isNpc} onChange={(isNpc) => patch({ isNpc })} />
         }
       >
         <TextField label="Name" value={name} onChange={setName} span={2} required />

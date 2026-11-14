@@ -280,13 +280,14 @@ export function CompendiumPage() {
               ))}
             </select>
             <select
-              aria-label="NPC filter"
+              aria-label="Named filter"
+              title="Stat blocks an imported book marks as a named character"
               value={filters.npc ?? 'any'}
               onChange={(e) => update({ npc: e.target.value as 'any' | 'only' | 'exclude' })}
             >
-              <option value="any">NPCs and monsters</option>
-              <option value="exclude">Hide named NPCs</option>
-              <option value="only">Named NPCs only</option>
+              <option value="any">Named and unnamed</option>
+              <option value="exclude">Hide named characters</option>
+              <option value="only">Named characters only</option>
             </select>
           </>
         )}
@@ -335,7 +336,13 @@ export function CompendiumPage() {
                     {r.type ?? ''}
                   </span>
                   <span className="cell size">{r.size ? (SIZE_LABEL[r.size] ?? r.size) : ''}</span>
-                  <span className="cell npc">{r.isNpc && <span className="badge">NPC</span>}</span>
+                  <span className="cell npc">
+                    {r.isNpc && (
+                      <span className="badge" title="A named character in its book">
+                        Named
+                      </span>
+                    )}
+                  </span>
                 </>
               )}
               {kind === 'spell' && (

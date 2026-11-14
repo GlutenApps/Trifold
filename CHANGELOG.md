@@ -17,6 +17,8 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Fixed
 
+- A monster's stat block ends with **Used by**: the campaign NPCs, in any campaign, that use it as their stat block, each a link to the NPC.
+- The compendium's NPC badge and filter are now **Named** and **Named characters only**, so "NPC" means only a character in a campaign.
 - A save made while a backup was running (the daily one at start, or the one at close) could stop the app with a "JavaScript error occurred in the main process" box. A file that changes during a backup is now read as it is when its turn comes, and a backup that hits a missing file tries again instead. Campaign export reads its media the same way.
 
 ## [0.3.0] - 2026-11-07

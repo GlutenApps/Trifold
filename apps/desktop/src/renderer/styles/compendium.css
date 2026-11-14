@@ -166,7 +166,7 @@
 }
 
 .list-row.columns[data-kind='monster'] {
-  --meta-cols: 46px minmax(0, 84px) 68px 36px var(--source-col);
+  --meta-cols: 46px minmax(0, 84px) 68px 48px var(--source-col);
 }
 
 .list-row.columns[data-kind='spell'] {
@@ -212,7 +212,7 @@
 /* In a narrow list the type and size columns go before the name does. */
 @container results (max-width: 560px) {
   .list-row.columns[data-kind='monster'] {
-    --meta-cols: 46px 36px var(--source-col);
+    --meta-cols: 46px 48px var(--source-col);
   }
 
   .list-row.columns[data-kind='item'] {
@@ -689,6 +689,28 @@ input.narrow {
 .entity-row {
   border-top: 1px solid var(--border);
   padding: 6px 0;
+}
+
+/* Under a stat block: the campaign NPCs that use it, each a link. */
+.used-by {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.used-by h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.used-by ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .npc-statblock {
