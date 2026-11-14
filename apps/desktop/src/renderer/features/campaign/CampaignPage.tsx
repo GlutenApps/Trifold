@@ -296,8 +296,9 @@ function NpcsTab() {
           });
         }}
         onFromRecord={(recordId) => {
+          // Straight to its form: name, role and notes are what the DM changes first.
           void npcFromRecord(recordId).then((made) => {
-            if (made) toList(made.id);
+            if (made) setView({ kind: 'edit', item: made, key: 0 });
           });
         }}
       />

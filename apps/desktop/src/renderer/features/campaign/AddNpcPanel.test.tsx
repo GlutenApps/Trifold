@@ -82,6 +82,36 @@ describe('AddNpcPanel', () => {
   });
 });
 
+describe('AddNpcPanel paging', () => {
+  it('loads the compendium a page at a time, with how many there are', async () => {
+    vi.mocked(window.trifold.campaigns.bundles).mockResolvedValue([]);
+    vi.mocked(window.trifold.compendium.search).mockImplementation(async (q) => {
+      const n = Math.min(q.limit ?? 0, 250);
+      return {
+        rows: Array.from({ length: n }, (_, i) => row(`r${i}`, `Creature ${i}`, false, 'SRD 5.2')),
+        total: 250,
+        tookMs: 1,
+      };
+    });
+    render(
+      <AddNpcPanel
+        currentCampaignId="here"
+        onBlank={vi.fn()}
+        onCopy={vi.fn()}
+        onFromRecord={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Compendium' }));
+    expect(await screen.findByText('Showing 100 of 250')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Show more' }));
+    expect(await screen.findByText('Showing 200 of 250')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Show more' }));
+    await waitFor(() => expect(screen.getAllByTestId('creature-row')).toHaveLength(250));
+    expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
+  });
+});
+
 describe('statBlockHome', () => {
   it('names where a stat block lives in the same words as Save', () => {
     const names = new Map([['srd', 'SRD 5.2']]);

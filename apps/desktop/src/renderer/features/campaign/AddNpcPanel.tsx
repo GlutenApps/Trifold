@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CompendiumRow } from '@trifold/api';
 import { Icon } from '../shell/icons';
 import { useOtherCampaignRows } from './CharacterEditors';
@@ -8,14 +8,21 @@ import { useOtherCampaignRows } from './CharacterEditors';
  * find one to copy: an NPC from another campaign (copied as it is, its stat block brought along
  * when needed, ADR 0036), or a creature from the compendium, which becomes a named NPC in this
  * campaign with its own copy of the stat block, so it can be changed without touching the
- * original.
+ * original; the NPC form opens on it next. The compendium list loads a page at a time.
  */
 type Mode = 'campaigns' | 'compendium';
 
 const SEARCH_DELAY_MS = 150;
+/** Creatures fetched at a time; more load as the list's end scrolls into view. */
+export const CREATURE_PAGE = 100;
 
+/** The compendium's creatures for a search, a page at a time, with how many match in all. */
 function useCompendiumCreatures(query: string, namedOnly: boolean, active: boolean) {
   const [rows, setRows] = useState<CompendiumRow[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [limit, setLimit] = useState(CREATURE_PAGE);
+  // A new search starts from the first page.
+  useEffect(() => setLimit(CREATURE_PAGE), [query, namedOnly]);
   useEffect(() => {
     if (!active) return;
     let live = true;
@@ -25,17 +32,51 @@ function useCompendiumCreatures(query: string, namedOnly: boolean, active: boole
           kind: 'monster',
           text: query.trim() || undefined,
           npc: namedOnly ? 'only' : 'any',
-          limit: 50,
+          limit,
         })
-        .then((result) => live && setRows(result.rows))
+        .then((result) => {
+          if (!live) return;
+          setRows(result.rows);
+          setTotal(result.total);
+        })
         .catch(() => live && setRows([]));
     }, SEARCH_DELAY_MS);
     return () => {
       live = false;
       clearTimeout(timer);
     };
-  }, [query, namedOnly, active]);
-  return rows;
+  }, [query, namedOnly, active, limit]);
+  const more = rows !== null && rows.length < total;
+  return {
+    rows,
+    total,
+    more,
+    showMore: () => setLimit((n) => (rows && rows.length >= n ? n + CREATURE_PAGE : n)),
+  };
+}
+
+/** Loads the next page when the end of the list scrolls into view (and on click). */
+function MoreRow({ shown, total, onMore }: { shown: number; total: number; onMore(): void }) {
+  const ref = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const watch = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) onMore();
+    });
+    watch.observe(el);
+    return () => watch.disconnect();
+  }, [onMore, shown]);
+  return (
+    <li ref={ref} className="picker-more">
+      <span className="muted small">
+        Showing {shown} of {total}
+      </span>
+      <button type="button" className="btn" onClick={onMore}>
+        Show more
+      </button>
+    </li>
+  );
 }
 
 export function AddNpcPanel({
@@ -55,7 +96,8 @@ export function AddNpcPanel({
   const [query, setQuery] = useState('');
   const [namedOnly, setNamedOnly] = useState(false);
   const npcs = useOtherCampaignRows('npc', currentCampaignId);
-  const creatures = useCompendiumCreatures(query, namedOnly, mode === 'compendium');
+  const found = useCompendiumCreatures(query, namedOnly, mode === 'compendium');
+  const creatures = found.rows;
 
   const shownNpcs = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -182,6 +224,9 @@ export function AddNpcPanel({
               </button>
             </li>
           ))}
+          {found.more && (
+            <MoreRow shown={creatures.length} total={found.total} onMore={found.showMore} />
+          )}
         </ul>
       )}
     </div>
