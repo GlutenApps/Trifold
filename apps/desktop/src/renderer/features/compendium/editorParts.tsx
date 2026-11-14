@@ -16,6 +16,7 @@ export function Section({
   cols = 2,
   hint,
   checks,
+  lead,
   children,
   testId,
 }: {
@@ -24,12 +25,15 @@ export function Section({
   hint?: string;
   /** Checkboxes, on their own line under the fields. */
   checks?: ReactNode;
+  /** A tool shown above the fields, such as the monster editor's CR scaler. */
+  lead?: ReactNode;
   children?: ReactNode;
   testId?: string;
 }) {
   return (
     <section className="editor-section" aria-label={title} data-testid={testId}>
       <h3>{title}</h3>
+      {lead}
       {hint && <p className="editor-hint">{hint}</p>}
       {children && <div className={`editor-grid cols-${cols}`}>{children}</div>}
       {checks && <div className="editor-checks">{checks}</div>}

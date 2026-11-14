@@ -187,7 +187,7 @@ test('console, Library, import, search, stat block and player window all work en
     const editor = console_.getByTestId('monster-editor');
     await expect(editor).toBeVisible();
     await editor.getByLabel('Name', { exact: true }).fill('Aboleth Elder');
-    await editor.getByLabel('Challenge rating').selectOption('12');
+    await editor.getByLabel('Challenge rating', { exact: true }).selectOption('12');
     await editor.getByRole('button', { name: 'Save', exact: true }).first().click();
     await expect(editor.getByRole('heading', { name: 'Save Aboleth Elder' })).toBeVisible();
     await editor.getByRole('button', { name: 'Confirm' }).click();
@@ -264,7 +264,8 @@ test('console, Library, import, search, stat block and player window all work en
       { name: 'Thora', player: 'Sam', cls: 'Fighter', hp: '44', ac: '18', init: '1', pp: '12' },
       { name: 'Zed', player: 'Kim', cls: 'Wizard', hp: '28', ac: '12', init: '2', pp: '10' },
     ];
-    await console_.getByRole('button', { name: 'New PC card' }).click();
+    await console_.getByRole('button', { name: 'Add PC' }).click();
+    await console_.getByRole('menuitem', { name: 'Start blank' }).click();
     for (const [i, pc] of party.entries()) {
       const form = console_.getByRole('form', { name: 'New PC card' });
       // The blank form replaces the saved one only once the save lands.
@@ -293,7 +294,7 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.getByRole('tab', { name: /^NPCs/ }).click();
     // One Add NPC (ADR 0037): blank, another campaign's NPC or a compendium creature.
     await console_.getByRole('button', { name: 'Add NPC' }).click();
-    await console_.getByRole('button', { name: 'Start a blank NPC' }).click();
+    await console_.getByRole('menuitem', { name: 'Start blank' }).click();
     await console_
       .getByRole('form', { name: 'New NPC' })
       .getByLabel('Name', { exact: true })
@@ -321,7 +322,23 @@ test('console, Library, import, search, stat block and player window all work en
       .filter({ hasText: 'Goblin Warrior' })
       .locator('input[type="number"]')
       .fill('3');
-    await expect(console_.getByTestId('difficulty')).toContainText('Enemy XP 150');
+    await expect(console_.getByTestId('difficulty')).toContainText('150 XP');
+
+    // Quick scale (ADR 0038 §7): the band follows the pick before Apply; Apply saves a same-named
+    // scaled copy in this campaign, and scaling back returns the row to the original goblin.
+    const goblinRow = console_.getByTestId('template-row').filter({ hasText: 'Goblin Warrior' });
+    const quickScale = async (cr: string) => {
+      await console_.getByRole('button', { name: 'Scale', exact: true }).click();
+      await console_.getByRole('combobox', { name: /^New CR for Goblin Warrior/ }).selectOption(cr);
+      await console_.getByRole('button', { name: 'Apply 1 change' }).click();
+      await expect(console_.getByRole('group', { name: 'Scale the creatures' })).toHaveCount(0);
+    };
+    await quickScale('1');
+    await expect(goblinRow).toContainText('CR 1 · 200 XP');
+    await expect(goblinRow).toContainText('Goblin Warrior');
+    await expect(console_.getByTestId('difficulty')).toContainText('600 XP');
+    await quickScale('1/4');
+    await expect(goblinRow).toContainText('CR 1/4 · 50 XP');
     await console_.getByLabel('Add creature').fill('mage');
     // The fixture's 2014 Mage carries <slots>; the bundled 2024 one describes spells in text.
     // The picker lists every record (no edition collapse), so the sample's own Mage is reachable.

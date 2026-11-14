@@ -19,3 +19,4 @@ export * from './timers';
 export * from './sourceOrder';
 export * from './bookReview';
 export * from './updates';
+export * from './crScale';

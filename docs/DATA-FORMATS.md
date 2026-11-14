@@ -220,7 +220,7 @@ All JSON files: UTF-8, 2-space indent, `schemaVersion` integer, ULID ids, ISO ti
 One `Record` (see `DESIGN.md` §5.1) per line. Order = file order. Rewritten in full on re-import.
 
 ### 5.3 `homebrew/<id>.json`
-A single `Record` with `sourceId = "homebrew"` and `basedOn` when duplicated.
+A single `Record` with `sourceId = "homebrew"` and `basedOn` when duplicated. A monster changed with the CR scaler (ADR 0038) carries `data.scaled: { "fromCr": "1/4", "toCr": "3" }`: the CR it was first written at and the CR it is now.
 
 `campaigns/<slug>/creatures/<id>.json` (ADR 0035) has the same shape for a campaign's own creatures: `sourceId = "campaign:<slug>"` (a file copied in from another campaign takes its folder's source id when read), ids `creature:<kind>:<ulid>`, `basedOn` when made from another record. The folder is one virtual source of kind `campaign` to the index, shown only while that campaign is open and never grouped by key with Library records.
 

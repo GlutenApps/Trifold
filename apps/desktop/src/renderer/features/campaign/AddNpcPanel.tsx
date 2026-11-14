@@ -4,14 +4,19 @@ import { Icon } from '../shell/icons';
 import { useOtherCampaignRows } from './CharacterEditors';
 
 /**
- * Add an NPC (ADR 0037): the one place a campaign gains an NPC by hand. Start a blank one, or
- * find one to copy: an NPC from another campaign (copied as it is, its stat block brought along
+ * Add an NPC (ADR 0037), opened from the NPCs tab's Add menu on the list picked there (a blank
+ * NPC goes straight to the form): an NPC from another campaign (copied as it is, its stat block brought along
  * when needed, ADR 0036), or a creature from the compendium, which becomes a named NPC in this
  * campaign with its own copy of the stat block, so it can be changed without touching the
  * original; the NPC form opens on it next. The compendium list loads a page at a time.
  */
 export type AddNpcMode = 'campaigns' | 'compendium';
 type Mode = AddNpcMode;
+
+const TITLE: Record<Mode, string> = {
+  campaigns: 'Import an NPC from another campaign',
+  compendium: 'Copy an NPC from the compendium',
+};
 
 const SEARCH_DELAY_MS = 150;
 /** Creatures fetched at a time; more load as the list's end scrolls into view. */
@@ -82,24 +87,22 @@ function MoreRow({ shown, total, onMore }: { shown: number; total: number; onMor
 
 export function AddNpcPanel({
   currentCampaignId,
-  initialMode = 'campaigns',
+  mode,
   initialQuery = '',
-  onBlank,
   onCopy,
   onFromRecord,
   onBack,
 }: {
   currentCampaignId: string;
-  /** Where to start: back from a cancelled add, the compendium search as it was. */
-  initialMode?: AddNpcMode;
+  /** Which list, picked from the NPCs tab's Add menu. */
+  mode: AddNpcMode;
+  /** Back from a cancelled add: the compendium search as it was. */
   initialQuery?: string;
-  onBlank(): void;
   onCopy(campaignId: string, npcId: string): void;
   /** `query` is the search it was picked from, for coming back to it. */
   onFromRecord(recordId: string, query: string): void;
   onBack(): void;
 }) {
-  const [mode, setMode] = useState<Mode>(initialMode);
   const [query, setQuery] = useState(initialQuery);
   const [namedOnly, setNamedOnly] = useState(false);
   const npcs = useOtherCampaignRows('npc', currentCampaignId);
@@ -114,7 +117,7 @@ export function AddNpcPanel({
   }, [npcs, query]);
 
   return (
-    <div className="copy-from-campaign add-npc" aria-label="Add an NPC">
+    <div className="copy-from-campaign add-npc" aria-label={TITLE[mode]}>
       <div className="row">
         <button
           type="button"
@@ -125,32 +128,8 @@ export function AddNpcPanel({
         >
           <Icon name="left" />
         </button>
-        <h2>Add an NPC</h2>
+        <h2>{TITLE[mode]}</h2>
         <span className="spacer" />
-        <button type="button" className="btn" onClick={onBlank}>
-          <Icon name="plus" />
-          Start a blank NPC
-        </button>
-      </div>
-      <div className="row">
-        <span className="seg" role="group" aria-label="Find an NPC in">
-          <button
-            type="button"
-            className="btn"
-            aria-pressed={mode === 'campaigns'}
-            onClick={() => setMode('campaigns')}
-          >
-            Other campaigns
-          </button>
-          <button
-            type="button"
-            className="btn"
-            aria-pressed={mode === 'compendium'}
-            onClick={() => setMode('compendium')}
-          >
-            Compendium
-          </button>
-        </span>
         {mode === 'compendium' && (
           <label>
             <input

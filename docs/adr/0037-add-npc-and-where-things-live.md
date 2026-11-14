@@ -20,7 +20,7 @@ imported file, in the DM's homebrew (every campaign), or in the campaign's own c
 ## Decision
 
 1. **One Add NPC.** The NPCs tab has one plus, **Add NPC**, opening a panel in the tab with
-   **Start a blank NPC** and a search over either **Other campaigns** (their NPCs, copied as
+   **Start blank** and a search over either **Other campaigns** (their NPCs, copied as
    today, ADR 0036 bringing the stat block when needed) or the **Compendium** (any creature, with
    **Named characters only** to narrow it). The panel says what each does.
 2. **A compendium creature becomes a named NPC with its own stat block.** Picking one makes an
@@ -49,6 +49,11 @@ imported file, in the DM's homebrew (every campaign), or in the campaign's own c
    go too). A stat block from the SRD, an imported file or homebrew is never touched. The inline
    confirm first says where it is used: "Brass Dragon is in 1 encounter and 1 token. Delete Brass
    Dragon and its stat block and take it out of them?"
+
+6. **One plus, one menu, on both tabs.** The Party and NPCs tabs each have a single plus
+   (**Add PC**, **Add NPC**) opening the same menu: **Start blank**, **Import from another
+   campaign…**, and on NPCs **Copy from the compendium…**. The NPC panel then shows only the list
+   picked.
 
 ## Consequences
 

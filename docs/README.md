@@ -56,5 +56,6 @@ One short file per decision that deviates from or refines `DESIGN.md`. Number th
 | [0033](adr/0033-creature-art.md) | Creature art replaces bulk matching: Set art… for one token or every copy, an Images section in the Library, images shrunk to 512 px. |
 | [0034](adr/0034-update-check.md) | An opt-in update check: asked once, at most daily, reads the public releases list, opens the release page; the release addresses are the one place the repo names a site. |
 | [0035](adr/0035-edit-in-place-and-campaign-creatures.md) | One Edit on a creature wherever it is; Save asks where it lives, its name and where to use it; campaign creatures stored in the campaign folder. |
+| [0038](adr/0038-cr-scaler.md) | The CR scaler shifts each number by how much a typical monster changes, keeps dice sizes, offers an attack more or fewer, and tags rather than renames. |
 | [0037](adr/0037-add-npc-and-where-things-live.md) | One Add NPC (blank, another campaign, or a compendium creature with its own stat block copy); "This campaign" and "All campaigns" wherever a place is named. |
 | [0036](adr/0036-per-campaign-sources.md) | Each imported source says which campaigns show it; a campaign file starts as its campaign only; a copied NPC brings its stat block. |

@@ -44,29 +44,25 @@ describe('AddNpcPanel', () => {
     });
   });
 
-  const setup = () => {
-    const handlers = { onBlank: vi.fn(), onCopy: vi.fn(), onFromRecord: vi.fn(), onBack: vi.fn() };
-    render(<AddNpcPanel currentCampaignId="here" {...handlers} />);
+  const setup = (mode: 'campaigns' | 'compendium') => {
+    const handlers = { onCopy: vi.fn(), onFromRecord: vi.fn(), onBack: vi.fn() };
+    render(<AddNpcPanel currentCampaignId="here" mode={mode} {...handlers} />);
     return handlers;
   };
 
-  it('starts blank, or copies an NPC from another campaign', async () => {
-    const h = setup();
-    expect(screen.getByRole('button', { name: 'Other campaigns' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+  it('copies an NPC from another campaign', async () => {
+    const h = setup('campaigns');
+    expect(
+      screen.getByRole('heading', { name: 'Import an NPC from another campaign' }),
+    ).toBeInTheDocument();
     await userEvent.click(
       await screen.findByRole('button', { name: 'Copy Captain Vex from Pale Tower' }),
     );
     expect(h.onCopy).toHaveBeenCalledWith('other', 'vex');
-    await userEvent.click(screen.getByRole('button', { name: 'Start a blank NPC' }));
-    expect(h.onBlank).toHaveBeenCalled();
   });
 
   it('says a compendium creature becomes a named NPC with its own copy, and can list only named', async () => {
-    const h = setup();
-    await userEvent.click(screen.getByRole('button', { name: 'Compendium' }));
+    const h = setup('compendium');
     expect(screen.getByTestId('add-npc-hint')).toHaveTextContent(
       'its own copy of the stat block, kept in this campaign only',
     );
@@ -96,20 +92,20 @@ describe('AddNpcPanel paging', () => {
     render(
       <AddNpcPanel
         currentCampaignId="here"
-        onBlank={vi.fn()}
+        mode="compendium"
         onCopy={vi.fn()}
         onFromRecord={vi.fn()}
         onBack={vi.fn()}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Compendium' }));
     expect(await screen.findByText('Showing 100 of 250')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Show more' }));
     expect(await screen.findByText('Showing 200 of 250')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Show more' }));
     await waitFor(() => expect(screen.getAllByTestId('creature-row')).toHaveLength(250));
     expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();
-  });
+    // 250 rows render slowly beside the rest of the suite.
+  }, 20_000);
 });
 
 describe('statBlockHome', () => {
@@ -166,7 +162,8 @@ describe('Cancel on an NPC just added from the compendium (ADR 0037)', () => {
     render(<CampaignPage />);
     await userEvent.click(await screen.findByRole('tab', { name: /^NPCs/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Add NPC' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Compendium' }));
+    // One plus, one menu (ADR 0037): the same on the Party tab, which has no compendium choice.
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Copy from the compendium…' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Find a creature' }), 'Ahmed');
     await userEvent.click(await screen.findByRole('button', { name: 'Add Ahmed Noke as an NPC' }));
 
@@ -176,10 +173,9 @@ describe('Cancel on an NPC just added from the compendium (ADR 0037)', () => {
 
     await waitFor(() => expect(window.trifold.npcs.remove).toHaveBeenCalledWith('npc-1'));
     expect(window.trifold.homebrew.remove).toHaveBeenCalledWith('creature:monster:1');
-    expect(await screen.findByRole('button', { name: 'Compendium' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(
+      await screen.findByRole('heading', { name: 'Copy an NPC from the compendium' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Find a creature' })).toHaveValue('Ahmed');
   });
 });

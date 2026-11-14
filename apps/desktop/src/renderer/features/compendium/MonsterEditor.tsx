@@ -11,6 +11,7 @@ import {
 } from '@trifold/rules';
 import type { Feature, MonsterRecord } from '@trifold/schema';
 import { Icon } from '../shell/icons';
+import { CrScalePanel } from './CrScalePanel';
 import {
   Check,
   EditorHead,
@@ -135,8 +136,11 @@ export function MonsterEditor({
     patch({ [key]: features } as Partial<Data>);
 
   const setCr = (cr: string) => {
+    // A CR typed by hand keeps the Scaled tag honest (ADR 0038).
+    const scaled = d.scaled && d.scaled.fromCr !== cr ? { ...d.scaled, toCr: cr } : undefined;
     patch({
       cr,
+      scaled,
       xp: xpForCr(cr) ?? d.xp,
       proficiencyBonus: proficiencyBonusForCr(cr) ?? d.proficiencyBonus,
     });
@@ -214,7 +218,24 @@ export function MonsterEditor({
       <Section
         title="Challenge"
         cols={3}
-        hint="Picking a CR fills in its XP and proficiency bonus."
+        hint="Or set the CR by hand: this changes only the CR, its XP and proficiency bonus."
+        lead={
+          <CrScalePanel
+            // A new CR (applied, or set by hand) starts the scaler afresh from it.
+            key={d.cr}
+            data={{
+              ...d,
+              saves: parseModifierPairs(savesText) as Data['saves'],
+              skills: parseModifierPairs(skillsText),
+            }}
+            name={name || 'creature'}
+            onApply={(next) => {
+              setD(next);
+              setSavesText(formatModifierPairs(next.saves as Record<string, number>));
+              setSkillsText(formatModifierPairs(next.skills));
+            }}
+          />
+        }
       >
         <SelectField
           label="CR"

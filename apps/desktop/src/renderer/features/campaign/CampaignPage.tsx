@@ -9,6 +9,7 @@ import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { useSourcesStore } from '../../stores/sourcesStore';
+import { AddMenu } from './AddMenu';
 import { AddNpcPanel, type AddNpcMode } from './AddNpcPanel';
 import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './CharacterEditors';
 import { describePlan } from '../encounters/replaceReferences';
@@ -65,34 +66,6 @@ type TabView<T> =
       added?: { creatureId: string | null; query: string };
     }
   | { kind: 'copy'; mode?: AddNpcMode; query?: string };
-
-/** The Party tab's header buttons: copy from another campaign, then New. NPCs use Add NPC. */
-function AddButtons({ what, onCopy, onNew }: { what: 'PC'; onCopy(): void; onNew(): void }) {
-  const newLabel = 'New PC card';
-  return (
-    <>
-      <button
-        type="button"
-        className="btn"
-        aria-label={`Copy a ${what} from another campaign`}
-        title={`Copy a ${what} from another campaign`}
-        onClick={onCopy}
-      >
-        <Icon name="plus" />
-        From another campaign…
-      </button>
-      <button
-        type="button"
-        className="chrome-btn primary"
-        aria-label={newLabel}
-        title={newLabel}
-        onClick={onNew}
-      >
-        <Icon name="plus" />
-      </button>
-    </>
-  );
-}
 
 function PartyTab() {
   const current = useCampaignStore((s) => s.current);
@@ -161,10 +134,20 @@ function PartyTab() {
         >
           Long rest
         </button>
-        <AddButtons
-          what="PC"
-          onCopy={() => setView({ kind: 'copy' })}
-          onNew={() => setView({ kind: 'edit', item: blankPc(), key: 0 })}
+        <AddMenu
+          label="Add PC"
+          choices={[
+            {
+              label: 'Start blank',
+              icon: 'pencil',
+              run: () => setView({ kind: 'edit', item: blankPc(), key: 0 }),
+            },
+            {
+              label: 'Import from another campaign…',
+              icon: 'campaign',
+              run: () => setView({ kind: 'copy' }),
+            },
+          ]}
         />
       </div>
       {current.pcs.length === 0 && <p className="muted">No PC cards yet.</p>}
@@ -332,10 +315,9 @@ function NpcsTab() {
     return (
       <AddNpcPanel
         currentCampaignId={current.campaign.id}
-        initialMode={view.mode}
+        mode={view.mode ?? 'campaigns'}
         initialQuery={view.query}
         onBack={() => toList()}
-        onBlank={() => setView({ kind: 'edit', item: blankNpc(), key: 0 })}
         onCopy={(campaignId, id) => {
           void copyNpc(campaignId, id).then((copied) => {
             if (copied) toList(copied.id);
@@ -364,15 +346,26 @@ function NpcsTab() {
       <div className="row">
         <h2>NPCs</h2>
         <span className="spacer" />
-        <button
-          type="button"
-          className="chrome-btn primary"
-          aria-label="Add NPC"
-          title="Add NPC: blank, from another campaign or from the compendium"
-          onClick={() => setView({ kind: 'copy' })}
-        >
-          <Icon name="plus" />
-        </button>
+        <AddMenu
+          label="Add NPC"
+          choices={[
+            {
+              label: 'Start blank',
+              icon: 'pencil',
+              run: () => setView({ kind: 'edit', item: blankNpc(), key: 0 }),
+            },
+            {
+              label: 'Import from another campaign…',
+              icon: 'campaign',
+              run: () => setView({ kind: 'copy', mode: 'campaigns' }),
+            },
+            {
+              label: 'Copy from the compendium…',
+              icon: 'compendium',
+              run: () => setView({ kind: 'copy', mode: 'compendium' }),
+            },
+          ]}
+        />
       </div>
       {current.npcs.length === 0 && <p className="muted">No NPCs yet.</p>}
       {current.npcs.map((n) => (

@@ -973,11 +973,131 @@ input.narrow {
   }
 }
 
-.difficulty {
+/* The encounter's difficulty (ADR 0038 §7): one row at the top of the builder, its band in
+   colour, a meter against the party's budget, and Scale opening the quick scaler under it. */
+.difficulty-wrap {
+  margin: 10px 0 4px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.difficulty-wrap.open {
+  border-color: var(--accent);
+}
+
+.difficulty-bar {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 8px 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 12px;
+}
+
+.difficulty-band {
+  padding: 1px 10px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.band-trivial .difficulty-band {
+  color: var(--text-muted);
+}
+
+.band-low .difficulty-band {
+  color: var(--ok);
+}
+
+.band-moderate .difficulty-band {
+  color: var(--warn);
+}
+
+.band-high .difficulty-band {
+  color: var(--danger);
+}
+
+.difficulty-meter {
+  position: relative;
+  flex: 1 1 120px;
+  max-width: 260px;
+  height: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+}
+
+.difficulty-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--radius-sm);
+  background: var(--text-muted);
+  transition: width 0.15s ease-out;
+}
+
+.band-low .difficulty-fill {
+  background: var(--ok);
+}
+
+.band-moderate .difficulty-fill {
+  background: var(--warn);
+}
+
+.band-high .difficulty-fill {
+  background: var(--danger);
+}
+
+.difficulty-tick {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--text);
+  opacity: 0.6;
+}
+
+.quick-scale {
+  padding: 0 12px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.quick-scale-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.quick-scale-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.quick-scale-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 6em 5.5em;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.quick-scale-list li.changed .quick-scale-name strong {
+  color: var(--accent);
+}
+
+.quick-scale-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.quick-scale-xp {
+  text-align: right;
 }
 
 .add-panel {
@@ -3249,4 +3369,51 @@ input[type='range'].wide {
 
 .counter-row.editing {
   border-color: var(--accent);
+}
+
+/* The CR scaler (ADR 0038): always on show at the top of the Challenge section, set off by an
+   accent edge so it is not lost among the fields; and the tag on a stat block. */
+.cr-scale {
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.cr-scale.open {
+  border-color: var(--accent);
+}
+
+.cr-scale-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cr-scale-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.cr-scale-stepper select {
+  width: 6em;
+}
+
+.cr-scale > p {
+  margin: 6px 0;
+}
+
+.cr-scale-lines {
+  list-style: none;
+  margin: 2px 0 8px 24px;
+  padding: 0;
+}
+
+.scaled-tag {
+  white-space: nowrap;
 }
