@@ -1,6 +1,6 @@
 # ADR 0035 · Edit a creature where it is, choose at Save; campaign creatures
 
-**Status:** proposed, 2026-11-15. Amends `DESIGN.md` §6.2 and the way Beta 3 (Save to
+**Status:** accepted, 2026-11-15. Amends `DESIGN.md` §6.2 and the way Beta 3 (Save to
 compendium) and Beta 4 (Replace references) are presented; sets where the CR scaler (Beta 8)
 lives; gives Beta 5's campaign-only stat blocks their storage.
 
