@@ -11,7 +11,8 @@ import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
 import { AddPanel } from './AddPanel';
 import { CombatView } from './CombatView';
-import { retargetToNpc } from './templates';
+import { registerBuilderDraft, saveToCompendium } from './saveToCompendium';
+import { retargetToNpc, retargetToRecord } from './templates';
 
 /**
  * The Encounters major (DESIGN.md §6.4, ADR 0005): the encounter list and builder while no
@@ -46,11 +47,13 @@ function TemplateRow({
   onChange,
   onRemove,
   onTrackAsNpc,
+  onSaveToCompendium,
 }: {
   t: CombatantTemplate;
   onChange(patch: Partial<CombatantTemplate>): void;
   onRemove(): void;
   onTrackAsNpc(): void;
+  onSaveToCompendium(): void;
 }) {
   const [editing, setEditing] = useState(false);
   const name = t.label || t.ref.name;
@@ -151,6 +154,17 @@ function TemplateRow({
             onClick={onTrackAsNpc}
           >
             <Icon name="person" />
+          </button>
+        )}
+        {t.ref.kind === 'record' && (
+          <button
+            type="button"
+            className="chrome-btn"
+            aria-label={`Save ${name} to compendium`}
+            title="Save to compendium: open a homebrew copy with this label and HP, to edit and keep"
+            onClick={onSaveToCompendium}
+          >
+            <Icon name="compendium" />
           </button>
         )}
         <button
@@ -335,6 +349,7 @@ function Builder({
                 set({ combatants: encounter.combatants.filter((x) => x.id !== t.id) })
               }
               onTrackAsNpc={() => void trackAsNpc(t)}
+              onSaveToCompendium={() => void saveToCompendium(encounter, t)}
             />
           ))}
         </div>
@@ -436,6 +451,23 @@ export function EncountersPage() {
     });
     return true;
   });
+
+  // Save to compendium's switch goes into this copy while the builder shows the encounter, so
+  // the autosave below keeps it rather than overwriting it.
+  const draftId = draft?.id;
+  useEffect(() => {
+    if (!draftId) return;
+    registerBuilderDraft({
+      encounterId: draftId,
+      retarget: (templateId, target) =>
+        setDraft((d) =>
+          d && d.id === draftId
+            ? { ...d, combatants: retargetToRecord(d.combatants, templateId, target) }
+            : d,
+        ),
+    });
+    return () => registerBuilderDraft(null);
+  }, [draftId]);
 
   // Autosave the builder draft.
   useEffect(() => {

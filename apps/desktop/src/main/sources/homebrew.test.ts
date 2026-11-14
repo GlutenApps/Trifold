@@ -46,6 +46,19 @@ describe('HomebrewRepository', () => {
     expect(await repo.get(copy.id)).toMatchObject({ id: copy.id });
   });
 
+  it('makes the same copy without writing it until it is saved', async () => {
+    const draft = repo.copyOf(goblin);
+    expect(draft).toMatchObject({
+      sourceId: 'homebrew',
+      displayName: 'Copy of Goblin Warrior',
+      basedOn: { recordId: goblin.id, sourceId: 'src' },
+    });
+    expect(await repo.list()).toEqual([]);
+    const saved = await repo.save({ ...draft, displayName: 'Grik' });
+    expect((await repo.list()).map((r) => r.displayName)).toEqual(['Grik']);
+    expect(saved.key).toBe('grik');
+  });
+
   it('re-derives attacks and saves from edited feature text on save', async () => {
     const copy = (await repo.duplicate(goblin)) as MonsterRecord;
     const edited: MonsterRecord = {

@@ -45,7 +45,13 @@ import {
   combatantFromPc,
   customCombatant,
 } from '../features/encounters/build';
-import { retargetToNpc, withTokenLink } from '../features/encounters/templates';
+import {
+  retargetCombatants,
+  retargetToNpc,
+  retargetToRecord,
+  withTokenLink,
+  type RecordTarget,
+} from '../features/encounters/templates';
 import { autoLink, sceneInPlay, type TokenLink } from '../features/presenter/tokenLinks';
 import {
   cancelSave,
@@ -166,6 +172,11 @@ interface CombatStoreState {
   setNotes(notes: string): Promise<void>;
   /** Turns a creature into a named NPC whose HP carries between fights. */
   trackAsNpc(id: string): Promise<NPC | null>;
+  /**
+   * Save to compendium's "Use it in this encounter" while this fight is loaded: the row and its
+   * fighters point at the saved record; HP, conditions and turn order stay.
+   */
+  retargetToRecord(templateId: string, target: RecordTarget): void;
   remove(id: string): void;
   move(id: string, direction: -1 | 1): void;
   useCounter(id: string, counterId: string, delta: number): void;
@@ -880,6 +891,12 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       if (encounter)
         saveTemplates(retargetToNpc(encounter.combatants, c.templateId, npc, c.tokenId));
       return npc;
+    },
+
+    retargetToRecord(templateId, target) {
+      update((s) => ({ ...s, combatants: retargetCombatants(s.combatants, templateId, target) }));
+      const encounter = currentEncounter();
+      if (encounter) saveTemplates(retargetToRecord(encounter.combatants, templateId, target));
     },
 
     remove(id) {

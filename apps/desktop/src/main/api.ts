@@ -315,6 +315,13 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         await syncIndex(index, catalog, store, ctx.logger);
         return copy;
       },
+      async draft(recordId) {
+        const homebrew = ctx.session.homebrew;
+        if (!homebrew) throw new Error('No Library is open');
+        const original = ctx.session.require().index.get(recordId);
+        if (!original) throw new Error('Record not found');
+        return homebrew.copyOf(original);
+      },
       async save(record) {
         const { index, catalog, store } = ctx.session.require();
         const homebrew = ctx.session.homebrew;

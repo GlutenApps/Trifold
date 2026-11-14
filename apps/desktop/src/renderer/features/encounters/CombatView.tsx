@@ -6,6 +6,7 @@ import { registerHotkey } from '../../hotkeys';
 import { navigate } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore, type DamageTarget } from '../../stores/combatStore';
+import { saveToCompendium } from './saveToCompendium';
 import { COMBAT_NOTES_SLOT, hasPendingSave, scheduleSave } from '../../stores/pendingSaves';
 import { useIconStore } from '../../stores/iconStore';
 import { usePresenterStore } from '../../stores/presenterStore';
@@ -368,6 +369,24 @@ function CombatantDrawer({
                 onClick={() => void store.trackAsNpc(c.id)}
               >
                 <Icon name="person" />
+              </button>
+            )}
+            {c.ref.kind === 'record' && c.templateId && !c.isLair && (
+              <button
+                type="button"
+                className="chrome-btn"
+                aria-label={`Save ${c.name} to compendium`}
+                title="Save to compendium: open a homebrew copy of this creature to edit and keep"
+                onClick={() => {
+                  const { encounterId } = useCombatStore.getState();
+                  const encounter = useCampaignStore
+                    .getState()
+                    .current?.encounters.find((e) => e.id === encounterId);
+                  const row = encounter?.combatants.find((t) => t.id === c.templateId);
+                  if (encounter && row) void saveToCompendium(encounter, row);
+                }}
+              >
+                <Icon name="compendium" />
               </button>
             )}
             {map && !c.isLair && (

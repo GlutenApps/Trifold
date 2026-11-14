@@ -90,8 +90,11 @@ export class HomebrewRepository {
     }
   }
 
-  /** A copy of any record placed in homebrew with `basedOn` provenance (DESIGN.md §6.2). */
-  async duplicate(original: CompendiumRecord): Promise<CompendiumRecord> {
+  /**
+   * A copy of any record as a homebrew record with `basedOn` provenance (DESIGN.md §6.2), not yet
+   * written: Duplicate saves it at once, Save to compendium opens it in the editor first.
+   */
+  copyOf(original: CompendiumRecord): CompendiumRecord {
     // A distinct key too: normalizeKey strips parentheses, so no "(copy)" suffix.
     const displayName = `Copy of ${original.displayName}`;
     const copy = CompendiumRecord.parse({
@@ -105,7 +108,12 @@ export class HomebrewRepository {
       basedOn: { recordId: original.id, sourceId: original.sourceId },
     });
     delete (copy as { sourcePage?: number }).sourcePage;
-    return this.save(copy);
+    return copy;
+  }
+
+  /** A copy of any record placed in homebrew (DESIGN.md §6.2). */
+  async duplicate(original: CompendiumRecord): Promise<CompendiumRecord> {
+    return this.save(this.copyOf(original));
   }
 
   /**
