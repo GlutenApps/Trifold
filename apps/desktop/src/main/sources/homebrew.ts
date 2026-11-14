@@ -42,12 +42,17 @@ export const LIBRARY_HOMEBREW: RecordFolder = {
 /** A campaign's own source id (ADR 0035): one per campaign folder. */
 export const campaignSourceId = (slug: string) => `campaign:${slug}`;
 
-/** A campaign's creatures (ADR 0035): `campaigns/<slug>/creatures/`, its own virtual source. */
+/**
+ * A campaign's creatures (ADR 0035): `campaigns/<slug>/creatures/`, its own virtual source. Only
+ * the open campaign's show, so the source pill names it "This campaign" (ADR 0037).
+ */
+export const CAMPAIGN_SOURCE_NAME = 'This campaign';
+
 export function campaignCreatures(slug: string, campaignName: string): RecordFolder {
   return {
     dir: `campaigns/${slug}/creatures`,
     sourceId: campaignSourceId(slug),
-    name: campaignName,
+    name: CAMPAIGN_SOURCE_NAME,
     kind: 'campaign',
     idPrefix: 'creature',
     sourceBook: campaignName,
@@ -198,7 +203,7 @@ export class HomebrewRepository {
    */
   async save(record: CompendiumRecord): Promise<CompendiumRecord> {
     if (record.sourceId !== this.folder.sourceId)
-      throw new Error(`Only ${this.folder.name} records can be saved here`);
+      throw new Error(`Only ${this.folder.sourceBook} records can be saved here`);
     if (!ID.test(record.id)) throw new Error('Bad record id');
     const displayName = record.displayName.trim();
     if (!displayName) throw new Error('A name is required');

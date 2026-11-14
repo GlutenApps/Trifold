@@ -4,7 +4,8 @@ import { CampaignEntities } from './campaign/entities';
 import { importSceneImage } from './campaign/images';
 import { importCampaignXml } from './campaign/importCampaign';
 import { syncIndex } from './index/sync';
-import { bringStatBlock, shareUsedSources } from './sources/campaignScope';
+import { CAMPAIGN_SCHEMA_VERSION } from '@trifold/schema';
+import { bringStatBlock, ownStatBlock, shareUsedSources } from './sources/campaignScope';
 import type { LibrarySession } from './library/session';
 import { errorMessage, type Logger } from './log';
 
@@ -198,6 +199,36 @@ export function createCampaignApi(
         const saved = await entities().saveNpc(value);
         if (added) await resync();
         return saved;
+      },
+      async fromRecord(recordId) {
+        const { index } = session.require();
+        const record = index.get(recordId);
+        if (!record || record.kind !== 'monster') {
+          throw new Error('Only a creature from the compendium can become an NPC');
+        }
+        const view = session.openCampaignView();
+        const creatures = view ? await session.creaturesFor(view.sourceId) : null;
+        if (!creatures) throw new Error('Open a campaign first');
+        const own = await ownStatBlock(record, creatures);
+        const npc = await entities().saveNpc({
+          schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+          id: '',
+          name: own.displayName,
+          role: '',
+          location: '',
+          notes: '',
+          isAlive: true,
+          recordRef: {
+            recordId: own.id,
+            sourceId: own.sourceId,
+            key: own.key,
+            edition: own.edition,
+          },
+          createdAt: '',
+          updatedAt: '',
+        });
+        if (own !== record) await resync();
+        return npc;
       },
     },
     counters: {

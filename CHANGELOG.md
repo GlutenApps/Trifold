@@ -6,9 +6,10 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Added
 
+- **Add NPC** (ADR 0037): one plus on the NPCs tab to start a blank NPC, copy one from another campaign, or turn a compendium creature into a named NPC with its own copy of the stat block in this campaign. Each NPC row says where its stat block lives.
 - **Per-campaign sources** (ADR 0036): an imported file can show in every campaign or only in the ones you tick, from its row in Library › Compendium › Sources. A Game Master campaign file's stat blocks start as that campaign only, and ones imported before this are linked to the campaign that uses them. Copying an NPC from another campaign brings its stat block along when this campaign can't see it.
 - **Edit, then choose at Save** (ADR 0035): one **Edit** on every record, on a creature's row in the builder and on a fighter in the tracker, opening the editor right there. Save asks the name, where to keep it (this campaign or your compendium; for your own, update or save as new) and where to use it (just this one, this fight or encounter, the campaign), showing only what applies; Confirm writes it. **Duplicate to homebrew**, the book icon and the choice above the editor are gone.
-- **Campaign creatures**: a campaign keeps its own creatures, shown in the compendium only while it is open; **Add to my compendium** copies one for every campaign. They travel with campaign export.
+- **Campaign creatures**: a campaign keeps its own creatures, shown in the compendium only while it is open; **Use in all campaigns** copies one into your homebrew. They travel with campaign export.
 - **Replace references**: a homebrew copy's page offers **Replace <original> in this campaign…**, which shows what will change and then switches every encounter row, fight and map token that uses the original (labels and HP overrides stay), and **Put <original> back…** to undo it. Save to compendium can also use the copy everywhere in the campaign (DESIGN.md §6.2).
 - **Save to compendium** on a creature row in the encounter builder and on a creature in the tracker: opens the homebrew monster editor on an unsaved copy named after the row's label and with its HP override; Save keeps it in homebrew and, with **Use it in …** ticked, puts it in that encounter's row, fight and tokens in place of the original (DESIGN.md §6.2).
 - An opt-in update check (ADR 0034): the Campaigns page asks once, Settings › Updates has the switch and Check now, and with it on Trifold reads the project's public releases list at most once a day and shows an **Update available** button in the top bar. Download opens the release page; nothing is installed for you.
@@ -20,6 +21,10 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 - Quick notes (ADR 0018): a dock tool and `Ctrl+N` to write a titled note mid-session without leaving the current tab; notes go into a Quick Notes folder that is made when missing, and the tool lists and edits every note in it.
 - Conditions in the compendium: the SRD 5.1 and 5.2.1 condition texts are fetched at build time with the rest of the snapshot, listed under a Conditions tab, found by search, and opened from the combat tracker's condition lane.
 - A sample campaign, *The Lantern at Greyford*: every Library gets it once, and Settings › Sample campaign adds it back or resets it (ADR 0016). Maps by 2-Minute Tabletop (CC BY-NC 4.0, for pre-1.0 testing), with night/day and flood variants; our own adventure text and SRD creatures.
+
+### Changed
+
+- Where something lives is now *This campaign* or *All campaigns* everywhere: the Save step, **Use in all campaigns** (was Add to my compendium), and campaign creatures' source pill. **Open in compendium** under an NPC's stat block is now **Open stat block**.
 
 ### Fixed
 

@@ -50,6 +50,8 @@ interface CampaignState {
   removeNpc(npcId: string): Promise<void>;
   /** Copies an NPC from another campaign into this one (new id, alive, no carried HP). */
   copyNpc(campaignId: string, npcId: string): Promise<NPC | null>;
+  /** A named NPC from a compendium creature, with its own copy of the stat block (ADR 0037). */
+  npcFromRecord(recordId: string): Promise<NPC | null>;
   saveScene(scene: Scene): Promise<Scene | null>;
   saveScenes(scenes: Scene[]): Promise<void>;
   removeScene(sceneId: string): Promise<void>;
@@ -235,6 +237,12 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
       const copied = await guard(() => window.trifold.npcs.copyFrom(campaignId, npcId));
       putNpc(copied);
       return copied;
+    },
+
+    async npcFromRecord(recordId) {
+      const made = await guard(() => window.trifold.npcs.fromRecord(recordId));
+      putNpc(made);
+      return made;
     },
 
     async removeNpc(npcId) {

@@ -20,6 +20,7 @@ import {
   canLimitToCampaigns,
   isCampaignFileSource,
   linkCampaignFileSources,
+  ownStatBlock,
   shareUsedSources,
   sourceShowsIn,
 } from './campaignScope';
@@ -190,5 +191,32 @@ describe('linking and sharing sources on disk', () => {
     expect((await bringStatBlock(gone, ctx)).value).toBe(gone);
     const plain: { name: string; recordRef?: typeof ref } = { name: 'Marla' };
     expect((await bringStatBlock(plain, ctx)).value).toBe(plain);
+  });
+});
+
+describe('a compendium creature as a named NPC’s own stat block (ADR 0037)', () => {
+  let root: string;
+  afterEach(() => rm(root, { recursive: true, force: true }));
+
+  it('copies it into the campaign’s creatures under the same name, named, with provenance', async () => {
+    root = await mkdtemp(join(tmpdir(), 'trifold-own-'));
+    const store = await LibraryStore.open(root);
+    const creatures = new HomebrewRepository(
+      store,
+      logger,
+      campaignCreatures('greyford', 'Greyford'),
+    );
+    const own = await ownStatBlock(goblin, creatures);
+    expect(own).toMatchObject({
+      sourceId: 'campaign:greyford',
+      displayName: goblin.displayName,
+      key: goblin.key,
+      basedOn: { recordId: goblin.id, sourceId: 'file-a' },
+    });
+    expect(own.kind === 'monster' && own.data.isNpc).toBe(true);
+    expect((await creatures.list()).map((r) => r.id)).toEqual([own.id]);
+    // One of the campaign's own creatures is used as it is.
+    expect(await ownStatBlock(own, creatures)).toBe(own);
+    expect(await creatures.list()).toHaveLength(1);
   });
 });

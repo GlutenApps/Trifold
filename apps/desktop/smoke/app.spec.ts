@@ -291,7 +291,9 @@ test('console, Library, import, search, stat block and player window all work en
 
     // NPCs: a name is all a new NPC needs.
     await console_.getByRole('tab', { name: /^NPCs/ }).click();
-    await console_.getByRole('button', { name: 'New NPC' }).click();
+    // One Add NPC (ADR 0037): blank, another campaign's NPC or a compendium creature.
+    await console_.getByRole('button', { name: 'Add NPC' }).click();
+    await console_.getByRole('button', { name: 'Start a blank NPC' }).click();
     await console_
       .getByRole('form', { name: 'New NPC' })
       .getByLabel('Name', { exact: true })

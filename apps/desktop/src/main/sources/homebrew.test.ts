@@ -98,7 +98,7 @@ describe('HomebrewRepository', () => {
     expect(after.recordCounts).toEqual({ monster: 1 });
     await repo.remove(copy.id);
     expect(await repo.list()).toEqual([]);
-    await expect(repo.save({ ...goblin })).rejects.toThrow(/Only Homebrew records/);
+    await expect(repo.save({ ...goblin })).rejects.toThrow(/Only Trifold Homebrew records/);
   });
 });
 
@@ -128,7 +128,11 @@ describe('a campaign’s creatures (ADR 0035)', () => {
       `${saved.id.replace(/:/g, '_')}.json`,
     ]);
     const source = await creatures.source();
-    expect(source).toMatchObject({ id: 'campaign:greyford', name: 'Greyford', kind: 'campaign' });
+    expect(source).toMatchObject({
+      id: 'campaign:greyford',
+      name: 'This campaign',
+      kind: 'campaign',
+    });
     expect(source.recordCounts).toEqual({ monster: 1 });
     // The Library's homebrew does not see them, and will not save one.
     const library = new HomebrewRepository(store, logger);

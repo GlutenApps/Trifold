@@ -536,7 +536,7 @@ export function NpcEditor({
 
 // ---------- From another campaign ----------
 
-interface CopyRow {
+export interface CopyRow {
   campaignId: string;
   campaignName: string;
   id: string;
@@ -544,26 +544,12 @@ interface CopyRow {
   detail: string;
 }
 
-/**
- * Lists the PCs or NPCs of every other campaign in the Library, to copy one into this campaign.
- * The copy is made in main (a new id, its portrait copied) and is independent afterwards.
- */
-export function CopyFromCampaign({
-  kind,
-  currentCampaignId,
-  onCopy,
-  onBack,
-}: {
-  kind: 'pc' | 'npc';
-  currentCampaignId: string;
-  onCopy(campaignId: string, id: string): void;
-  onBack(): void;
-}) {
+/** Every PC or NPC in the Library's other campaigns, by name; null while loading. */
+export function useOtherCampaignRows(
+  kind: 'pc' | 'npc',
+  currentCampaignId: string,
+): CopyRow[] | null {
   const [rows, setRows] = useState<CopyRow[] | null>(null);
-  const [query, setQuery] = useState('');
-  const what = kind === 'pc' ? 'PC' : 'NPC';
-  const back = kind === 'pc' ? 'Back to party' : 'Back to NPCs';
-
   useEffect(() => {
     let live = true;
     void window.trifold.campaigns
@@ -592,6 +578,28 @@ export function CopyFromCampaign({
       live = false;
     };
   }, [kind, currentCampaignId]);
+  return rows;
+}
+
+/**
+ * Lists the PCs or NPCs of every other campaign in the Library, to copy one into this campaign.
+ * The copy is made in main (a new id, its portrait copied) and is independent afterwards.
+ */
+export function CopyFromCampaign({
+  kind,
+  currentCampaignId,
+  onCopy,
+  onBack,
+}: {
+  kind: 'pc' | 'npc';
+  currentCampaignId: string;
+  onCopy(campaignId: string, id: string): void;
+  onBack(): void;
+}) {
+  const rows = useOtherCampaignRows(kind, currentCampaignId);
+  const [query, setQuery] = useState('');
+  const what = kind === 'pc' ? 'PC' : 'NPC';
+  const back = kind === 'pc' ? 'Back to party' : 'Back to NPCs';
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();

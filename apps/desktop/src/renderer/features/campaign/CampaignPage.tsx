@@ -8,7 +8,19 @@ import { StatBlock } from '../compendium/StatBlock';
 import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
 import { InlineConfirm } from '../shell/InlineConfirm';
+import { useSourcesStore } from '../../stores/sourcesStore';
+import { AddNpcPanel } from './AddNpcPanel';
 import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './CharacterEditors';
+
+/**
+ * Where an NPC's stat block lives, in ADR 0037's words: this campaign only, the DM's homebrew
+ * for all campaigns, or the book or file it came from.
+ */
+export function statBlockHome(sourceId: string, sourceNames: ReadonlyMap<string, string>): string {
+  if (sourceId.startsWith('campaign:')) return 'This campaign';
+  if (sourceId === 'homebrew') return 'Homebrew';
+  return sourceNames.get(sourceId) ?? 'Compendium';
+}
 
 /**
  * The Campaign major (DESIGN.md §6.3). `CampaignPage` at the end of the file is the tab;
@@ -21,17 +33,9 @@ type CampaignTab = 'party' | 'npcs' | 'notes';
 /** What the Party and NPCs tabs show: their list, a form in its place, or the copy picker. */
 type TabView<T> = { kind: 'list' } | { kind: 'edit'; item: T; key: number } | { kind: 'copy' };
 
-/** The header buttons both tabs share: copy from another campaign, then New. */
-function AddButtons({
-  what,
-  onCopy,
-  onNew,
-}: {
-  what: 'PC' | 'NPC';
-  onCopy(): void;
-  onNew(): void;
-}) {
-  const newLabel = what === 'PC' ? 'New PC card' : 'New NPC';
+/** The Party tab's header buttons: copy from another campaign, then New. NPCs use Add NPC. */
+function AddButtons({ what, onCopy, onNew }: { what: 'PC'; onCopy(): void; onNew(): void }) {
+  const newLabel = 'New PC card';
   return (
     <>
       <button
@@ -227,7 +231,7 @@ function NpcStatBlock({ npc }: { npc: NPC }) {
           }}
         >
           <Icon name="external" />
-          Open in compendium
+          Open stat block
         </button>
       </div>
       <StatBlock
@@ -247,9 +251,17 @@ function NpcsTab() {
   const removeNpc = useCampaignStore((s) => s.removeNpc);
   const saveNpc = useCampaignStore((s) => s.saveNpc);
   const copyNpc = useCampaignStore((s) => s.copyNpc);
+  const npcFromRecord = useCampaignStore((s) => s.npcFromRecord);
+  const sources = useSourcesStore((s) => s.sources);
+  const loadSources = useSourcesStore((s) => s.load);
   const [view, setView] = useState<TabView<NPC>>({ kind: 'list' });
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [shownId, setShownId] = useState<string | null>(null);
+  const hasSources = sources.length > 0;
+  useEffect(() => {
+    if (!hasSources) void loadSources();
+  }, [hasSources, loadSources]);
+  const sourceNames = new Map(sources.map((s) => [s.id, s.name]));
   if (!current) return null;
   const toList = (landId?: string) => {
     setView({ kind: 'list' });
@@ -274,13 +286,18 @@ function NpcsTab() {
   }
   if (view.kind === 'copy') {
     return (
-      <CopyFromCampaign
-        kind="npc"
+      <AddNpcPanel
         currentCampaignId={current.campaign.id}
         onBack={() => toList()}
+        onBlank={() => setView({ kind: 'edit', item: blankNpc(), key: 0 })}
         onCopy={(campaignId, id) => {
           void copyNpc(campaignId, id).then((copied) => {
             if (copied) toList(copied.id);
+          });
+        }}
+        onFromRecord={(recordId) => {
+          void npcFromRecord(recordId).then((made) => {
+            if (made) toList(made.id);
           });
         }}
       />
@@ -292,11 +309,15 @@ function NpcsTab() {
       <div className="row">
         <h2>NPCs</h2>
         <span className="spacer" />
-        <AddButtons
-          what="NPC"
-          onCopy={() => setView({ kind: 'copy' })}
-          onNew={() => setView({ kind: 'edit', item: blankNpc(), key: 0 })}
-        />
+        <button
+          type="button"
+          className="chrome-btn primary"
+          aria-label="Add NPC"
+          title="Add NPC: blank, from another campaign or from the compendium"
+          onClick={() => setView({ kind: 'copy' })}
+        >
+          <Icon name="plus" />
+        </button>
       </div>
       {current.npcs.length === 0 && <p className="muted">No NPCs yet.</p>}
       {current.npcs.map((n) => (
@@ -312,6 +333,15 @@ function NpcsTab() {
               </span>
             )}
             {!n.isAlive && <span className="badge">dead</span>}
+            {n.recordRef && (
+              <span
+                className="badge source-pill"
+                data-testid="npc-statblock-home"
+                title="Where its stat block lives"
+              >
+                Stat block: {statBlockHome(n.recordRef.sourceId, sourceNames)}
+              </span>
+            )}
             <span className="spacer" />
             {confirmId === n.id ? (
               <InlineConfirm

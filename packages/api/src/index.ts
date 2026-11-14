@@ -815,9 +815,16 @@ export interface TrifoldApi {
     remove(npcId: string): Promise<void>;
     /**
      * Copies an NPC from another campaign into the open one: new id, carried HP cleared and
-     * alive, stat block link and portrait kept. The original is untouched.
+     * alive, stat block link and portrait kept, and a stat block this campaign cannot see copied
+     * into its creatures (ADR 0036). The original is untouched.
      */
     copyFrom(campaignId: string, npcId: string): Promise<NPC>;
+    /**
+     * A named NPC in the open campaign made from a compendium creature (ADR 0037): its stat block
+     * is copied into this campaign's creatures, marked named, so it can be changed without
+     * touching the original. One of this campaign's own creatures is used as it is.
+     */
+    fromRecord(recordId: string): Promise<NPC>;
   };
   pcs: {
     /**
@@ -1038,7 +1045,7 @@ export const API_METHODS = {
   ],
   notes: ['save', 'remove', 'move', 'capture'],
   noteTemplates: ['list', 'save', 'remove'],
-  npcs: ['save', 'remove', 'copyFrom'],
+  npcs: ['save', 'remove', 'copyFrom', 'fromRecord'],
   scenes: ['save', 'remove', 'importImage'],
   counters: ['save', 'remove', 'move'],
   timers: ['save', 'remove', 'move'],

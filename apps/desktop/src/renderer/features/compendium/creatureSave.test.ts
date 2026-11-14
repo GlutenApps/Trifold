@@ -52,8 +52,8 @@ const record = {
 describe('homeChoices', () => {
   it('offers this campaign first when one is open, else only the compendium', () => {
     expect(homeChoices(false, campaign([])).map((c) => c.label)).toEqual([
-      'In Greyford',
-      'In my compendium',
+      'This campaign only',
+      'All campaigns',
     ]);
     expect(homeChoices(false, null).map((c) => c.id)).toEqual(['library']);
   });
@@ -112,7 +112,10 @@ describe('scopeChoices', () => {
       null,
     );
     expect(used.map((c) => c.id)).toEqual(['none', 'campaign']);
-    expect(used[1]).toMatchObject({ label: 'Every Goblin in Greyford', detail: '1 encounter' });
+    expect(used[1]).toMatchObject({
+      label: 'Every Goblin in this campaign',
+      detail: '1 encounter',
+    });
   });
 
   it('from a row: this row, the encounter when another row uses it, the campaign when elsewhere does', () => {

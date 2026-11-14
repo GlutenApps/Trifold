@@ -58,7 +58,7 @@ describe('CreatureEditor', () => {
     expect(window.trifold.homebrew.save).not.toHaveBeenCalled();
 
     const step = screen.getByLabelText('Save');
-    expect(within(step).getByRole('radio', { name: /In Greyford/ })).toBeChecked();
+    expect(within(step).getByRole('radio', { name: /This campaign only/ })).toBeChecked();
     // The campaign uses no Goblin Warrior, so there is nowhere else to use it.
     expect(within(step).getByRole('radio', { name: 'Nowhere yet' })).toBeChecked();
     expect(within(step).queryByRole('radio', { name: /Every/ })).toBeNull();
@@ -81,7 +81,7 @@ describe('CreatureEditor', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     const step = screen.getByLabelText('Save');
-    await userEvent.click(within(step).getByRole('radio', { name: /In my compendium/ }));
+    await userEvent.click(within(step).getByRole('radio', { name: /All campaigns/ }));
     const warning = await within(step).findByRole('alert');
     expect(warning).toHaveTextContent('is already in');
     expect(within(step).getByRole('button', { name: 'Confirm' })).toBeDisabled();
