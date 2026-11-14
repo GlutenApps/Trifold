@@ -390,6 +390,38 @@ export const PlayerCamera = z.object({
 });
 export type PlayerCamera = z.infer<typeof PlayerCamera>;
 
+/**
+ * One step of a scene's fog of war (DESIGN.md §6.5, ADR 0029), in map pixels. The fog starts
+ * whole; the shapes are applied in order, each revealing or hiding what it covers. `all` covers
+ * the whole map (Reveal all, Hide all); a polygon's points are flat `[x0, y0, x1, y1, …]`.
+ */
+export const FogShape = z.discriminatedUnion('kind', [
+  z.object({
+    id: z.string().min(1),
+    mode: z.enum(['reveal', 'hide']),
+    kind: z.literal('rect'),
+    x: z.number(),
+    y: z.number(),
+    w: z.number().nonnegative(),
+    h: z.number().nonnegative(),
+  }),
+  z.object({
+    id: z.string().min(1),
+    mode: z.enum(['reveal', 'hide']),
+    kind: z.literal('poly'),
+    points: z.array(z.number()).min(6),
+  }),
+  z.object({ id: z.string().min(1), mode: z.enum(['reveal', 'hide']), kind: z.literal('all') }),
+]);
+export type FogShape = z.infer<typeof FogShape>;
+
+/** A scene's fog of war: off keeps the shapes but shows the whole map. */
+export const SceneFog = z.object({
+  enabled: z.boolean().default(false),
+  shapes: z.array(FogShape).default([]),
+});
+export type SceneFog = z.infer<typeof SceneFog>;
+
 export const Scene = z.object({
   schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
   id: z.string().min(1),
@@ -418,6 +450,8 @@ export const Scene = z.object({
     .object({ playlistId: z.string().optional(), ambienceIds: z.array(z.string()).default([]) })
     .optional(),
   encounterId: z.string().optional(),
+  /** Map and blank-grid scenes: fog of war (ADR 0029). Absent = no fog. */
+  fog: SceneFog.optional(),
   playerCamera: PlayerCamera.prefault({}),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,

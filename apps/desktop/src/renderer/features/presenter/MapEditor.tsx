@@ -16,6 +16,7 @@ import {
   type NPC,
   type PCCard,
   type Scene,
+  type SceneFog,
   type Token,
 } from '@trifold/schema';
 import { capitalize } from '../compendium/formatting';
@@ -26,7 +27,20 @@ import { useIconStore } from '../../stores/iconStore';
 import { useShellStore } from '../../stores/shellStore';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
-import { GridLines } from './MapLayer';
+import { FogLayer, GridLines } from './MapLayer';
+import {
+  activeFog,
+  addShape,
+  allShape,
+  dragRect,
+  polyShape,
+  rectShape,
+  svgPoints,
+  tokensInView,
+  type FogMode,
+} from './fog';
+import { registerHotkey } from '../../hotkeys';
+import { hk } from '../../platform';
 import { MapPop } from './MapPop';
 import { TokenDisc } from './TokenDisc';
 import {
@@ -64,7 +78,16 @@ import {
  * here belong to the editor's modes and pop-ups; `MapEditor` further down has the detail.
  */
 
-type Mode = 'select' | 'align' | 'party' | 'place';
+type Mode = 'select' | 'align' | 'party' | 'place' | 'fog';
+
+/** The fog tool (ADR 0029): what a shape does, and how it is drawn. */
+interface FogTool {
+  mode: FogMode;
+  shape: 'rect' | 'poly';
+}
+
+const NO_FOG: SceneFog = { enabled: false, shapes: [] };
+const FOG_UNDO_LIMIT = 50;
 
 type Pending =
   | { kind: 'creature'; row: CompendiumRow }
@@ -149,6 +172,14 @@ export function MapEditor({
   /** The background whose delete waits on the inline confirm. */
   const [confirmBg, setConfirmBg] = useState<string | null>(null);
   const [pop, setPop] = useState<Pop | null>(null);
+  const [fogTool, setFogTool] = useState<FogTool>({ mode: 'reveal', shape: 'rect' });
+  /** A rectangle being dragged, in map pixels; `free` when Alt turned off the grid snap. */
+  const [fogDrag, setFogDrag] = useState<{ a: Point; b: Point; free: boolean } | null>(null);
+  /** A polygon being clicked out, and where the pointer is for its closing edge. */
+  const [fogPoints, setFogPoints] = useState<Point[]>([]);
+  const [fogHover, setFogHover] = useState<Point | null>(null);
+  /** Earlier fogs for Undo, this session only. */
+  const [fogUndo, setFogUndo] = useState<SceneFog[]>([]);
   const drag = useRef<{ tokenId: string; dx: number; dy: number } | null>(null);
   const pan = useRef<{ startX: number; startY: number; camX: number; camY: number } | null>(null);
   const debounce = useRef<number | null>(null);
@@ -204,13 +235,19 @@ export function MapEditor({
     if (fighter) markDead(fighter.id, dead);
     else patchToken(t.id, { dead });
   };
+  // The dashed box shows what the TV frames: tokens the players can see (not hidden, not fogged).
+  const playerTokens = tokensInView(
+    scene.tokens.filter((t) => !t.hidden),
+    activeFog(scene.fog),
+    grid,
+  );
   const viewportRect = cameraRect(
     scene.playerCamera,
     size,
     grid,
-    scene.tokens,
+    playerTokens,
     aspect,
-    activeTokenId,
+    playerTokens.some((t) => t.id === activeTokenId) ? activeTokenId : null,
   );
   const selectedTokenId = selection?.kind === 'token' ? selection.id : null;
   const selectedToken = scene.tokens.find((t) => t.id === selectedTokenId) ?? null;
@@ -277,6 +314,38 @@ export function MapEditor({
     if (selectedTokenId === id) setSelection(null);
     setMenu(null);
   };
+  // ---------- fog of war (ADR 0029) ----------
+  const fog = scene.fog ?? NO_FOG;
+  /** Rectangles snap to whole cells when the scene has a grid (Alt draws freely). */
+  const fogGrid = scene.grid || scene.kind === 'blankGrid' ? grid : null;
+  const setFog = (next: SceneFog) => {
+    setFogUndo((u) => [...u.slice(-(FOG_UNDO_LIMIT - 1)), fog]);
+    patch({ fog: next });
+  };
+  /** A drawn shape turns the fog on: drawing is how the DM starts using it. */
+  const addFog = (shape: Parameters<typeof addShape>[1]) =>
+    setFog({ enabled: true, shapes: addShape(fog.shapes, shape) });
+  const undoFog = () => {
+    const previous = fogUndo[fogUndo.length - 1];
+    if (!previous) return;
+    setFogUndo((u) => u.slice(0, -1));
+    patch({ fog: previous });
+  };
+  const closeFogPolygon = (points: Point[] = fogPoints) => {
+    const shape = polyShape(fogTool.mode, points);
+    if (shape) addFog(shape);
+    setFogPoints([]);
+    setFogHover(null);
+  };
+  const fogUndoRef = useRef(undoFog);
+  fogUndoRef.current = undoFog;
+  // A new scene starts its own undo history.
+  useEffect(() => {
+    setFogUndo([]);
+    setFogPoints([]);
+    setFogDrag(null);
+  }, [scene.id]);
+
   const mapPoint = (e: { clientX: number; clientY: number }): Point => {
     const rect = containerRef.current?.getBoundingClientRect();
     return {
@@ -433,6 +502,10 @@ export function MapEditor({
   };
 
   const onBackgroundDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (mode === 'fog') {
+      onFogDown(e);
+      return;
+    }
     if (e.button === 2) return;
     setMenu(null);
     const at = mapPoint(e);
@@ -457,7 +530,37 @@ export function MapEditor({
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
+  /**
+   * Fog mode: the left button draws (a rectangle by dragging, a polygon by clicking its corners);
+   * the right or middle button pans, so the map still moves while drawing.
+   */
+  const onFogDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    setMenu(null);
+    if (e.button !== 0) {
+      pan.current = { startX: e.clientX, startY: e.clientY, camX: cam.x, camY: cam.y };
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      return;
+    }
+    const at = mapPoint(e);
+    if (fogTool.shape === 'rect') {
+      setFogDrag({ a: at, b: at, free: e.altKey });
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      return;
+    }
+    const near = (p: Point | undefined) =>
+      !!p && Math.hypot(p.x - at.x, p.y - at.y) * cam.zoom < 10;
+    // Clicking the first corner again closes it; a second click on the last corner is ignored.
+    if (fogPoints.length >= 3 && near(fogPoints[0])) closeFogPolygon();
+    else if (!near(fogPoints[fogPoints.length - 1])) setFogPoints([...fogPoints, at]);
+  };
+
   const onBackgroundMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (mode === 'fog' && !pan.current) {
+      const at = mapPoint(e);
+      if (fogDrag) setFogDrag({ ...fogDrag, b: at, free: e.altKey });
+      else if (fogPoints.length) setFogHover(at);
+      return;
+    }
     if (mode === 'align' && alignFirst) setAlignHover(mapPoint(e));
     if (pan.current) {
       setCam({
@@ -470,6 +573,12 @@ export function MapEditor({
 
   const onBackgroundUp = () => {
     pan.current = null;
+    if (fogDrag) {
+      const r = dragRect(fogDrag.a, fogDrag.b, fogDrag.free ? null : fogGrid);
+      // A click without a drag reveals one cell on a grid, nothing without one.
+      if (r.w > 0 && r.h > 0) addFog(rectShape(fogTool.mode, r));
+      setFogDrag(null);
+    }
   };
 
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -713,7 +822,7 @@ export function MapEditor({
       ? pan.current
         ? 'grabbing'
         : 'grab'
-      : mode === 'align'
+      : mode === 'align' || mode === 'fog'
         ? 'crosshair'
         : 'copy';
 
@@ -739,7 +848,47 @@ export function MapEditor({
     setAlignFirst(null);
     setAlignHover(null);
     setAlignFirst(null);
+    setFogPoints([]);
+    setFogHover(null);
+    setFogDrag(null);
   };
+  const toggleFogMode = () => {
+    if (mode === 'fog') {
+      cancelMode();
+      return;
+    }
+    cancelMode();
+    closePop();
+    setMode('fog');
+    containerRef.current?.focus();
+  };
+  const toggleFogRef = useRef(toggleFogMode);
+  toggleFogRef.current = toggleFogMode;
+
+  // Table-time hotkeys (CLAUDE.md): F opens and closes the fog tools on the map shown; Ctrl+Z
+  // undoes the last fog change while they are open (only then, so it never shadows typing).
+  useEffect(
+    () =>
+      registerHotkey({
+        id: 'map.fog',
+        combo: 'F',
+        description: 'Fog of war tools on the map',
+        // A parked (hidden) panel stays mounted; only the map on screen answers.
+        run: () => {
+          if (containerRef.current?.getClientRects().length) toggleFogRef.current();
+        },
+      }),
+    [],
+  );
+  useEffect(() => {
+    if (mode !== 'fog') return;
+    return registerHotkey({
+      id: 'map.fog.undo',
+      combo: 'Ctrl+Z',
+      description: 'Undo the last fog change',
+      run: () => fogUndoRef.current(),
+    });
+  }, [mode]);
   /** Starts a placing mode from a pop-up and hands the keyboard to the map. */
   const beginPlacing = (next: Mode, p: Pending | null = null) => {
     setPending(p);
@@ -1023,6 +1172,17 @@ export function MapEditor({
           </MapPop>
         )}
 
+        <button
+          type="button"
+          className={`chrome-btn${mode === 'fog' ? ' on' : ''}`}
+          aria-pressed={mode === 'fog'}
+          aria-label="Fog of war"
+          title={`Fog of war: reveal and hide parts of the map (${hk('F')})`}
+          onClick={toggleFogMode}
+        >
+          <Icon name="fog" />
+        </button>
+
         <MapPop
           open={pop === 'camera'}
           onClose={closePop}
@@ -1223,7 +1383,7 @@ export function MapEditor({
 
       <div
         ref={containerRef}
-        className="map-canvas"
+        className={`map-canvas${mode === 'fog' ? ' fog-mode' : ''}`}
         data-testid="map-canvas"
         style={{ cursor }}
         tabIndex={0}
@@ -1233,7 +1393,21 @@ export function MapEditor({
         onPointerCancel={onBackgroundUp}
         onWheel={onWheel}
         onContextMenu={(e) => e.preventDefault()}
+        onDoubleClick={() => {
+          if (mode === 'fog' && fogPoints.length >= 3) closeFogPolygon();
+        }}
         onKeyDown={(e) => {
+          if (mode === 'fog' && fogPoints.length) {
+            // A polygon in progress: Enter closes it, Backspace drops a corner, Escape drops it.
+            if (e.key === 'Enter') closeFogPolygon();
+            if (e.key === 'Backspace') setFogPoints(fogPoints.slice(0, -1));
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              setFogPoints([]);
+              setFogHover(null);
+            }
+            return;
+          }
           if (e.key === 'Escape') {
             cancelMode();
             setMenu(null);
@@ -1265,6 +1439,34 @@ export function MapEditor({
             />
           )}
           <GridLines width={size.width} height={size.height} grid={grid} />
+          {fog.enabled && (
+            <FogLayer dm width={size.width} height={size.height} shapes={fog.shapes} />
+          )}
+          {(fogDrag || fogPoints.length > 0) && (
+            <svg
+              className={`fog-draft ${fogTool.mode}`}
+              data-testid="fog-draft"
+              width={size.width}
+              height={size.height}
+              aria-hidden="true"
+            >
+              {fogDrag &&
+                (() => {
+                  const r = dragRect(fogDrag.a, fogDrag.b, fogDrag.free ? null : fogGrid);
+                  return <rect x={r.x} y={r.y} width={r.w} height={r.h} />;
+                })()}
+              {fogPoints.length > 0 && (
+                <polyline
+                  points={svgPoints(
+                    [...fogPoints, ...(fogHover ? [fogHover] : [])].flatMap((p) => [p.x, p.y]),
+                  )}
+                />
+              )}
+              {fogPoints.map((p, i) => (
+                <circle key={i} cx={p.x} cy={p.y} r={Math.max(3, 5 / cam.zoom)} />
+              ))}
+            </svg>
+          )}
           {alignFirst && (
             <div className="align-dot" style={{ left: alignFirst.x, top: alignFirst.y }} />
           )}
@@ -1549,8 +1751,83 @@ export function MapEditor({
         )}
       </div>
 
-      <div className="map-context">
-        {hint ? (
+      <div className={`map-context${mode === 'fog' ? ' fog-context' : ''}`}>
+        {mode === 'fog' ? (
+          <div className="fog-tools" role="toolbar" aria-label="Fog tools">
+            <label className="check" title="Off shows the players the whole map; your shapes stay">
+              <input
+                type="checkbox"
+                checked={fog.enabled}
+                onChange={(e) => setFog({ ...fog, enabled: e.target.checked })}
+              />
+              Fog on
+            </label>
+            <span className="seg" role="group" aria-label="Fog brush">
+              {(['reveal', 'hide'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className="btn small"
+                  aria-pressed={fogTool.mode === m}
+                  onClick={() => setFogTool({ ...fogTool, mode: m })}
+                >
+                  {m === 'reveal' ? 'Reveal' : 'Hide'}
+                </button>
+              ))}
+            </span>
+            <span className="icon-toolbar" role="group" aria-label="Fog shape">
+              <button
+                type="button"
+                className={`chrome-btn${fogTool.shape === 'rect' ? ' on' : ''}`}
+                aria-pressed={fogTool.shape === 'rect'}
+                aria-label="Rectangle"
+                title="Rectangle: drag across the map"
+                onClick={() => {
+                  setFogPoints([]);
+                  setFogTool({ ...fogTool, shape: 'rect' });
+                }}
+              >
+                <Icon name="square" />
+              </button>
+              <button
+                type="button"
+                className={`chrome-btn${fogTool.shape === 'poly' ? ' on' : ''}`}
+                aria-pressed={fogTool.shape === 'poly'}
+                aria-label="Polygon"
+                title="Polygon: click its corners"
+                onClick={() => setFogTool({ ...fogTool, shape: 'poly' })}
+              >
+                <Icon name="polygon" />
+              </button>
+            </span>
+            <button type="button" className="btn small" onClick={() => addFog(allShape('reveal'))}>
+              Reveal all
+            </button>
+            <button type="button" className="btn small" onClick={() => addFog(allShape('hide'))}>
+              Hide all
+            </button>
+            <button
+              type="button"
+              className="chrome-btn"
+              aria-label="Undo fog"
+              title={`Undo the last fog change (${hk('Ctrl+Z')})`}
+              disabled={fogUndo.length === 0}
+              onClick={undoFog}
+            >
+              <Icon name="undo" />
+            </button>
+            <p className="muted small fog-hint" role="status">
+              {fogTool.shape === 'rect'
+                ? `Drag to ${fogTool.mode}${fogGrid ? ' whole cells (Alt draws freely)' : ''}. Right-drag pans.`
+                : fogPoints.length
+                  ? 'Click the first corner, double-click or press Enter to finish; Backspace undoes a corner.'
+                  : `Click the corners of the area to ${fogTool.mode}. Right-drag pans.`}
+            </p>
+            <button type="button" className="btn small" onClick={cancelMode}>
+              Done
+            </button>
+          </div>
+        ) : hint ? (
           <>
             <p className="muted small" role="status">
               {hint}

@@ -544,3 +544,68 @@ describe('MapEditor: the fight on the map (ADR 0012)', () => {
     );
   });
 });
+
+describe('MapEditor: fog of war (ADR 0029)', () => {
+  beforeEach(() => {
+    latest = blank;
+    useCampaignStore.setState({
+      current: {
+        campaign: { settings: { initiativeMode: 'perGroup' } },
+        pcs: [],
+        encounters: [],
+        scenes: [blank],
+      } as unknown as CampaignBundle,
+    });
+    useCombatStore.setState({ encounterId: null, state: null });
+  });
+
+  it('reveals whole cells by dragging, hides a polygon, and undoes, hides all and reveals all', async () => {
+    render(<Harness />);
+    const canvas = screen.getByTestId('map-canvas');
+    await userEvent.click(screen.getByRole('button', { name: 'Fog of war' }));
+    const tools = screen.getByRole('toolbar', { name: 'Fog tools' });
+    expect(within(tools).getByRole('status')).toHaveTextContent('Drag to reveal whole cells');
+
+    // Client px × 4 = map px; 70 px cells: a drag from 40 to 160 covers cells 0–2.
+    fireEvent.pointerDown(canvas, { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(canvas, { clientX: 40, clientY: 40 });
+    expect(screen.getByTestId('fog-draft')).toBeInTheDocument();
+    fireEvent.pointerUp(canvas, { clientX: 40, clientY: 40 });
+    expect(latest.fog?.enabled).toBe(true);
+    expect(latest.fog?.shapes).toEqual([
+      expect.objectContaining({ mode: 'reveal', kind: 'rect', x: 0, y: 0, w: 210, h: 210 }),
+    ]);
+    expect(screen.getByTestId('fog-dm')).toBeInTheDocument();
+
+    // A hiding polygon: three corners, then Enter.
+    await userEvent.click(within(tools).getByRole('button', { name: 'Hide' }));
+    await userEvent.click(within(tools).getByRole('button', { name: 'Polygon' }));
+    for (const [x, y] of [
+      [10, 10],
+      [30, 10],
+      [10, 30],
+    ]) {
+      fireEvent.pointerDown(canvas, { button: 0, clientX: x, clientY: y });
+    }
+    fireEvent.keyDown(canvas, { key: 'Enter' });
+    expect(latest.fog?.shapes[1]).toMatchObject({
+      mode: 'hide',
+      kind: 'poly',
+      points: [40, 40, 120, 40, 40, 120],
+    });
+
+    await userEvent.click(within(tools).getByRole('button', { name: 'Undo fog' }));
+    expect(latest.fog?.shapes).toHaveLength(1);
+    await userEvent.click(within(tools).getByRole('button', { name: 'Hide all' }));
+    expect(latest.fog).toEqual({ enabled: true, shapes: [] });
+    await userEvent.click(within(tools).getByRole('button', { name: 'Reveal all' }));
+    expect(latest.fog?.shapes).toEqual([expect.objectContaining({ kind: 'all', mode: 'reveal' })]);
+
+    // Fog off keeps the shapes; Done leaves the tools.
+    await userEvent.click(within(tools).getByRole('checkbox', { name: 'Fog on' }));
+    expect(latest.fog?.enabled).toBe(false);
+    expect(latest.fog?.shapes).toHaveLength(1);
+    await userEvent.click(within(tools).getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('toolbar', { name: 'Fog tools' })).toBeNull();
+  });
+});

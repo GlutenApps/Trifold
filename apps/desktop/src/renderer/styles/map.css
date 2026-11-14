@@ -30,6 +30,65 @@
   touch-action: none;
 }
 
+/* Fog of war (ADR 0029): opaque on the TV, half strength for the DM. */
+.fog-layer,
+.fog-draft {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+.fog-fill {
+  fill: var(--tv-dark);
+}
+
+.fog-layer.dm {
+  opacity: 0.5;
+}
+
+/* The shape being drawn: a dashed outline that stays thin at any zoom. */
+.fog-draft rect,
+.fog-draft polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.fog-draft.reveal rect {
+  fill: var(--accent);
+  fill-opacity: 0.15;
+}
+
+.fog-draft.hide rect {
+  fill: var(--tv-dark);
+  fill-opacity: 0.4;
+}
+
+.fog-draft circle {
+  fill: var(--accent);
+}
+
+/* While drawing fog, clicks on tokens go to the map underneath. */
+.map-canvas.fog-mode .token-slot {
+  pointer-events: none;
+}
+
+.fog-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  width: 100%;
+}
+
+.fog-tools .fog-hint {
+  flex: 1 1 14em;
+  margin: 0;
+}
+
 /* Token discs (DESIGN.md §6.8 treatments) */
 .token-disc {
   position: relative;

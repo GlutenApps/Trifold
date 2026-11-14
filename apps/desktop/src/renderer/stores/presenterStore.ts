@@ -14,6 +14,7 @@ import {
 } from '@trifold/api';
 import type { Scene } from '@trifold/schema';
 import { DEFAULT_GRID, cameraRect, mapSize } from '../features/presenter/mapMath';
+import { activeFog, tokensInView } from '../features/presenter/fog';
 
 /**
  * The authoritative presenter state (DESIGN.md §4.1, §6.5): what the TV shows. Every change
@@ -56,6 +57,17 @@ export function liveSceneFrom(
       if (scene.kind === 'map' && !scene.image) return null;
       const grid = scene.grid ?? DEFAULT_GRID;
       const size = mapSize(scene);
+      // Fog (ADR 0029): a token whose centre is under it never reaches the player window, and
+      // the player camera frames and follows only what the players can see.
+      const fog = activeFog(scene.fog);
+      const seen = tokensInView(
+        scene.tokens.filter((t) => !t.hidden),
+        fog,
+        grid,
+      );
+      const activeTokenId = seen.some((t) => t.id === options.activeTokenId)
+        ? options.activeTokenId
+        : null;
       return {
         kind: scene.kind,
         id: scene.id,
@@ -72,30 +84,22 @@ export function liveSceneFrom(
           opacity: grid.opacity,
           visible: grid.showToPlayers,
         },
-        tokens: scene.tokens
-          .filter((t) => !t.hidden)
-          .map((t) => ({
-            id: t.id,
-            kind: t.kind,
-            x: t.x,
-            y: t.y,
-            footprint: t.footprint,
-            label: t.kind === 'creature' && t.nameMasked ? (t.maskedLabel ?? 'Creature') : t.label,
-            role: t.role,
-            ...(t.art ? { artUrl: mediaUrl(campaignSlug, t.art) } : {}),
-            ...(t.glyph ? { glyphUrl: iconUrl(t.glyph) } : {}),
-            ...(t.color ? { color: t.color } : {}),
-            dead: t.dead,
-          })),
+        tokens: seen.map((t) => ({
+          id: t.id,
+          kind: t.kind,
+          x: t.x,
+          y: t.y,
+          footprint: t.footprint,
+          label: t.kind === 'creature' && t.nameMasked ? (t.maskedLabel ?? 'Creature') : t.label,
+          role: t.role,
+          ...(t.art ? { artUrl: mediaUrl(campaignSlug, t.art) } : {}),
+          ...(t.glyph ? { glyphUrl: iconUrl(t.glyph) } : {}),
+          ...(t.color ? { color: t.color } : {}),
+          dead: t.dead,
+        })),
         tokenStyle: options.tokenStyle,
-        camera: cameraRect(
-          scene.playerCamera,
-          size,
-          grid,
-          scene.tokens,
-          options.aspect,
-          options.activeTokenId,
-        ),
+        camera: cameraRect(scene.playerCamera, size, grid, seen, options.aspect, activeTokenId),
+        ...(fog ? { fog: { shapes: fog.shapes } } : {}),
       };
     }
     case 'title':

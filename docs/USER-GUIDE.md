@@ -85,6 +85,8 @@ In **Library › Campaigns**, **Create campaign** opens three ways in: **New bla
 
 Tokens snap to the grid; hold Alt for free placement; Delete removes the selected one. The inspector sets label, role and size, masks or reveals the name (players see the creature's type until revealed), hides it, marks it dead and sets custom art from an image file. Without art, tokens show a game-icons.net silhouette matched to the creature.
 
+**Fog of war.** **Fog of war** in the map toolbar (`F`) opens the fog bar under the map. Tick **Fog on** to cover the whole map on the TV; you still see it, under a half-dark layer. Pick **Reveal** or **Hide**, then a **Rectangle** (drag across the map; on a grid it takes whole cells, hold Alt to draw freely) or a **Polygon** (click its corners; click the first corner again, double-click or press Enter to finish, Backspace drops a corner, Escape drops the shape). **Reveal all** and **Hide all** do the whole map, and **Undo** (`Ctrl+Z` while the bar is open) steps back. Right-drag pans while you draw. Tokens whose centre is under fog are not shown on the TV at all, and the player camera ignores them, as it does tokens you have hidden. Untick **Fog on** to show the whole map again; your shapes are kept for next time. **Done** closes the bar.
+
 ## Music
 
 **Library › Music folders › Add folder…** points Trifold at folders of MP3, OGG, FLAC, WAV or M4A files. Files stay where they are; the refresh icon rescans. A track whose file has gone shows "missing".

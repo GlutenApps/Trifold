@@ -8,6 +8,7 @@ import type {
   CompendiumRecord,
   Encounter,
   EncounterResult,
+  FogShape,
   IconTables,
   LibrarySettings,
   Note,
@@ -152,6 +153,8 @@ export interface MapScene {
   tokens: LiveToken[];
   tokenStyle: TokenStyle;
   camera: CameraRect;
+  /** Fog of war when it is on (ADR 0029): drawn opaque; tokens under it are already left out. */
+  fog?: { shapes: FogShape[] };
 }
 
 export type LiveScene = TitleCardScene | ImageScene | MapScene;

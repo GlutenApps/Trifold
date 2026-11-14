@@ -1,5 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CombatSummary, MapScene } from '@trifold/api';
+import type { FogShape } from '@trifold/schema';
+import { svgPoints } from './fog';
 import { TokenDisc } from './TokenDisc';
 import { viewTransform } from './mapMath';
 
@@ -42,6 +44,49 @@ export function GridLines({
         </pattern>
       </defs>
       <rect width={width} height={height} fill={`url(#${id})`} />
+    </svg>
+  );
+}
+
+/**
+ * Fog of war (ADR 0029) as an SVG mask in map pixels: the fog is whole, then each shape in order
+ * cuts it away (reveal) or paints it back (hide). The TV draws it opaque; the console's editor
+ * passes `dm` for the half-strength view, with a dashed outline on the in-progress shape.
+ */
+export function FogLayer({
+  width,
+  height,
+  shapes,
+  dm = false,
+}: {
+  width: number;
+  height: number;
+  shapes: readonly FogShape[];
+  dm?: boolean;
+}) {
+  const id = `fog-${useId().replace(/:/g, '')}`;
+  return (
+    <svg
+      className={`fog-layer${dm ? ' dm' : ''}`}
+      data-testid={dm ? 'fog-dm' : 'fog'}
+      width={width}
+      height={height}
+      aria-hidden="true"
+    >
+      <defs>
+        <mask id={id} maskUnits="userSpaceOnUse" x={0} y={0} width={width} height={height}>
+          <rect width={width} height={height} fill="white" />
+          {shapes.map((s) => {
+            const fill = s.mode === 'reveal' ? 'black' : 'white';
+            if (s.kind === 'all')
+              return <rect key={s.id} width={width} height={height} fill={fill} />;
+            if (s.kind === 'rect')
+              return <rect key={s.id} x={s.x} y={s.y} width={s.w} height={s.h} fill={fill} />;
+            return <polygon key={s.id} points={svgPoints(s.points)} fill={fill} />;
+          })}
+        </mask>
+      </defs>
+      <rect className="fog-fill" width={width} height={height} mask={`url(#${id})`} />
     </svg>
   );
 }
@@ -155,6 +200,9 @@ export function MapLayer({ scene, combat }: { scene: MapScene; combat: CombatSum
         )}
         {scene.grid.visible && (
           <GridLines width={scene.width} height={scene.height} grid={scene.grid} />
+        )}
+        {scene.fog && (
+          <FogLayer width={scene.width} height={scene.height} shapes={scene.fog.shapes} />
         )}
         {scene.tokens.map((token) => {
           const size = token.footprint * scene.grid.cellPx;
