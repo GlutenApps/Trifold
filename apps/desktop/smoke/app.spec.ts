@@ -301,6 +301,28 @@ test('console, Library, import, search, stat block and player window all work en
       .fill('Pell Marsh');
     await console_.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(console_.getByTestId('npc-row')).toHaveCount(1);
+
+    // One pencil edits the NPC and its stat block (ADR 0039): link one, rename and scale it
+    // there, and Save copies it into this campaign; the fixture's goblin stays as it was.
+    await console_.getByRole('button', { name: 'Edit Pell Marsh' }).click();
+    const npcForm = console_.getByRole('form', { name: 'Edit Pell Marsh' });
+    await npcForm.getByLabel('Stat block, optional').click();
+    await npcForm.getByLabel('Find a stat block').fill('goblin warrior');
+    await npcForm
+      .getByRole('button', { name: /^Use Goblin Warrior/ })
+      .first()
+      .click();
+    const npcBlock = npcForm.getByTestId('npc-statblock-editor');
+    await expect(npcForm.getByTestId('statblock-home-note')).toContainText('make a copy');
+    await npcBlock.getByLabel('Stat block name').fill('Marsh Goblin');
+    await npcBlock.getByRole('button', { name: 'One CR higher' }).click();
+    await npcBlock.getByRole('button', { name: /^Apply CR/ }).click();
+    await console_.getByRole('button', { name: 'Save', exact: true }).click();
+    const pell = console_.getByTestId('npc-row').filter({ hasText: 'Pell Marsh' });
+    await expect(pell).toContainText('This campaign');
+    await pell.getByRole('button', { name: 'Stat block for Pell Marsh' }).click();
+    await expect(console_.getByTestId('scaled-tag')).toBeVisible();
+    await pell.getByRole('button', { name: 'Stat block for Pell Marsh' }).click();
     await console_.getByRole('tab', { name: /^Party/ }).click();
     await expect(
       stat(join(library, 'campaigns', 'smoke-campaign', 'campaign.json')),
@@ -419,7 +441,7 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(console_.getByTestId('pc-row').filter({ hasText: 'Thora' })).toBeVisible();
     await console_.keyboard.press(process.platform === 'darwin' ? 'Meta+f' : 'Control+f');
     await searchField.fill('goblin war');
-    const compendiumHits = searchResults.getByRole('group', { name: 'Compendium' });
+    const compendiumHits = searchResults.getByRole('group', { name: 'Compendium', exact: true });
     await expect(compendiumHits).toContainText('Goblin Warrior');
     await compendiumHits.getByRole('option', { name: /Goblin Warrior/ }).click();
     await expect(tab('Compendium')).toHaveAttribute('aria-selected', 'true');

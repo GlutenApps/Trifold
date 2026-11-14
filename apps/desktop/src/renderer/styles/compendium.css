@@ -2207,6 +2207,9 @@ input[type='range'].wide {
   padding: 6px 12px 8px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
+  /* Sticky stops below a scroll pane's top padding (the Campaign tab has some), so fill that
+     gap with the background rather than let the scrolled form show through it. */
+  box-shadow: 0 -16px 0 var(--bg);
 }
 
 .editor-head h2 {

@@ -14,6 +14,7 @@ import { AddNpcPanel, type AddNpcMode } from './AddNpcPanel';
 import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './CharacterEditors';
 import { describePlan } from '../encounters/replaceReferences';
 import { planNpcRemoval, removeNpcEverywhere } from './npcRemoval';
+import { editsInPlace, refreshNpcRows, saveStatBlock } from './npcStatBlock';
 
 /**
  * The NPC delete confirm (ADR 0037): where it is used, which it leaves, and whether its stat
@@ -247,7 +248,7 @@ function NpcStatBlock({ npc }: { npc: NPC }) {
           }}
         >
           <Icon name="external" />
-          Open stat block
+          Open in compendium
         </button>
       </div>
       <StatBlock
@@ -273,6 +274,8 @@ function NpcsTab() {
   const [view, setView] = useState<TabView<NPC>>({ kind: 'list' });
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [shownId, setShownId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const hasSources = sources.length > 0;
   useEffect(() => {
     if (!hasSources) void loadSources();
@@ -280,6 +283,7 @@ function NpcsTab() {
   const sourceNames = new Map(sources.map((s) => [s.id, s.name]));
   if (!current) return null;
   const toList = (landId?: string) => {
+    setSaveError(null);
     setView({ kind: 'list' });
     if (landId) landOn(navKey('npc', landId));
   };
@@ -301,12 +305,34 @@ function NpcsTab() {
             setView({ kind: 'copy', mode: 'compendium', query: added.query });
           })();
         }}
-        onSave={(npc, another) => {
-          void saveNpc(npc).then((saved) => {
-            if (!saved) return;
-            if (another) setView({ kind: 'edit', item: blankNpc(), key: view.key + 1 });
-            else toList(saved.id);
-          });
+        saving={saving}
+        error={saveError}
+        inPlace={editsInPlace(view.item, { slug: current.campaign.slug, npcs: current.npcs })}
+        onSave={(npc, another, statBlock) => {
+          // A changed stat block is written first; the NPC follows, linked to it (ADR 0039).
+          void (async () => {
+            setSaving(true);
+            setSaveError(null);
+            try {
+              let next = npc;
+              let record = null;
+              if (statBlock) {
+                ({ npc: next, record } = await saveStatBlock(npc, statBlock, {
+                  draft: (id) => window.trifold.homebrew.draft(id, 'campaign'),
+                  save: (r) => window.trifold.homebrew.save(r),
+                }));
+              }
+              const saved = await saveNpc(next);
+              if (!saved) return;
+              if (record) await refreshNpcRows(saved, record);
+              if (another) setView({ kind: 'edit', item: blankNpc(), key: view.key + 1 });
+              else toList(saved.id);
+            } catch (err) {
+              setSaveError(err instanceof Error ? err.message : String(err));
+            } finally {
+              setSaving(false);
+            }
+          })();
         }}
       />
     );
