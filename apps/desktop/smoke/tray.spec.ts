@@ -119,19 +119,32 @@ test('the tray takes a timer and a counter, fits a narrow window and comes back 
       await expect
         .poll(() => page.evaluate(() => window.innerWidth))
         .toBeLessThanOrEqual(Math.max(asked, 900));
-      const width = await page.evaluate(() => window.innerWidth);
-      const boxes = strip.locator('[data-strip]');
-      const seen: string[] = [];
-      const outside: string[] = [];
-      for (let i = 0; i < (await boxes.count()); i++) {
-        const name = (await boxes.nth(i).getAttribute('data-strip')) ?? '?';
-        const box = await boxes.nth(i).boundingBox();
-        seen.push(box ? `${name} ${Math.round(box.x)}+${Math.round(box.width)}` : `${name} none`);
-        const fixed = name === 'choose' || name === 'dice';
-        // The fixed pair must be whole; a chosen section must at least start on screen.
-        if (!box || (fixed ? box.x + box.width > width + 0.5 : box.x >= width)) outside.push(name);
-      }
-      expect(outside, `window ${width} px: ${seen.join(', ')}`).toEqual([]);
+      // The tray lays itself out again after the window has resized, so measure until it
+      // settles: the window can report its new width a frame before the sections move.
+      let report = '';
+      const outsideNow = async () => {
+        const width = await page.evaluate(() => window.innerWidth);
+        const boxes = strip.locator('[data-strip]');
+        const seen: string[] = [];
+        const outside: string[] = [];
+        for (let i = 0; i < (await boxes.count()); i++) {
+          const name = (await boxes.nth(i).getAttribute('data-strip')) ?? '?';
+          const box = await boxes.nth(i).boundingBox();
+          seen.push(box ? `${name} ${Math.round(box.x)}+${Math.round(box.width)}` : `${name} none`);
+          const fixed = name === 'choose' || name === 'dice';
+          // The fixed pair must be whole; a chosen section must at least start on screen.
+          if (!box || (fixed ? box.x + box.width > width + 0.5 : box.x >= width))
+            outside.push(name);
+        }
+        report = `window ${width} px: ${seen.join(', ')}`;
+        return outside;
+      };
+      await expect
+        .poll(outsideNow)
+        .toEqual([])
+        .catch((err: Error) => {
+          throw new Error(`tray sections outside the ${report}\n${err.message}`);
+        });
       await expect(strip.getByRole('button', { name: 'Dice', exact: true })).toBeVisible();
       await expect(strip.getByRole('button', { name: 'Choose what the tray shows' })).toBeVisible();
     }
