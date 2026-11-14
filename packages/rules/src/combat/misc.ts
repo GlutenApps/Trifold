@@ -68,66 +68,6 @@ export function applyDeathSave(saves: DeathSaves, natural: number): DeathSaveOut
   };
 }
 
-export interface QuickAddPc {
-  name: string;
-  playerName?: string;
-  classText?: string;
-  level?: number;
-  maxHp?: number;
-  ac?: number;
-  initiativeBonus?: number;
-  speed?: number;
-  passivePerception?: number;
-}
-
-/**
- * One PC per line: `Name, Player, Class L, HP, AC, Init, Speed, PP` (DESIGN.md §6.3).
- * Trailing fields may be omitted; `Fighter 5`, `Fighter L5` and `Fighter (5)` all parse.
- */
-export function parseQuickAddLine(line: string): QuickAddPc | null {
-  const parts = line.split(',').map((p) => p.trim());
-  const name = parts[0];
-  if (!name) return null;
-  const pc: QuickAddPc = { name };
-  if (parts[1]) pc.playerName = parts[1];
-  if (parts[2]) {
-    const m = /^(.*?)\s*(?:\(?L?\s*(\d{1,2})\)?)?$/i.exec(parts[2]);
-    if (m?.[1]) pc.classText = m[1].trim();
-    if (m?.[2]) pc.level = Math.min(20, Math.max(1, Number(m[2])));
-  }
-  const num = (i: number) => {
-    const v = parts[i];
-    if (v === undefined || v === '') return undefined;
-    const n = Number.parseInt(v.replace(/[^-\d]/g, ''), 10);
-    return Number.isFinite(n) ? n : undefined;
-  };
-  const hp = num(3);
-  const ac = num(4);
-  const init = num(5);
-  const speed = num(6);
-  const pp = num(7);
-  if (hp !== undefined) pc.maxHp = Math.max(1, hp);
-  if (ac !== undefined) pc.ac = ac;
-  if (init !== undefined) pc.initiativeBonus = init;
-  if (speed !== undefined) pc.speed = speed;
-  if (pp !== undefined) pc.passivePerception = pp;
-  return pc;
-}
-
-/**
- * The quick-add text: one PC per line as `Name, Player, Class L, HP, AC, Init, Speed, PP` (see
- * `parseQuickAddLine`). Blank lines and lines starting with `#` are skipped; a line without a
- * name is dropped.
- */
-export function parseQuickAdd(text: string): QuickAddPc[] {
-  return text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0 && !l.startsWith('#'))
-    .map(parseQuickAddLine)
-    .filter((pc): pc is QuickAddPc => pc !== null);
-}
-
 /** Player-facing name for a creature: its type, capitalized (DESIGN.md §6.4). */
 export function maskedNameFor(type: string, fallback = 'Creature'): string {
   const t = type.trim();

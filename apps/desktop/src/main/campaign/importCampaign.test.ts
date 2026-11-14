@@ -126,7 +126,23 @@ describe('importCampaignXml', () => {
 
   it('merges PCs by name into the open campaign', async () => {
     await campaigns.create('Existing');
-    await campaigns.quickAdd('Thora, Sam, Fighter 4, 30, 17, +1, 30, 11');
+    await campaigns.savePc({
+      schemaVersion: 1,
+      id: '',
+      name: 'Thora',
+      playerName: 'Sam',
+      classText: 'Fighter',
+      level: 4,
+      maxHp: 30,
+      ac: 17,
+      initiativeBonus: 1,
+      speed: 30,
+      passives: { perception: 11, insight: 10, investigation: 10 },
+      saves: {},
+      notes: '',
+      createdAt: '',
+      updatedAt: '',
+    });
     const report = await importCampaignXml(
       { store, sources, index, campaigns, logger },
       FIXTURE,

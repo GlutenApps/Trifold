@@ -8,6 +8,7 @@ import { StatBlock } from '../compendium/StatBlock';
 import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
 import { InlineConfirm } from '../shell/InlineConfirm';
+import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './CharacterEditors';
 
 /**
  * The Campaign major (DESIGN.md §6.3). `CampaignPage` at the end of the file is the tab;
@@ -15,185 +16,91 @@ import { InlineConfirm } from '../shell/InlineConfirm';
  * between fights with Long rest and Restore (ADR 0012). The Notes sub-tab lives in
  * CampaignNotes.tsx (ADR 0010).
  */
-const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
-
-/** A number field's text as an integer, or `fallback` when it does not parse. */
-function num(value: string, fallback: number): number {
-  const n = Number.parseInt(value, 10);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function PcEditor({
-  pc,
-  onSave,
-  onCancel,
-}: {
-  pc: PCCard;
-  onSave(pc: PCCard): void;
-  onCancel(): void;
-}) {
-  const [draft, setDraft] = useState<PCCard>(pc);
-  const field = (label: string, key: keyof PCCard, type: 'text' | 'number' = 'text') => (
-    <label className="field">
-      {label}
-      <input
-        type={type}
-        value={String(draft[key] ?? '')}
-        onChange={(e) =>
-          setDraft({
-            ...draft,
-            [key]:
-              type === 'number' ? num(e.target.value, Number(draft[key]) || 0) : e.target.value,
-          })
-        }
-      />
-    </label>
-  );
-  return (
-    <form
-      className="card pc-editor"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (draft.name.trim()) onSave({ ...draft, name: draft.name.trim() });
-      }}
-    >
-      <div className="grid-fields">
-        {field('Name', 'name')}
-        {field('Player', 'playerName')}
-        {field('Class', 'classText')}
-        {field('Level', 'level', 'number')}
-        {field('Max HP', 'maxHp', 'number')}
-        <label className="field">
-          Current HP
-          <input
-            type="number"
-            placeholder="full"
-            value={draft.currentHp ?? ''}
-            onChange={(e) => {
-              const { currentHp: _was, ...rest } = draft;
-              setDraft(
-                e.target.value === ''
-                  ? rest
-                  : { ...rest, currentHp: Math.max(0, num(e.target.value, 0)) },
-              );
-            }}
-          />
-        </label>
-        {field('AC', 'ac', 'number')}
-        {field('Initiative bonus', 'initiativeBonus', 'number')}
-        {field('Speed', 'speed', 'number')}
-        <label className="field">
-          Passive Perception
-          <input
-            type="number"
-            value={draft.passives.perception}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                passives: { ...draft.passives, perception: num(e.target.value, 10) },
-              })
-            }
-          />
-        </label>
-        <label className="field">
-          Passive Insight
-          <input
-            type="number"
-            value={draft.passives.insight}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                passives: { ...draft.passives, insight: num(e.target.value, 10) },
-              })
-            }
-          />
-        </label>
-        <label className="field">
-          Spell save DC
-          <input
-            type="number"
-            value={draft.spellSaveDc ?? ''}
-            onChange={(e) => {
-              const { spellSaveDc: _drop, ...rest } = draft;
-              setDraft(
-                e.target.value === '' ? rest : { ...rest, spellSaveDc: num(e.target.value, 10) },
-              );
-            }}
-          />
-        </label>
-      </div>
-      <div className="row">
-        <span className="muted">Saves</span>
-        {ABILITIES.map((a) => (
-          <label key={a} className="field inline">
-            {a.toUpperCase()}
-            <input
-              type="number"
-              className="narrow"
-              value={draft.saves[a] ?? ''}
-              onChange={(e) => {
-                const saves = { ...draft.saves };
-                if (e.target.value === '') delete saves[a];
-                else saves[a] = num(e.target.value, 0);
-                setDraft({ ...draft, saves });
-              }}
-            />
-          </label>
-        ))}
-      </div>
-      <label className="field">
-        Notes
-        <textarea
-          rows={2}
-          value={draft.notes}
-          onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-        />
-      </label>
-      <div className="row">
-        <button type="submit" className="btn primary">
-          Save
-        </button>
-        <button type="button" className="btn" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    </form>
-  );
-}
-
-/** A new PC card with starting values and a blank id, which main fills in on save. */
-function blankPc(): PCCard {
-  const now = new Date().toISOString();
-  return {
-    schemaVersion: 1,
-    id: '',
-    name: '',
-    playerName: '',
-    classText: '',
-    level: 1,
-    maxHp: 10,
-    ac: 10,
-    initiativeBonus: 0,
-    speed: 30,
-    passives: { perception: 10, insight: 10, investigation: 10 },
-    saves: {},
-    notes: '',
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
 type CampaignTab = 'party' | 'npcs' | 'notes';
+
+/** What the Party and NPCs tabs show: their list, a form in its place, or the copy picker. */
+type TabView<T> = { kind: 'list' } | { kind: 'edit'; item: T; key: number } | { kind: 'copy' };
+
+/** The header buttons both tabs share: copy from another campaign, then New. */
+function AddButtons({
+  what,
+  onCopy,
+  onNew,
+}: {
+  what: 'PC' | 'NPC';
+  onCopy(): void;
+  onNew(): void;
+}) {
+  const newLabel = what === 'PC' ? 'New PC card' : 'New NPC';
+  return (
+    <>
+      <button
+        type="button"
+        className="btn"
+        aria-label={`Copy a ${what} from another campaign`}
+        title={`Copy a ${what} from another campaign`}
+        onClick={onCopy}
+      >
+        <Icon name="plus" />
+        From another campaign…
+      </button>
+      <button
+        type="button"
+        className="chrome-btn primary"
+        aria-label={newLabel}
+        title={newLabel}
+        onClick={onNew}
+      >
+        <Icon name="plus" />
+      </button>
+    </>
+  );
+}
 
 function PartyTab() {
   const current = useCampaignStore((s) => s.current);
-  const quickAdd = useCampaignStore((s) => s.quickAdd);
   const savePc = useCampaignStore((s) => s.savePc);
+  const copyPc = useCampaignStore((s) => s.copyPc);
   const removePc = useCampaignStore((s) => s.removePc);
-  const [quick, setQuick] = useState('');
-  const [editing, setEditing] = useState<PCCard | null>(null);
+  const [view, setView] = useState<TabView<PCCard>>({ kind: 'list' });
   const [confirmId, setConfirmId] = useState<string | null>(null);
   if (!current) return null;
+  const toList = (landId?: string) => {
+    setView({ kind: 'list' });
+    if (landId) landOn(navKey('pc', landId));
+  };
+
+  if (view.kind === 'edit') {
+    return (
+      <PcEditor
+        key={view.key}
+        pc={view.item}
+        onCancel={() => toList()}
+        onSave={(pc, another) => {
+          void savePc(pc).then((saved) => {
+            if (!saved) return;
+            if (another) setView({ kind: 'edit', item: blankPc(), key: view.key + 1 });
+            else toList(saved.id);
+          });
+        }}
+      />
+    );
+  }
+  if (view.kind === 'copy') {
+    return (
+      <CopyFromCampaign
+        kind="pc"
+        currentCampaignId={current.campaign.id}
+        onBack={() => toList()}
+        onCopy={(campaignId, id) => {
+          void copyPc(campaignId, id).then((copied) => {
+            if (copied) toList(copied.id);
+          });
+        }}
+      />
+    );
+  }
+
   const wounded = current.pcs.filter(
     (pc) => (pc.currentHp !== undefined && pc.currentHp < pc.maxHp) || (pc.tempHp ?? 0) > 0,
   );
@@ -217,105 +124,58 @@ function PartyTab() {
         >
           Long rest
         </button>
+        <AddButtons
+          what="PC"
+          onCopy={() => setView({ kind: 'copy' })}
+          onNew={() => setView({ kind: 'edit', item: blankPc(), key: 0 })}
+        />
       </div>
       {current.pcs.length === 0 && <p className="muted">No PC cards yet.</p>}
-      {current.pcs.map((pc) =>
-        editing?.id === pc.id ? (
-          <PcEditor
-            key={pc.id}
-            pc={editing}
-            onSave={(p) => {
-              void savePc(p);
-              setEditing(null);
-            }}
-            onCancel={() => setEditing(null)}
-          />
-        ) : (
-          <div
-            key={pc.id}
-            className="row pc-row"
-            data-testid="pc-row"
-            data-nav={navKey('pc', pc.id)}
-          >
-            <strong>{pc.name}</strong>
-            <span className="muted">
-              {pc.playerName ? `${pc.playerName} · ` : ''}
-              {pc.classText} {pc.level} · HP {pc.currentHp ?? pc.maxHp}/{pc.maxHp}
-              {(pc.tempHp ?? 0) > 0 ? ` +${pc.tempHp}` : ''} · AC {pc.ac} · Init{' '}
-              {pc.initiativeBonus >= 0 ? '+' : ''}
-              {pc.initiativeBonus} · PP {pc.passives.perception}
+      {current.pcs.map((pc) => (
+        <div key={pc.id} className="row pc-row" data-testid="pc-row" data-nav={navKey('pc', pc.id)}>
+          <strong>{pc.name}</strong>
+          <span className="muted">
+            {pc.playerName ? `${pc.playerName} · ` : ''}
+            {pc.classText ? `${pc.classText} ${pc.level} · ` : ''}
+            HP {pc.currentHp ?? pc.maxHp}/{pc.maxHp}
+            {(pc.tempHp ?? 0) > 0 ? ` +${pc.tempHp}` : ''} · AC {pc.ac} · Init{' '}
+            {pc.initiativeBonus >= 0 ? '+' : ''}
+            {pc.initiativeBonus} · PP {pc.passives.perception}
+          </span>
+          <span className="spacer" />
+          {confirmId === pc.id ? (
+            <InlineConfirm
+              name={pc.name}
+              onConfirm={() => {
+                setConfirmId(null);
+                void removePc(pc.id);
+              }}
+              onKeep={() => setConfirmId(null)}
+            />
+          ) : (
+            <span className="row-actions">
+              <button
+                type="button"
+                className="chrome-btn xs"
+                aria-label={`Edit ${pc.name}`}
+                title="Edit"
+                onClick={() => setView({ kind: 'edit', item: pc, key: 0 })}
+              >
+                <Icon name="pencil" />
+              </button>
+              <button
+                type="button"
+                className="chrome-btn xs danger"
+                aria-label={`Delete ${pc.name}`}
+                title="Delete"
+                onClick={() => setConfirmId(pc.id)}
+              >
+                <Icon name="trash" />
+              </button>
             </span>
-            <span className="spacer" />
-            {confirmId === pc.id ? (
-              <InlineConfirm
-                name={pc.name}
-                onConfirm={() => {
-                  setConfirmId(null);
-                  void removePc(pc.id);
-                }}
-                onKeep={() => setConfirmId(null)}
-              />
-            ) : (
-              <span className="row-actions">
-                <button
-                  type="button"
-                  className="chrome-btn xs"
-                  aria-label={`Edit ${pc.name}`}
-                  title="Edit"
-                  onClick={() => setEditing(pc)}
-                >
-                  <Icon name="pencil" />
-                </button>
-                <button
-                  type="button"
-                  className="chrome-btn xs danger"
-                  aria-label={`Delete ${pc.name}`}
-                  title="Delete"
-                  onClick={() => setConfirmId(pc.id)}
-                >
-                  <Icon name="trash" />
-                </button>
-              </span>
-            )}
-          </div>
-        ),
-      )}
-      {editing && !editing.id && (
-        <PcEditor
-          pc={editing}
-          onSave={(p) => {
-            void savePc(p);
-            setEditing(null);
-          }}
-          onCancel={() => setEditing(null)}
-        />
-      )}
-      <div className="row">
-        <button type="button" className="btn" onClick={() => setEditing(blankPc())}>
-          New PC card
-        </button>
-      </div>
-      <h2 className="mt">Quick add</h2>
-      <p className="muted">One PC per line: Name, Player, Class L, HP, AC, Init, Speed, PP</p>
-      <textarea
-        aria-label="Quick add"
-        rows={3}
-        value={quick}
-        onChange={(e) => setQuick(e.target.value)}
-        placeholder="Thora, Sam, Fighter 5, 44, 18, +1, 30, 12"
-      />
-      <div className="row">
-        <button
-          type="button"
-          className="btn primary"
-          disabled={!quick.trim()}
-          onClick={() => {
-            void quickAdd(quick).then(() => setQuick(''));
-          }}
-        >
-          Add PCs
-        </button>
-      </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -386,12 +246,58 @@ function NpcsTab() {
   const current = useCampaignStore((s) => s.current);
   const removeNpc = useCampaignStore((s) => s.removeNpc);
   const saveNpc = useCampaignStore((s) => s.saveNpc);
+  const copyNpc = useCampaignStore((s) => s.copyNpc);
+  const [view, setView] = useState<TabView<NPC>>({ kind: 'list' });
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [shownId, setShownId] = useState<string | null>(null);
   if (!current) return null;
+  const toList = (landId?: string) => {
+    setView({ kind: 'list' });
+    if (landId) landOn(navKey('npc', landId));
+  };
+
+  if (view.kind === 'edit') {
+    return (
+      <NpcEditor
+        key={view.key}
+        npc={view.item}
+        onCancel={() => toList()}
+        onSave={(npc, another) => {
+          void saveNpc(npc).then((saved) => {
+            if (!saved) return;
+            if (another) setView({ kind: 'edit', item: blankNpc(), key: view.key + 1 });
+            else toList(saved.id);
+          });
+        }}
+      />
+    );
+  }
+  if (view.kind === 'copy') {
+    return (
+      <CopyFromCampaign
+        kind="npc"
+        currentCampaignId={current.campaign.id}
+        onBack={() => toList()}
+        onCopy={(campaignId, id) => {
+          void copyNpc(campaignId, id).then((copied) => {
+            if (copied) toList(copied.id);
+          });
+        }}
+      />
+    );
+  }
+
   return (
     <div className="card">
-      <h2>NPCs</h2>
+      <div className="row">
+        <h2>NPCs</h2>
+        <span className="spacer" />
+        <AddButtons
+          what="NPC"
+          onCopy={() => setView({ kind: 'copy' })}
+          onNew={() => setView({ kind: 'edit', item: blankNpc(), key: 0 })}
+        />
+      </div>
       {current.npcs.length === 0 && <p className="muted">No NPCs yet.</p>}
       {current.npcs.map((n) => (
         <div key={n.id} className="entity-row" data-testid="npc-row" data-nav={navKey('npc', n.id)}>
@@ -447,6 +353,15 @@ function NpcsTab() {
                     <Icon name="refresh" />
                   </button>
                 )}
+                <button
+                  type="button"
+                  className="chrome-btn xs"
+                  aria-label={`Edit ${n.name}`}
+                  title="Edit"
+                  onClick={() => setView({ kind: 'edit', item: n, key: 0 })}
+                >
+                  <Icon name="pencil" />
+                </button>
                 <button
                   type="button"
                   className="chrome-btn xs danger"

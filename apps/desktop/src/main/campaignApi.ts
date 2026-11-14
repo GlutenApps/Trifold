@@ -131,8 +131,8 @@ export function createCampaignApi(
       async remove(pcId) {
         await repo().removePc(pcId);
       },
-      async quickAdd(text) {
-        return repo().quickAdd(text);
+      async copyFrom(campaignId, pcId) {
+        return repo().copyPcFrom(campaignId, pcId);
       },
     },
     encounters: {
@@ -169,6 +169,9 @@ export function createCampaignApi(
       },
       async remove(id) {
         await entities().removeNpc(id);
+      },
+      async copyFrom(campaignId, npcId) {
+        return entities().copyNpcFrom(campaignId, npcId);
       },
     },
     counters: {

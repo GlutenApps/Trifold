@@ -4,9 +4,31 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
-import type { Combatant } from '@trifold/schema';
+import type { Combatant, PCCard } from '@trifold/schema';
 import { CampaignEntities } from './entities';
 import { CampaignRepository } from './repository';
+
+/** A PC card as the editor sends it: no id, so the repository creates it. */
+function card(name: string, extra: Partial<PCCard> = {}): PCCard {
+  return {
+    schemaVersion: 1,
+    id: '',
+    name,
+    playerName: '',
+    classText: '',
+    level: 1,
+    maxHp: 30,
+    ac: 17,
+    initiativeBonus: 1,
+    speed: 30,
+    passives: { perception: 11, insight: 10, investigation: 10 },
+    saves: {},
+    notes: '',
+    createdAt: '',
+    updatedAt: '',
+    ...extra,
+  };
+}
 
 const logger: Logger = { log: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 let dir: string;
@@ -58,22 +80,17 @@ describe('CampaignRepository', () => {
     expect(second.campaign.slug).toBe('test-2');
   });
 
-  it('adds PCs from quick-add text and lists them in the bundle', async () => {
-    await repo.create('Quick');
-    const pcs = await repo.quickAdd(
-      'Thora, Sam, Fighter 5, 44, 18, +1, 30, 12\nZed, , Wizard 3, 20, 12, +2',
+  it('saves PC cards and lists them in the bundle', async () => {
+    await repo.create('Party');
+    const thora = await repo.savePc(
+      card('Thora', { playerName: 'Sam', level: 5, maxHp: 44, ac: 18 }),
     );
-    expect(pcs.map((p) => p.name)).toEqual(['Thora', 'Zed']);
-    expect(pcs[0]).toMatchObject({
-      level: 5,
-      maxHp: 44,
-      ac: 18,
-      initiativeBonus: 1,
-      passives: { perception: 12 },
-    });
+    await repo.savePc(card('Zed'));
+    expect(thora.id).not.toBe('');
+    expect(thora).toMatchObject({ level: 5, maxHp: 44, ac: 18, initiativeBonus: 1 });
     const bundle = await repo.bundle();
     expect(bundle.pcs.map((p) => p.name)).toEqual(['Thora', 'Zed']);
-    await repo.removePc(pcs[0]!.id);
+    await repo.removePc(thora.id);
     expect((await repo.bundle()).pcs).toHaveLength(1);
   });
 
@@ -123,7 +140,7 @@ describe('CampaignRepository', () => {
   it('deletes a campaign folder and closes it when it was open', async () => {
     const keep = await repo.create('Keep');
     const gone = await repo.create('Gone');
-    await repo.quickAdd('Thora, Sam, Fighter 4, 30, 17, +1, 30, 11');
+    await repo.savePc(card('Thora'));
     await repo.remove(gone.campaign.id);
     expect(repo.current).toBeNull();
     expect(store.getSettings().lastOpenCampaignSlug).toBeNull();
@@ -145,7 +162,7 @@ describe('CampaignRepository', () => {
 describe('what a fight leaves behind (ADR 0012)', () => {
   it('carries HP to PC cards and tracked NPCs when the encounter finishes', async () => {
     await repo.create('Carry');
-    const [thora] = await repo.quickAdd('Thora, Sam, Fighter 4, 30, 17, +1, 30, 11');
+    const thora = await repo.savePc(card('Thora'));
     const grak = await new CampaignEntities(repo).saveNpc({
       schemaVersion: 1,
       id: '',
@@ -234,5 +251,73 @@ describe('what a fight leaves behind (ADR 0012)', () => {
       hp: { current: 0, max: 20, temp: 0 },
     });
     expect(bundle.encounters[0]!.state).toBeNull();
+  });
+});
+
+describe('copying from another campaign', () => {
+  it('copies a PC card at full HP with its portrait, leaving the original alone', async () => {
+    const from = await repo.create('First');
+    await store.writeText('campaigns/first/tokens/thora.png', 'png bytes');
+    const original = await repo.savePc(
+      card('Thora', { currentHp: 4, tempHp: 3, portrait: 'tokens/thora.png', notes: 'Owes Pell' }),
+    );
+    await repo.create('Second');
+
+    const copy = await repo.copyPcFrom(from.campaign.id, original.id);
+    expect(copy.id).not.toBe(original.id);
+    expect(copy).toMatchObject({ name: 'Thora', maxHp: 30, notes: 'Owes Pell' });
+    expect(copy.currentHp).toBeUndefined();
+    expect(copy.tempHp).toBeUndefined();
+    expect(copy.portrait).toMatch(/^tokens\/\w+\.png$/);
+    expect(copy.portrait).not.toBe('tokens/thora.png');
+    expect(await readdir(store.resolvePath('campaigns/second/tokens'))).toHaveLength(1);
+    expect((await repo.bundle()).pcs.map((p) => p.id)).toEqual([copy.id]);
+
+    const untouched = await repo.bundleOf('first');
+    expect(untouched.pcs[0]).toMatchObject({ id: original.id, currentHp: 4 });
+  });
+
+  it('copies an NPC alive, without carried HP, keeping its stat block link', async () => {
+    const from = await repo.create('First');
+    const entities = new CampaignEntities(repo);
+    const recordRef = {
+      recordId: 'r1',
+      sourceId: 's1',
+      key: 'bandit captain',
+      edition: '2014' as const,
+    };
+    const mara = await entities.saveNpc({
+      schemaVersion: 1,
+      id: '',
+      name: 'Mara Venn',
+      recordRef,
+      role: 'Bandit captain',
+      location: 'The mill',
+      notes: '',
+      isAlive: false,
+      hp: { current: 0, max: 65, temp: 0 },
+      createdAt: '',
+      updatedAt: '',
+    });
+    await repo.create('Second');
+
+    const copy = await entities.copyNpcFrom(from.campaign.id, mara.id);
+    expect(copy).toMatchObject({
+      name: 'Mara Venn',
+      role: 'Bandit captain',
+      recordRef,
+      isAlive: true,
+    });
+    expect(copy.hp).toBeUndefined();
+    expect(copy.id).not.toBe(mara.id);
+    expect((await repo.bundle()).npcs.map((n) => n.name)).toEqual(['Mara Venn']);
+  });
+
+  it('drops a portrait whose file is missing rather than pointing at nothing', async () => {
+    const from = await repo.create('First');
+    const original = await repo.savePc(card('Zed', { portrait: 'tokens/gone.png' }));
+    await repo.create('Second');
+    const copy = await repo.copyPcFrom(from.campaign.id, original.id);
+    expect(copy.portrait).toBeUndefined();
   });
 });
