@@ -63,7 +63,7 @@ interface CompendiumState {
   /** After the editor's Confirm: back to the list with the saved record selected. */
   finishEdit(saved: CompendiumRecord): Promise<void>;
   removeHomebrew(recordId: string): Promise<void>;
-  /** Add to my compendium (ADR 0035): the selected campaign creature into the Library's homebrew. */
+  /** Use in all campaigns (ADR 0035, 0037): the selected campaign creature into the Library's homebrew. */
   addToLibrary(): Promise<void>;
 }
 

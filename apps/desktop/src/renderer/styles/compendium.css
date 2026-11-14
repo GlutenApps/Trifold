@@ -691,6 +691,17 @@ input.narrow {
   padding: 6px 0;
 }
 
+/* Where an NPC's stat block lives (ADR 0037): short, and a long file name ends in "…" (full
+   name in the tooltip) rather than pushing the row actions onto a new line. */
+.npc-home {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Above the editor when Save to compendium opened it: what Save does next, one choice. */
 /* The Save step (ADR 0035): it takes the editor's pinned header once Save is pressed. */
 .editor-head.save-step-head {

@@ -8,7 +8,40 @@ import { StatBlock } from '../compendium/StatBlock';
 import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
 import { InlineConfirm } from '../shell/InlineConfirm';
+import { useSourcesStore } from '../../stores/sourcesStore';
+import { AddNpcPanel, type AddNpcMode } from './AddNpcPanel';
 import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './CharacterEditors';
+import { describePlan } from '../encounters/replaceReferences';
+import { planNpcRemoval, removeNpcEverywhere } from './npcRemoval';
+
+/**
+ * The NPC delete confirm (ADR 0037): where it is used, which it leaves, and whether its stat
+ * block goes with it.
+ */
+export function deleteNpcQuestion(npc: NPC): string {
+  const planned = planNpcRemoval(npc);
+  if (!planned) return `Delete ${npc.name}?`;
+  const { plan, fate } = planned;
+  const used = describePlan(plan);
+  const what = fate.creatureId ? `${npc.name} and its stat block` : npc.name;
+  return [
+    used ? `${npc.name} is in ${used}.` : '',
+    `Delete ${what}${used ? ' and take it out of them' : ''}?`,
+    fate.sharedWith ? `Its stat block stays: ${fate.sharedWith} uses it.` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+/**
+ * Where an NPC's stat block lives, in ADR 0037's words: this campaign only, the DM's homebrew
+ * for all campaigns, or the book or file it came from.
+ */
+export function statBlockHome(sourceId: string, sourceNames: ReadonlyMap<string, string>): string {
+  if (sourceId.startsWith('campaign:')) return 'This campaign';
+  if (sourceId === 'homebrew') return 'Homebrew';
+  return sourceNames.get(sourceId) ?? 'Compendium';
+}
 
 /**
  * The Campaign major (DESIGN.md §6.3). `CampaignPage` at the end of the file is the tab;
@@ -19,19 +52,23 @@ import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './Char
 type CampaignTab = 'party' | 'npcs' | 'notes';
 
 /** What the Party and NPCs tabs show: their list, a form in its place, or the copy picker. */
-type TabView<T> = { kind: 'list' } | { kind: 'edit'; item: T; key: number } | { kind: 'copy' };
+type TabView<T> =
+  | { kind: 'list' }
+  | {
+      kind: 'edit';
+      item: T;
+      key: number;
+      /**
+       * Just added from the compendium (ADR 0037): Cancel removes the NPC and the stat block copy
+       * made for it, then returns to that search.
+       */
+      added?: { creatureId: string | null; query: string };
+    }
+  | { kind: 'copy'; mode?: AddNpcMode; query?: string };
 
-/** The header buttons both tabs share: copy from another campaign, then New. */
-function AddButtons({
-  what,
-  onCopy,
-  onNew,
-}: {
-  what: 'PC' | 'NPC';
-  onCopy(): void;
-  onNew(): void;
-}) {
-  const newLabel = what === 'PC' ? 'New PC card' : 'New NPC';
+/** The Party tab's header buttons: copy from another campaign, then New. NPCs use Add NPC. */
+function AddButtons({ what, onCopy, onNew }: { what: 'PC'; onCopy(): void; onNew(): void }) {
+  const newLabel = 'New PC card';
   return (
     <>
       <button
@@ -227,7 +264,7 @@ function NpcStatBlock({ npc }: { npc: NPC }) {
           }}
         >
           <Icon name="external" />
-          Open in compendium
+          Open stat block
         </button>
       </div>
       <StatBlock
@@ -247,9 +284,17 @@ function NpcsTab() {
   const removeNpc = useCampaignStore((s) => s.removeNpc);
   const saveNpc = useCampaignStore((s) => s.saveNpc);
   const copyNpc = useCampaignStore((s) => s.copyNpc);
+  const npcFromRecord = useCampaignStore((s) => s.npcFromRecord);
+  const sources = useSourcesStore((s) => s.sources);
+  const loadSources = useSourcesStore((s) => s.load);
   const [view, setView] = useState<TabView<NPC>>({ kind: 'list' });
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [shownId, setShownId] = useState<string | null>(null);
+  const hasSources = sources.length > 0;
+  useEffect(() => {
+    if (!hasSources) void loadSources();
+  }, [hasSources, loadSources]);
+  const sourceNames = new Map(sources.map((s) => [s.id, s.name]));
   if (!current) return null;
   const toList = (landId?: string) => {
     setView({ kind: 'list' });
@@ -261,7 +306,18 @@ function NpcsTab() {
       <NpcEditor
         key={view.key}
         npc={view.item}
-        onCancel={() => toList()}
+        onCancel={() => {
+          const added = view.added;
+          if (!added) return toList();
+          // Not saved after all: the NPC and its stat block copy go, back to the search.
+          void (async () => {
+            await removeNpc(view.item.id);
+            if (added.creatureId) {
+              await window.trifold.homebrew.remove(added.creatureId).catch(() => undefined);
+            }
+            setView({ kind: 'copy', mode: 'compendium', query: added.query });
+          })();
+        }}
         onSave={(npc, another) => {
           void saveNpc(npc).then((saved) => {
             if (!saved) return;
@@ -274,13 +330,29 @@ function NpcsTab() {
   }
   if (view.kind === 'copy') {
     return (
-      <CopyFromCampaign
-        kind="npc"
+      <AddNpcPanel
         currentCampaignId={current.campaign.id}
+        initialMode={view.mode}
+        initialQuery={view.query}
         onBack={() => toList()}
+        onBlank={() => setView({ kind: 'edit', item: blankNpc(), key: 0 })}
         onCopy={(campaignId, id) => {
           void copyNpc(campaignId, id).then((copied) => {
             if (copied) toList(copied.id);
+          });
+        }}
+        onFromRecord={(recordId, query) => {
+          // Straight to its form: name, role and notes are what the DM changes first. A stat
+          // block copy was made unless the creature was already this campaign's own.
+          void npcFromRecord(recordId).then((made) => {
+            if (!made) return;
+            const copied = made.recordRef && made.recordRef.recordId !== recordId;
+            setView({
+              kind: 'edit',
+              item: made,
+              key: 0,
+              added: { creatureId: copied ? made.recordRef!.recordId : null, query },
+            });
           });
         }}
       />
@@ -292,11 +364,15 @@ function NpcsTab() {
       <div className="row">
         <h2>NPCs</h2>
         <span className="spacer" />
-        <AddButtons
-          what="NPC"
-          onCopy={() => setView({ kind: 'copy' })}
-          onNew={() => setView({ kind: 'edit', item: blankNpc(), key: 0 })}
-        />
+        <button
+          type="button"
+          className="chrome-btn primary"
+          aria-label="Add NPC"
+          title="Add NPC: blank, from another campaign or from the compendium"
+          onClick={() => setView({ kind: 'copy' })}
+        >
+          <Icon name="plus" />
+        </button>
       </div>
       {current.npcs.length === 0 && <p className="muted">No NPCs yet.</p>}
       {current.npcs.map((n) => (
@@ -312,13 +388,23 @@ function NpcsTab() {
               </span>
             )}
             {!n.isAlive && <span className="badge">dead</span>}
+            {n.recordRef && (
+              <span
+                className="badge source-pill npc-home"
+                data-testid="npc-statblock-home"
+                title={`Stat block: ${statBlockHome(n.recordRef.sourceId, sourceNames)}`}
+              >
+                {statBlockHome(n.recordRef.sourceId, sourceNames)}
+              </span>
+            )}
             <span className="spacer" />
             {confirmId === n.id ? (
               <InlineConfirm
                 name={n.name}
+                question={deleteNpcQuestion(n)}
                 onConfirm={() => {
                   setConfirmId(null);
-                  void removeNpc(n.id);
+                  void removeNpcEverywhere(n);
                 }}
                 onKeep={() => setConfirmId(null)}
               />

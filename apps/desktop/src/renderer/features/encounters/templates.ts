@@ -210,3 +210,20 @@ export function splitToRecord(
     rowId: own.id,
   };
 }
+
+/** A fight without some fighters; the turn stays on the same fighter where it can. */
+export function withoutFighters<S extends { combatants: Combatant[]; turnIndex: number }>(
+  state: S,
+  test: (ref: EntityRef) => boolean,
+): S {
+  let turnIndex = state.turnIndex;
+  state.combatants.forEach((c, i) => {
+    if (test(c.ref) && i < state.turnIndex) turnIndex -= 1;
+  });
+  const combatants = state.combatants.filter((c) => !test(c.ref));
+  return {
+    ...state,
+    combatants,
+    turnIndex: Math.max(0, Math.min(turnIndex, combatants.length - 1)),
+  };
+}

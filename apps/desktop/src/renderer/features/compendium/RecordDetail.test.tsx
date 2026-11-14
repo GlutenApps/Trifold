@@ -150,7 +150,7 @@ describe('RecordDetail', () => {
     expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
   });
 
-  it('treats a campaign creature as the DM’s own, with Add to my compendium (ADR 0035)', async () => {
+  it('treats a campaign creature as the DM’s own, with Use in all campaigns (ADR 0035, 0037)', async () => {
     const onAddToLibrary = vi.fn();
     const onEdit = vi.fn();
     const creature = {
@@ -176,7 +176,7 @@ describe('RecordDetail', () => {
     expect(screen.getByTestId('homebrew-bar')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
     expect(onEdit).toHaveBeenCalledOnce();
-    await userEvent.click(screen.getByRole('button', { name: 'Add to my compendium' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Use in all campaigns' }));
     expect(onAddToLibrary).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: 'Delete Grik' })).toHaveAttribute(
       'title',

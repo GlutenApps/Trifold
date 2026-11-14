@@ -53,7 +53,7 @@ export interface CampaignView {
 
 /**
  * Where it can live. Your own record: Update (the default) or Save as new. A copy: this campaign
- * (the default when one is open) or your compendium.
+ * only (the default when one is open) or all campaigns, in your homebrew (ADR 0037's words).
  */
 export function homeChoices(own: boolean, campaign: CampaignView | null): Choice<Home>[] {
   if (own) {
@@ -64,12 +64,16 @@ export function homeChoices(own: boolean, campaign: CampaignView | null): Choice
   }
   const library: Choice<Home> = {
     id: 'library',
-    label: 'In my compendium',
-    detail: 'For every campaign.',
+    label: 'All campaigns',
+    detail: 'Kept in your homebrew.',
   };
   if (!campaign) return [library];
   return [
-    { id: 'campaign', label: `In ${campaign.name}`, detail: 'Listed only while it is open.' },
+    {
+      id: 'campaign',
+      label: 'This campaign only',
+      detail: `Listed only while ${campaign.name} is open.`,
+    },
     library,
   ];
 }
@@ -160,7 +164,7 @@ export function scopeChoices(
     return [
       { id: 'none', label: 'Nowhere yet' },
       ...(what
-        ? [{ id: 'campaign' as const, label: `Every ${name} in ${campaign!.name}`, detail: what }]
+        ? [{ id: 'campaign' as const, label: `Every ${name} in this campaign`, detail: what }]
         : []),
     ];
   }
@@ -199,7 +203,7 @@ export function scopeChoices(
   if (elsewhere && campaign) {
     out.push({
       id: 'campaign',
-      label: `Every ${name} in ${campaign.name}`,
+      label: `Every ${name} in this campaign`,
       detail: `Also ${elsewhere}`,
     });
   }

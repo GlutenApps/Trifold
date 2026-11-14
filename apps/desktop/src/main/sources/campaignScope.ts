@@ -145,6 +145,26 @@ export async function shareUsedSources(
   }
 }
 
+/**
+ * A compendium creature as a named character's own stat block in the open campaign (ADR 0037):
+ * a copy among its creatures under the same name, marked named, with `basedOn` pointing at
+ * the original. One of the campaign's own creatures is returned as it is.
+ */
+export async function ownStatBlock(
+  record: CompendiumRecord,
+  creatures: Pick<HomebrewRepository, 'sourceId' | 'copyOf' | 'save'>,
+): Promise<CompendiumRecord> {
+  if (record.sourceId === creatures.sourceId) return record;
+  const copy = creatures.copyOf(record);
+  const named = copy.kind === 'monster' ? { ...copy, data: { ...copy.data, isNpc: true } } : copy;
+  return creatures.save({
+    ...named,
+    name: record.displayName,
+    displayName: record.displayName,
+    key: record.key,
+  });
+}
+
 /** What `bringStatBlock` needs: the index, the sources and the open campaign's creatures. */
 export interface StatBlockContext {
   index: Pick<IndexDb, 'get'>;

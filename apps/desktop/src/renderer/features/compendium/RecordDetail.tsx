@@ -43,7 +43,7 @@ interface Props {
 
 /**
  * Edit / Changes from original / Delete on the DM's own records (DESIGN.md §6.2): homebrew, and
- * the open campaign's creatures, which also offer Add to my compendium (ADR 0035).
+ * the open campaign's creatures, which also offer Use in all campaigns (ADR 0035, 0037).
  */
 function HomebrewBar({
   record,
@@ -87,11 +87,11 @@ function HomebrewBar({
           <button
             type="button"
             className="btn"
-            title="Copy it into your compendium, for every campaign; this campaign keeps its own"
+            title="Copy it into your homebrew for every campaign; this campaign keeps its own"
             onClick={actions.onAddToLibrary}
           >
             <Icon name="plus" />
-            Add to my compendium
+            Use in all campaigns
           </button>
         )}
         <span className="spacer" />

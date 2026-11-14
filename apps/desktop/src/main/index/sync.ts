@@ -28,7 +28,8 @@ export async function syncIndex(
     const upToDate =
       row !== undefined &&
       (row.file_hash ?? null) === (source.fileHash ?? null) &&
-      row.enabled === (source.enabled ? 1 : 0);
+      row.enabled === (source.enabled ? 1 : 0) &&
+      row.name === source.name;
     if (upToDate) {
       const campaigns = campaignsColumn(source.campaignIds);
       if ((row.campaigns ?? null) !== campaigns)

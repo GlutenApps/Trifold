@@ -256,6 +256,9 @@ export function installBridgeMock(): TrifoldBridge {
       copyFrom: vi.fn(async () => {
         throw new Error('not mocked');
       }),
+      fromRecord: vi.fn(async () => {
+        throw new Error('not mocked');
+      }),
     },
     scenes: {
       save: vi.fn(async (scene) => scene),
