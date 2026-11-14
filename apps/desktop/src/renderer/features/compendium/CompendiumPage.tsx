@@ -6,7 +6,8 @@ import { useCampaignStore } from '../../stores/campaignStore';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { itemTypeName, shortSourceName } from './formatting';
-import { HomebrewEditor } from './RecordEditor';
+import { CreatureEditor } from './CreatureEditor';
+import { KIND_NAMES } from './homebrew';
 import { RecordDetail } from './RecordDetail';
 
 /**
@@ -64,17 +65,13 @@ export function CompendiumPage() {
   const back = useCompendiumStore((s) => s.back);
   const clearError = useCompendiumStore((s) => s.clearError);
   const editing = useCompendiumStore((s) => s.editing);
-  const editingNew = useCompendiumStore((s) => s.editingNew);
-  const saving = useCompendiumStore((s) => s.saving);
-  const duplicateSelected = useCompendiumStore((s) => s.duplicateSelected);
+  const editingOwn = useCompendiumStore((s) => s.editingOwn);
+  const editingFrom = useCompendiumStore((s) => s.editingFrom);
   const startEdit = useCompendiumStore((s) => s.startEdit);
   const cancelEdit = useCompendiumStore((s) => s.cancelEdit);
-  const saveHomebrew = useCompendiumStore((s) => s.saveHomebrew);
+  const finishEdit = useCompendiumStore((s) => s.finishEdit);
   const removeHomebrew = useCompendiumStore((s) => s.removeHomebrew);
   const addToLibrary = useCompendiumStore((s) => s.addToLibrary);
-  const draftFrom = useCompendiumStore((s) => s.draftFrom);
-  const draftChoice = useCompendiumStore((s) => s.draftChoice);
-  const setDraftChoice = useCompendiumStore((s) => s.setDraftChoice);
   const sources = useSourcesStore((s) => s.sources);
   const loadSources = useSourcesStore((s) => s.load);
   // The open campaign's preferred edition heads each collapsed row; a change re-runs the search.
@@ -399,37 +396,22 @@ export function CompendiumPage() {
           className="inspector"
           data-nav={selected && !editing ? navKey('record', selected.id) : undefined}
         >
-          {editing && draftFrom && (
-            <div
-              className="banner draft-origin"
-              role="radiogroup"
-              aria-label="After saving"
-              data-testid="draft-origin"
-            >
-              {draftFrom.choices.map((choice) => (
-                <label key={choice.id} className="draft-choice">
-                  <input
-                    type="radio"
-                    name="draft-choice"
-                    checked={draftChoice === choice.id}
-                    onChange={() => setDraftChoice(choice.id)}
-                  />
-                  <span>
-                    {choice.label}
-                    <span className="muted small"> {choice.detail}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          )}
           {editing ? (
-            <HomebrewEditor
+            <CreatureEditor
               key={editing.id}
               record={editing}
-              isNew={editingNew}
-              saving={saving}
+              own={editingOwn}
+              original={editingFrom}
+              origin={{ kind: 'record' }}
+              title={
+                editingOwn
+                  ? `Edit ${editing.displayName}`
+                  : editingFrom
+                    ? `Edit ${editingFrom.name}`
+                    : `New ${KIND_NAMES[editing.kind]}`
+              }
               onCancel={cancelEdit}
-              onSave={(r) => void saveHomebrew(r)}
+              onSaved={(saved) => void finishEdit(saved)}
             />
           ) : selected ? (
             <RecordDetail
@@ -443,8 +425,7 @@ export function CompendiumPage() {
               onOpenSpell={(key) => void openByKey('spell', key)}
               sourceNames={Object.fromEntries(sources.map((s) => [s.id, s.name]))}
               homebrew={{
-                onDuplicate: () => void duplicateSelected(),
-                onEdit: startEdit,
+                onEdit: () => void startEdit(),
                 onRemove: (id) => void removeHomebrew(id),
                 onAddToLibrary: () => void addToLibrary(),
               }}

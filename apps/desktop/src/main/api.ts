@@ -328,16 +328,6 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     ...createPhoneAudioApi(ctx.phoneAudio, ctx.config, ctx.logger),
 
     homebrew: {
-      async duplicate(recordId) {
-        const { index, catalog, store } = ctx.session.require();
-        const homebrew = ctx.session.homebrew;
-        if (!homebrew) throw new Error('No Library is open');
-        const original = index.get(recordId);
-        if (!original) throw new Error('Record not found');
-        const copy = await homebrew.duplicate(original);
-        await syncIndex(index, catalog, store, ctx.logger);
-        return copy;
-      },
       async draft(recordId, home = 'library') {
         const original = ctx.session.require().index.get(recordId);
         if (!original) throw new Error('Record not found');

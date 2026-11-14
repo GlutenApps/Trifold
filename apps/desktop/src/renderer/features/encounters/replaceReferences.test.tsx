@@ -13,7 +13,7 @@ import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { ReplaceInCampaign } from '../compendium/ReplaceInCampaign';
 import { describePlan, planReplace } from './replaceReferences';
-import { recordTarget } from './saveToCompendium';
+import { recordTarget } from './creatureEdits';
 import { refersTo, type RecordIdentity } from './templates';
 
 const now = '2026-11-14T00:00:00.000Z';

@@ -928,11 +928,10 @@ export interface TrifoldApi {
     setSource(source: AudioSource): Promise<PhoneAudioStatus>;
   };
   homebrew: {
-    /** Copies any record into the homebrew source with `basedOn` provenance (DESIGN.md §6.2). */
-    duplicate(recordId: string): Promise<CompendiumRecord>;
     /**
-     * The same copy as `duplicate`, not written: Save to compendium opens it in the editor and
-     * it reaches disk only through `save` (DESIGN.md §6.2).
+     * A copy of any record with `basedOn` provenance (DESIGN.md §6.2), not written: Edit opens
+     * it in the editor and it reaches disk only through `save`, at the Save step's Confirm
+     * (ADR 0035). `home` picks its id and source; the step can still move it.
      */
     draft(recordId: string, home?: 'library' | 'campaign'): Promise<CompendiumRecord>;
     /**
@@ -1057,7 +1056,7 @@ export const API_METHODS = {
     'removePlaylist',
   ],
   phoneAudio: ['status', 'listDevices', 'connect', 'disconnect', 'forget', 'setSource'],
-  homebrew: ['duplicate', 'draft', 'save', 'remove', 'addToLibrary'],
+  homebrew: ['draft', 'save', 'remove', 'addToLibrary'],
   icons: ['tables', 'available', 'credits', 'reportMiss'],
   compendium: ['search', 'get', 'findByKey', 'facets', 'suggest', 'searchText'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };

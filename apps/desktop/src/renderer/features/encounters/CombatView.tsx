@@ -6,7 +6,7 @@ import { registerHotkey } from '../../hotkeys';
 import { navigate } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore, type DamageTarget } from '../../stores/combatStore';
-import { saveToCompendium } from './saveToCompendium';
+import { editFighter } from './creatureEdits';
 import { COMBAT_NOTES_SLOT, hasPendingSave, scheduleSave } from '../../stores/pendingSaves';
 import { useIconStore } from '../../stores/iconStore';
 import { usePresenterStore } from '../../stores/presenterStore';
@@ -375,18 +375,11 @@ function CombatantDrawer({
               <button
                 type="button"
                 className="chrome-btn"
-                aria-label={`Save ${c.name} to compendium`}
-                title="Save to compendium: open a homebrew copy of this creature to edit and keep"
-                onClick={() => {
-                  const { encounterId } = useCombatStore.getState();
-                  const encounter = useCampaignStore
-                    .getState()
-                    .current?.encounters.find((e) => e.id === encounterId);
-                  const row = encounter?.combatants.find((t) => t.id === c.templateId);
-                  if (encounter && row) void saveToCompendium(encounter, row);
-                }}
+                aria-label={`Edit ${c.name}`}
+                title="Edit this creature: change anything, then Save asks where it lives and where to use it"
+                onClick={() => void editFighter(c.id)}
               >
-                <Icon name="compendium" />
+                <Icon name="pencil" />
               </button>
             )}
             {map && !c.isLair && (

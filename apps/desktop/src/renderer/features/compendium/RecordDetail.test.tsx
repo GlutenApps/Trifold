@@ -126,8 +126,8 @@ describe('RecordDetail', () => {
     expect(screen.getByTestId('detail-last-roll')).toHaveTextContent(String(entry!.total));
   });
 
-  it('offers Duplicate to homebrew on a spell, in the bar, and no homebrew bar on an original', async () => {
-    const onDuplicate = vi.fn();
+  it('offers Edit on a stock spell, and no homebrew bar on an original (ADR 0035)', async () => {
+    const onEdit = vi.fn();
     render(
       <RecordDetail
         record={record('Fireball')}
@@ -137,15 +137,15 @@ describe('RecordDetail', () => {
         onSwitchEdition={() => undefined}
         onOpenSpell={() => undefined}
         homebrew={{
-          onDuplicate,
-          onEdit: () => undefined,
+          onEdit,
           onRemove: () => undefined,
           onAddToLibrary: () => undefined,
         }}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Duplicate to homebrew' }));
-    expect(onDuplicate).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: 'Duplicate to homebrew' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(onEdit).toHaveBeenCalledOnce();
     expect(screen.queryByTestId('homebrew-bar')).toBeNull();
     expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
   });
@@ -167,7 +167,6 @@ describe('RecordDetail', () => {
         onSwitchEdition={() => undefined}
         onOpenSpell={() => undefined}
         homebrew={{
-          onDuplicate: () => undefined,
           onEdit,
           onRemove: () => undefined,
           onAddToLibrary,

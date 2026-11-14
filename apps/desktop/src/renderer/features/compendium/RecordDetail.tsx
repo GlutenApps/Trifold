@@ -14,7 +14,7 @@ import { UsedBy } from './UsedBy';
 
 /**
  * One open compendium record (DESIGN.md §6.1): a bar with Back, the edition dropdown, the source
- * citation and Duplicate to homebrew (ADR 0026), then the record laid out by kind (monsters as
+ * citation and Edit (ADR 0035; a record that is not the DM's own is edited as a copy), then the record laid out by kind (monsters as
  * the 2024 stat block). Rolls made from the record land in the shared log through
  * compendiumRolls. A homebrew record also gets the homebrew bar: Edit, Changes from original
  * and Delete (DESIGN.md §6.2).
@@ -33,7 +33,7 @@ interface Props {
   /** Source names by id, used to tell apart editions that come from different sources. */
   sourceNames?: Record<string, string>;
   homebrew?: {
-    onDuplicate(): void;
+    /** Edit: the DM's own record in place, any other as a copy (ADR 0035). */
     onEdit(): void;
     onRemove(recordId: string): void;
     /** A campaign creature into the Library's homebrew (ADR 0035). */
@@ -462,10 +462,15 @@ export function RecordDetail({
             </span>
           )}
         <span className="spacer" />
-        {homebrew && (
-          <button type="button" className="btn" onClick={homebrew.onDuplicate}>
-            <Icon name="plus" />
-            Duplicate to homebrew
+        {homebrew && !isOwnRecord(record) && (
+          <button
+            type="button"
+            className="btn"
+            title="Edit a copy; Save asks where it lives and where to use it"
+            onClick={homebrew.onEdit}
+          >
+            <Icon name="pencil" />
+            Edit
           </button>
         )}
       </div>

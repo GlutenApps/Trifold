@@ -148,9 +148,6 @@ export function installBridgeMock(): TrifoldBridge {
       setSource: vi.fn(async (source) => ({ ...phoneStatus('off'), source })),
     },
     homebrew: {
-      duplicate: vi.fn(async () => {
-        throw new Error('not in tests');
-      }),
       draft: vi.fn(async () => {
         throw new Error('not in tests');
       }),

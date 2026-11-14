@@ -8,6 +8,7 @@ import {
   replaceInCombatants,
   replaceInTemplates,
   replaceInTokens,
+  templateTokenIds,
   type RecordIdentity,
   type RecordTarget,
 } from './templates';
@@ -134,4 +135,69 @@ export async function replaceInCampaign(
   }
   for (const scene of plan.scenes) await useCampaignStore.getState().saveScene(scene);
   return plan;
+}
+
+/**
+ * Replace references within one encounter (ADR 0035, "Every Goblin in this fight"): its rows,
+ * its fight, and the map tokens those rows placed. Other encounters and maps are left alone.
+ */
+export async function replaceInEncounter(
+  encounterId: string,
+  from: RecordIdentity,
+  to: RecordTarget,
+): Promise<void> {
+  await flushPendingSaves();
+  const campaign = useCampaignStore.getState();
+  const encounter = campaign.current?.encounters.find((e) => e.id === encounterId);
+  if (!encounter) return;
+  const tokenIds = new Set(
+    encounter.combatants.filter((t) => refersTo(t.ref, from)).flatMap(templateTokenIds),
+  );
+  const combat = useCombatStore.getState();
+  const builder = builderDraftFor(encounterId);
+  if (combat.encounterId === encounterId && combat.state) {
+    combat.replaceRecord(from, to);
+  } else if (builder) {
+    builder.editTemplates((templates) => replaceInTemplates(templates, from, to));
+  } else {
+    const plan = planReplace({ encounters: [encounter], scenes: [] }, from, to);
+    for (const e of plan.encounters) await campaign.saveEncounter(e);
+  }
+  if (tokenIds.size === 0) return;
+  for (const scene of useCampaignStore.getState().current?.scenes ?? []) {
+    if (!scene.tokens.some((t) => tokenIds.has(t.id) && refersTo(t.ref, from))) continue;
+    await useCampaignStore.getState().saveScene({
+      ...scene,
+      tokens: scene.tokens.map((t) =>
+        tokenIds.has(t.id) && refersTo(t.ref, from) ? { ...t, ref: to.ref } : t,
+      ),
+    });
+  }
+}
+
+/**
+ * What a campaign-wide replace would change outside one encounter: the other encounters and
+ * fights, and tokens other than the ones that encounter's rows placed. Empty when nothing there
+ * uses the record.
+ */
+export function planElsewhere(
+  bundle: { encounters: readonly Encounter[]; scenes: readonly Scene[] },
+  encounterId: string,
+  from: RecordIdentity,
+  to: RecordTarget,
+  live?: { encounterId: string; combatants: readonly Combatant[] } | null,
+): ReplacePlan {
+  const here = bundle.encounters.find((e) => e.id === encounterId);
+  const own = new Set(
+    (here?.combatants ?? []).filter((t) => refersTo(t.ref, from)).flatMap(templateTokenIds),
+  );
+  return planReplace(
+    {
+      encounters: bundle.encounters.filter((e) => e.id !== encounterId),
+      scenes: bundle.scenes.map((s) => ({ ...s, tokens: s.tokens.filter((t) => !own.has(t.id)) })),
+    },
+    from,
+    to,
+    live && live.encounterId !== encounterId ? live : null,
+  );
 }

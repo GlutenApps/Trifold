@@ -88,9 +88,9 @@ export interface RecordTarget {
 }
 
 /**
- * Save to compendium's "Use it in this encounter" (DESIGN.md §6.2): the whole row, every copy in
- * it, points at the new record. Its label, quantity, role and tokens stay; the HP override goes,
- * since the record now carries that HP.
+ * The row an edited creature was saved from (ADR 0035): the whole row, every copy in it, points
+ * at the new record. Its quantity, role and tokens stay; the label and HP override go, since the
+ * record now carries that name and HP.
  */
 export function retargetToRecord(
   templates: readonly CombatantTemplate[],
@@ -99,7 +99,7 @@ export function retargetToRecord(
 ): CombatantTemplate[] {
   return templates.map((t) => {
     if (t.id !== templateId) return t;
-    const { hpOverride: _hp, ...rest } = t;
+    const { hpOverride: _hp, label: _label, ...rest } = t;
     return { ...rest, ref: target.ref, cache: target.cache };
   });
 }
@@ -172,4 +172,41 @@ export function replaceInTokens(
   return tokens.map((t) =>
     t.kind !== 'marker' && refersTo(t.ref, from) ? { ...t, ref: to.ref } : t,
   );
+}
+
+/**
+ * "Just Goblin 2" at Save (ADR 0035): one fighter out of a group gets its own row, pointing at
+ * the saved record and taking its token with it; the group keeps the rest. A lone row is simply
+ * switched. Resolves to the templates and the row the fighter now belongs to.
+ */
+export function splitToRecord(
+  templates: readonly CombatantTemplate[],
+  templateId: string,
+  target: RecordTarget,
+  tokenId?: string,
+): { templates: CombatantTemplate[]; rowId: string } {
+  const source = templates.find((t) => t.id === templateId);
+  if (!source || source.quantity <= 1) {
+    return { templates: retargetToRecord(templates, templateId, target), rowId: templateId };
+  }
+  const had = source.tokenIds ?? [];
+  const remaining = tokenId ? had.filter((id) => id !== tokenId) : had;
+  const group: CombatantTemplate = {
+    ...source,
+    quantity: source.quantity - 1,
+    ...(source.tokenIds ? { tokenIds: remaining } : {}),
+  };
+  const own: CombatantTemplate = {
+    id: ulid(),
+    ref: target.ref,
+    quantity: 1,
+    role: source.role,
+    hidden: source.hidden,
+    cache: target.cache,
+    ...(tokenId ? { tokenId } : {}),
+  };
+  return {
+    templates: templates.flatMap((t) => (t.id === source.id ? [group, own] : [t])),
+    rowId: own.id,
+  };
 }

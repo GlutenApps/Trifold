@@ -49,6 +49,7 @@ import {
   replaceInCombatants,
   replaceInTemplates,
   retargetCombatants,
+  splitToRecord,
   retargetToNpc,
   retargetToRecord,
   withTokenLink,
@@ -185,6 +186,11 @@ interface CombatStoreState {
    * `to` instead; labels, HP overrides, HP, conditions and turn order stay.
    */
   replaceRecord(from: RecordIdentity, to: RecordTarget): void;
+  /**
+   * "Just Goblin 2" at Save (ADR 0035): this fighter alone points at the saved record, in a row
+   * of its own when its row has others; HP, conditions and turn order stay.
+   */
+  splitToRecord(combatantId: string, target: RecordTarget): void;
   remove(id: string): void;
   move(id: string, direction: -1 | 1): void;
   useCounter(id: string, counterId: string, delta: number): void;
@@ -905,6 +911,20 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       update((s) => ({ ...s, combatants: retargetCombatants(s.combatants, templateId, target) }));
       const encounter = currentEncounter();
       if (encounter) saveTemplates(retargetToRecord(encounter.combatants, templateId, target));
+    },
+
+    splitToRecord(combatantId, target) {
+      const c = find(combatantId);
+      const encounter = currentEncounter();
+      if (!c || !c.templateId || !encounter) return;
+      const split = splitToRecord(encounter.combatants, c.templateId, target, c.tokenId);
+      patchCombatant(combatantId, (x) => ({
+        ...x,
+        ref: target.ref,
+        recordId: target.ref.ref.recordId,
+        templateId: split.rowId,
+      }));
+      saveTemplates(split.templates);
     },
 
     replaceRecord(from, to) {

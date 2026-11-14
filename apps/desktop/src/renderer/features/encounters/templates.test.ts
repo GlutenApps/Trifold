@@ -98,16 +98,16 @@ describe('retargetToRecord and retargetCombatants', () => {
     hpOverride: 12,
   };
 
-  it('points the whole row at the new record, keeping its label, count and tokens', () => {
+  it('points the whole row at the new record, keeping its count and tokens, taking its name', () => {
     const [moved, other] = retargetToRecord([row, ogre], 'g', target);
     expect(moved).toMatchObject({
       ref: target.ref,
       cache: target.cache,
-      label: 'Grik’s gang',
       quantity: 3,
       tokenIds: ['t1', 't2', 't3'],
     });
     expect(moved!.hpOverride).toBeUndefined();
+    expect(moved!.label).toBeUndefined();
     expect(other).toBe(ogre);
     expect(templateTokenIds(moved!)).toEqual(['t1', 't2', 't3']);
     expect(templateTokenIds(ogre)).toEqual(['old']);

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { identityOf, type Original } from '../features/compendium/creatureSave';
 import { blankRecord, isOwnRecord } from '../features/compendium/homebrew';
 import type { CompendiumFacets, CompendiumQuery, CompendiumRow } from '@trifold/api';
 import { errorMessage, type CompendiumRecord, type RecordKind } from '@trifold/schema';
@@ -43,48 +44,27 @@ interface CompendiumState {
   back(): void;
   clearError(): void;
   /**
-   * Homebrew (DESIGN.md §6.2, ADR 0026): start one blank or as a copy of any record, edit,
-   * save, delete. `editingNew` marks a blank one that is not on disk until it is saved.
+   * One Edit on every record (ADR 0035): the DM's own record opens as it is (`editingOwn`); any
+   * other opens as a copy not yet written, as does a blank one from New homebrew. The editor's
+   * Save step decides where it lives and where it is used; nothing is written before Confirm.
    */
   editing: CompendiumRecord | null;
-  editingNew: boolean;
-  saving: boolean;
-  duplicateSelected(): Promise<void>;
-  /** Copies any record into homebrew, shows its kind, and opens the copy in the editor. */
-  duplicateRecord(recordId: string): Promise<void>;
+  /** `editing` is one of the DM's own records, edited in place unless saved as new. */
+  editingOwn: boolean;
+  /** What a copy was made from, for "Every Goblin in the campaign"; null for a blank one. */
+  editingFrom: Original | null;
   /** Opens the editor on a blank record of `kind`, showing that kind's list. */
   newHomebrew(kind: RecordKind): Promise<void>;
-  startEdit(): void;
+  /** Opens the editor on a copy of any record, not yet written, showing its kind. */
+  editCopy(recordId: string): Promise<void>;
+  /** Edit on the selected record: in place when it is the DM's own, else as a copy. */
+  startEdit(): Promise<void>;
   cancelEdit(): void;
-  saveHomebrew(record: CompendiumRecord): Promise<boolean>;
+  /** After the editor's Confirm: back to the list with the saved record selected. */
+  finishEdit(saved: CompendiumRecord): Promise<void>;
   removeHomebrew(recordId: string): Promise<void>;
   /** Add to my compendium (ADR 0035): the selected campaign creature into the Library's homebrew. */
   addToLibrary(): Promise<void>;
-  /**
-   * Save to compendium (DESIGN.md §6.2): a copy not yet on disk, opened in the editor from a
-   * fight or an encounter, with what Save can do next ("Use it in Bridge ambush"). Cleared when
-   * the editor closes.
-   */
-  draftFrom: DraftOrigin | null;
-  /** The chosen `draftFrom.choices` id; the first by default. */
-  draftChoice: string | null;
-  startDraft(draft: CompendiumRecord, from: DraftOrigin): Promise<void>;
-  setDraftChoice(id: string): void;
-}
-
-/** One way to use a saved draft: "Use it in Bridge ambush", "Just save it". */
-export interface DraftChoice {
-  id: string;
-  label: string;
-  /** A line under it: "Every Goblin in that row, in the fight too." */
-  detail: string;
-}
-
-/** Where a Save to compendium draft came from, and what Save does next for each choice. */
-export interface DraftOrigin {
-  /** Shown above the editor, the first chosen by default. */
-  choices: DraftChoice[];
-  apply(saved: CompendiumRecord, choiceId: string): Promise<void>;
 }
 
 const EMPTY_FACETS: CompendiumFacets = { types: [], sizes: [], environments: [] };
@@ -103,10 +83,8 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
   editions: [],
   history: [],
   editing: null,
-  editingNew: false,
-  saving: false,
-  draftFrom: null,
-  draftChoice: null,
+  editingOwn: false,
+  editingFrom: null,
   error: null,
 
   async setKind(kind) {
@@ -231,18 +209,18 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
       .catch(() => undefined);
   },
 
-  async duplicateSelected() {
-    const selected = get().selected;
-    if (selected) await get().duplicateRecord(selected.id);
-  },
-
-  async duplicateRecord(recordId) {
+  async editCopy(recordId) {
     try {
-      const copy = await window.trifold.homebrew.duplicate(recordId);
+      const original = await window.trifold.compendium.get(recordId);
+      const copy = await window.trifold.homebrew.draft(recordId);
       if (get().kind !== copy.kind) await get().setKind(copy.kind);
-      else await get().search();
-      await get().select(copy.id);
-      set({ editing: copy, editingNew: false, draftFrom: null });
+      set({
+        editing: copy,
+        editingOwn: false,
+        editingFrom: original
+          ? { identity: identityOf(original), name: original.displayName }
+          : null,
+      });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : String(err) });
     }
@@ -250,46 +228,31 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
 
   async newHomebrew(kind) {
     if (get().kind !== kind) await get().setKind(kind);
-    set({ editing: blankRecord(kind), editingNew: true, draftFrom: null });
+    set({ editing: blankRecord(kind), editingOwn: false, editingFrom: null });
   },
 
-  startEdit() {
+  async startEdit() {
     const selected = get().selected;
-    if (selected && isOwnRecord(selected)) set({ editing: selected, editingNew: false });
+    if (!selected) return;
+    if (isOwnRecord(selected)) {
+      set({
+        editing: selected,
+        editingOwn: true,
+        editingFrom: { identity: identityOf(selected), name: selected.displayName },
+      });
+    } else {
+      await get().editCopy(selected.id);
+    }
   },
 
   cancelEdit() {
-    set({ editing: null, editingNew: false, draftFrom: null });
+    set({ editing: null, editingOwn: false, editingFrom: null });
   },
 
-  async startDraft(draft, from) {
-    if (get().kind !== draft.kind) await get().setKind(draft.kind);
-    set({
-      editing: draft,
-      editingNew: true,
-      draftFrom: from,
-      draftChoice: from.choices[0]?.id ?? null,
-    });
-  },
-
-  setDraftChoice(id) {
-    set({ draftChoice: id });
-  },
-
-  async saveHomebrew(record) {
-    set({ saving: true });
-    try {
-      const saved = await window.trifold.homebrew.save(record);
-      const { draftFrom, draftChoice } = get();
-      set({ editing: null, editingNew: false, saving: false, draftFrom: null });
-      if (draftFrom && draftChoice) await draftFrom.apply(saved, draftChoice);
-      await get().search();
-      await get().select(saved.id);
-      return true;
-    } catch (err) {
-      set({ saving: false, error: err instanceof Error ? err.message : String(err) });
-      return false;
-    }
+  async finishEdit(saved) {
+    set({ editing: null, editingOwn: false, editingFrom: null });
+    await get().search();
+    await get().select(saved.id);
   },
 
   async addToLibrary() {

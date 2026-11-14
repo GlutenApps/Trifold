@@ -692,11 +692,53 @@ input.narrow {
 }
 
 /* Above the editor when Save to compendium opened it: what Save does next, one choice. */
-.draft-origin {
+/* The Save step (ADR 0035): it takes the editor's pinned header once Save is pressed. */
+.save-step-head {
+  display: block;
+}
+
+.save-step {
+  display: flex;
   flex-direction: column;
-  align-items: stretch;
+  gap: 10px;
+}
+
+.save-step h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.save-step .field {
+  max-width: 420px;
+}
+
+.save-step-choices {
+  display: flex;
+  flex-direction: column;
   gap: 4px;
-  margin-bottom: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.save-step-choices legend {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.save-step-warn {
+  margin: 0;
+  color: var(--warn);
+}
+
+/* The editor in the Encounters panel, in place of the builder or tracker. */
+.creature-edit {
+  min-height: 0;
+  overflow: auto;
 }
 
 .draft-choice {

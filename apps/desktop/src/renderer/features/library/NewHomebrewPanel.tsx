@@ -28,7 +28,7 @@ const editionLabel = (e: string) => (e === '2014' ? 'legacy' : e);
 export function NewHomebrewPanel({ onClose }: { onClose(): void }) {
   const current = useCompendiumStore((s) => s.kind);
   const newHomebrew = useCompendiumStore((s) => s.newHomebrew);
-  const duplicateRecord = useCompendiumStore((s) => s.duplicateRecord);
+  const editCopy = useCompendiumStore((s) => s.editCopy);
   const [kind, setKind] = useState<RecordKind>(current);
   const [text, setText] = useState('');
   const [rows, setRows] = useState<CompendiumRow[]>([]);
@@ -127,7 +127,7 @@ export function NewHomebrewPanel({ onClose }: { onClose(): void }) {
                 title={`Copy ${r.displayName} into homebrew and edit it`}
                 onClick={() => {
                   onClose();
-                  void duplicateRecord(r.id);
+                  void editCopy(r.id);
                 }}
               >
                 <span className="list-name">{r.displayName}</span>
