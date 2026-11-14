@@ -17,6 +17,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Fixed
 
+- A campaign NPC can be placed on a map directly: the map's Add creature or marker pop-up lists the campaign's NPCs, each sized and masked from its stat block, starting neutral, one token per map. Before, an NPC reached a map only inside a placed encounter.
 - A save made while a backup was running (the daily one at start, or the one at close) could stop the app with a "JavaScript error occurred in the main process" box. A file that changes during a backup is now read as it is when its turn comes, and a backup that hits a missing file tries again instead. Campaign export reads its media the same way.
 
 ## [0.3.0] - 2026-11-07

@@ -13,6 +13,7 @@ import {
   type Combatant,
   type CombatantTemplate,
   type Encounter,
+  type NPC,
   type PCCard,
   type Scene,
   type Token,
@@ -66,7 +67,11 @@ import {
 type Mode = 'select' | 'align' | 'party' | 'place';
 
 type Pending =
-  { kind: 'creature'; row: CompendiumRow } | { kind: 'marker' } | { kind: 'pc'; pc: PCCard };
+  | { kind: 'creature'; row: CompendiumRow }
+  | { kind: 'marker' }
+  | { kind: 'pc'; pc: PCCard }
+  /** A campaign NPC, with the size and type of its stat block when it has one. */
+  | { kind: 'npc'; npc: NPC; size?: string; type?: string };
 
 /** What the panel under the map is showing options for. */
 type Selection = { kind: 'token'; id: string } | null;
@@ -83,6 +88,7 @@ interface DmCamera {
 const ZOOM_MIN = 0.05;
 const ZOOM_MAX = 8;
 const NO_SCENES: Scene[] = [];
+const NO_NPCS: NPC[] = [];
 const NO_COMBATANTS: Combatant[] = [];
 
 /**
@@ -100,6 +106,7 @@ export function MapEditor({
   onChange(scene: Scene): void;
 }) {
   const pcs = useCampaignStore((s) => s.current?.pcs ?? []);
+  const npcs = useCampaignStore((s) => s.current?.npcs ?? NO_NPCS);
   const encounters = useCampaignStore((s) => s.current?.encounters ?? []);
   const initiativeMode = useCampaignStore(
     (s) => s.current?.campaign.settings.initiativeMode ?? 'perGroup',
@@ -292,6 +299,49 @@ export function MapEditor({
     dead: false,
   });
 
+  /**
+   * A campaign NPC's token (DESIGN.md §6.5): tied to the NPC by identity like an encounter's NPC
+   * token (ADR 0012), sized and masked from its stat block, starting neutral.
+   */
+  const npcToken = (p: Extract<Pending, { kind: 'npc' }>, at: Point): Token => {
+    const glyph = glyphFor({ name: p.npc.name, ...(p.type ? { type: p.type } : {}) }, 'creature');
+    return {
+      id: ulid(),
+      kind: 'creature',
+      ref: { kind: 'npc', npcId: p.npc.id, name: p.npc.name },
+      label: p.npc.name,
+      maskedLabel: p.type ? capitalize(p.type) : 'Creature',
+      x: at.x,
+      y: at.y,
+      footprint: footprintForSize(p.size),
+      role: 'neutral',
+      hidden: false,
+      nameMasked: true,
+      dead: !p.npc.isAlive,
+      ...(p.npc.portrait ? { art: p.npc.portrait } : {}),
+      ...(glyph ? { glyph } : {}),
+    };
+  };
+
+  /** Starts placing an NPC once its stat block's size and type are known. */
+  const beginNpc = async (npc: NPC) => {
+    let size: string | undefined;
+    let type: string | undefined;
+    if (npc.recordRef) {
+      const record = await window.trifold.compendium.get(npc.recordRef.recordId).catch(() => null);
+      if (record?.kind === 'monster') {
+        size = record.data.size ?? undefined;
+        type = record.data.type || undefined;
+      }
+    }
+    beginPlacing('place', {
+      kind: 'npc',
+      npc,
+      ...(size ? { size } : {}),
+      ...(type ? { type } : {}),
+    });
+  };
+
   const placeParty = (at: Point) => {
     const others = scene.tokens.filter((t) => t.kind !== 'pc');
     const spots = partyFormation(pcs.length, pixelToGrid(at.x, at.y, grid));
@@ -308,6 +358,14 @@ export function MapEditor({
         (t) => !(t.kind === 'pc' && t.ref.kind === 'pc' && t.ref.pcId === pending.pc.id),
       );
       patch({ tokens: [...others, token] });
+      selectToken(token.id);
+      return;
+    }
+    if (pending.kind === 'npc') {
+      // One token per NPC on a map, like a PC: placing them again moves them.
+      const was = scene.tokens.find((t) => t.ref.kind === 'npc' && t.ref.npcId === pending.npc.id);
+      const token = was ? { ...was, x: cell.x, y: cell.y } : npcToken(pending, cell);
+      patch({ tokens: [...scene.tokens.filter((t) => t.id !== was?.id), token] });
       selectToken(token.id);
       return;
     }
@@ -368,7 +426,7 @@ export function MapEditor({
       return;
     }
     placePending(at);
-    if (!keepPlacing || pending?.kind === 'pc') {
+    if (!keepPlacing || pending?.kind === 'pc' || pending?.kind === 'npc') {
       setPending(null);
       setMode('select');
     }
@@ -670,7 +728,9 @@ export function MapEditor({
         : mode === 'place'
           ? pending?.kind === 'pc'
             ? `Click to place ${pending.pc.name}`
-            : `Click to place ${pending?.kind === 'creature' ? pending.row.displayName : 'a marker'} (Shift keeps placing)`
+            : pending?.kind === 'npc'
+              ? `Click to place ${pending.npc.name}`
+              : `Click to place ${pending?.kind === 'creature' ? pending.row.displayName : 'a marker'} (Shift keeps placing)`
           : null;
 
   const cancelMode = () => {
@@ -1077,17 +1137,49 @@ export function MapEditor({
           trigger={
             <button
               type="button"
-              className={`chrome-btn${pop === 'creature' || pending?.kind === 'creature' || pending?.kind === 'marker' ? ' on' : ''}`}
+              className={`chrome-btn${pop === 'creature' || pending?.kind === 'creature' || pending?.kind === 'npc' || pending?.kind === 'marker' ? ' on' : ''}`}
               aria-label="Add creature or marker"
               aria-haspopup="dialog"
               aria-expanded={pop === 'creature'}
-              title="Add a creature or a marker token"
+              title="Add an NPC, a creature or a marker token"
               onClick={() => togglePop('creature')}
             >
               <Icon name="paw" />
             </button>
           }
         >
+          {npcs.length > 0 && (
+            <>
+              <h3>NPCs</h3>
+              <ul className="picker-list" aria-label="Campaign NPCs">
+                {npcs.map((npc) => {
+                  const onMap = scene.tokens.some(
+                    (t) => t.ref.kind === 'npc' && t.ref.npcId === npc.id,
+                  );
+                  const verb = onMap ? 'Move' : 'Place';
+                  return (
+                    <li key={npc.id}>
+                      <span>
+                        {npc.name}{' '}
+                        <span className="muted small">
+                          {onMap ? 'on map' : npc.isAlive ? npc.role : 'dead'}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        className="chrome-btn xs"
+                        aria-label={`${verb} ${npc.name}`}
+                        title={onMap ? 'Move: click the map' : 'Place: click the map'}
+                        onClick={() => void beginNpc(npc)}
+                      >
+                        <Icon name={onMap ? 'hand' : 'plus'} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
           <h3>Creatures</h3>
           <input
             type="text"
