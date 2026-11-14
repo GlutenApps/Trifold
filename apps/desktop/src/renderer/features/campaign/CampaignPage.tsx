@@ -335,11 +335,11 @@ function NpcsTab() {
             {!n.isAlive && <span className="badge">dead</span>}
             {n.recordRef && (
               <span
-                className="badge source-pill"
+                className="badge source-pill npc-home"
                 data-testid="npc-statblock-home"
-                title="Where its stat block lives"
+                title={`Stat block: ${statBlockHome(n.recordRef.sourceId, sourceNames)}`}
               >
-                Stat block: {statBlockHome(n.recordRef.sourceId, sourceNames)}
+                {statBlockHome(n.recordRef.sourceId, sourceNames)}
               </span>
             )}
             <span className="spacer" />

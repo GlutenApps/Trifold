@@ -6,7 +6,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Added
 
-- **Add NPC** (ADR 0037): one plus on the NPCs tab to start a blank NPC, copy one from another campaign, or turn a compendium creature into a named NPC with its own copy of the stat block in this campaign. Each NPC row says where its stat block lives.
+- **Add NPC** (ADR 0037): one plus on the NPCs tab to start a blank NPC, copy one from another campaign, or turn a compendium creature into a named NPC with its own copy of the stat block in this campaign. Each NPC row shows where its stat block lives in a short pill.
 - **Per-campaign sources** (ADR 0036): an imported file can show in every campaign or only in the ones you tick, from its row in Library › Compendium › Sources. A Game Master campaign file's stat blocks start as that campaign only, and ones imported before this are linked to the campaign that uses them. Copying an NPC from another campaign brings its stat block along when this campaign can't see it.
 - **Edit, then choose at Save** (ADR 0035): one **Edit** on every record, on a creature's row in the builder and on a fighter in the tracker, opening the editor right there. Save asks the name, where to keep it (this campaign or your compendium; for your own, update or save as new) and where to use it (just this one, this fight or encounter, the campaign), showing only what applies; Confirm writes it. **Duplicate to homebrew**, the book icon and the choice above the editor are gone.
 - **Campaign creatures**: a campaign keeps its own creatures, shown in the compendium only while it is open; **Use in all campaigns** copies one into your homebrew. They travel with campaign export.

@@ -37,8 +37,8 @@ imported file, in the DM's homebrew (every campaign), or in the campaign's own c
      compendium.
    - Campaign creatures' source pill reads **This campaign** (only the open campaign's ever
      show).
-4. **The NPC row says where its stat block lives**: a pill, *Stat block: This campaign*,
-   *Stat block: Homebrew* or the book or file's name. The button under a shown stat block reads
+4. **The NPC row says where its stat block lives**: a short pill, *This campaign*,
+   *Homebrew* or the book or file's name, cut short with its full name in the tooltip. The button under a shown stat block reads
    **Open stat block**.
 
 ## Consequences
