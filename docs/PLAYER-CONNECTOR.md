@@ -324,6 +324,82 @@ long as nobody else claimed them meanwhile. Main keeps that grace for 5 seconds 
   submits initiative; Switch character and Undo; a second window takes Brannoc over in Approval
   mode after the DM accepts.
 
+## Phase 3 plan
+
+**Status:** confirmed by the DM, 2026-11-15: no turn rule, Lock movement in the pop-up and the
+device list, companions as an NPC's Companion of.
+
+### A drag, start to finish
+
+Main owns the drag locks, in memory only; the console still applies every move, as with Phase 2's
+edits.
+
+1. **Grab.** A finger down on one of the player's own tokens sends `grab {tokenId}`. Main grants
+   a lock when the device holds the token's creature, movement is not locked (below), and no
+   other device holds the token. Other phones see the token marked as moving; the DM sees it on
+   the console map with the device's name.
+2. **Drag.** The phone moves the token locally and sends `preview {tokenId, x, y}` at most ten
+   times a second. Main forwards previews to the console, which shows them on the console map and
+   the TV without saving anything. A preview whose token centre is under fog shows nothing on the
+   TV (the TV's existing centre rule), and no phone but the owner's sees it. Previews count as the
+   lock's heartbeat; with no preview or `hold` for 3 seconds the lock expires and the token snaps
+   back on the phone.
+3. **Drop.** `drop {tokenId, x, y, from}` carries where the token was at the grab. Main refuses it,
+   and the phone snaps the token back with a one-line reason, when the lock is gone, the token
+   has moved since `from` (the stale check: someone else moved it), the drop is off the map, or
+   the token's centre lands under fog (decision 12). Otherwise main forwards it and the console
+   moves the token with `patchTokenAnywhere`, the same path the tracker uses: the scene saves, the
+   TV and every phone follow. On a grid the drop snaps to whole cells, as a DM drag does.
+4. **DM priority.** The DM starting a drag on a locked token tells main, which cancels the player's
+   lock; the phone's token snaps back and says "The DM moved Brannoc." The DM never waits.
+
+No `version` field: the `from` position is the stale check, and positions are the only thing a
+player writes absolutely and concurrently.
+
+### Locking movement
+
+- **Lock movement** for everyone, and per creature, live in `players.json` (main enforces them).
+  The global switch sits in the Player devices pop-up; the per-creature lock is a
+  lock button beside each claim in its device list. A locked phone shows "Movement locked by the
+  DM" and its tokens do not pick up.
+- **Turns in a fight:** no turn rule: players move whenever movement is
+  not locked, as at a physical table where the DM keeps order. An "only on their turn" switch can come later
+  if the table wants it.
+
+### Companions
+
+- An NPC gets an optional **Companion of** (a PC), set on the NPC form: a ranger's
+  beast, a familiar kept as an NPC. Claiming the PC also claims its companions that no other
+  device holds; releasing the PC (Switch character, DM release, a takeover) releases them with it.
+  A companion can still be released on its own: its chip has a Release. Phase 4's summons reuse
+  the same link.
+- The phone's creature chips list the PC first, then its companions; tapping a token selects its
+  chip, as now.
+
+### Give to…
+
+The DM hands any PC card or NPC to a connected device: **Give to…** on the selected token's
+actions on the map and on the PC and NPC forms, listing the devices online now. It moves the claim
+(the old device, if any, drops it), bypasses the reclaim mode and the player-controllable flag
+(the DM's call), and takes companions along with a PC. Take back is Release.
+
+### The phone
+
+- One finger on one of the player's own tokens drags it; one finger anywhere else pans; a second
+  finger cancels a drag and pinch-zooms. Tokens the player cannot move never start a drag. The
+  dragged token shows a ghost where it started until the drop is accepted.
+- A refused drop snaps back with a one-line reason; the token never jumps on its own otherwise.
+
+### Tests
+
+- Unit (`packages/rules`): the lock table (grant, refuse another device, expiry, DM grab), the drop
+  checks (stale, off map, under fog, locked movement), the companion set for a claim.
+- Unit (renderer): previews show on the live scene without saving, a drop moves the token and
+  clears the preview, the DM's drag tells main.
+- Smoke: the phone drags Brannoc into a revealed area and the TV shows the move; a drop under fog
+  snaps back; Lock movement stops a drag; the DM grabbing a token mid-drag cancels the phone's;
+  Give to… hands Tobin to the phone.
+
 ## Goals and non-goals
 
 Players get one-tap access to their own creatures on the map; the DM keeps full authority and loses no speed.
