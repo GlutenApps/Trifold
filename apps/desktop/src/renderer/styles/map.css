@@ -612,3 +612,11 @@
   margin: 4px 4px;
   background: var(--border);
 }
+
+/* Set art… and Remove art… ask where (ADR 0033): this token, or every one of it. */
+.art-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}

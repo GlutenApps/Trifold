@@ -7,6 +7,7 @@ import type { Combatant, Encounter, NPC, PCCard, Scene, Token } from '@trifold/s
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
+import { useArtStore } from '../../stores/artStore';
 import { MapEditor } from './MapEditor';
 
 const now = '2026-09-28T00:00:00.000Z';
@@ -687,5 +688,69 @@ describe('MapEditor: movement ruler (Beta 9)', () => {
     expect(screen.getByTestId('ruler-label')).toHaveTextContent('3 squares · 15 ft');
     fireEvent.pointerUp(wolfToken);
     expect(screen.queryByTestId('ruler-label')).toBeNull();
+  });
+});
+
+describe('MapEditor: token art (ADR 0033)', () => {
+  const goblin: Token = {
+    ...wolf,
+    id: 'gob',
+    ref: {
+      kind: 'record',
+      ref: { recordId: 'r1', sourceId: 'srd', key: 'goblin', edition: '2024' },
+      name: 'Goblin',
+    },
+    label: 'Goblin',
+  };
+  beforeEach(() => {
+    latest = blank;
+    useCampaignStore.setState({
+      current: {
+        campaign: { id: 'c1', slug: 'keep', settings: { initiativeMode: 'perGroup' } },
+        pcs: [],
+        npcs: [],
+        encounters: [],
+        scenes: [blank],
+      } as unknown as CampaignBundle,
+    });
+    useCombatStore.setState({ encounterId: null, state: null });
+    useArtStore.setState({ byKey: {}, error: null });
+  });
+
+  it('chooses the picture first, then asks this token or every one, and removes the same way', async () => {
+    render(<Harness initial={{ ...blank, tokens: [goblin] }} />);
+    fireEvent.pointerDown(screen.getByTestId('console-token'), { button: 0 });
+    fireEvent.pointerUp(screen.getByTestId('console-token'));
+    const inspector = screen.getByTestId('token-inspector');
+    // No art yet: no Remove.
+    expect(within(inspector).queryByRole('button', { name: 'Remove art' })).toBeNull();
+
+    await userEvent.click(within(inspector).getByRole('button', { name: 'Set art' }));
+    const ask = await screen.findByRole('group', { name: 'Use this art for' });
+    await userEvent.click(within(ask).getByRole('button', { name: 'This token' }));
+    expect(window.trifold.art.setToken).toHaveBeenCalledWith('/pictures/goblin.png');
+    await waitFor(() => expect(latest.tokens[0]!.art).toBe('tokens/art.png'));
+
+    // Every Goblin: the creature's art, and this token gives up its own to show it.
+    await userEvent.click(screen.getByRole('button', { name: 'Set art' }));
+    await userEvent.click(
+      within(await screen.findByRole('group', { name: 'Use this art for' })).getByRole('button', {
+        name: 'Every Goblin',
+      }),
+    );
+    expect(window.trifold.art.setCreature).toHaveBeenCalledWith(
+      'monster',
+      'goblin',
+      '/pictures/goblin.png',
+    );
+    await waitFor(() => expect(latest.tokens[0]!.art).toBeUndefined());
+
+    // Remove from this token only: the Goblin keeps its art, this one shows none.
+    await userEvent.click(screen.getByRole('button', { name: 'Remove art' }));
+    const removing = await screen.findByRole('group', { name: 'Remove the art from' });
+    await userEvent.click(within(removing).getByRole('button', { name: 'This token' }));
+    await waitFor(() => expect(latest.tokens[0]!.art).toBe(''));
+    expect(screen.queryByRole('button', { name: 'Remove art' })).toBeNull();
+    expect(window.trifold.art.removeCreature).not.toHaveBeenCalled();
   });
 });

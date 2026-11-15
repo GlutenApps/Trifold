@@ -6,7 +6,8 @@ import { useCampaignStore } from '../../stores/campaignStore';
 /**
  * Which picture a token shows (ADR 0033), the same on the console and the TV:
  *
- * 1. its own art (Set art… › This token);
+ * 1. its own art (Set art… › This token), or none at all when it is set empty (Remove art… ›
+ *    This token, while the creature keeps its picture);
  * 2. a PC's or NPC's portrait, set once for every token of them;
  * 3. the compendium creature's art, Library-wide (an NPC falls back to its stat block's);
  * 4. otherwise nothing, and the token draws its game-icons glyph.
@@ -22,7 +23,8 @@ export function resolveTokenArt(
   token: { art?: string | undefined; ref: EntityRef },
   sources: ArtSources,
 ): string | undefined {
-  if (token.art) return mediaUrl(sources.slug, token.art);
+  // An empty `art` is this token's art removed while its creature keeps one: no picture here.
+  if (token.art !== undefined) return token.art ? mediaUrl(sources.slug, token.art) : undefined;
   const ref = token.ref;
   if (ref.kind === 'pc') {
     const portrait = sources.pcs.find((p) => p.id === ref.pcId)?.portrait;

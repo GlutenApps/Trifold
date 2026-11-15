@@ -111,6 +111,10 @@ export function createArtApi(session: LibrarySession): Pick<TrifoldApi, 'art'> {
         return out;
       },
 
+      async chooseImage() {
+        return chooseImage('Choose art');
+      },
+
       async setCreature(kind, key, file) {
         checkKey(kind, key);
         const source = file ?? (await chooseImage('Choose art for this creature'));

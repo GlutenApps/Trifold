@@ -1005,6 +1005,8 @@ export interface TrifoldApi {
   art: {
     /** Every compendium creature with art. */
     list(): Promise<CreatureArt[]>;
+    /** Asks for an image file and returns its path, writing nothing; null when cancelled. */
+    chooseImage(): Promise<string | null>;
     /** Art shown on every token and page of a compendium creature, by kind and key. */
     setCreature(kind: RecordKind, key: string, file?: string): Promise<CreatureArt | null>;
     removeCreature(kind: RecordKind, key: string): Promise<void>;
@@ -1155,6 +1157,7 @@ export const API_METHODS = {
   homebrew: ['draft', 'save', 'remove', 'addToLibrary'],
   art: [
     'list',
+    'chooseImage',
     'setCreature',
     'removeCreature',
     'setToken',

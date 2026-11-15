@@ -281,6 +281,7 @@ export function installBridgeMock(): TrifoldBridge {
     },
     art: {
       list: vi.fn(async () => []),
+      chooseImage: vi.fn(async () => '/pictures/goblin.png'),
       setCreature: vi.fn(async (kind, key) => ({
         kind,
         key,

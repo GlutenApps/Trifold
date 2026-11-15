@@ -48,6 +48,10 @@ describe('token art', () => {
     ).toBeUndefined();
   });
 
+  it('shows nothing on a token whose art was removed, though its creature keeps a picture', () => {
+    expect(resolveTokenArt({ art: '', ref: record('goblin') }, sources)).toBeUndefined();
+  });
+
   it('shows a compendium creature’s art by key, and nothing for a marker', () => {
     expect(resolveTokenArt({ ref: record('goblin') }, sources)).toBe('art:goblin');
     expect(resolveTokenArt({ ref: record('wolf') }, sources)).toBeUndefined();
