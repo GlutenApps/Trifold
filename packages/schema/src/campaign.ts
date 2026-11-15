@@ -22,7 +22,25 @@ export const CampaignSettings = z.object({
   hpDisplayMode: z.enum(['hidden', 'bloodied', 'exact']).default('bloodied'),
   /** Roll one initiative per identical group or one per creature (DESIGN.md §6.4). */
   initiativeMode: z.enum(['perGroup', 'perCreature']).default('perGroup'),
+  /**
+   * The DM's summon list (ADR 0043, Phase 4): creatures players may bring into play from their
+   * phones. Name, type, size, AC and HP are cached so the table never looks the record up.
+   */
+  summonable: z
+    .array(
+      z.object({
+        ref: RecordRef,
+        name: z.string().min(1),
+        type: z.string().default(''),
+        size: z.string().nullable().default(null),
+        ac: int.nullable().default(null),
+        hp: int.nullable().default(null),
+      }),
+    )
+    .default([]),
 });
+export type CampaignSettings = z.infer<typeof CampaignSettings>;
+export type SummonableEntry = CampaignSettings['summonable'][number];
 
 export const Campaign = z.object({
   schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
@@ -70,6 +88,8 @@ export const PCCard = z.object({
   dndBeyondUrl: z.string().optional(),
   notes: z.string().default(''),
   tokenStyleOverride: z.enum(['engraved', 'flat', 'twoTone', 'plain']).optional(),
+  /** Offered to players at the table to claim (ADR 0043); absent means on, false means not. */
+  playerControllable: z.boolean().optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -314,6 +334,13 @@ export const NPC = z.object({
   isAlive: z.boolean().default(true),
   /** HP at the end of the last fight this NPC was in; absent until then (ADR 0012). */
   hp: z.object({ current: int.min(0), max: int.min(0), temp: int.min(0).default(0) }).optional(),
+  /**
+   * Offered to players at the table to claim (ADR 0043) while it is not marked enemy on the live
+   * scene or in the running fight.
+   */
+  playerControllable: z.boolean().optional(),
+  /** The PC this NPC is a companion of (Phase 3): claimed and released with that PC. */
+  companionOf: z.string().optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -371,6 +398,28 @@ export const Token = z.object({
   glyph: z.string().optional(),
   color: z.string().optional(),
   dead: z.boolean().default(false),
+  /**
+   * A creature a player summoned (ADR 0043, Phase 4): it belongs to whoever holds its owner.
+   * HP and AC are kept here outside a fight; in one, its combatant has them.
+   */
+  summon: z
+    .object({
+      ownerKind: z.enum(['pc', 'npc']),
+      ownerId: z.string().min(1),
+      /** The device that summoned it, by name. */
+      spawnedBy: z.string().default(''),
+      type: z.string().default(''),
+      hp: z.object({ current: int.min(0), max: int.min(0), temp: int.min(0).default(0) }),
+      ac: int.default(10),
+      initiative: z.enum(['shared', 'own']).default('shared'),
+      /** In a fight: the round it goes at. */
+      expiresAtRound: int.optional(),
+      concentration: z.boolean().default(false),
+      concentrationLost: z.boolean().default(false),
+      /** Stays after the fight ends (a familiar). */
+      persistent: z.boolean().default(false),
+    })
+    .optional(),
 });
 export type Token = z.infer<typeof Token>;
 
@@ -596,3 +645,52 @@ export const CampaignExportOptions = z.object({
   layout: z.boolean().default(false),
 });
 export type CampaignExportOptions = z.infer<typeof CampaignExportOptions>;
+
+// ---------- player connector (ADR 0043, docs/PLAYER-CONNECTOR.md) ----------
+
+/** A browser at the table that has claimed something. Only a hash of its token is kept. */
+export const PlayerDevice = z.object({
+  deviceId: z.string().min(1),
+  /** SHA-256 of the device token, hex. The token itself never touches disk. */
+  tokenHash: z.string().regex(/^[0-9a-f]{64}$/),
+  label: z.string().default(''),
+  lastSeen: IsoDateTime,
+});
+export type PlayerDevice = z.infer<typeof PlayerDevice>;
+
+export const PlayerClaim = z.object({
+  creatureKind: z.enum(['pc', 'npc']),
+  creatureId: z.string().min(1),
+  deviceId: z.string().min(1),
+  claimedAt: IsoDateTime,
+  /** PIN reclaim mode: `scrypt` salt and hash, hex, `salt:hash`. Never the PIN itself. */
+  pinHash: z.string().optional(),
+});
+export type PlayerClaim = z.infer<typeof PlayerClaim>;
+
+/**
+ * `campaigns/<slug>/players.json`: the table server's devices and claims, written only by main
+ * so the console's whole-file saves of PC cards and NPCs never erase a claim (ADR 0043).
+ */
+export const PlayersFile = z.object({
+  schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+  devices: z.array(PlayerDevice).default([]),
+  claims: z.array(PlayerClaim).default([]),
+  /** How a claimed character is got back (Phase 2): Open, PIN or the DM's approval. */
+  reclaimMode: z.enum(['open', 'pin', 'approval']).default('open'),
+  /** Lock movement (Phase 3): everyone's, and `kind:id` of single creatures. */
+  movement: z
+    .object({
+      all: z.boolean().default(false),
+      creatures: z.array(z.string()).default([]),
+    })
+    .prefault({}),
+  /** Player summoning (Phase 4): on, on with the DM's approval, or off; and a cap per character. */
+  summoning: z
+    .object({
+      mode: z.enum(['on', 'approval', 'off']).default('on'),
+      cap: z.number().int().min(1).max(20).default(8),
+    })
+    .prefault({}),
+});
+export type PlayersFile = z.infer<typeof PlayersFile>;

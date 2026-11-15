@@ -13,6 +13,7 @@ import {
   type Combatant,
   type CombatantTemplate,
   type Encounter,
+  type FogShape,
   type NPC,
   type PCCard,
   type Scene,
@@ -21,6 +22,8 @@ import {
 } from '@trifold/schema';
 import { capitalize } from '../compendium/formatting';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { npcOffered, pcOffered } from '../players/claimFlag';
+import { GiveTo } from '../players/GiveTo';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useIconStore } from '../../stores/iconStore';
@@ -149,6 +152,9 @@ export function MapEditor({
     (s) => s.current?.campaign.settings.initiativeMode ?? 'perGroup',
   );
   const saveEncounter = useCampaignStore((s) => s.saveEncounter);
+  const savePc = useCampaignStore((s) => s.savePc);
+  const moving = usePresenterStore((s) => s.moving);
+  const saveNpc = useCampaignStore((s) => s.saveNpc);
   const importSceneImage = useCampaignStore((s) => s.importSceneImage);
   const combatState = useCombatStore((s) => s.state);
   const combatEncounterId = useCombatStore((s) => s.encounterId);
@@ -377,7 +383,7 @@ export function MapEditor({
     patch({ fog: next });
   };
   /** A drawn shape turns the fog on: drawing is how the DM starts using it. */
-  const addFog = (shape: Parameters<typeof addShape>[1]) =>
+  const addFog = (shape: FogShape) =>
     setFog({ enabled: true, shapes: addShape(fog.shapes, shape) });
   const undoFog = () => {
     const previous = fogUndo[fogUndo.length - 1];
@@ -683,6 +689,8 @@ export function MapEditor({
     if (mode !== 'select') return;
     const at = mapPoint(e);
     const cell = pixelToGrid(at.x, at.y, grid);
+    // A player dragging this token on their phone lets go: the DM never waits (ADR 0043).
+    if (moving[token.id]) void window.trifold.table.dmGrab(token.id);
     drag.current = {
       tokenId: token.id,
       dx: cell.x - token.x,
@@ -1803,14 +1811,16 @@ export function MapEditor({
           />
           {scene.tokens.map((token) => {
             const px = token.footprint * grid.cellPx;
+            // A player's drag in progress shows where their finger is (Phase 3).
+            const playerDrag = moving[token.id];
             return (
               <div
                 key={token.id}
-                className="token-slot"
+                className={`token-slot${playerDrag ? ' player-moving' : ''}`}
                 data-testid="console-token"
                 style={{
-                  left: grid.offsetX + token.x * grid.cellPx,
-                  top: grid.offsetY + token.y * grid.cellPx,
+                  left: grid.offsetX + (playerDrag?.x ?? token.x) * grid.cellPx,
+                  top: grid.offsetY + (playerDrag?.y ?? token.y) * grid.cellPx,
                   width: px,
                   height: px,
                 }}
@@ -1832,6 +1842,11 @@ export function MapEditor({
                   selected={token.id === selectedTokenId}
                   hidden={token.hidden}
                 />
+                {playerDrag && (
+                  <span className="token-mover" data-testid="token-mover">
+                    {playerDrag.label}
+                  </span>
+                )}
                 {turnOrder.has(token.id) && (
                   <span
                     className="token-order"
@@ -2190,6 +2205,16 @@ export function MapEditor({
         ) : selectedToken ? (
           <div className="map-inspector" data-testid="token-inspector">
             <h3>{TOKEN_KIND_LABEL[selectedToken.kind]}</h3>
+            {selectedToken.summon && (
+              <p className="muted small" data-testid="summon-source">
+                {`Summoned for ${
+                  (selectedToken.summon.ownerKind === 'pc'
+                    ? pcs.find((p) => p.id === selectedToken.summon!.ownerId)?.name
+                    : npcs.find((n) => n.id === selectedToken.summon!.ownerId)?.name) ??
+                  'a character'
+                }${selectedToken.summon.spawnedBy ? ` by ${selectedToken.summon.spawnedBy}` : ''}`}
+              </p>
+            )}
             <label className="field inline">
               Label
               <input
@@ -2228,6 +2253,49 @@ export function MapEditor({
               </select>
             </label>
             <span className="icon-toolbar state-toolbar" role="group" aria-label="Token actions">
+              {(() => {
+                // The player connector (ADR 0043): offer this PC or friendly NPC to players.
+                const ref = selectedToken.ref;
+                const pc = ref.kind === 'pc' ? pcs.find((p) => p.id === ref.pcId) : undefined;
+                const npc =
+                  ref.kind === 'npc' && selectedToken.role !== 'enemy'
+                    ? npcs.find((n) => n.id === ref.npcId)
+                    : undefined;
+                if (!pc && !npc) return null;
+                const name = pc?.name ?? npc!.name;
+                const offered = pc ? pcOffered(pc) : npcOffered(npc!);
+                return (
+                  <button
+                    type="button"
+                    className={`chrome-btn${offered ? ' on' : ''}`}
+                    aria-label={`Players can claim ${name}`}
+                    aria-pressed={offered}
+                    title={
+                      offered
+                        ? `Players can pick ${name} on their phones. Click to stop offering`
+                        : `Let players pick ${name} on their phones`
+                    }
+                    onClick={() =>
+                      void (pc
+                        ? savePc({ ...pc, playerControllable: !offered })
+                        : saveNpc({ ...npc!, playerControllable: !offered }))
+                    }
+                  >
+                    <Icon name="phone" />
+                  </button>
+                );
+              })()}
+              {(() => {
+                // Give to… (Phase 3): any PC or NPC, enemy or not; the DM's call.
+                const ref = selectedToken.ref;
+                if (ref.kind !== 'pc' && ref.kind !== 'npc') return null;
+                const id = ref.kind === 'pc' ? ref.pcId : ref.npcId;
+                const name =
+                  (ref.kind === 'pc'
+                    ? pcs.find((p) => p.id === id)?.name
+                    : npcs.find((n) => n.id === id)?.name) ?? ref.name;
+                return <GiveTo kind={ref.kind} id={id} name={name} variant="icon" />;
+              })()}
               {selectedToken.kind === 'creature' && (
                 <button
                   type="button"

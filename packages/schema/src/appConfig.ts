@@ -72,6 +72,12 @@ export const AppConfig = z.object({
       lastError: z.string().nullable().default(null),
     })
     .prefault({}),
+  /**
+   * The table server's port (ADR 0043): null until the first start finds a free one, then that
+   * port every session. Kept per computer, since it is part of the address players' devices
+   * stored their tokens under.
+   */
+  tableServerPort: z.number().int().min(1).max(65535).nullable().default(null),
 });
 export type AppConfig = z.infer<typeof AppConfig>;
 

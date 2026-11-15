@@ -20,6 +20,7 @@ const versions = {
   timer: 1,
   pinnedRoll: 1,
   session: 1,
+  players: 1,
 };
 const registry: MigrationRegistry = {
   appConfig: [],
@@ -44,6 +45,7 @@ const registry: MigrationRegistry = {
   timer: [],
   pinnedRoll: [],
   session: [],
+  players: [],
 };
 const run = createMigrator(registry, versions);
 

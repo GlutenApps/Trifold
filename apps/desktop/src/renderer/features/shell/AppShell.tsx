@@ -22,6 +22,7 @@ import { useTimersStore } from '../../stores/timersStore';
 import { useQuickNotesStore } from '../../stores/quickNotesStore';
 import { useSearchStore } from '../../stores/searchStore';
 import { useShellStore } from '../../stores/shellStore';
+import { installTableSync } from '../../stores/tableStore';
 import { LibraryView } from '../library/LibraryView';
 import { useBackupEvents } from '../settings/useBackupEvents';
 import { useUpdateEvents } from '../settings/Updates';
@@ -70,6 +71,8 @@ export function AppShell() {
   useUpdateEvents();
   // The session log fills itself from what happens at the table (ADR 0040).
   useEffect(() => installSessionLog(), []);
+  // The player connector (ADR 0043): keeps main fed while the table server runs.
+  useEffect(() => installTableSync(), []);
 
   // A modifier combo pressed inside a web tab's page reaches the hotkeys as if typed here
   // (ADR 0011). The page keeps its copy; only combos the console knows do anything.

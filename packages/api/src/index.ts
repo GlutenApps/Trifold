@@ -24,6 +24,38 @@ import type {
   Source,
   Track,
 } from '@trifold/schema';
+import type {
+  CreatureKind,
+  ReclaimMode,
+  TableIntent,
+  TableSnapshot,
+  TableTokenEvent,
+  TableSummonEvent,
+  SummonMode,
+} from '@trifold/rules';
+
+export type {
+  ClientMap,
+  ClientMessage,
+  ClientScreen,
+  ClientToken,
+  ClientView,
+  CreatureKind,
+  CreatureView,
+  PickerEntry,
+  ReclaimMode,
+  ServerMessage,
+  TableIntent,
+  TableCreature,
+  TableScene,
+  TableSnapshot,
+  TableToken,
+  TableTokenEvent,
+  TableSummonEvent,
+  SummonMode,
+  SummonOption,
+  SummonRequest,
+} from '@trifold/rules';
 
 /**
  * The one interface between the renderer and the main process (DESIGN.md §4.4).
@@ -235,6 +267,11 @@ export interface PresenterState {
    * may see is sent: never one that starts or ends under fog, nor one on a hidden token.
    */
   ruler?: LiveRuler | null;
+  /**
+   * The player connector's join code on the TV (ADR 0043), while Show join code on TV is
+   * ticked: the address the QR encodes (always the IP) and the local name, when there is one.
+   */
+  joinCode?: { url: string; localUrl: string | null } | null;
   /** Milliseconds since epoch; lets the player ignore stale updates. */
   updatedAt: number;
 }
@@ -680,6 +717,59 @@ export interface CampaignImportReport {
   warnings: string[];
 }
 
+// ---------- player connector (ADR 0043, docs/PLAYER-CONNECTOR.md) ----------
+
+/** A browser that has claimed something in the open campaign. */
+export interface TableDeviceView {
+  deviceId: string;
+  label: string;
+  online: boolean;
+  lastSeen: string;
+  claims: Array<{ kind: CreatureKind; id: string; name: string }>;
+}
+
+export interface TableStatus {
+  state: 'off' | 'starting' | 'on';
+  campaignId: string | null;
+  port: number | null;
+  /** `http://<ip>[:port]` for each private address it listens on; the first goes in the QR. */
+  urls: string[];
+  /** `http://trifold.local[:port]` (or the suffixed name it won), null until mDNS is up. */
+  localUrl: string | null;
+  devices: TableDeviceView[];
+  /** Browsers connected now, claimed or not. */
+  connections: number;
+  /** Any browser has connected since Let players join; the firewall hint goes once one has. */
+  anyConnected: boolean;
+  startedAt: string | null;
+  error: string | null;
+  reclaimMode: ReclaimMode;
+  /** Approval mode: devices waiting for the DM, oldest first. */
+  approvals: Array<{
+    requestId: string;
+    label: string;
+    creatureName: string;
+    takeover: boolean;
+    /** A summon waiting for the DM (Phase 4): how many of what. */
+    summon?: { count: number; name: string };
+  }>;
+  /** Player summoning: on, on with approval, or off, and the cap per character (Phase 4). */
+  summoning: { mode: SummonMode; cap: number };
+  /** Lock movement: everyone's, and `kind:id` of single creatures (Phase 3). */
+  movement: { all: boolean; creatures: string[] };
+}
+
+/** A player's change, checked by main and handed to the console to apply (Phase 2). */
+export interface TableIntentEvent {
+  deviceLabel: string;
+  /** A summon's id is its token's id (Phase 4). */
+  creatureKind: CreatureKind | 'summon';
+  creatureId: string;
+  intent: TableIntent;
+}
+
+export type TableReleaseTarget = { kind: CreatureKind; id: string } | 'all';
+
 export interface TrifoldApi {
   app: {
     getInfo(): Promise<AppInfo>;
@@ -732,6 +822,38 @@ export interface TrifoldApi {
     open(displayId?: number | null): Promise<void>;
     close(): Promise<void>;
     isOpen(): Promise<boolean>;
+  };
+  /**
+   * The table server for the player connector (ADR 0043): off until the DM starts it, private
+   * LAN only. The console pushes what the table may see; main filters it per device.
+   */
+  table: {
+    status(): Promise<TableStatus>;
+    /** Starts serving this campaign; the answer also arrives as `tableStatus` events. */
+    start(campaignId: string): Promise<TableStatus>;
+    /** Disconnects every browser and stops listening. */
+    stop(): Promise<TableStatus>;
+    /** Releases one creature's claim, or all of them; creature data never changes. */
+    release(target: TableReleaseTarget): Promise<TableStatus>;
+    /** The console's latest table state; ignored while the server is off. */
+    push(snapshot: TableSnapshot): Promise<void>;
+    /** The live map image with fog filled black, as a JPEG (decision 11). */
+    setMapImage(sceneId: string, fogKey: string, jpeg: Uint8Array): Promise<void>;
+    /** Open, PIN or Approval, saved in the campaign's players.json. */
+    setReclaimMode(mode: ReclaimMode): Promise<TableStatus>;
+    /** Accept or Deny a device waiting in Approval mode. */
+    answer(requestId: string, accept: boolean): Promise<TableStatus>;
+    /** The DM started dragging a token: any player's drag on it ends (DM priority). */
+    dmGrab(tokenId: string): Promise<void>;
+    /** Hands a PC card or NPC to a connected device, companions with a PC (Give to…). */
+    give(target: { kind: CreatureKind; id: string }, deviceId: string): Promise<TableStatus>;
+    /** Locks or unlocks movement for everyone, or for one creature. */
+    setMovementLock(
+      target: 'all' | { kind: CreatureKind; id: string },
+      locked: boolean,
+    ): Promise<TableStatus>;
+    /** Player summoning's mode and cap per character (Phase 4). */
+    setSummoning(summoning: { mode: SummonMode; cap: number }): Promise<TableStatus>;
   };
   presenter: {
     /**
@@ -1091,6 +1213,20 @@ export const API_METHODS = {
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],
   presenter: ['push', 'get'],
+  table: [
+    'status',
+    'start',
+    'stop',
+    'release',
+    'push',
+    'setMapImage',
+    'setReclaimMode',
+    'answer',
+    'dmGrab',
+    'give',
+    'setMovementLock',
+    'setSummoning',
+  ],
   sources: [
     'list',
     'chooseFile',
@@ -1206,6 +1342,14 @@ export interface TrifoldEvents {
   backupCopy: BackupCopyStatus;
   /** An update check started or answered, or the DM changed the setting. */
   updateStatus: UpdateStatus;
+  /** The table server started, stopped, or a device came, went, claimed or was released. */
+  tableStatus: TableStatus;
+  /** A player's change for the console to apply. */
+  tableIntent: TableIntentEvent;
+  /** A player dragging or dropping a token (Phase 3). */
+  tableToken: TableTokenEvent;
+  /** A player summoning, dismissing or keeping a summon (Phase 4). */
+  tableSummon: TableSummonEvent;
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -1218,6 +1362,10 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   flushSaves: 'trifold:event:flush-saves',
   backupCopy: 'trifold:event:backup-copy',
   updateStatus: 'trifold:event:update-status',
+  tableStatus: 'trifold:event:table-status',
+  tableIntent: 'trifold:event:table-intent',
+  tableToken: 'trifold:event:table-token',
+  tableSummon: 'trifold:event:table-summon',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */

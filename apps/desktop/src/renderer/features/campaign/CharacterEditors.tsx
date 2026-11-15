@@ -7,11 +7,14 @@ import {
   Check,
   NumberField,
   Section,
+  SelectField,
   TextBlock,
   TextField,
   type Cols,
 } from '../compendium/editorParts';
 import { Icon } from '../shell/icons';
+import { useCampaignStore } from '../../stores/campaignStore';
+import { PlayerAccess } from '../players/PlayerAccess';
 
 /**
  * The PC card and NPC forms (DESIGN.md §6.3, §10 Bugs) and the "From another campaign…"
@@ -22,6 +25,7 @@ import { Icon } from '../shell/icons';
  */
 
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
+const NO_PCS: PCCard[] = [];
 
 /** An Optional section: folded or open, its title saying it can be skipped. */
 function FoldSection({
@@ -135,7 +139,12 @@ export function PcEditor({
     basics:
       !isNew &&
       Boolean(
-        pc.playerName || pc.classText || pc.level > 1 || pc.initiativeBonus || pc.speed !== 30,
+        pc.playerName ||
+        pc.classText ||
+        pc.level > 1 ||
+        pc.initiativeBonus ||
+        pc.speed !== 30 ||
+        pc.playerControllable,
       ),
     senses:
       !isNew &&
@@ -229,6 +238,13 @@ export function PcEditor({
           min={0}
           value={draft.speed}
           onChange={(v) => patch({ speed: int(v, 30) })}
+        />
+        <PlayerAccess
+          kind="pc"
+          id={pc.id}
+          name={pc.name}
+          checked={draft.playerControllable !== false}
+          onChange={(playerControllable) => patch({ playerControllable })}
         />
       </FoldSection>
       <FoldSection
@@ -517,8 +533,14 @@ export function NpcEditor({
 }) {
   const isNew = !npc.id;
   const [draft, setDraft] = useState<NPC>(npc);
+  // A companion (a ranger's beast, a familiar) goes with its PC to a player's phone (ADR 0043).
+  const partyPcs = useCampaignStore((s) => s.current?.pcs ?? NO_PCS);
   const [open, setOpen] = useState(() => ({
-    basics: !isNew && Boolean(npc.role || npc.location || !npc.isAlive),
+    basics:
+      !isNew &&
+      Boolean(
+        npc.role || npc.location || !npc.isAlive || npc.playerControllable || npc.companionOf,
+      ),
     statBlock: !isNew && npc.recordRef !== undefined,
     notes: !isNew && npc.notes.trim() !== '',
   }));
@@ -583,9 +605,25 @@ export function NpcEditor({
           value={draft.location}
           onChange={(location) => patch({ location })}
         />
+        <SelectField
+          label="Companion of"
+          value={draft.companionOf ?? ''}
+          options={[['', 'Nobody'], ...partyPcs.map((p) => [p.id, p.name] as const)]}
+          onChange={(companionOf) => {
+            const { companionOf: _was, ...rest } = draft;
+            setDraft(companionOf ? { ...rest, companionOf } : rest);
+          }}
+        />
         <div className="span-all">
           <Check label="Alive" checked={draft.isAlive} onChange={(isAlive) => patch({ isAlive })} />
         </div>
+        <PlayerAccess
+          kind="npc"
+          id={npc.id}
+          name={npc.name}
+          checked={!!draft.playerControllable}
+          onChange={(playerControllable) => patch({ playerControllable })}
+        />
       </FoldSection>
       <FoldSection
         title="Notes"

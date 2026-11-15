@@ -23,7 +23,10 @@ export default defineConfig({
         test: {
           name: 'renderer',
           environment: 'jsdom',
-          include: ['apps/desktop/src/renderer/**/*.test.{ts,tsx}'],
+          include: [
+            'apps/desktop/src/renderer/**/*.test.{ts,tsx}',
+            'apps/desktop/src/web/**/*.test.{ts,tsx}',
+          ],
           setupFiles: ['apps/desktop/src/renderer/test/setup.ts'],
         },
       },

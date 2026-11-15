@@ -46,6 +46,20 @@
   --fight-contrast: #1f0e0c;
   --ally: #6fa4e0;
   --enemy: #e0685e;
+  /* Tinted buttons and chips on the player connector's page (ADR 0043): a dark fill, an edge and
+     the ink on it, for damage, healing, temp HP and an active condition. */
+  --damage-tint: #2a1c1d;
+  --damage-edge: #a8463f;
+  --damage-ink: #f0958c;
+  --heal-tint: #182a20;
+  --heal-edge: #3f7d58;
+  --heal-ink: #8fd3a8;
+  --temp-tint: #1b2a3a;
+  --temp-edge: #36506b;
+  --temp-ink: #9cc6f0;
+  --cond-tint: #3a2f1a;
+  --cond-edge: #c99a45;
+  --cond-ink: #f6d38c;
   --radius: 10px;
   --radius-sm: 6px;
   --radius-lg: 14px;
@@ -131,6 +145,18 @@
   --fight-contrast: #4a1712;
   --ally: #3b75b8;
   --enemy: #c2483f;
+  --damage-tint: #f8e4e1;
+  --damage-edge: #c2483f;
+  --damage-ink: #9a2f27;
+  --heal-tint: #e2f1e7;
+  --heal-edge: #3f8a5e;
+  --heal-ink: #2b6643;
+  --temp-tint: #e1ecf7;
+  --temp-edge: #3b75b8;
+  --temp-ink: #285a90;
+  --cond-tint: #f6ecd3;
+  --cond-edge: #a87a18;
+  --cond-ink: #6e4f0c;
   --shadow: 0 8px 24px rgba(40, 30, 10, 0.18);
 }
 

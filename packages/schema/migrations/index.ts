@@ -21,7 +21,8 @@ export type FileKind =
   | 'counter'
   | 'timer'
   | 'pinnedRoll'
-  | 'session';
+  | 'session'
+  | 'players';
 
 export type JsonObject = Record<string, unknown>;
 
@@ -58,6 +59,7 @@ export const CURRENT_SCHEMA_VERSION: VersionTable = {
   timer: 1,
   pinnedRoll: 1,
   session: 1,
+  players: 1,
 };
 
 /** Registered migrations, oldest first. Add an entry whenever a schema version is bumped. */
@@ -111,6 +113,7 @@ export const MIGRATIONS: MigrationRegistry = {
   timer: [],
   pinnedRoll: [],
   session: [],
+  players: [],
 };
 
 /** Removes one minor tool from every saved layout's dock (presets and per-campaign consoles). */

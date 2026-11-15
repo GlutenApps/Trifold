@@ -12,6 +12,7 @@ import { useArtStore } from '../../stores/artStore';
 import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
 import { SessionsTab } from './SessionsTab';
+import { SummonsTab } from '../players/SummonsTab';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { AddMenu } from './AddMenu';
@@ -56,7 +57,7 @@ export function statBlockHome(sourceId: string, sourceNames: ReadonlyMap<string,
  * between fights with Long rest and Restore (ADR 0012). The Notes sub-tab lives in
  * CampaignNotes.tsx (ADR 0010).
  */
-type CampaignTab = 'party' | 'npcs' | 'notes' | 'sessions';
+type CampaignTab = 'party' | 'npcs' | 'summons' | 'notes' | 'sessions';
 
 /** What the Party and NPCs tabs show: their list, a form in its place, or the copy picker. */
 type TabView<T> =
@@ -534,6 +535,7 @@ export function CampaignPage() {
     ? [
         ['party', `Party (${current.pcs.length})`],
         ['npcs', `NPCs (${current.npcs.length})`],
+        ['summons', `Summons (${(current.campaign.settings.summonable ?? []).length})`],
         ['notes', `Notes (${current.notes.filter((n) => n.kind !== 'folder').length})`],
         ['sessions', `Sessions (${current.sessions.length})`],
       ]
@@ -603,6 +605,7 @@ export function CampaignPage() {
 
           {tab === 'party' && <PartyTab />}
           {tab === 'npcs' && <NpcsTab />}
+          {tab === 'summons' && <SummonsTab />}
           {tab === 'notes' && <CampaignNotes notes={current.notes} />}
           {tab === 'sessions' && <SessionsTab />}
         </>

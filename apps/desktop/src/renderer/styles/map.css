@@ -625,3 +625,243 @@
 .art-menu-head {
   padding: 4px 10px 2px;
 }
+
+/* The player connector's Player devices pop-up and join code (ADR 0043). */
+.map-pop:has(> .player-devices) {
+  width: 340px;
+  max-height: min(70vh, 560px);
+}
+
+.player-devices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.player-devices h3 {
+  margin: 0;
+}
+
+.player-devices .banner,
+.player-devices p {
+  margin: 0;
+}
+
+.join-code {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.join-addresses {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.join-local {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.join-ip {
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.join-qr {
+  flex: none;
+  border-radius: var(--radius-sm);
+}
+
+.join-qr-light {
+  fill: var(--tv-white);
+}
+
+.join-qr-dark {
+  fill: var(--tv-black);
+}
+
+.chrome-btn .chrome-pip {
+  position: absolute;
+  margin: -14px -14px 0 0;
+}
+
+.chrome-btn:has(.chrome-pip) {
+  position: relative;
+}
+
+.device-list,
+.device-claims {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.device-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.device-name {
+  font-weight: 500;
+}
+
+.device-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.device-dot.online {
+  background: var(--ok);
+}
+
+.device-claim {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 14px;
+}
+
+.device-claim .chrome-btn {
+  opacity: var(--quiet);
+}
+
+.device-claim:hover .chrome-btn,
+.device-claim:focus-within .chrome-btn {
+  opacity: 1;
+}
+
+.player-devices-actions {
+  width: 100%;
+}
+
+/* The join code on the TV (decision 6): large, bottom-right, over everything but a blackout. */
+.tv-join {
+  position: absolute;
+  right: 4vh;
+  bottom: 4vh;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 3vh;
+  padding: 3vh;
+  border-radius: var(--radius-lg);
+  background: var(--tv-scrim-strong);
+  color: var(--tv-dark-ink);
+}
+
+.tv-join-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+  font-size: 3.2vh;
+}
+
+.tv-join-text strong {
+  font-size: 4.4vh;
+}
+
+.tv-join-text .join-ip {
+  font-size: 3vh;
+}
+
+.approval-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.player-devices .reclaim-mode {
+  width: 100%;
+}
+
+/* A token a player is dragging on their phone (ADR 0043, Phase 3): their name under it. */
+.token-slot.player-moving {
+  opacity: 0.85;
+}
+
+.token-mover {
+  position: absolute;
+  left: 50%;
+  bottom: -20px;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--tv-scrim-label);
+  color: var(--tv-dark-ink);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.summoning-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+/* Campaign › Summons (ADR 0043, Phase 4). */
+.summons-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 720px;
+}
+
+.summon-list,
+.summon-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summon-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.summon-row:hover {
+  background: var(--bg-hover);
+}
+
+.summon-list .summon-row .chrome-btn {
+  opacity: var(--quiet);
+}
+
+.summon-list .summon-row:hover .chrome-btn,
+.summon-list .summon-row:focus-within .chrome-btn {
+  opacity: 1;
+}
+
+.summon-heading {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

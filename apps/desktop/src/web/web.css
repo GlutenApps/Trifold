@@ -1,0 +1,1408 @@
+/* The player connector's page (ADR 0043; player UI handoff, 2026-11-15). The console's tokens,
+   type and token discs from global.css and map.css, adapted for touch: 44 px targets, nothing
+   that needs hover, safe-area padding for notches. Colours come from the tokens only:
+   surfaces --bg-rail (bars), --bg-panel (page), --bg (inset), --bg-hover (raised),
+   --bg-active (an open tab or segment). */
+
+:root {
+  --touch: 44px;
+  font-size: 16px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg-panel);
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.pc-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ---------- header ---------- */
+
+.pc-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: env(safe-area-inset-top) 12px 0 16px;
+  background: var(--bg-rail);
+  border-bottom: 1px solid var(--border);
+}
+
+.pc-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.pc-brand {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.pc-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+.pc-link.open .pc-dot {
+  background: var(--ok);
+}
+
+.pc-link.stopped .pc-dot {
+  background: var(--text-muted);
+}
+
+.pc-switch {
+  flex: none;
+  white-space: nowrap;
+}
+
+.pc-banner {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg-active);
+  border-bottom: 1px solid var(--warn);
+}
+
+/* ---------- controls ---------- */
+
+.pc-btn {
+  min-height: var(--touch);
+  min-width: var(--touch);
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-hover);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.pc-btn.ghost {
+  background: transparent;
+}
+
+.pc-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+
+.pc-btn.damage {
+  background: var(--damage-tint);
+  border-color: var(--damage-edge);
+  color: var(--damage-ink);
+  font-weight: 600;
+}
+
+.pc-btn.heal {
+  background: var(--heal-tint);
+  border-color: var(--heal-edge);
+  color: var(--heal-ink);
+  font-weight: 600;
+}
+
+.pc-btn.temp {
+  background: var(--temp-tint);
+  border-color: var(--temp-edge);
+  color: var(--temp-ink);
+  font-weight: 600;
+}
+
+.pc-btn.danger-ink {
+  color: var(--damage-ink);
+}
+
+.pc-btn:disabled {
+  opacity: 0.45;
+}
+
+.pc-round {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch);
+  height: var(--touch);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-panel);
+  color: var(--text);
+}
+
+.pc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pc-hint {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0;
+  max-width: 34em;
+}
+
+.pc-hint.small {
+  font-size: 12px;
+}
+
+.pc-hint.center {
+  text-align: center;
+  padding: 16px 8px;
+  max-width: none;
+}
+
+.pc-field {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.pc-field input,
+.pc-amount,
+.pc-search {
+  min-height: var(--touch);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  /* 16 px keeps iOS from zooming the page on focus. */
+  font: inherit;
+  font-size: 16px;
+}
+
+.pc-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.pc-portrait {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  border: 2px solid var(--border);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pc-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pc-num,
+.pc-of {
+  font-family: var(--font-mono);
+}
+
+.pc-of {
+  color: var(--text-muted);
+  font-size: 0.8em;
+  font-weight: 400;
+}
+
+.pc-temp-ink {
+  color: var(--temp-ink);
+  font-size: 12px;
+}
+
+.pc-bar {
+  display: block;
+  width: 76px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--bg-active);
+  overflow: hidden;
+}
+
+.pc-bar.wide {
+  flex: 1;
+  width: auto;
+  height: 8px;
+}
+
+.pc-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--ok);
+}
+
+.pc-bar > span.warn {
+  background: var(--warn);
+}
+
+.pc-bar > span.low {
+  background: var(--danger);
+}
+
+.pc-chip.temp {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--temp-tint);
+  color: var(--temp-ink);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ---------- joining and picking ---------- */
+
+.pc-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+main.pc-center {
+  flex: 1;
+}
+
+.pc-lead {
+  font-size: 18px;
+  margin: 0;
+}
+
+.pc-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.pc-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.pc-pick-list {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .pc-pick-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pc-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-rail);
+  color: var(--text);
+  text-align: left;
+}
+
+.pc-pick:disabled {
+  opacity: 0.55;
+}
+
+.pc-pick-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-pin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.pc-pin .pc-field {
+  flex: 1 1 160px;
+  text-align: left;
+}
+
+.pc-pin input {
+  font-family: var(--font-mono);
+  letter-spacing: 0.4em;
+  text-align: center;
+}
+
+/* ---------- playing: shared ---------- */
+
+.pc-play {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.pc-mapwrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+
+.pc-map {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background: var(--tv-dark);
+}
+
+.pc-map-surface {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.pc-map-art {
+  display: block;
+  -webkit-user-drag: none;
+}
+
+.backdrop-dark {
+  background: var(--tv-dark);
+  color: var(--tv-dark-ink);
+}
+
+.backdrop-parchment {
+  background: var(--tv-parchment);
+  color: var(--tv-parchment-ink);
+}
+
+.backdrop-stone {
+  background: var(--tv-stone);
+  color: var(--tv-stone-ink);
+}
+
+.pc-mapbtns {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 2;
+}
+
+.pc-token {
+  pointer-events: auto;
+}
+
+.pc-token.fogged {
+  opacity: 0.55;
+}
+
+.pc-token.dragging {
+  z-index: 2;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+}
+
+.pc-token.ghost {
+  border: 2px dashed var(--accent);
+  border-radius: 50%;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* While a move is shown the line runs under the tokens, so both ends stay visible; the reading
+   sits above them. */
+.pc-map .ruler-layer {
+  pointer-events: none;
+}
+
+.pc-map .ruler-label {
+  z-index: 3;
+  pointer-events: none;
+}
+
+.pc-token.moving {
+  opacity: 0.7;
+}
+
+.pc-mover {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--tv-scrim-label);
+  color: var(--tv-dark-ink);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Floating over the map: initiative, the Move banner and card, the phone-landscape pills. */
+.pc-overlay-top {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 64px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.pc-overlay-top > * {
+  pointer-events: auto;
+}
+
+.pc-initiative {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 16px;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow);
+}
+
+.pc-initiative .pc-field {
+  flex: 1 1 160px;
+}
+
+.pc-movebanner {
+  align-self: center;
+  max-width: 100%;
+  padding: 8px 14px;
+  border: 1px solid var(--cond-edge);
+  border-radius: 999px;
+  background: var(--cond-tint);
+  color: var(--cond-ink);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-movecard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-panel);
+}
+
+.pc-movecard-actions {
+  position: absolute;
+  left: 10px;
+  right: 64px;
+  bottom: 10px;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pc-movecard-actions .pc-btn {
+  min-height: 48px;
+  border-radius: 14px;
+}
+
+.pc-move-hint {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pc-locked {
+  margin: 0;
+  color: var(--warn);
+  font-size: 14px;
+}
+
+/* The character summary: a one-row strip on phones, a card in side panels. */
+.pc-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 0 16px;
+  border: 0;
+  background: var(--bg-rail);
+  color: var(--text);
+  text-align: left;
+}
+
+.pc-summary.strip {
+  flex: none;
+  border-top: 1px solid var(--border);
+}
+
+.pc-summary.card {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pc-sum-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pc-sum-name {
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-sum-conds {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-sum-conds.active {
+  color: var(--cond-ink);
+}
+
+.pc-sum-hp {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.pc-sum-hpnum {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.pc-ac {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+
+.pc-ac span {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.pc-ac strong {
+  font-size: 16px;
+  line-height: 1.1;
+}
+
+/* Tool tabs: icon and label; the open one lighter, its icon and label in bone. */
+.pc-tooltab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.pc-tooltab.on {
+  background: var(--bg-active);
+  color: var(--accent);
+}
+
+.pc-tooltab-icon {
+  position: relative;
+  display: flex;
+}
+
+.pc-tooltab-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pc-badge {
+  position: absolute;
+  top: -5px;
+  right: -10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--warn);
+  color: var(--accent-contrast);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Target chips: which creature a tool works on. */
+.pc-targets {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  flex: none;
+}
+
+.pc-target {
+  flex: none;
+  min-height: var(--touch);
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.pc-target.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* ---------- the tools ---------- */
+
+.pc-tool-health,
+.pc-tool-conditions,
+.pc-tool-companions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pc-hprow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pc-hpbig {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.pc-segment {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.pc-segment button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pc-segment button[aria-pressed='true'] {
+  background: var(--bg-active);
+  color: var(--text);
+}
+
+.pc-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pc-step {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-hover);
+  color: var(--text);
+  font-size: 24px;
+}
+
+.pc-step-value,
+.pc-stepper .pc-amount {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.pc-hpactions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.8fr;
+  gap: 8px;
+}
+
+.pc-hpactions .pc-btn,
+.pc-tool-health > .pc-btn.primary {
+  min-height: 52px;
+  border-radius: 14px;
+  font-size: 16px;
+}
+
+.pc-condgrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.pc-cond {
+  min-height: var(--touch);
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-hover);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pc-cond.on {
+  background: var(--cond-tint);
+  border-color: var(--cond-edge);
+  color: var(--cond-ink);
+}
+
+.pc-exhaustion {
+  grid-column: span 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.pc-exhaustion > span {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pc-exhaustion .pc-step {
+  width: var(--touch);
+  height: var(--touch);
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+}
+
+.pc-exhaustion .pc-step-value {
+  flex: none;
+  width: 24px;
+  height: auto;
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+}
+
+.pc-tool-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.pc-count {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.pc-comp {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+}
+
+.pc-comp.confirming {
+  border-color: var(--damage-edge);
+}
+
+.pc-comp-row,
+.pc-comp-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pc-comp-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pc-comp-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pc-comp-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pc-comp-confirm > span {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.pc-add-comp {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed var(--accent);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ---------- layout: phone portrait ---------- */
+
+.layout-phonePortrait .pc-tabbar {
+  flex: none;
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  background: var(--bg-rail);
+  border-top: 1px solid var(--border);
+}
+
+.layout-phonePortrait .pc-tabbar .pc-tooltab.on::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 30%;
+  right: 30%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--accent);
+}
+
+.pc-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 0;
+  padding: 0;
+  background: var(--tv-scrim-soft);
+}
+
+.pc-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  z-index: 3;
+  max-height: 72%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow);
+}
+
+.pc-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pc-sheet-title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.pc-round.small {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+/* ---------- layout: phone landscape ---------- */
+
+.layout-phoneLandscape {
+  flex-direction: row;
+}
+
+.pc-railwrap {
+  flex: none;
+  display: flex;
+  background: var(--bg-rail);
+  border-left: 1px solid var(--border);
+}
+
+.pc-panel-tool {
+  width: 340px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+}
+
+.pc-rail {
+  width: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+}
+
+.pc-rail-hp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.pc-rail-hp strong {
+  font-family: var(--font-mono);
+  font-size: 18px;
+}
+
+.pc-rail-hp .pc-bar {
+  width: 56px;
+}
+
+.pc-railtabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pc-railtabs .pc-tooltab-label {
+  font-size: 11px;
+}
+
+.pc-pills {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pc-pills .pc-title-block {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+}
+
+/* ---------- layout: tablets and laptops ---------- */
+
+.layout-wide {
+  flex-direction: row;
+}
+
+.pc-side {
+  flex: none;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-rail);
+  border-left: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (max-width: 1279px) {
+  .layout-wide .pc-side {
+    width: 360px;
+  }
+}
+
+.pc-sidetabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pc-sidetabs .pc-tooltab-label {
+  font-size: 13px;
+}
+
+.pc-side-tool {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-panel);
+}
+
+.layout-tabletPortrait .pc-side {
+  width: auto;
+  height: 500px;
+  flex-direction: row;
+  border-left: 0;
+  border-top: 1px solid var(--border);
+}
+
+.layout-tabletPortrait .pc-side-nav {
+  width: 300px;
+  flex: none;
+  border-right: 1px solid var(--border);
+}
+
+.layout-tabletPortrait .pc-sidetabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 0;
+}
+
+.layout-tabletPortrait .pc-sidetabs .pc-tooltab {
+  min-height: 64px;
+  background: var(--bg-hover);
+}
+
+.layout-tabletPortrait .pc-sidetabs .pc-tooltab.on {
+  background: var(--bg-active);
+}
+
+.layout-tabletPortrait .pc-side-tool {
+  min-width: 0;
+  padding: 16px 20px;
+}
+
+/* ---------- full-screen map: only the map and its buttons ---------- */
+
+.pc-play.full > :not(.pc-mapwrap) {
+  display: none;
+}
+
+.pc-movebanner.locked {
+  border-color: var(--warn);
+  background: var(--bg-panel);
+  color: var(--warn);
+}
+
+/* Phase 4: adding companions, summon options, the concentration prompt. */
+.pc-round.bare {
+  border: 0;
+  background: transparent;
+  margin-left: -10px;
+}
+
+.pc-tool-title .pc-round.bare + span {
+  flex: 1;
+}
+
+.pc-addlist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pc-addrow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.pc-btn.small {
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.pc-summon-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 6px 6px 0;
+}
+
+.pc-optrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.pc-stepper.small .pc-step {
+  width: var(--touch);
+  height: var(--touch);
+  font-size: 20px;
+}
+
+.pc-stepper.small .pc-step-value {
+  flex: none;
+  min-width: 48px;
+  height: var(--touch);
+  font-size: 16px;
+}
+
+.pc-stepper.small .pc-step-value.wide {
+  min-width: 132px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pc-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--touch);
+  font-size: 14px;
+}
+
+.pc-check input {
+  width: 22px;
+  height: 22px;
+}
+
+.pc-concentration {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--cond-edge);
+  border-radius: 16px;
+  background: var(--bg-panel);
+  font-size: 14px;
+}
+
+/* A long press on the map is a drag or a pan, never the browser's "save image" menu. */
+.pc-map,
+.pc-map * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.pc-map img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Confirming a move; the TV's other screens. */
+.pc-tool-move {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pc-move-actions .pc-btn {
+  flex: 1;
+  min-height: 48px;
+}
+
+.pc-token.planned {
+  z-index: 2;
+}
+
+.pc-screen-wrap {
+  display: flex;
+}
+
+.pc-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.pc-screen.title h2 {
+  margin: 0;
+  color: inherit;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.pc-screen.title p {
+  margin: 0;
+  font-size: 17px;
+  opacity: 0.85;
+}
+
+.pc-screen.image {
+  padding: 0;
+  background: var(--tv-dark);
+}
+
+.pc-screen.image img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.pc-countdown {
+  font-family: var(--font-mono);
+  font-size: 32px !important;
+}
+
+/* Move on a phone in portrait: a strip under the map where the character strip was. */
+.pc-movestrip {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-rail);
+  border-top: 1px solid var(--border);
+}
+
+/* The Move banner never takes a tap meant for the token under it. */
+.pc-movebanner {
+  pointer-events: none;
+}

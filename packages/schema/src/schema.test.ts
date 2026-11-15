@@ -96,6 +96,7 @@ describe('AppConfig', () => {
         dismissedVersion: null,
         lastError: null,
       },
+      tableServerPort: null,
     });
   });
 

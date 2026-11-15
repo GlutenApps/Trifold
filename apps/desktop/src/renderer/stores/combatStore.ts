@@ -153,6 +153,24 @@ interface CombatStoreState {
   damage(id: string, amount: number, type?: string): void;
   heal(id: string, amount: number): void;
   tempHp(id: string, amount: number): void;
+  /** Max HP as a player set it (Phase 2): current HP is kept within it. */
+  setMaxHp(id: string, max: number): void;
+  /** Temp HP as a number, not the take-the-higher rule `tempHp` follows. */
+  setTempHp(id: string, temp: number): void;
+  setAc(id: string, ac: number): void;
+  /**
+   * Runs store actions on behalf of a player's device (ADR 0043): their log lines start with the
+   * device's name, so the DM can tell a player's change from their own.
+   */
+  fromDevice(label: string, run: () => void): void;
+  /**
+   * A player's summon joins the fight (ADR 0043, Phase 4): built from its token like any newcomer,
+   * at the initiative given (its owner's, or none so the phone asks), and never added to the
+   * encounter's list.
+   */
+  addSummon(token: Token, initiative: number | null, deviceLabel: string): Promise<void>;
+  /** Takes the combatant tied to a token out of the fight, as a summon leaving play does. */
+  removeByToken(tokenId: string, reason: string): void;
   addCondition(id: string, name: string, duration?: ConditionDuration, level?: number): void;
   removeCondition(id: string, conditionId: string): void;
   setConcentration(id: string, on: string | null): void;
@@ -398,12 +416,14 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
   const find = (id: string): Combatant | undefined =>
     get().state?.combatants.find((c) => c.id === id);
 
+  let logPrefix = '';
   const log = (
     kind: LogEntry['kind'],
-    text: string,
+    rawText: string,
     actorId?: string,
     detail?: Record<string, unknown>,
   ) => {
+    const text = logPrefix + rawText;
     update((s) => ({
       ...s,
       log: [
@@ -726,6 +746,40 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       log('heal', `${c.name} gains ${amount} temporary HP`, id);
     },
 
+    setMaxHp(id, max) {
+      const c = find(id);
+      if (!c || max < 1 || max === c.hp.max) return;
+      patchCombatant(id, (x) => ({
+        ...x,
+        hp: { ...x.hp, max, current: Math.min(x.hp.current, max) },
+      }));
+      log('note', `${c.name}'s max HP is now ${max}`, id);
+    },
+
+    setTempHp(id, temp) {
+      const c = find(id);
+      if (!c || temp < 0 || temp === c.hp.temp) return;
+      patchCombatant(id, (x) => ({ ...x, hp: { ...x.hp, temp } }));
+      log('heal', `${c.name} has ${temp} temporary HP`, id);
+    },
+
+    setAc(id, ac) {
+      const c = find(id);
+      if (!c || ac === c.ac) return;
+      patchCombatant(id, (x) => ({ ...x, ac }));
+      log('note', `${c.name}'s AC is now ${ac}`, id);
+    },
+
+    fromDevice(label, run) {
+      const before = logPrefix;
+      logPrefix = `${label}: `;
+      try {
+        run();
+      } finally {
+        logPrefix = before;
+      }
+    },
+
     addCondition(id, name, duration, level) {
       const c = find(id);
       if (!c) return;
@@ -862,6 +916,38 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       }
       const encounter = currentEncounter();
       if (encounter && built.length) saveTemplates([...encounter.combatants, template]);
+    },
+
+    async addSummon(token, initiative, deviceLabel) {
+      if (!get().state) return;
+      const template: CombatantTemplate = {
+        id: ulid(),
+        ref: token.ref,
+        label: token.label,
+        quantity: 1,
+        role: token.role,
+        hidden: false,
+        tokenId: token.id,
+      };
+      const built = await buildFor(template);
+      for (const c of built) {
+        const summon = token.summon;
+        const joined: Combatant = {
+          ...c,
+          initiative,
+          ...(summon ? { hp: { ...summon.hp }, ac: summon.ac } : {}),
+          tokenId: token.id,
+        };
+        insertCombatant(joined);
+        log('note', `${deviceLabel}: ${joined.name} is summoned`, joined.id);
+      }
+    },
+
+    removeByToken(tokenId, reason) {
+      const c = get().state?.combatants.find((x) => x.tokenId === tokenId);
+      if (!c) return;
+      log('note', `${c.name} ${reason}`, c.id);
+      get().remove(c.id);
     },
 
     async addToFight(template) {

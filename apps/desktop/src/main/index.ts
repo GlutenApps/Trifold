@@ -15,6 +15,7 @@ import phoneAudioHelper from './phoneAudio/helper.ps1?raw';
 import { PhoneAudioReceiver } from './phoneAudio/receiver';
 import { PresenterHub } from './presenter';
 import { SaveFlush } from './saveFlush';
+import { TableHub } from './table/hub';
 import { UpdateService } from './updates';
 import { WindowManager } from './windows';
 
@@ -125,12 +126,28 @@ async function main(): Promise<void> {
   );
   updates.start();
 
+  // The table server (ADR 0043): off until the DM starts it from the VTT tab.
+  const smokePort = Number(process.env['TRIFOLD_TABLE_PORT']);
+  const table = new TableHub({
+    config,
+    session: activeSession,
+    logger,
+    icons,
+    webDir: join(app.getAppPath(), 'out', 'web'),
+    onStatus: (status) => windows.sendToConsole(EVENT_CHANNELS.tableStatus, status),
+    onIntent: (intent) => windows.sendToConsole(EVENT_CHANNELS.tableIntent, intent),
+    onToken: (event) => windows.sendToConsole(EVENT_CHANNELS.tableToken, event),
+    onSummon: (event) => windows.sendToConsole(EVENT_CHANNELS.tableSummon, event),
+    ...(smokePort ? { ports: [smokePort] } : {}),
+  });
+
   registerIpc(
     createApi({
       config,
       session: activeSession,
       windows,
       presenter,
+      table,
       logger,
       icons,
       phoneAudio,
@@ -154,6 +171,7 @@ async function main(): Promise<void> {
       return;
     }
     phoneAudio.disconnect();
+    void table.stop();
     updates.stop();
     activeSession.close();
   });

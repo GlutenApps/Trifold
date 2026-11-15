@@ -7,6 +7,7 @@ import { useMusicStore } from '../../stores/musicStore';
 import { usePhoneAudioStore } from '../../stores/phoneAudioStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useShellStore } from '../../stores/shellStore';
+import { useTableStore } from '../../stores/tableStore';
 import { DicePool } from '../dice/DicePool';
 import { Icon } from './icons';
 import { CounterTraySection, TimerTraySection, useTraySync } from './TrayItems';
@@ -109,6 +110,7 @@ function TvSection() {
   const openPlayer = useAppStore((s) => s.openPlayer);
   const closePlayer = useAppStore((s) => s.closePlayer);
   const openMajor = useShellStore((s) => s.openMajor);
+  const playersWaiting = useTableStore((s) => s.status?.approvals.length ?? 0);
   return (
     <div className="strip-sec" data-strip="tv">
       <Icon name="tv" size={15} />
@@ -119,7 +121,7 @@ function TvSection() {
           toConsole();
           openMajor('map', { avoid: 'encounters' });
         }}
-        title={`VTT: the scene on the TV (${hk('Ctrl+T')})`}
+        title={`VTT: the scene on the TV (${hk('Ctrl+T')})${playersWaiting ? '. A player is waiting for you' : ''}`}
       >
         {!scene ? (
           <span className="muted">Nothing live</span>
@@ -129,6 +131,9 @@ function TvSection() {
           <>
             <span className="pip" /> <span data-testid="live-status">Live: {scene.title}</span>
           </>
+        )}
+        {playersWaiting > 0 && (
+          <span className="pip alert" data-testid="strip-players-waiting" aria-hidden="true" />
         )}
       </button>
       <button

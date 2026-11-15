@@ -28,6 +28,7 @@ import { Icon, type IconName } from './icons';
 import { MAJOR_ICON, MajorBody } from './majors';
 import { WebTabIconPicker, WebTabPage } from './WebTabPage';
 import { hk } from '../../platform';
+import { useTableStore } from '../../stores/tableStore';
 
 /**
  * The stage (ADR 0004): one or two tab groups of majors and web tabs, each with its own tab
@@ -286,6 +287,8 @@ function TabStrip({
   const liveSceneId = usePresenterStore((s) => (s.state.blackout ? null : s.state.scene?.id));
   const selectedSceneId = useSceneStore((s) => s.selectedId);
   const playerOpen = useAppStore((s) => s.playerOpen);
+  // Players waiting for the DM's approval (ADR 0043, decision 4): a dot, never a toast.
+  const playersWaiting = useTableStore((s) => s.status?.approvals.length ?? 0);
   const unsavedHomebrew = false;
   const stripRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
@@ -395,6 +398,14 @@ function TabStrip({
               )}
               <Icon name={tabIcon(kind, webTabs)} size={14} />
               {!iconOnly && <span className="tab-label">{tabTitle(kind, webTabs)}</span>}
+              {kind === 'map' && playersWaiting > 0 && (
+                <span
+                  className="pip alert"
+                  data-testid="players-waiting"
+                  aria-hidden="true"
+                  title="A player is waiting for you"
+                />
+              )}
               {unsavedHomebrew && kind === 'compendium' && <span className="ring" />}
               <button
                 type="button"

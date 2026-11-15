@@ -5,6 +5,7 @@ import { discardPendingSaves } from '../stores/pendingSaves';
 import {
   initialPresenterState,
   type PhoneAudioStatus,
+  type TableStatus,
   type TrifoldBridge,
   type UpdateStatus,
 } from '@trifold/api';
@@ -21,6 +22,24 @@ import { defaultLibrarySettings, type CompendiumRecord, type Playlist } from '@t
 function phoneStatus(state: PhoneAudioStatus['state']): PhoneAudioStatus {
   return { supported: true, state, device: null, detail: null, remembered: [], source: 'computer' };
 }
+
+/** The table server, off (ADR 0043). */
+export const TABLE_OFF: TableStatus = {
+  state: 'off',
+  campaignId: null,
+  port: null,
+  urls: [],
+  localUrl: null,
+  devices: [],
+  connections: 0,
+  anyConnected: false,
+  startedAt: null,
+  error: null,
+  reclaimMode: 'open',
+  approvals: [],
+  movement: { all: false, creatures: [] },
+  summoning: { mode: 'on', cap: 8 },
+};
 
 /** A fully mocked `window.trifold` so renderer tests never touch Electron. */
 export function installBridgeMock(): TrifoldBridge {
@@ -89,6 +108,20 @@ export function installBridgeMock(): TrifoldBridge {
     presenter: {
       push: vi.fn(async () => undefined),
       get: vi.fn(async () => initialPresenterState),
+    },
+    table: {
+      status: vi.fn(async () => TABLE_OFF),
+      start: vi.fn(async () => TABLE_OFF),
+      stop: vi.fn(async () => TABLE_OFF),
+      release: vi.fn(async () => TABLE_OFF),
+      push: vi.fn(async () => undefined),
+      setMapImage: vi.fn(async () => undefined),
+      setReclaimMode: vi.fn(async () => TABLE_OFF),
+      answer: vi.fn(async () => TABLE_OFF),
+      dmGrab: vi.fn(async () => undefined),
+      give: vi.fn(async () => TABLE_OFF),
+      setMovementLock: vi.fn(async () => TABLE_OFF),
+      setSummoning: vi.fn(async () => TABLE_OFF),
     },
     backups: {
       list: vi.fn(async () => []),

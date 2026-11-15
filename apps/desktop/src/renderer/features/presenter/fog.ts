@@ -1,86 +1,24 @@
 import { ulid } from 'ulid';
-import type { FogShape, GridSpec, SceneFog, Token } from '@trifold/schema';
+import type { FogShape, GridSpec } from '@trifold/schema';
 import type { Point } from './mapMath';
 
 /**
- * Fog of war, phase 1 (DESIGN.md §6.5, ADR 0029): a shape mask per scene. The fog starts whole
- * and its shapes apply in order, each revealing or hiding what it covers, so a point's state is
- * set by the last shape that covers it. Pure: the map editor draws with these, `liveSceneFrom`
- * filters tokens with them, and both screens render the same shapes as an SVG mask.
+ * Fog of war, phase 1 (DESIGN.md §6.5, ADR 0029). The pure "is this point under fog" functions
+ * live in `@trifold/rules` so the table server shares them (ADR 0043); this file adds the map
+ * editor's drawing helpers.
  */
+export {
+  activeFog,
+  addShape,
+  covers,
+  inPolygon,
+  isRevealed,
+  svgPoints,
+  tokenCentre,
+  tokensInView,
+} from '@trifold/rules';
 
 export type FogMode = FogShape['mode'];
-
-/** The fog the scene shows: null when it has none or it is off. */
-export function activeFog(fog: SceneFog | undefined): SceneFog | null {
-  return fog?.enabled ? fog : null;
-}
-
-/**
- * The shapes after adding one. Reveal all and Hide all cover everything before them, so those
- * go; hiding everything on a fresh fog is no shape at all.
- */
-export function addShape(shapes: readonly FogShape[], shape: FogShape): FogShape[] {
-  if (shape.kind === 'all') return shape.mode === 'hide' ? [] : [shape];
-  return [...shapes, shape];
-}
-
-/** Ray casting over a flat `[x0, y0, x1, y1, …]` polygon. */
-export function inPolygon(p: Point, points: readonly number[]): boolean {
-  let inside = false;
-  const n = points.length / 2;
-  for (let i = 0, j = n - 1; i < n; j = i++) {
-    const xi = points[i * 2]!;
-    const yi = points[i * 2 + 1]!;
-    const xj = points[j * 2]!;
-    const yj = points[j * 2 + 1]!;
-    if (yi > p.y !== yj > p.y && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi) {
-      inside = !inside;
-    }
-  }
-  return inside;
-}
-
-export function covers(shape: FogShape, p: Point): boolean {
-  switch (shape.kind) {
-    case 'all':
-      return true;
-    case 'rect':
-      return (
-        p.x >= shape.x && p.x <= shape.x + shape.w && p.y >= shape.y && p.y <= shape.y + shape.h
-      );
-    case 'poly':
-      return inPolygon(p, shape.points);
-  }
-}
-
-/** Whether the players can see a map point: the last shape covering it decides. */
-export function isRevealed(fog: SceneFog | null, p: Point): boolean {
-  if (!fog) return true;
-  for (let i = fog.shapes.length - 1; i >= 0; i--) {
-    const shape = fog.shapes[i]!;
-    if (covers(shape, p)) return shape.mode === 'reveal';
-  }
-  return false;
-}
-
-/** A token's centre in map pixels. */
-export function tokenCentre(token: Pick<Token, 'x' | 'y' | 'footprint'>, grid: GridSpec): Point {
-  return {
-    x: grid.offsetX + (token.x + token.footprint / 2) * grid.cellPx,
-    y: grid.offsetY + (token.y + token.footprint / 2) * grid.cellPx,
-  };
-}
-
-/** Tokens the players may see: those whose centre is not under fog. */
-export function tokensInView<T extends Pick<Token, 'x' | 'y' | 'footprint'>>(
-  tokens: readonly T[],
-  fog: SceneFog | null,
-  grid: GridSpec,
-): T[] {
-  if (!fog) return [...tokens];
-  return tokens.filter((t) => isRevealed(fog, tokenCentre(t, grid)));
-}
 
 /**
  * The rectangle a drag from `a` to `b` makes: on a grid, the whole cells the drag touches;
@@ -123,7 +61,3 @@ export function polyShape(mode: FogMode, points: readonly Point[]): FogShape | n
 export function allShape(mode: FogMode): FogShape {
   return { id: ulid(), mode, kind: 'all' };
 }
-
-/** An SVG polygon's `points` attribute. */
-export const svgPoints = (points: readonly number[]): string =>
-  points.reduce((s, v, i) => s + (i % 2 ? `,${v}` : `${i ? ' ' : ''}${v}`), '');

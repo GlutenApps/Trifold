@@ -16,6 +16,7 @@ import { syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 import type { PresenterHub } from './presenter';
+import type { TableHub } from './table/hub';
 import { canLimitToCampaigns } from './sources/campaignScope';
 import { importXmlSource, isStale, reimportSource } from './sources/importXml';
 import { systemPageUrl } from './systemPages';
@@ -36,6 +37,7 @@ export interface ApiContext {
   session: LibrarySession;
   windows: WindowManager;
   presenter: PresenterHub;
+  table: TableHub;
   logger: Logger;
   icons: IconResources;
   phoneAudio: PhoneAudioReceiver;
@@ -191,6 +193,47 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       },
     },
 
+    table: {
+      status() {
+        return Promise.resolve(ctx.table.status());
+      },
+      start(campaignId) {
+        return ctx.table.start(campaignId);
+      },
+      stop() {
+        return ctx.table.stop();
+      },
+      release(target) {
+        return ctx.table.release(target);
+      },
+      push(snapshot) {
+        ctx.table.push(snapshot);
+        return Promise.resolve();
+      },
+      setMapImage(sceneId, fogKey, jpeg) {
+        ctx.table.setMapImage(sceneId, fogKey, jpeg);
+        return Promise.resolve();
+      },
+      setReclaimMode(mode) {
+        return ctx.table.setReclaimMode(mode);
+      },
+      answer(requestId, accept) {
+        return ctx.table.answer(requestId, accept);
+      },
+      dmGrab(tokenId) {
+        ctx.table.dmGrab(tokenId);
+        return Promise.resolve();
+      },
+      give(target, deviceId) {
+        return ctx.table.give(target, deviceId);
+      },
+      setMovementLock(target, locked) {
+        return ctx.table.setMovementLock(target, locked);
+      },
+      setSummoning(summoning) {
+        return ctx.table.setSummoning(summoning);
+      },
+    },
     presenter: {
       async push(state) {
         ctx.presenter.push(state);
