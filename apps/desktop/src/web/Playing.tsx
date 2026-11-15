@@ -143,6 +143,15 @@ export function Playing({
       setHolding(null);
     }
   }, [view.map, plan]);
+  // A sent move that the map never shows (lost on the way) never leaves the token stuck.
+  useEffect(() => {
+    if (!plan?.sending) return;
+    const t = window.setTimeout(() => {
+      setPlan(null);
+      setHolding(null);
+    }, 4000);
+    return () => window.clearTimeout(t);
+  }, [plan]);
   // Leaving Move with a plan unconfirmed cancels it.
   useEffect(() => {
     if (tool !== 'move' && plan && !plan.sending) cancelMove();

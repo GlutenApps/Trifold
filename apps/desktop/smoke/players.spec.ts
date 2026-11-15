@@ -334,6 +334,8 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
       parseFloat((el as unknown as { style: { width: string } }).style.width),
     );
     expect(parseFloat(afterMove) - parseFloat(before)).toBeCloseTo(2 * cellPx, 0);
+    // The phone takes no new drag until its own map shows the move done.
+    await expect(phoneBrannoc).not.toHaveClass(/planned/);
 
     // A drop under fog is refused and Brannoc stays put.
     await dragOnPhone(4);
