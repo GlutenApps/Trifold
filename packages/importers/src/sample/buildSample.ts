@@ -468,6 +468,7 @@ export function buildSampleCampaign(input: SampleInput): SampleBuild {
       counters: [],
       timers: [],
       pinnedRolls: [],
+      sessions: [],
     },
     media,
   };

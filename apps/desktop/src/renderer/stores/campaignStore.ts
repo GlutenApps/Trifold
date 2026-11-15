@@ -14,6 +14,7 @@ import {
   type PCCard,
   type Scene,
   type SceneImage,
+  type Session,
 } from '@trifold/schema';
 import { childrenOf, descendantsOf, nextOrder, placeItem } from '@trifold/rules';
 import { cancelSave, encounterSlot, flushPendingSaves } from './pendingSaves';
@@ -53,6 +54,14 @@ interface CampaignState {
   /** A named NPC from a compendium creature, with its own copy of the stat block (ADR 0037). */
   npcFromRecord(recordId: string): Promise<NPC | null>;
   saveScene(scene: Scene): Promise<Scene | null>;
+  /** Saves a session of the log (ADR 0040); a new one (no id) is started. */
+  saveSession(session: Session): Promise<Session | null>;
+  removeSession(sessionId: string): Promise<void>;
+  /**
+   * Re-reads PC cards and NPCs from disk after a fight wrote its HP and deaths back to them
+   * (ADR 0012), so the Party and NPCs tabs and the session log see what the fight left.
+   */
+  refreshCharacters(): Promise<void>;
   saveScenes(scenes: Scene[]): Promise<void>;
   removeScene(sceneId: string): Promise<void>;
   importSceneImage(): Promise<SceneImage | null>;
@@ -132,6 +141,38 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
         set({ current: { ...current, scenes: [...others, saved] } });
       }
       return saved;
+    },
+
+    async saveSession(session) {
+      const saved = await guard(() => window.trifold.sessions.save(session));
+      const current = get().current;
+      if (saved && current) {
+        const sessions = [...current.sessions.filter((x) => x.id !== saved.id), saved].sort(
+          (a, b) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id),
+        );
+        set({ current: { ...current, sessions } });
+      }
+      return saved;
+    },
+
+    async refreshCharacters() {
+      const fresh = await guard(() => window.trifold.campaigns.current());
+      const current = get().current;
+      if (!fresh || !current || fresh.campaign.id !== current.campaign.id) return;
+      set({ current: { ...current, pcs: fresh.pcs, npcs: fresh.npcs } });
+    },
+
+    async removeSession(sessionId) {
+      const ok = await guard(async () => {
+        await window.trifold.sessions.remove(sessionId);
+        return true;
+      });
+      const current = get().current;
+      if (ok && current) {
+        set({
+          current: { ...current, sessions: current.sessions.filter((s) => s.id !== sessionId) },
+        });
+      }
     },
 
     async saveScenes(scenes) {

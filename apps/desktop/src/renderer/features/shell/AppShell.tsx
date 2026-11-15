@@ -8,6 +8,7 @@
 import { useEffect } from 'react';
 import { tvCounters, tvTimer } from '@trifold/rules';
 import { handleKeydown, installHotkeys, registerHotkey } from '../../hotkeys';
+import { installSessionLog } from '../campaign/sessionLog';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
@@ -66,6 +67,8 @@ export function AppShell() {
   }, [load, setPlayerOpen]);
   useBackupEvents();
   useUpdateEvents();
+  // The session log fills itself from what happens at the table (ADR 0040).
+  useEffect(() => installSessionLog(), []);
 
   // A modifier combo pressed inside a web tab's page reaches the hotkeys as if typed here
   // (ADR 0011). The page keeps its copy; only combos the console knows do anything.

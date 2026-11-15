@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CampaignCounter, CampaignTimer, PinnedRoll, Scene } from '@trifold/schema';
+import type { CampaignCounter, CampaignTimer, PinnedRoll, Scene, Session } from '@trifold/schema';
 import { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
 import { CampaignEntities } from './entities';
@@ -461,5 +461,55 @@ describe('pinned rolls', () => {
     expect((await repo.open(bundle.campaign.id)).pinnedRolls).toHaveLength(1);
     await entities.removePinnedRoll(pin.id);
     expect((await repo.open(bundle.campaign.id)).pinnedRolls).toEqual([]);
+  });
+});
+
+describe('sessions (ADR 0040)', () => {
+  const draft = (over: Partial<Session> = {}): Session => ({
+    schemaVersion: 1,
+    id: '',
+    title: '',
+    recap: '',
+    events: [],
+    startedAt: '',
+    lastActivityAt: '',
+    createdAt: '',
+    updatedAt: '',
+    ...over,
+  });
+
+  it('starts sessions, keeps events and recap through a restart, newest first', async () => {
+    const bundle = await repo.create('Keep');
+    expect(bundle.sessions).toEqual([]);
+    const entities = new CampaignEntities(repo);
+    const first = await entities.saveSession(draft({ startedAt: '2026-11-07T19:00:00.000Z' }));
+    expect(first.id).not.toBe('');
+    expect(first.lastActivityAt).not.toBe('');
+    await entities.saveSession({
+      ...first,
+      recap: 'They reached the mill.',
+      events: [{ kind: 'scene', at: '2026-11-07T19:05:00.000Z', sceneId: 's', title: 'Mill' }],
+    });
+    await entities.saveSession(draft({ startedAt: '2026-11-14T19:00:00.000Z', title: 'Heist' }));
+    const restarted = new CampaignRepository(await LibraryStore.open(join(dir, 'Library')), logger);
+    const reopened = await restarted.open(bundle.campaign.id);
+    expect(reopened.sessions.map((s) => s.title || s.recap)).toEqual([
+      'Heist',
+      'They reached the mill.',
+    ]);
+    expect(reopened.sessions[1]!.events).toHaveLength(1);
+  });
+
+  it('deletes a session, and opens a campaign made before the session log', async () => {
+    const bundle = await repo.create('Old');
+    await rm(join(dir, 'Library', 'campaigns', bundle.campaign.slug, 'sessions'), {
+      recursive: true,
+    });
+    expect((await repo.open(bundle.campaign.id)).sessions).toEqual([]);
+    const entities = new CampaignEntities(repo);
+    const session = await entities.saveSession(draft());
+    expect((await repo.open(bundle.campaign.id)).sessions).toHaveLength(1);
+    await entities.removeSession(session.id);
+    expect((await repo.open(bundle.campaign.id)).sessions).toEqual([]);
   });
 });

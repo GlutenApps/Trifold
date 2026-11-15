@@ -607,6 +607,28 @@ test('console, Library, import, search, stat block and player window all work en
       'false',
     );
 
+    // Session log (ADR 0040): the fight that ended and the scenes sent to the TV filled one
+    // session on their own; the recap is the DM's, saved to the session's file.
+    await tab('Campaign').click();
+    await console_.getByRole('tab', { name: /^Sessions/ }).click();
+    const sessionCard = console_.getByTestId('session-card');
+    await expect(sessionCard).toHaveCount(1);
+    await expect(sessionCard).toContainText('Session 1');
+    await expect(sessionCard).toContainText('XP');
+    await expect(sessionCard).toContainText('The Sunken Keep');
+    await expect(sessionCard).toContainText('Blank grid');
+    await sessionCard.getByRole('textbox', { name: 'Body' }).fill('The party held the bridge.');
+    const sessionsDir = join(library, 'campaigns', 'smoke-campaign', 'sessions');
+    await expect
+      .poll(async () => {
+        const [file] = await readdir(sessionsDir);
+        return file
+          ? (await readFile(join(sessionsDir, file), 'utf8')).includes('held the bridge')
+          : false;
+      })
+      .toBe(true);
+    await tab('VTT').click();
+
     // Music: a folder is scanned in place, the track lists, and Play reaches the tray.
     const songs = await mkdtemp(join(tmpdir(), 'trifold-songs-'));
     await writeFile(join(songs, 'Tavern Night.wav'), silentWav(2));

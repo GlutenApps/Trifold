@@ -9,6 +9,7 @@ import type {
   NPC,
   PCCard,
   PinnedRoll,
+  Session,
   RecordRef,
   Scene,
 } from '@trifold/schema';
@@ -30,6 +31,8 @@ export interface CampaignParts {
   timers: CampaignTimer[];
   /** Results of play: a fresh start leaves them out. */
   pinnedRolls: PinnedRoll[];
+  /** The session log (ADR 0040), also a result of play: a fresh start leaves it out. */
+  sessions: Session[];
 }
 
 /** Bundled sources: they ship with every Trifold, so their records always resolve. */
@@ -64,6 +67,7 @@ export function freshStart(parts: CampaignParts): CampaignParts {
     })),
     counters: parts.counters.map((c) => ({ ...c, value: c.initial })),
     pinnedRolls: [],
+    sessions: [],
   };
 }
 
@@ -159,6 +163,7 @@ export function withNewIds(parts: CampaignParts, newId: () => string): CampaignP
     parts.counters,
     parts.timers,
     parts.pinnedRolls,
+    parts.sessions,
   ]) {
     for (const item of group) claim(item.id);
   }

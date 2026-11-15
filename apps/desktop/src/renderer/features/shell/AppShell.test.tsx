@@ -31,6 +31,7 @@ function bundle(): CampaignBundle {
     scenes: [],
     counters: [],
     timers: [],
+    sessions: [],
   } as unknown as CampaignBundle;
 }
 

@@ -16,6 +16,7 @@ import type {
   NPC,
   PCCard,
   PinnedRoll,
+  Session,
   Playlist,
   RecordKind,
   Scene,
@@ -584,6 +585,8 @@ export interface CampaignBundle {
   timers: CampaignTimer[];
   /** Rolls pinned from the roll log, in the order they were pinned. */
   pinnedRolls: PinnedRoll[];
+  /** The session log, newest first (ADR 0040). */
+  sessions: Session[];
 }
 
 /** What `notes.remove` does with a folder's contents: move it up a level, or remove it too. */
@@ -911,6 +914,12 @@ export interface TrifoldApi {
     save(pin: PinnedRoll): Promise<PinnedRoll>;
     remove(pinId: string): Promise<void>;
   };
+  /** The open campaign's session log (ADR 0040), one file each under `sessions/`. */
+  sessions: {
+    /** An id-less session is started; otherwise its file is replaced. */
+    save(session: Session): Promise<Session>;
+    remove(sessionId: string): Promise<void>;
+  };
   backups: {
     list(): Promise<BackupInfo[]>;
     /** Writes a zip now, regardless of the daily schedule. */
@@ -1067,6 +1076,7 @@ export const API_METHODS = {
   counters: ['save', 'remove', 'move'],
   timers: ['save', 'remove', 'move'],
   pinnedRolls: ['save', 'remove'],
+  sessions: ['save', 'remove'],
   pcs: ['save', 'remove', 'copyFrom'],
   encounters: ['save', 'remove', 'saveState', 'finish'],
   backups: [

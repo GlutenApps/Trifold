@@ -3421,3 +3421,84 @@ input[type='range'].wide {
 .scaled-tag {
   white-space: nowrap;
 }
+
+/* The session log (ADR 0040): campaign XP, then one card per session, the newest open. */
+.sessions {
+  max-width: 760px;
+}
+
+.sessions-head {
+  margin: 4px 0 10px;
+}
+
+.session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.session-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 6px 10px;
+}
+
+.session-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.session-name {
+  font-weight: 600;
+}
+
+.session-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* Label above an input that fills it, like every form field (not centred by the column). */
+.session-body .field {
+  align-self: stretch;
+  align-items: stretch;
+  max-width: 360px;
+  text-align: left;
+}
+
+.session-section h3 {
+  margin: 0 0 4px;
+}
+
+.session-events {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.session-scenes {
+  margin: 0;
+}
+
+.session-recap .note-body {
+  min-height: 120px;
+}

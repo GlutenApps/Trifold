@@ -27,6 +27,7 @@ export function createCampaignApi(
   | 'counters'
   | 'timers'
   | 'pinnedRolls'
+  | 'sessions'
 > {
   const repo = () => {
     const campaigns = session.campaigns;
@@ -259,6 +260,14 @@ export function createCampaignApi(
       },
       async remove(id) {
         await entities().removePinnedRoll(id);
+      },
+    },
+    sessions: {
+      async save(input) {
+        return entities().saveSession(input);
+      },
+      async remove(id) {
+        await entities().removeSession(id);
       },
     },
     scenes: {

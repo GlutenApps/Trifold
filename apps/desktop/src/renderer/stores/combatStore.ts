@@ -67,6 +67,7 @@ import {
   scheduleSave,
 } from './pendingSaves';
 import { useCampaignStore } from './campaignStore';
+import { recordFight } from '../features/campaign/sessionLog';
 import { usePresenterStore } from './presenterStore';
 import { facesText, useRollLogStore } from './rollLogStore';
 import { useSceneStore } from './sceneStore';
@@ -1216,6 +1217,11 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       }
       get().leave();
       set({ finished: { encounterId, result } });
+      // The session log (ADR 0040) takes the fight; the cards and NPCs it changed are read back,
+      // which is how a death in it reaches the log too.
+      const pcs = state.combatants.filter((c) => c.ref.kind === 'pc').length;
+      void recordFight(encounterId, result, pcs);
+      void useCampaignStore.getState().refreshCharacters();
       return result;
     },
   };
