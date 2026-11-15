@@ -613,10 +613,15 @@
   background: var(--border);
 }
 
-/* Set art… and Remove art… ask where (ADR 0033): this token, or every one of it. */
-.art-ask {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
+/* Set art… and Remove art… ask where first (ADR 0033), right where they were clicked: in the
+   right-click menu, or popped up above the inspector's art buttons. */
+.art-menu {
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 20;
+  white-space: nowrap;
+}
+
+.art-menu-head {
+  padding: 4px 10px 2px;
 }
