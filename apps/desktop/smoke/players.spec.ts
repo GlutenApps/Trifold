@@ -305,8 +305,20 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
       consoleBrannoc.evaluate((el) => (el as unknown as { style: { left: string } }).style.left);
     const before = await consoleLeft();
     const phoneBrannoc = phone.locator('[data-token-id="tok-brannoc"]');
+    // Where Brannoc is once the phone's layout has settled (a banner closing moves the map).
+    const settledBox = async () => {
+      let box = (await phoneBrannoc.boundingBox())!;
+      for (let i = 0; i < 20; i++) {
+        await phone.waitForTimeout(50);
+        const next = (await phoneBrannoc.boundingBox())!;
+        if (next.x === box.x && next.y === box.y && next.width === box.width) return next;
+        box = next;
+      }
+      return box;
+    };
     const dragOnPhone = async (cells: number, release = true) => {
-      const box = (await phoneBrannoc.boundingBox())!;
+      await expect(phone.locator('.pc-banner')).toHaveCount(0);
+      const box = await settledBox();
       const cx = box.x + box.width / 2;
       const cy = box.y + box.height / 2;
       await phone.mouse.move(cx, cy);
