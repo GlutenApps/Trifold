@@ -56,6 +56,7 @@ const Int = z.number().int().min(-100_000).max(100_000);
 const IntentSchema: z.ZodType<TableIntent> = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('hp'), delta: Int }),
   z.object({ kind: z.literal('temp'), delta: Int }),
+  z.object({ kind: z.literal('setTemp'), value: Int }),
   z.object({ kind: z.literal('maxHp'), value: Int }),
   z.object({ kind: z.literal('ac'), value: Int }),
   z.object({

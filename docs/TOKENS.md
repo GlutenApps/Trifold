@@ -21,6 +21,10 @@ Palette "Slate and bone": near-monochrome slate surfaces, warm bone as the only 
 | ok | #6FB08A | healthy |
 | ally | #6FA4E0 | PCs and allies |
 | enemy | #E0685E | enemies |
+| damage-tint / -edge / -ink | #2A1C1D / #A8463F / #F0958C | Damage on the player page (ADR 0043) |
+| heal-tint / -edge / -ink | #182A20 / #3F7D58 / #8FD3A8 | Heal on the player page |
+| temp-tint / -edge / -ink | #1B2A3A / #36506B / #9CC6F0 | Temp HP on the player page |
+| cond-tint / -edge / -ink | #3A2F1A / #C99A45 / #F6D38C | An active condition on the player page |
 
 Health bar: healthy #6FB08A → bloodied #E0B252 → down #E0685E.
 

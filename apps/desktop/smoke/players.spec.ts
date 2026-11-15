@@ -214,12 +214,16 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await phone.getByLabel('This device’s name (optional)').fill('Smoke phone');
     await phone.getByRole('button', { name: /Brannoc Hale/ }).click();
 
-    const stats = phone.getByRole('region', { name: 'Brannoc Hale’s numbers' });
+    // The redesigned page (player UI handoff): on a phone in portrait, the character strip.
+    const stats = phone.getByRole('button', { name: 'Brannoc Hale, open health' });
     await expect(stats).toBeVisible();
-    // His companion came with him, with a Release of her own.
-    const chips = phone.getByRole('navigation', { name: 'Your characters' });
-    await expect(chips.getByRole('button', { name: 'Hesper Quill', exact: true })).toBeVisible();
-    await expect(chips.getByRole('button', { name: 'Release Hesper Quill' })).toBeVisible();
+    // His companion came with him: she is in play in the Companions tool, with a Remove.
+    const tools = phone.getByRole('navigation', { name: 'Character tools' });
+    await tools.getByRole('button', { name: 'Companions' }).click();
+    await expect(
+      phone.getByRole('button', { name: 'Remove Hesper Quill from play' }),
+    ).toBeVisible();
+    await tools.getByRole('button', { name: 'Companions' }).click();
     // Brannoc and Tobin: Gorm is hidden and the lurker stands under fog.
     await expect(phone.getByTestId('pc-token')).toHaveCount(2);
     // The fogged map image the console drew arrives and loads.
@@ -262,12 +266,19 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await expect(initiative).toBeHidden();
 
     // Damage and a condition from the phone land in the tracker.
-    await phone.getByLabel('Amount').fill('5');
+    await tools.getByRole('button', { name: 'Health' }).click();
+    await expect(phone.getByLabel('Amount', { exact: true })).toHaveValue('5');
     await phone.getByRole('button', { name: 'Damage' }).click();
     await expect(stats).toContainText('26');
-    await phone.getByLabel('Add a condition').selectOption('Prone');
-    await phone.getByRole('button', { name: 'Add', exact: true }).click();
-    await expect(phone.getByRole('button', { name: 'Remove Prone' })).toBeVisible();
+    await tools.getByRole('button', { name: 'Conditions' }).click();
+    await phone.getByRole('button', { name: 'Prone', exact: true }).click();
+    await expect(phone.getByRole('button', { name: 'Prone', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(tools.getByRole('button', { name: /Conditions/ })).toContainText('1');
+    // Close the sheet so the map takes the next taps.
+    await tools.getByRole('button', { name: /Conditions/ }).click();
 
     // Switch character, then Undo within the few seconds.
     await phone.getByRole('button', { name: 'Switch character' }).click();
@@ -305,7 +316,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     // A drop under fog is refused and Brannoc stays put.
     await dragOnPhone(4);
     await expect(phone.getByText('You can’t see that spot.')).toBeVisible();
-    await phone.getByRole('button', { name: 'OK' }).click();
+    await phone.getByRole('button', { name: 'OK', exact: true }).click();
     expect(await consoleLeft()).toBe(afterMove);
 
     // The DM grabbing Brannoc mid-drag wins; the phone's drag ends.
@@ -318,7 +329,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await page.mouse.up();
     await expect(phone.getByText('The DM moved Brannoc Hale.')).toBeVisible();
     await phone.mouse.up();
-    await phone.getByRole('button', { name: 'OK' }).click();
+    await phone.getByRole('button', { name: 'OK', exact: true }).click();
 
     // Lock movement: the phone says so.
     await page.getByRole('button', { name: 'Player devices', exact: true }).click();
@@ -362,12 +373,13 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await openPop();
     await expect(pop.getByText('Smoke tablet wants to take over Brannoc Hale')).toBeVisible();
     await pop.getByRole('button', { name: 'Accept' }).click();
-    await expect(tablet.getByRole('region', { name: 'Brannoc Hale’s numbers' })).toBeVisible();
+    await expect(tablet.getByRole('button', { name: 'Brannoc Hale, open health' })).toBeVisible();
+    await tablet
+      .getByRole('navigation', { name: 'Character tools' })
+      .getByRole('button', { name: 'Companions' })
+      .click();
     await expect(
-      tablet.getByRole('navigation', { name: 'Your characters' }).getByRole('button', {
-        name: 'Hesper Quill',
-        exact: true,
-      }),
+      tablet.getByRole('button', { name: 'Remove Hesper Quill from play' }),
     ).toBeVisible();
     await expect(phone.getByRole('heading', { name: 'Pick your character' })).toBeVisible();
     await expect(phone.getByText('Brannoc Hale was picked up on another device.')).toBeVisible();
@@ -383,7 +395,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
       .getByRole('dialog', { name: 'Give Tobin Marsh to a player' })
       .getByRole('button', { name: 'Smoke phone' })
       .click();
-    await expect(phone.getByRole('region', { name: 'Tobin Marsh’s numbers' })).toBeVisible();
+    await expect(phone.getByRole('button', { name: 'Tobin Marsh, open health' })).toBeVisible();
 
     // The DM releases him: back to the picker, nothing else changes.
     await openPop();

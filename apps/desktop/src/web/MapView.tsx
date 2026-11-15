@@ -51,11 +51,24 @@ export function MapView({
   selectedTokenId,
   onSelectToken,
   drag: handlers,
+  tapMove,
+  centerOn,
+  fullScreen,
+  onFullScreen,
+  overlay,
 }: {
   map: ClientMap;
   selectedTokenId: string | null;
   onSelectToken(tokenId: string): void;
   drag?: DragHandlers;
+  /** With the Move tool open: a tap on the map moves this token there (player UI redesign). */
+  tapMove?: string | null;
+  /** The token Center on my token frames. */
+  centerOn?: string | null;
+  fullScreen?: boolean;
+  onFullScreen?: () => void;
+  /** Cards and banners floating over the map (initiative, Move). */
+  overlay?: React.ReactNode;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View | null>(null);
@@ -99,6 +112,21 @@ export function MapView({
     const onResize = () => fit();
     window.addEventListener('orientationchange', onResize);
     return () => window.removeEventListener('orientationchange', onResize);
+  }, [fit]);
+
+  // The map area grows and shrinks as tools open and close: keep the map framed in it.
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let last = '';
+    const ro = new ResizeObserver(([entry]) => {
+      const r = entry!.contentRect;
+      const size = `${Math.round(r.width)}x${Math.round(r.height)}`;
+      if (last && size !== last) fit();
+      last = size;
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [fit]);
 
   // The server refused or ended a drag: the token goes back where the map has it.
@@ -235,7 +263,18 @@ export function MapView({
     const g = gesture.current;
     if (g && !g.moved && pointers.current.size === 0) {
       const target = (e.target as HTMLElement).closest<HTMLElement>('[data-token-id]');
-      if (target?.dataset['mine'] === 'true') onSelectToken(target.dataset['tokenId']!);
+      const moving = tapMove ? map.tokens.find((t) => t.id === tapMove) : undefined;
+      if (target?.dataset['mine'] === 'true') {
+        onSelectToken(target.dataset['tokenId']!);
+      } else if (moving && view && handlers?.movable.has(moving.id)) {
+        // Tap a spot: the same grab and drop as a drag, with the same checks.
+        const cells = toCells(local(e));
+        const x = Math.round(cells.x - moving.footprint / 2);
+        const y = Math.round(cells.y - moving.footprint / 2);
+        setPending({ tokenId: moving.id, x, y });
+        handlers.grab(moving.id);
+        handlers.drop(moving.id, x, y, { x: moving.x, y: moving.y });
+      }
     }
     const pts = [...pointers.current.values()];
     gesture.current = pts.length ? { dist: 0, mid: midpoint(pts), moved: g?.moved ?? false } : null;
@@ -244,6 +283,17 @@ export function MapView({
   const onWheel = (e: React.WheelEvent) => {
     const p = local(e);
     zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, p.x, p.y);
+  };
+
+  const centre = () => {
+    const el = box.current;
+    const t = centerOn ? map.tokens.find((x) => x.id === centerOn) : undefined;
+    if (!el || !t || !view) return;
+    const { width, height } = el.getBoundingClientRect();
+    const scale = Math.max(view.scale, Math.min(width, height) / (map.grid.cellPx * 8));
+    const px = map.grid.offsetX + (t.x + t.footprint / 2) * map.grid.cellPx;
+    const py = map.grid.offsetY + (t.y + t.footprint / 2) * map.grid.cellPx;
+    setView({ scale, x: width / 2 - px * scale, y: height / 2 - py * scale });
   };
 
   const cell = map.grid.cellPx;
@@ -347,24 +397,60 @@ export function MapView({
           })}
         </div>
       )}
-      <button
-        type="button"
-        className="pc-fit"
-        onClick={fit}
-        onPointerDown={(e) => e.stopPropagation()}
-        aria-label="Show the whole map"
-        title="Show the whole map"
-      >
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-          <path
-            d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
+      {overlay}
+      <div className="pc-mapbtns">
+        {centerOn && (
+          <button
+            type="button"
+            className="pc-round"
+            onClick={centre}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            aria-label="Center on my token"
+            title="Center on my token"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="7" />
+              <circle cx="12" cy="12" r="2" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+            </svg>
+          </button>
+        )}
+        {onFullScreen && (
+          <button
+            type="button"
+            className="pc-round"
+            aria-pressed={!!fullScreen}
+            onClick={onFullScreen}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            aria-label={fullScreen ? 'Leave full-screen map' : 'Full-screen map'}
+            title={fullScreen ? 'Leave full-screen map' : 'Full-screen map'}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            </svg>
+          </button>
+        )}
+      </div>
     </div>
   );
 }

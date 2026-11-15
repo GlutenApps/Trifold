@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { ClientView, CreatureView } from '@trifold/api';
+import { useEffect } from 'react';
 import { useConnection, type Connection } from './connection';
-import { MapView, type DragHandlers } from './MapView';
 import { Picker } from './Picker';
-import { Portrait } from './Portrait';
-import { Stats } from './Stats';
+import { Playing } from './Playing';
+import { useLayout } from './useLayout';
 
 /**
  * The player connector's page (docs/PLAYER-CONNECTOR.md): join, pick a character, then the live
@@ -14,25 +12,37 @@ import { Stats } from './Stats';
 export function App() {
   const conn = useConnection();
   const { view } = conn;
+  const layout = useLayout();
   const playing = !!view?.mine.length;
+
+  const switchButton = playing && (
+    <button
+      type="button"
+      className="pc-btn ghost pc-switch"
+      aria-label="Switch character"
+      title="Switch character"
+      onClick={() => conn.send({ type: 'switch' })}
+    >
+      Switch
+    </button>
+  );
+  const title = (
+    <span className="pc-title-block">
+      <span className="pc-brand">{view?.campaignName || 'Trifold'}</span>
+      <LinkDot link={conn.link} />
+    </span>
+  );
+  // Phone landscape gives the map the full height: name and Switch float on it as pills.
+  const floating = playing && layout === 'phoneLandscape';
 
   return (
     <div className="pc-app">
-      <header className="pc-top">
-        <span className="pc-brand">{view?.campaignName || 'Trifold'}</span>
-        <LinkDot link={conn.link} />
-        {playing && (
-          <button
-            type="button"
-            className="pc-btn ghost pc-switch"
-            aria-label="Switch character"
-            title="Switch character"
-            onClick={() => conn.send({ type: 'switch' })}
-          >
-            Switch
-          </button>
-        )}
-      </header>
+      {!floating && (
+        <header className="pc-top">
+          {title}
+          {switchButton}
+        </header>
+      )}
       {conn.error && (
         <div className="pc-banner" role="alert">
           <span>{conn.error}</span>
@@ -45,7 +55,17 @@ export function App() {
       {!view ? (
         <Joining link={conn.link} />
       ) : playing ? (
-        <Playing view={view} conn={conn} />
+        <Playing
+          view={view}
+          conn={conn}
+          layout={layout}
+          header={
+            <>
+              {title}
+              {switchButton}
+            </>
+          }
+        />
       ) : (
         <Picker view={view} conn={conn} />
       )}
@@ -109,84 +129,3 @@ function Joining({ link }: { link: Connection['link'] }) {
     </main>
   );
 }
-
-function Playing({ view, conn }: { view: ClientView; conn: Connection }) {
-  // PCs first, each followed by its companions (Phase 3).
-  const ordered = useMemo(() => {
-    const pcs = view.mine.filter((c) => !c.companionOf);
-    const out: CreatureView[] = [];
-    for (const pc of pcs) {
-      out.push(pc);
-      out.push(...view.mine.filter((c) => c.companionOf === pc.id));
-    }
-    for (const c of view.mine) if (!out.includes(c)) out.push(c);
-    return out;
-  }, [view.mine]);
-  const [selected, setSelected] = useState<string>(() => key(ordered[0]!));
-  const current = ordered.find((c) => key(c) === selected) ?? ordered[0]!;
-  const movable = useMemo(
-    () => new Set(view.mine.flatMap((c) => (c.tokenId && !c.movementLocked ? [c.tokenId] : []))),
-    [view.mine],
-  );
-  const drag: DragHandlers = {
-    movable,
-    grab: (tokenId) => conn.send({ type: 'grab', tokenId }),
-    preview: (tokenId, x, y) => conn.send({ type: 'preview', tokenId, x, y }),
-    hold: (tokenId) => conn.send({ type: 'hold', tokenId }),
-    drop: (tokenId, x, y, from) => conn.send({ type: 'drop', tokenId, x, y, from }),
-    letGo: (tokenId) => conn.send({ type: 'letGo', tokenId }),
-    ended: conn.dragEnded,
-  };
-  return (
-    <main className="pc-play">
-      {ordered.length > 1 && (
-        <nav className="pc-chips" aria-label="Your characters">
-          {ordered.map((c) => (
-            <span key={key(c)} className="pc-chip-wrap">
-              <button
-                type="button"
-                className={`pc-chip${key(c) === key(current) ? ' on' : ''}`}
-                aria-pressed={key(c) === key(current)}
-                onClick={() => setSelected(key(c))}
-              >
-                <Portrait url={c.portraitUrl} name={c.name} size={28} />
-                {c.name}
-              </button>
-              {c.companionOf && (
-                <button
-                  type="button"
-                  className="pc-chip-release"
-                  aria-label={`Release ${c.name}`}
-                  title={`Release ${c.name}`}
-                  onClick={() =>
-                    conn.send({ type: 'releaseOne', creatureKind: c.kind, creatureId: c.id })
-                  }
-                >
-                  ×
-                </button>
-              )}
-            </span>
-          ))}
-        </nav>
-      )}
-      {view.map ? (
-        <MapView
-          map={view.map}
-          selectedTokenId={current.tokenId ?? null}
-          onSelectToken={(tokenId) => {
-            const hit = view.mine.find((c) => c.tokenId === tokenId);
-            if (hit) setSelected(key(hit));
-          }}
-          drag={drag}
-        />
-      ) : (
-        <div className="pc-map pc-center">
-          <p className="pc-hint">No map right now.</p>
-        </div>
-      )}
-      <Stats key={key(current)} creature={current} conn={conn} />
-    </main>
-  );
-}
-
-const key = (c: Pick<CreatureView, 'kind' | 'id'>) => `${c.kind}:${c.id}`;

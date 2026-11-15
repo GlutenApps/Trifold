@@ -60,6 +60,11 @@ export function intentProblem(intent: TableIntent, creature: TableCreature): str
         return 'Enter a whole number up to 999.';
       }
       return null;
+    case 'setTemp':
+      if (!creature.editable.hp) return 'HP can’t be changed here.';
+      return within(intent.value, { min: 0, max: INTENT_LIMITS.delta })
+        ? null
+        : 'Enter a whole number up to 999.';
     case 'maxHp':
       if (!creature.editable.maxHp) return 'Max HP can’t be changed here.';
       return within(intent.value, INTENT_LIMITS.maxHp) ? null : 'Max HP must be 1 to 999.';

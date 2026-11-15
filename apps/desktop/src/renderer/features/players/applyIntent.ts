@@ -34,6 +34,9 @@ export function applyTableIntent(event: TableIntentEvent): void {
         case 'temp':
           combat.setTempHp(f, Math.max(0, fighter.hp.temp + intent.delta));
           return;
+        case 'setTemp':
+          combat.setTempHp(f, intent.value);
+          return;
         case 'maxHp':
           combat.setMaxHp(f, intent.value);
           return;
@@ -62,11 +65,19 @@ export function applyTableIntent(event: TableIntentEvent): void {
   if (pc) {
     const current = pc.currentHp ?? pc.maxHp;
     switch (intent.kind) {
-      case 'hp':
+      case 'hp': {
+        // Damage takes temp HP first, as the tracker does in a fight.
+        const temp = pc.tempHp ?? 0;
+        const absorbed = intent.delta < 0 ? Math.min(temp, -intent.delta) : 0;
         void campaign.savePc({
           ...pc,
-          currentHp: Math.min(pc.maxHp, Math.max(0, current + intent.delta)),
+          currentHp: Math.min(pc.maxHp, Math.max(0, current + intent.delta + absorbed)),
+          tempHp: temp - absorbed,
         });
+        return;
+      }
+      case 'setTemp':
+        void campaign.savePc({ ...pc, tempHp: intent.value });
         return;
       case 'temp':
         void campaign.savePc({ ...pc, tempHp: Math.max(0, (pc.tempHp ?? 0) + intent.delta) });
@@ -92,10 +103,17 @@ export function applyTableIntent(event: TableIntentEvent): void {
   if (npc?.hp) {
     const hp = npc.hp;
     if (intent.kind === 'hp') {
+      const absorbed = intent.delta < 0 ? Math.min(hp.temp, -intent.delta) : 0;
       void campaign.saveNpc({
         ...npc,
-        hp: { ...hp, current: Math.min(hp.max, Math.max(0, hp.current + intent.delta)) },
+        hp: {
+          ...hp,
+          current: Math.min(hp.max, Math.max(0, hp.current + intent.delta + absorbed)),
+          temp: hp.temp - absorbed,
+        },
       });
+    } else if (intent.kind === 'setTemp') {
+      void campaign.saveNpc({ ...npc, hp: { ...hp, temp: intent.value } });
     } else if (intent.kind === 'temp') {
       void campaign.saveNpc({ ...npc, hp: { ...hp, temp: Math.max(0, hp.temp + intent.delta) } });
     }

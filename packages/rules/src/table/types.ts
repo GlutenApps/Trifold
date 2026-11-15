@@ -182,6 +182,8 @@ export interface ClientView {
 export type TableIntent =
   | { kind: 'hp'; delta: number }
   | { kind: 'temp'; delta: number }
+  /** Temp HP set to a value (0 clears it): temp HP never stacks, so this is safe absolute. */
+  | { kind: 'setTemp'; value: number }
   | { kind: 'maxHp'; value: number }
   | { kind: 'ac'; value: number }
   | { kind: 'addCondition'; name: string; level?: number }

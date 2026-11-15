@@ -145,3 +145,39 @@ describe('applyTableIntent outside a fight', () => {
     });
   });
 });
+
+describe('applyTableIntent: temp HP (player UI redesign)', () => {
+  beforeEach(() => {
+    openCampaign();
+    useCombatStore.setState({ encounterId: null, state: null });
+  });
+
+  it('sets temp HP to a value, and 0 clears it', () => {
+    apply({ kind: 'setTemp', value: 7 });
+    expect(lastSaved<PCCard>(window.trifold.pcs.save as never)).toMatchObject({ tempHp: 7 });
+  });
+
+  it('takes damage from temp HP first outside a fight', () => {
+    useCampaignStore.setState({
+      current: {
+        campaign: { id: 'c', slug: 'g' },
+        pcs: [{ ...brannoc, tempHp: 4 }],
+        npcs: [],
+        scenes: [],
+      } as unknown as CampaignBundle,
+    });
+    apply({ kind: 'hp', delta: -6 });
+    expect(lastSaved<PCCard>(window.trifold.pcs.save as never)).toMatchObject({
+      tempHp: 0,
+      currentHp: 18,
+    });
+  });
+
+  it('sets temp HP on the combatant in a fight', () => {
+    fight();
+    apply({ kind: 'setTemp', value: 5 });
+    expect(k().hp.temp).toBe(5);
+    apply({ kind: 'setTemp', value: 0 });
+    expect(k().hp.temp).toBe(0);
+  });
+});
