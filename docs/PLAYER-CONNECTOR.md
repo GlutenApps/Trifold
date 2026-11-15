@@ -1,6 +1,6 @@
 # Player connector
 
-**Status:** Phase 1 in progress (plan confirmed 2026-11-14, ADR 0043). Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
+**Status:** Phase 1 built and checked on real hardware (2026-11-14, ADR 0043); Phase 2 next. Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
 The [decisions](#decisions) below settle where the original spec and the repo disagreed; where
 they differ from a later section, the decisions win. Before Phase 1 starts, a Phase 1 plan is
 confirmed and an ADR amends `DESIGN.md` §1.2 and `CLAUDE.md` ground rule 1.
@@ -373,21 +373,18 @@ Four phases; each ships something usable and testable at a real table.
 **Phase 1: connect, claim and view**
 
 - [x] DM starts and stops the server from the console; the join QR and address appear on the console and can be shown on the TV
-- [ ] A phone and a laptop on the same Wi-Fi open the client with no install
+- [x] A phone and a laptop on the same Wi-Fi open the client with no install
 - [x] Players claim a creature and see the filtered map and their creature's stats, read-only
 - [x] Reopening the page next session reconnects automatically
 - [x] Fogged areas and hidden creatures never reach a client (verified by inspecting WebSocket traffic)
-- [ ] On a 360 px portrait phone the client fits with no horizontal scrolling, every control is reachable, and it is recognisably the same visual language as the console
-- [ ] A Windows laptop and a Mac join by typing the `http://trifold.local` address shown on the console, and by the IP fallback
-- [ ] An Android phone (Android 12 or later) opens the `.local` address typed in Chrome (secondary path; phones normally use the QR code)
-- [ ] With port 80 occupied, Trifold falls back to the alternative port, keeps it across restarts, and shows it in every address
+- [x] On a 360 px portrait phone the client fits with no horizontal scrolling, every control is reachable, and it is recognisably the same visual language as the console
+- [x] A Windows laptop and a Mac join by typing the `http://trifold.local` address shown on the console, and by the IP fallback
+- [x] An Android phone (Android 12 or later) opens the `.local` address typed in Chrome (secondary path; phones normally use the QR code)
+- [x] With port 80 occupied, Trifold falls back to the alternative port, keeps it across restarts, and shows it in every address
 
-Phase 1 status (2026-11-14): the four ticked items pass in `smoke/players.spec.ts` on Windows,
-which joins from a browser window on the machine's own LAN address and checks every WebSocket
-frame. The 360 px layout was checked by screenshot. Still to check by hand on real devices: a
-phone and a laptop on the Wi-Fi, a Mac running Trifold (and port 80 there), `trifold.local` from
-Windows, macOS and Android, and the port fallback with port 80 held by another program (unit
-tested only).
+Phase 1 status (2026-11-14): done. The smoke test (`smoke/players.spec.ts`) covers joining,
+claiming, reconnecting and the WebSocket filter; the DM checked the rest on real hardware (phones,
+a laptop, a Mac, `trifold.local` and the port fallback).
 
 **Phase 2: edits, reclaim and release**
 
