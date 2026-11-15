@@ -1390,3 +1390,19 @@ main.pc-center {
   font-family: var(--font-mono);
   font-size: 32px !important;
 }
+
+/* Move on a phone in portrait: a strip under the map where the character strip was. */
+.pc-movestrip {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-rail);
+  border-top: 1px solid var(--border);
+}
+
+/* The Move banner never takes a tap meant for the token under it. */
+.pc-movebanner {
+  pointer-events: none;
+}

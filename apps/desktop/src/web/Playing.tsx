@@ -225,12 +225,16 @@ export function Playing({
           creature={current}
           planSquares={plan ? planSquares : null}
           sending={!!plan?.sending}
-          {...(layout === 'phonePortrait'
-            ? {}
-            : {
-                onCancel: cancelMove,
-                onDone: confirmMove,
-              })}
+          // On a phone in portrait Move is a strip under the map, and its buttons also close it.
+          closes={layout === 'phonePortrait'}
+          onCancel={() => {
+            cancelMove();
+            if (layout === 'phonePortrait') close();
+          }}
+          onDone={() => {
+            if (plan) confirmMove();
+            if (layout === 'phonePortrait') close();
+          }}
         />
       </>
     ) : null;
@@ -280,52 +284,14 @@ export function Playing({
             onSubmit={(value) => send(c, { kind: 'initiative', value })}
           />
         ))}
-        {phoneMove ? (
-          <div className="pc-movecard">
-            <MoveTool
-              creature={current}
-              planSquares={plan ? planSquares : null}
-              sending={!!plan?.sending}
-            />
-            {chips}
+        {tool === 'move' && !phoneMove && current.tokenId && !current.movementLocked && (
+          <div className="pc-movebanner" role="status">
+            {plan
+              ? `Moving ${current.name}: ${rulerLabel(planSquares)}. Done to confirm.`
+              : `Moving ${current.name}: drag the token or tap a spot.`}
           </div>
-        ) : (
-          tool === 'move' &&
-          current.tokenId &&
-          !current.movementLocked && (
-            <div className="pc-movebanner" role="status">
-              {plan
-                ? `Moving ${current.name}: ${rulerLabel(planSquares)}. Done to confirm.`
-                : `Moving ${current.name}: drag the token or tap a spot.`}
-            </div>
-          )
         )}
       </div>
-      {phoneMove && (
-        <div className="pc-movecard-actions" onPointerDown={stop} onPointerUp={stop}>
-          <button
-            type="button"
-            className="pc-btn"
-            onClick={() => {
-              cancelMove();
-              close();
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="pc-btn primary"
-            disabled={!!plan?.sending}
-            onClick={() => {
-              if (plan) confirmMove();
-              close();
-            }}
-          >
-            Done
-          </button>
-        </div>
-      )}
     </>
   );
 
@@ -365,7 +331,12 @@ export function Playing({
 
       {layout === 'phonePortrait' && (
         <>
-          {tool !== 'move' && (
+          {tool === 'move' ? (
+            // Move sits under the map, never over it, so it can't cover the token being moved.
+            <section className="pc-movestrip" aria-label="Move">
+              {toolBody}
+            </section>
+          ) : (
             <Summary creature={me} variant="strip" onClick={() => setTool('health')} />
           )}
           {tool && tool !== 'move' && (

@@ -484,6 +484,7 @@ export function MoveTool({
   sending,
   onCancel,
   onDone,
+  closes = false,
 }: {
   creature: CreatureView;
   /** Squares the planned move covers, or null with no plan. */
@@ -491,6 +492,8 @@ export function MoveTool({
   sending: boolean;
   onCancel?: () => void;
   onDone?: () => void;
+  /** The buttons also close Move (a phone in portrait), so they work with no plan too. */
+  closes?: boolean;
 }) {
   if (creature.movementLocked) {
     return <p className="pc-locked">Movement locked by the DM</p>;
@@ -512,7 +515,7 @@ export function MoveTool({
           <button
             type="button"
             className="pc-btn"
-            disabled={planSquares === null || sending}
+            disabled={sending || (planSquares === null && !closes)}
             onClick={onCancel}
           >
             Cancel
@@ -520,7 +523,7 @@ export function MoveTool({
           <button
             type="button"
             className="pc-btn primary"
-            disabled={planSquares === null || sending}
+            disabled={sending || (planSquares === null && !closes)}
             onClick={onDone}
           >
             Done
