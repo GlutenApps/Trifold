@@ -6,16 +6,18 @@ import { SettingsPage } from '../settings/SettingsPage';
 import { Icon, type IconName } from '../shell/icons';
 import { CampaignsPage } from './CampaignsPage';
 import { CompendiumLibraryPage } from './CompendiumLibraryPage';
+import { ImagesPage } from './ImagesPage';
 import { hk } from '../../platform';
 
 /**
  * The Library space (ADR 0004, Spaces): what every campaign shares, outside the console. A nav
- * of four pages and the chosen page's content; `LibraryView` below reads the page from the
+ * of five pages and the chosen page's content; `LibraryView` below reads the page from the
  * shell store.
  */
 const PAGES: Array<{ id: LibraryPage; label: string; icon: IconName }> = [
   { id: 'campaigns', label: 'Campaigns', icon: 'campaign' },
   { id: 'compendium', label: 'Compendium', icon: 'compendium' },
+  { id: 'images', label: 'Images', icon: 'image' },
   { id: 'music', label: 'Music folders', icon: 'music' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
@@ -61,6 +63,7 @@ export function LibraryView() {
       <div className="lib-content">
         {page === 'campaigns' && <CampaignsPage />}
         {page === 'compendium' && <CompendiumLibraryPage />}
+        {page === 'images' && <ImagesPage />}
         {page === 'music' && (
           <>
             <h1>Music folders</h1>

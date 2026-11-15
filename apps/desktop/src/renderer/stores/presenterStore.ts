@@ -13,9 +13,11 @@ import {
   type PresenterOverlays,
   type PresenterState,
 } from '@trifold/api';
-import type { Scene } from '@trifold/schema';
+import type { Scene, Token } from '@trifold/schema';
 import { DEFAULT_GRID, cameraRect, mapSize } from '../features/presenter/mapMath';
 import { activeFog, tokensInView } from '../features/presenter/fog';
+import { tokenArtUrl } from '../features/presenter/tokenArt';
+import { useArtStore } from './artStore';
 
 /**
  * The authoritative presenter state (DESIGN.md §4.1, §6.5): what the TV shows. Every change
@@ -33,6 +35,11 @@ export interface LiveOptions {
   aspect: number;
   activeTokenId: string | null;
   tokenStyle: 'engraved' | 'flat' | 'twoTone' | 'plain';
+  /**
+   * A token's picture (ADR 0033): its own art, a PC's or NPC's portrait, or its creature's art.
+   * Without it only a token's own art shows.
+   */
+  artFor?: (token: Token) => string | undefined;
 }
 
 const DEFAULT_OPTIONS: LiveOptions = {
@@ -61,6 +68,14 @@ export function liveSceneFrom(
       // Fog (ADR 0029): a token whose centre is under it never reaches the player window, and
       // the player camera frames and follows only what the players can see.
       const fog = activeFog(scene.fog);
+      const artOf = (t: Token) => {
+        const url = options.artFor
+          ? options.artFor(t)
+          : t.art
+            ? mediaUrl(campaignSlug, t.art)
+            : undefined;
+        return url ? { artUrl: url } : {};
+      };
       const seen = tokensInView(
         scene.tokens.filter((t) => !t.hidden),
         fog,
@@ -93,7 +108,7 @@ export function liveSceneFrom(
           footprint: t.footprint,
           label: t.kind === 'creature' && t.nameMasked ? (t.maskedLabel ?? 'Creature') : t.label,
           role: t.role,
-          ...(t.art ? { artUrl: mediaUrl(campaignSlug, t.art) } : {}),
+          ...artOf(t),
           ...(t.glyph ? { glyphUrl: iconUrl(t.glyph) } : {}),
           ...(t.color ? { color: t.color } : {}),
           dead: t.dead,
@@ -212,6 +227,7 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
   const optionsFor = (combat: CombatSummary | null): LiveOptions => ({
     ...get().liveOptions,
     activeTokenId: activeTokenOf(combat),
+    artFor: (t) => tokenArtUrl(t, get().liveSource?.campaignSlug),
   });
 
   return {
@@ -372,4 +388,9 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
       commitCoalesced({ ...state, ruler });
     },
   };
+});
+
+// New or removed creature art shows on the TV at once (ADR 0033).
+useArtStore.subscribe((s, prev) => {
+  if (s.byKey !== prev.byKey) usePresenterStore.getState().setLiveOptions({});
 });

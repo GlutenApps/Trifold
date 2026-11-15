@@ -24,11 +24,13 @@ import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useIconStore } from '../../stores/iconStore';
+import { useArtStore } from '../../stores/artStore';
 import { useShellStore } from '../../stores/shellStore';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
 import { FogLayer, GridLines, RulerLayer } from './MapLayer';
 import { cellAt, cellCentre, rulerLabel, squaresBetween } from './ruler';
+import { tokenArtUrl } from './tokenArt';
 import {
   activeFog,
   addShape,
@@ -160,6 +162,8 @@ export function MapEditor({
   const liveSceneId = usePresenterStore((s) => s.state.scene?.id ?? null);
   const openMajor = useShellStore((s) => s.openMajor);
   const glyphFor = useIconStore((s) => s.glyphForCreature);
+  // Creature art set anywhere (the Images page, another map) redraws the tokens here (ADR 0033).
+  useArtStore((s) => s.byKey);
   const loadIcons = useIconStore((s) => s.load);
   const aspect = usePresenterStore((s) => s.liveOptions.aspect);
   const tokenStyle = usePresenterStore((s) => s.liveOptions.tokenStyle);
@@ -183,6 +187,10 @@ export function MapEditor({
   /** The background whose delete waits on the inline confirm. */
   const [confirmBg, setConfirmBg] = useState<string | null>(null);
   const [pop, setPop] = useState<Pop | null>(null);
+  /** A picture that could not be set, shown above the map until dismissed. */
+  const [artError, setArtError] = useState<string | null>(null);
+  const artStoreError = useArtStore((s) => s.error);
+  const clearArtStoreError = useArtStore((s) => s.clearError);
   const [fogTool, setFogTool] = useState<FogTool>({ mode: 'reveal', shape: 'rect' });
   /** A rectangle being dragged, in map pixels; `free` when Alt turned off the grid snap. */
   const [fogDrag, setFogDrag] = useState<{ a: Point; b: Point; free: boolean } | null>(null);
@@ -699,10 +707,49 @@ export function MapEditor({
     });
   };
 
+  // ---------- art (ADR 0033) ----------
+  /** This token only: fitted to 512 px and kept in the campaign's tokens/. */
   const setArt = async (tokenId: string) => {
-    const image = await importSceneImage();
-    if (image) patchToken(tokenId, { art: image.displayPath });
     setMenu(null);
+    try {
+      const path = await window.trifold.art.setToken();
+      if (path) patchToken(tokenId, { art: path });
+    } catch (err) {
+      setArtError(err instanceof Error ? err.message : String(err));
+    }
+  };
+  /** What "every" means for a token: its creature, PC or NPC; markers have none. */
+  const everyName = (t: Token) => (t.ref.kind === 'custom' ? null : t.ref.name);
+  /**
+   * Every token of this creature, PC or NPC: a creature's art is Library-wide, a PC's or NPC's
+   * is its portrait. This token's own art goes, so it shows the new one too.
+   */
+  const setEveryArt = async (t: Token) => {
+    setMenu(null);
+    const campaign = useCampaignStore.getState().current;
+    try {
+      let done = false;
+      if (t.ref.kind === 'record') {
+        done = await useArtStore.getState().setCreature('monster', t.ref.ref.key);
+      } else if ((t.ref.kind === 'pc' || t.ref.kind === 'npc') && campaign) {
+        const id = t.ref.kind === 'pc' ? t.ref.pcId : t.ref.npcId;
+        done = !!(await window.trifold.art.setCharacter(campaign.campaign.id, t.ref.kind, id));
+        if (done) await useCampaignStore.getState().refreshCharacters();
+      }
+      if (!done) return;
+      if (t.art) {
+        const { art: _own, ...rest } = t;
+        patch({ tokens: scene.tokens.map((x) => (x.id === t.id ? rest : x)) });
+      }
+      usePresenterStore.getState().setLiveOptions({});
+    } catch (err) {
+      setArtError(err instanceof Error ? err.message : String(err));
+    }
+  };
+  const clearArt = (t: Token) => {
+    setMenu(null);
+    const { art: _own, ...rest } = t;
+    patch({ tokens: scene.tokens.map((x) => (x.id === t.id ? rest : x)) });
   };
 
   const useMyView = () => {
@@ -1656,7 +1703,7 @@ export function MapEditor({
                 <TokenDisc
                   token={{
                     ...token,
-                    artUrl: token.art ? mediaUrl(slug, token.art) : undefined,
+                    artUrl: tokenArtUrl(token, slug),
                     dead: token.dead || deadTokens.has(token.id),
                   }}
                   style={tokenStyle}
@@ -1787,8 +1834,18 @@ export function MapEditor({
                     {t.dead ? 'Revive' : 'Mark dead'}
                   </button>
                   <button type="button" role="menuitem" onClick={() => void setArt(t.id)}>
-                    Set art…
+                    Art for this token…
                   </button>
+                  {everyName(t) && (
+                    <button type="button" role="menuitem" onClick={() => void setEveryArt(t)}>
+                      Art for every {everyName(t)}…
+                    </button>
+                  )}
+                  {t.art && (
+                    <button type="button" role="menuitem" onClick={() => clearArt(t)}>
+                      Clear this token’s art
+                    </button>
+                  )}
                   <button type="button" role="menuitem" onClick={() => removeToken(t.id)}>
                     Remove
                   </button>
@@ -1800,6 +1857,21 @@ export function MapEditor({
       </div>
 
       <div className="map-actions">
+        {(artError ?? artStoreError) && (
+          <div className="banner error" role="alert">
+            <span>{artError ?? artStoreError}</span>
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => {
+                setArtError(null);
+                clearArtStoreError();
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         <button
           type="button"
           className="btn primary"
@@ -2111,12 +2183,23 @@ export function MapEditor({
               <button
                 type="button"
                 className="chrome-btn"
-                aria-label="Set token art"
-                title="Set art…"
+                aria-label="Art for this token"
+                title="Art for this token only…"
                 onClick={() => void setArt(selectedToken.id)}
               >
                 <Icon name="image" />
               </button>
+              {everyName(selectedToken) && (
+                <button
+                  type="button"
+                  className="chrome-btn"
+                  aria-label={`Art for every ${everyName(selectedToken)}`}
+                  title={`Art for every ${everyName(selectedToken)}: every token of it, in every campaign for a creature`}
+                  onClick={() => void setEveryArt(selectedToken)}
+                >
+                  <Icon name="layers" />
+                </button>
+              )}
               <button
                 type="button"
                 className="chrome-btn"

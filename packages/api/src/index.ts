@@ -382,6 +382,32 @@ export interface IconCreditsInfo {
  * A file inside `campaigns/<slug>/` (a scene image, token art), served by main from the open
  * Library.
  */
+/**
+ * A file anywhere in the Library (creature art, ADR 0033). `version` changes the URL when the
+ * file is replaced, so a picture that changed is never served from cache.
+ */
+export function libraryUrl(relativePath: string, version?: number): string {
+  const parts = relativePath.split('/').map(encodeURIComponent);
+  return `${MEDIA_SCHEME}://library/${parts.join('/')}${version ? `?v=${version}` : ''}`;
+}
+
+/** Art for a compendium creature (ADR 0033): one picture per kind and key, Library-wide. */
+export interface CreatureArt {
+  kind: RecordKind;
+  key: string;
+  /** Library-relative, `art/<kind>/<key>.png`. */
+  path: string;
+  /** When the file was written, for the URL. */
+  version: number;
+}
+
+/** An image in a folder offered for Add from folder, with the name matched against creatures. */
+export interface ArtFolderFile {
+  path: string;
+  /** The file name without its extension, as written. */
+  name: string;
+}
+
 export function mediaUrl(campaignSlug: string, relativePath: string): string {
   const parts = [`campaigns`, campaignSlug, ...relativePath.split('/')].map(encodeURIComponent);
   return `${MEDIA_SCHEME}://library/${parts.join('/')}`;
@@ -971,6 +997,30 @@ export interface TrifoldApi {
     /** Records which player the table hears (per machine, in config.json); connects nothing. */
     setSource(source: AudioSource): Promise<PhoneAudioStatus>;
   };
+  /**
+   * Creature art (ADR 0033). Every picture is fitted to 512 × 512 and kept as PNG; the original
+   * is not kept. Each `set` asks for a file when none is given and resolves to null when the DM
+   * cancels.
+   */
+  art: {
+    /** Every compendium creature with art. */
+    list(): Promise<CreatureArt[]>;
+    /** Art shown on every token and page of a compendium creature, by kind and key. */
+    setCreature(kind: RecordKind, key: string, file?: string): Promise<CreatureArt | null>;
+    removeCreature(kind: RecordKind, key: string): Promise<void>;
+    /** Art for one token: written to the open campaign's `tokens/`; resolves to that path. */
+    setToken(file?: string): Promise<string | null>;
+    /** A PC's or NPC's portrait in any campaign, shown on its card and every token of it. */
+    setCharacter(
+      campaignId: string,
+      kind: 'pc' | 'npc',
+      id: string,
+      file?: string,
+    ): Promise<string | null>;
+    removeCharacter(campaignId: string, kind: 'pc' | 'npc', id: string): Promise<void>;
+    /** Asks for a folder and lists the images in it (and its subfolders); null when cancelled. */
+    chooseFolder(): Promise<ArtFolderFile[] | null>;
+  };
   homebrew: {
     /**
      * A copy of any record with `basedOn` provenance (DESIGN.md §6.2), not written: Edit opens
@@ -1103,6 +1153,15 @@ export const API_METHODS = {
   ],
   phoneAudio: ['status', 'listDevices', 'connect', 'disconnect', 'forget', 'setSource'],
   homebrew: ['draft', 'save', 'remove', 'addToLibrary'],
+  art: [
+    'list',
+    'setCreature',
+    'removeCreature',
+    'setToken',
+    'setCharacter',
+    'removeCharacter',
+    'chooseFolder',
+  ],
   icons: ['tables', 'available', 'credits', 'reportMiss'],
   compendium: ['search', 'get', 'findByKey', 'facets', 'suggest', 'searchText'],
 } as const satisfies { [N in ApiNamespace]: readonly (keyof TrifoldApi[N])[] };

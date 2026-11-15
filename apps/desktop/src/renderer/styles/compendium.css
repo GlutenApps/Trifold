@@ -3587,3 +3587,89 @@ input[type='range'].wide {
   background: var(--bg-hover);
   font-weight: 600;
 }
+
+/* Creature art (ADR 0033): a round thumbnail in a row, a square on a compendium page. */
+.art-thumb {
+  flex: none;
+  object-fit: cover;
+  background: var(--bg-hover);
+}
+
+.art-thumb.small {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.art-thumb.small.empty {
+  display: inline-block;
+  border-style: dashed;
+  background: none;
+}
+
+.art-thumb.large {
+  float: right;
+  width: 96px;
+  height: 96px;
+  margin: 0 0 8px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  object-fit: contain;
+}
+
+/* Library › Images: every creature, PC and NPC with its art and what to do about it. */
+.images-page {
+  max-width: 900px;
+}
+
+.images-filters {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.images-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+
+.images-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.images-row:hover {
+  background: var(--bg-hover);
+}
+
+.images-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.images-name > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.images-folder {
+  max-width: 640px;
+}
+
+.images-matches {
+  max-height: 240px;
+  overflow: auto;
+  margin: 6px 0;
+  padding-left: 18px;
+}
+
+.images-matches .badge {
+  margin-left: 6px;
+}

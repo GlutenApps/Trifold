@@ -1,4 +1,7 @@
 import type { RollMode } from '@trifold/rules';
+import { libraryUrl } from '@trifold/api';
+import { useArtStore } from '../../stores/artStore';
+import { ArtThumb } from '../shell/ArtThumb';
 import type { Attack, Feature, MonsterRecord, RollButton, SaveCall } from '@trifold/schema';
 import type React from 'react';
 import {
@@ -259,10 +262,17 @@ export function StatBlock({ record, onOpenSpell, actions }: Props) {
   const traits = d.traits.filter((t) => !/^treasure$/i.test(t.displayName));
   const skills = Object.entries(d.skills);
   const saves = Object.entries(d.saves);
+  // Its art (ADR 0033), shared by every source and edition of the creature.
+  const art = useArtStore((s) => s.byKey[`monster:${record.key}`]);
 
   return (
     <article className="statblock">
       <header>
+        <ArtThumb
+          url={art ? libraryUrl(art.path, art.version) : undefined}
+          size="page"
+          label={record.displayName}
+        />
         <h2>{record.displayName}</h2>
         <p className="muted">
           {d.size ? SIZE_NAMES[d.size] : 'Unknown size'} {capitalize(d.type)}

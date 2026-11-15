@@ -279,6 +279,20 @@ export function installBridgeMock(): TrifoldBridge {
       save: vi.fn(async (pin) => ({ ...pin, id: pin.id || `pin-${pin.createdAt}` })),
       remove: vi.fn(async () => undefined),
     },
+    art: {
+      list: vi.fn(async () => []),
+      setCreature: vi.fn(async (kind, key) => ({
+        kind,
+        key,
+        path: `art/${kind}/${key}.png`,
+        version: 1,
+      })),
+      removeCreature: vi.fn(async () => undefined),
+      setToken: vi.fn(async () => 'tokens/art.png'),
+      setCharacter: vi.fn(async () => 'tokens/portrait.png'),
+      removeCharacter: vi.fn(async () => undefined),
+      chooseFolder: vi.fn(async () => null),
+    },
     sessions: {
       save: vi.fn(async (session) => ({ ...session, id: session.id || `session-${Date.now()}` })),
       remove: vi.fn(async () => undefined),

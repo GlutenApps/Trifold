@@ -6,6 +6,7 @@ import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
 import { copyStatus } from './backupCopy';
 import { createCampaignApi } from './campaignApi';
+import { createArtApi } from './art';
 import { createMusicApi } from './musicApi';
 import { createNoteTemplatesApi } from './noteTemplates';
 import { createPhoneAudioApi } from './phoneAudio/phoneAudioApi';
@@ -340,6 +341,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     ...createCampaignApi(ctx.session, ctx.logger),
     ...createNoteTemplatesApi(ctx.session, ctx.logger),
     ...createMusicApi(ctx.session, ctx.windows),
+    ...createArtApi(ctx.session),
     ...createPhoneAudioApi(ctx.phoneAudio, ctx.config, ctx.logger),
 
     homebrew: {

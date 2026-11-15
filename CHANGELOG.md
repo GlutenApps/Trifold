@@ -6,6 +6,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Added
 
+- **Creature art** (ADR 0033): set a creature's art once and it shows on every token of it in every campaign and on its compendium page; PCs and NPCs get a portrait on their card and tokens. **Library › Images** shows what still needs art, with Add from folder matching files by name. Pictures are fitted to 512 px as they come in, so backups stay small.
 - **Compendium tabs fold into More** (ADR 0042): the kinds never scroll out of sight; those that do not fit go into a **More** menu, and they are now in table-time order (Monsters, Spells, Conditions, Rules, Items first).
 - **Rules in the compendium** (ADR 0041): a **Rules** sub-tab with the SRD rules chapters, one entry per rule with its section and formatted text (tables included): 239 rules from SRD 5.1 (Dash, Cover, Travel Pace, Spellcasting…) and 58 from SRD 5.2.1. The 2024 Rules Glossary is not in the source data yet.
 - **Session log** (ADR 0040): **Campaign › Sessions** fills itself with each session's fights (XP and XP per PC), the scenes shown on the TV and the NPCs who died, takes your title and recap, and totals the campaign's XP. A session runs until play stops for six hours.
