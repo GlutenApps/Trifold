@@ -1,6 +1,6 @@
 # Player connector
 
-**Status:** proposed, not built. Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
+**Status:** Phase 1 in progress (plan confirmed 2026-11-14, ADR 0043). Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
 The [decisions](#decisions) below settle where the original spec and the repo disagreed; where
 they differ from a later section, the decisions win. Before Phase 1 starts, a Phase 1 plan is
 confirmed and an ADR amends `DESIGN.md` §1.2 and `CLAUDE.md` ground rule 1.
@@ -80,6 +80,145 @@ they differ.
       shows on every token of that character. A token-only art the DM set still wins on that token.
     - **Summon presets** offer only creatures from sources enabled in this campaign (Beta 5).
 
+## Phase 1 plan
+
+**Status:** confirmed by the DM, 2026-11-14 (ADR 0043).
+
+### Who owns what
+
+The repo's rule for the TV holds here too: the console's stores own the state, main relays and
+filters, clients only render (`PresenterHub`, `DESIGN.md` §4.1). The table server is a second
+relay beside the player window, not a new source of truth. In Phase 2 a player's intent goes
+main → console, the console applies it in its one thread (which serialises it), and the result
+comes back the way a DM edit does.
+
+- **Console (renderer)** pushes a *table snapshot* to main whenever the live scene, the fight or
+  a claimable creature changes, at most once per frame: the live map scene unfiltered (tokens
+  with refs, fog shapes, grid, size), each claimable creature's summary (name, portrait path, HP,
+  temp HP, AC, conditions, taken from its combatant in the running fight, else from the PC card
+  or NPC), and each token's role. It also renders the fogged map JPEG (below).
+- **Main** (`apps/desktop/src/main/table/`) runs the server, holds devices and claims, and
+  builds each client's view from the snapshot with pure functions.
+- **Pure logic** (`packages/rules/src/table/`): `viewFor(snapshot, deviceId, claims)` (fog and
+  hidden filtering, decision 12's owner exception, own creatures in full, others as position,
+  label, role and art only), the claimable test (decisions 1 and 13), token hashing and
+  constant-time compare, and port order. `fog.ts`'s pure functions move from the renderer to
+  `packages/rules/src/fog.ts` so main, the TV and the console use the same "is this point under
+  fog" code (decision 11).
+
+### What phones see
+
+- Phones follow the TV: they show the map scene that is live on the TV, the whole
+  revealed area rather than the player camera's frame. If the TV shows a title or image scene,
+  nothing, or a blackout, phones show "No map right now" above their creature's stats.
+- **The fogged map image:** the console draws the scene's display image on a canvas, fills every
+  fogged area with solid black, encodes it as a JPEG (quality 0.85) and sends the bytes to main
+  over IPC, keyed by scene id and a hash of the fog shapes. Main keeps the latest image in memory
+  only (a derived artefact, nothing written to the Library) and serves it at
+  `/map/<sceneId>/<fogHash>.jpg`. The `trifold-media` scheme is already `corsEnabled`, so the
+  canvas is not tainted. A scene with fog off is served the same way, without the black.
+- **Token art** is served by token id at `/art/<tokenId>` and only for tokens in that client's
+  view; main resolves the path from the snapshot. No campaign path or file name reaches a
+  client.
+
+### Claims and devices
+
+- **`playerControllable: boolean`** (default false) is added to the PC card and the NPC, with
+  a toggle on each form. Older files parse without it (Zod default), so the campaign schema
+  version does not change.
+- **Claims and devices live in one main-owned file**,
+  `campaigns/<slug>/players.json` (`{ schemaVersion, devices: [{ deviceId, tokenHash, label,
+  lastSeen }], claims: [{ creatureKind: 'pc' | 'npc', creatureId, deviceId, claimedAt }] }`),
+  written through `LibraryStore`, rather than as a `claim` field on each PC card and NPC as the
+  data-model table says. The console saves whole PC and NPC files; if main also wrote claims
+  into them, either side's save would erase the other's change. One writer per file avoids that.
+  Releasing never touches creature data, and From another campaign… copies no claim either way.
+  This deviates from the data-model table (ADR 0043).
+- **First claim:** the picker lists claimable creatures with portraits; claimed ones show "In
+  use" and cannot be tapped in Phase 1 (reclaim and takeover are Phase 2). Claiming creates a
+  128-bit random token (`crypto.randomBytes(16)`, base64url), stores its SHA-256 hash and returns
+  the token, which the client keeps in localStorage under `trifold:<campaignId>`.
+- **Reconnect:** on load the client sends its token; a matching device with claims goes
+  straight to its creatures. A device with no live claims goes to the picker.
+- Phase 1 also ships **DM release** (per creature and Release all) in the Player
+  devices pop-up, so a lost phone never leaves a creature stuck before Phase 2's reclaim lands.
+  The player's own Switch character, undo and the reclaim modes stay in Phase 2.
+- The `version` field and drag locks are not needed until edits and movement (Phases 2 and 3).
+
+### Server, ports and the local name
+
+- **HTTP:** Node's built-in `http` (no package). It serves only the client's built files, the
+  map image, token art and `/ws`. Every request's `Host` header must be one of the addresses
+  Trifold shows (blocks DNS-rebinding pages), and the WebSocket upgrade must come from the same
+  origin. Responses carry a strict CSP (`default-src 'self'; connect-src 'self' ws://<host>`).
+- **WebSocket:** `ws` **8.22.0** (pure JS; its optional native add-ons are not installed).
+- **Binding:** one listener per private IPv4 address (10/8, 172.16/12, 192.168/16) and its IPv6
+  link-local or ULA peer, never `0.0.0.0`; the interface list is re-read every 10 seconds and
+  listeners follow DHCP changes. Connections from any other remote address are dropped as well.
+- **Ports:** 80, then 8130–8139 (decision 7); `EADDRINUSE` and `EACCES` both move on. The
+  working port is saved in the app config (not the campaign: it is part of the origin players'
+  tokens are stored under) and reused; 80 is not retried. Settings › Player devices can change
+  it, with the warning from the spec. Whether macOS allows port 80 on a specific address is
+  checked on a Mac; the fallback covers a refusal either way.
+- **mDNS:** `multicast-dns` **7.2.5** (pure JS, on `dns-packet`), answering A and AAAA for
+  `trifold.local`, including legacy unicast queries (source port ≠ 5353, answered by unicast to
+  the sender with the query id echoed, RFC 6762 §6.7). Before announcing it probes the name; if
+  another host answers it tries `trifold-2.local` and so on, and shows the name it won.
+- **QR codes:** `qrcode-generator` **2.0.4** (no dependencies), rendered as SVG in the console
+  and on the TV. The QR always encodes the IP address with `http://` and the port when not 80.
+- **Firewall:** Let players join first shows a one-line hint ("Windows will ask about the
+  firewall: allow it on private networks"). If no client connects within a minute while a
+  listener is up, the pop-up says the firewall or the Wi-Fi may be blocking it, and suggests a
+  phone hotspot.
+- **Logging:** start, stop, port chosen, mDNS name, claims, releases and rejected requests go to
+  `log.ts`. Tokens never reach the log.
+
+### The player client
+
+- `apps/desktop/src/web/`: React 18 + TypeScript, built by its own Vite config into `out/web/`
+  (electron-builder already packages `out/`). `pnpm dev` runs it with `vite build --watch`, so
+  a phone reload picks up changes. It imports `styles/global.css` for the tokens and type, plus
+  a touch stylesheet (44 px targets, 360 px floor, no hover-only states).
+- **Screens in Phase 1:** join (with the guest-Wi-Fi hint), picker, and main view: the map as
+  an SVG (image, grid, fog shapes over the blacked image for clean edges, tokens via a shared
+  token disc), pan and pinch-zoom, creature chips, and a read-only panel with HP, temp HP, AC and
+  conditions. A connection dot and "Reconnecting…" handle drops with backoff.
+- Wire messages are Zod schemas in `packages/api/src/table.ts`, checked on both ends.
+
+### Console
+
+- **Player devices** button in the VTT tab's TV tools toolbar, opening a `MapPop` like Overlays
+  and Break: Let players join / Stop, the QR, the `http://trifold.local` name in large text with
+  the IP address below, Copy link, Show join code on TV, the firewall hint, and the device list
+  (label, online or offline, what it holds, Release; Release all).
+- **Show join code on TV** adds a `joinCode` field to `PresenterState` and a large QR panel to
+  `PlayerScreen`; off by default and not saved across restarts.
+- **PC and NPC forms:** the Player-controllable toggle and the current claim (device label,
+  Release).
+- **Hotkey:** none in Phase 1; starting the server is not a table-time action.
+
+### Tests
+
+- Unit (`packages/rules`): `viewFor` with fog, hidden tokens, masked names, the owner exception,
+  an enemy NPC never claimable, an NPC with no token decided by its flag, a Named stat block
+  token never claimable; token hash and compare; port order; fog functions (the existing tests
+  move with them).
+- Unit (main): port fallback with fake listeners (80 taken, 80 refused, all taken); `Host`
+  check; the mDNS responder's answers to multicast, legacy unicast, A and AAAA queries and its
+  probe conflict, using `dns-packet` buffers; `players.json` round trip through `LibraryStore`.
+- Component: the Player devices pop-up, the form toggle, the TV join code.
+- Smoke (`smoke/players.spec.ts`): open the sample, flag Brannoc, start the server on a test
+  port, connect a Playwright browser page to it, claim Brannoc, reload and land back on him,
+  and check the WebSocket frames never contain a fogged token's id or Gorm Tallow's name while
+  he is hidden. Runs on Windows and macOS in CI.
+
+### The ADR before code
+
+ADR 0043 amends `DESIGN.md` §1.2 (no web client) and `CLAUDE.md` ground rule 1: a third
+network use, started by the DM, local network only, off until started and off again on Stop or
+quit, serving one campaign to browsers on the LAN, with nothing sent beyond it. It names the
+three packages above and records the claims-file deviation if that is confirmed.
+
 ## Goals and non-goals
 
 Players get one-tap access to their own creatures on the map; the DM keeps full authority and loses no speed.
@@ -108,8 +247,8 @@ All data lives in the campaign on the DM's machine. Players' devices hold only a
 | Concept | Stored where | Key fields | Notes |
 | --- | --- | --- | --- |
 | Player-controllable flag | On the creature | `playerControllable: bool` | Only flagged creatures appear in the player picker |
-| Claim | On the creature | `claim: { deviceId, deviceLabel, claimedAt } \| null` | One controlling device per creature at a time |
-| Device | Campaign | `deviceId`, `tokenHash`, `label`, `lastSeen`, `pin?` | Store a hash of the token, never the raw token |
+| Claim | `players.json` (ADR 0043) | `{ creatureKind, creatureId, deviceId, claimedAt }` | One controlling device per creature at a time |
+| Device | `players.json` | `deviceId`, `tokenHash`, `label`, `lastSeen`, `pin?` | Store a hash of the token, never the raw token |
 | Link | On the creature | `parentId: creatureId \| null` | Familiars and summons point at their owner |
 | Summon preset | On the parent creature | `name`, `maxHp`, `ac`, `speed`, `image`, `initiativeMode`, `duration?`, `concentration`, `persistent`, `defaultCount` | Player-editable; spawning copies a preset into a new creature |
 | Spawn record | On the spawned creature | `spawnedBy: deviceId`, `presetId`, `expiresAtRound?`, `concentrationOf?` | Lets the console show who created it and clean up |
