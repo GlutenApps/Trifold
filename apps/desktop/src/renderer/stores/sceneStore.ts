@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Scene, Token } from '@trifold/schema';
-import { scheduleSave } from './pendingSaves';
+import { hasPendingSave, scheduleSave } from './pendingSaves';
 import { useCampaignStore } from './campaignStore';
 import { useMusicStore } from './musicStore';
 import { usePresenterStore } from './presenterStore';
@@ -35,6 +35,9 @@ interface SceneState {
   reset(): void;
 }
 
+/** The draft's autosave slot (ADR 0015). */
+const SCENE_SLOT = 'scene';
+
 export function isMapScene(scene: Scene | null): boolean {
   return !!scene && (scene.kind === 'map' || scene.kind === 'blankGrid');
 }
@@ -59,7 +62,7 @@ export const useSceneStore = create<SceneState>((set, get) => ({
     set({ draft: scene });
     const liveId = usePresenterStore.getState().state.scene?.id ?? null;
     if (scene.id === liveId) usePresenterStore.getState().syncLiveScene(scene);
-    scheduleSave('scene', () => useCampaignStore.getState().saveScene(scene), 350);
+    scheduleSave(SCENE_SLOT, () => useCampaignStore.getState().saveScene(scene), 350);
   },
 
   send(scene) {
@@ -118,5 +121,8 @@ useCampaignStore.subscribe((s, prev) => {
     if (selectedId) useSceneStore.setState({ selectedId: null, draft: null });
     return;
   }
+  // An edit still waiting to be saved wins: anything else saved in the campaign meanwhile (a
+  // session log entry, a fight's result) would otherwise put the older copy back over it.
+  if (draft?.id === saved.id && hasPendingSave(SCENE_SLOT)) return;
   if (!draft || saved.updatedAt !== draft.updatedAt) useSceneStore.setState({ draft: saved });
 });
