@@ -218,6 +218,18 @@ test('console, Library, import, search, stat block and player window all work en
       'Legacy',
     );
     await expect(console_.getByRole('listitem').first()).toBeVisible();
+
+    // Rules come with it too (ADR 0041): the SRD's rules chapters, one record per rule with its
+    // section, the text rendered as markdown (Cover has a table in both editions).
+    await console_.getByRole('tab', { name: 'Rules', exact: true }).click();
+    await console_.getByLabel('Search', { exact: true }).fill('cover');
+    await console_
+      .getByRole('option', { name: /^Cover/ })
+      .first()
+      .click();
+    await expect(console_.getByRole('heading', { name: 'Cover' })).toBeVisible();
+    await expect(console_.getByTestId('markdown-view')).toContainText(/three-quarters cover/i);
+    await console_.getByLabel('Search', { exact: true }).fill('');
     await console_.getByRole('tab', { name: 'Monsters', exact: true }).click();
     await console_
       .getByLabel('Source', { exact: true })

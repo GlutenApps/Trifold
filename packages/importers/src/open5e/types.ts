@@ -192,3 +192,21 @@ export const O5E_KINDS: readonly O5eKind[] = [
 
 /** Kinds shared across documents, described per document inside each record. */
 export const O5E_SHARED_KINDS: readonly O5eKind[] = ['conditions'];
+
+/**
+ * A section of an SRD document's rules chapters (`rulesets/`): Combat, Exploration, Cover…
+ * Its rules come nested, each with markdown text; a section without rules carries its text in
+ * `desc` (ADR 0041).
+ */
+export interface O5eRuleset {
+  key: string;
+  name: string;
+  desc?: string | null;
+  document?: { key?: string | null } | string | null;
+  rules?: Array<{
+    key: string;
+    name: string;
+    desc?: string | null;
+    index?: number | null;
+  }> | null;
+}

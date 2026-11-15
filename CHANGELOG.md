@@ -6,6 +6,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Added
 
+- **Rules in the compendium** (ADR 0041): a **Rules** sub-tab with the SRD rules chapters, one entry per rule with its section and formatted text (tables included): 239 rules from SRD 5.1 (Dash, Cover, Travel Pace, Spellcasting…) and 58 from SRD 5.2.1. The 2024 Rules Glossary is not in the source data yet.
 - **Session log** (ADR 0040): **Campaign › Sessions** fills itself with each session's fights (XP and XP per PC), the scenes shown on the TV and the NPCs who died, takes your title and recap, and totals the campaign's XP. A session runs until play stops for six hours.
 - **Movement ruler** (Beta 9): **Ruler** in the map toolbar (`R`) measures in squares and feet (5 ft a square, diagonals too), and dragging a token shows how far it has moved. The TV shows the same line and reading, except under fog or for a hidden token.
 - **Fog of war** (ADR 0029, phase 1): reveal and hide parts of a map with rectangles (snapped to the grid) and polygons, Reveal all, Hide all and undo. The TV shows the fog opaque and never receives tokens under it; you see it as a light hatched mist that shows on dark and light maps.

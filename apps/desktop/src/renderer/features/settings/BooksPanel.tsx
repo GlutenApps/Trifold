@@ -20,6 +20,7 @@ const NOUNS: Record<string, [string, string]> = {
   background: ['background', 'backgrounds'],
   class: ['class', 'classes'],
   condition: ['condition', 'conditions'],
+  rule: ['rule', 'rules'],
 };
 
 /** "14 monsters and 3 spells appear twice in this file…", or null when nothing clashes. */

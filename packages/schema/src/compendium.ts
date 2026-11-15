@@ -211,6 +211,18 @@ export const ConditionData = z.object({
 });
 export type ConditionData = z.infer<typeof ConditionData>;
 
+/**
+ * A rule from the SRD's rules chapters (DESIGN.md §6.7, ADR 0041): its text in markdown, the
+ * section it belongs to (Combat, Exploration…) and its place there. One record per edition.
+ */
+export const RuleData = z.object({
+  text: z.string(),
+  section: z.string().default(''),
+  order: z.number().int().default(0),
+  extra: Extra,
+});
+export type RuleData = z.infer<typeof RuleData>;
+
 export const SimpleTrait = z.object({
   name: z.string(),
   text: z.string(),
@@ -320,6 +332,7 @@ export const ConditionRecord = RecordHeader.extend({
   kind: z.literal('condition'),
   data: ConditionData,
 });
+export const RuleRecord = RecordHeader.extend({ kind: z.literal('rule'), data: RuleData });
 
 export const CompendiumRecord = z.discriminatedUnion('kind', [
   MonsterRecord,
@@ -330,6 +343,7 @@ export const CompendiumRecord = z.discriminatedUnion('kind', [
   BackgroundRecord,
   ClassRecord,
   ConditionRecord,
+  RuleRecord,
 ]);
 export type CompendiumRecord = z.infer<typeof CompendiumRecord>;
 export type MonsterRecord = z.infer<typeof MonsterRecord>;
@@ -340,3 +354,4 @@ export type SpeciesRecord = z.infer<typeof SpeciesRecord>;
 export type BackgroundRecord = z.infer<typeof BackgroundRecord>;
 export type ClassRecord = z.infer<typeof ClassRecord>;
 export type ConditionRecord = z.infer<typeof ConditionRecord>;
+export type RuleRecord = z.infer<typeof RuleRecord>;

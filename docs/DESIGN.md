@@ -337,7 +337,7 @@ Spell, Item, Feat, Species, Background, Class keep the XML fields as typed prope
 ### 6.7 Dice and reference
 
 - Roller: a dice pool built by clicking (each click on d4…d100 adds one; right-click takes one away), a modifier stepper, advantage/disadvantage for a lone d20, then Roll. One pool is shared app-wide: the Dice pop-up and the live strip's pool show and edit the same selection (ADR 0009). A typed expression (`2d6+3`, `4d6kh3`, `d20 adv`) remains as a secondary field. Roll log shared with combat and the compendium, oldest first with the newest roll at the bottom; any roll can be pinned to the campaign under a name until it is unpinned (ADR 0031). Roll sounds are **(not built; later)**.
-- Rules **(not built; beta, ADR 0029)**: the SRD rules text (actions, cover, travel, exhaustion, etc.) as a Rules kind in the compendium, one per edition like conditions, searchable and reachable by deep link. Custom pages are what notes are for. Verify the SRD documents carry the rules as separate sections before building.
+- Rules **(built; beta, ADR 0041)**: the SRD rules chapters as a Rules kind in the compendium (a **Rules** sub-tab), one record per rule with its section, per edition like conditions, the text rendered as markdown, searchable and reachable by deep link. SRD 5.1 carries 239 rules in 41 sections (actions, cover, movement, travel, spellcasting, traps…); SRD 5.2.1 carries its 58 play-chapter rules but not its Rules Glossary, which no source has cleanly yet. Rules are read-only; custom pages are what notes are for.
 
 ### 6.8 Token art pipeline
 
@@ -473,7 +473,7 @@ What the beta adds, built top to bottom (ADR 0029). M2 and M3 became this list a
 8. **CR scaler** **(built, ADR 0038)**: in the monster editor, a new CR shifts AC, HP, attack bonuses, damage, save DCs, saves and skills by how much a typical monster changes, keeping dice sizes; an attack more or fewer is offered at big steps; the name stays and a Scaled tag shows (§6.2).
 9. **Movement ruler (built)** on map and blank-grid scenes (§6.5).
 10. **Session log (built):** one entry per session, filled from what happened, with the DM's recap (§6.3, ADR 0040).
-11. **Rules in the compendium:** the SRD rules text as a Rules kind, per edition (§6.7).
+11. **Rules in the compendium (built; the 2024 Rules Glossary is not in the source):** the SRD rules text as a Rules kind, per edition (§6.7).
 12. **Creature art:** Set art… on a token for that token or every copy of the creature, and an Images section in the Library to find what still needs art and add it one at a time or from a folder; images shrunk to 512 px on the way in (§6.8, ADR 0033).
 13. **XML export** of homebrew or any source (§6.2, `DATA-FORMATS.md` §2.15).
 14. **Player connector:** players on the same Wi-Fi open a browser page the DM's Trifold serves, claim a PC or a non-enemy NPC, and edit its HP, AC and conditions, submit initiative, move its token and spawn summons; started from the VTT tab, off until the DM starts it, local network only, the DM keeps authority. Four phases (ADR 0032, `docs/PLAYER-CONNECTOR.md`).

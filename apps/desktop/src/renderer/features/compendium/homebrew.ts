@@ -29,6 +29,7 @@ export const KIND_NAMES: Record<RecordKind, string> = {
   background: 'background',
   class: 'class',
   condition: 'condition',
+  rule: 'rule',
 };
 
 export function blankRecord(kind: RecordKind): CompendiumRecord {
@@ -119,6 +120,8 @@ export function blankRecord(kind: RecordKind): CompendiumRecord {
       return { ...header, kind, data: { text: '', rolls: [], modifiers: [], extra } };
     case 'condition':
       return { ...header, kind, data: { text: '', extra } };
+    case 'rule':
+      return { ...header, kind, data: { text: '', section: '', order: 0, extra } };
     case 'species':
       return { ...header, kind, data: { spells: [], traits: [], extra } };
     case 'background':

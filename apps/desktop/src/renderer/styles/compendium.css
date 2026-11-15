@@ -177,6 +177,11 @@
   --meta-cols: minmax(0, 104px) 76px var(--source-col);
 }
 
+/* A rule shows its section (Combat, Exploration…) beside its name (ADR 0041). */
+.list-row.columns[data-kind='rule'] {
+  --meta-cols: minmax(0, 132px) var(--source-col);
+}
+
 .list-row.columns .list-name,
 .list-row.columns .cell {
   min-width: 0;
@@ -217,6 +222,10 @@
 
   .list-row.columns[data-kind='item'] {
     --meta-cols: 76px var(--source-col);
+  }
+
+  .list-row.columns[data-kind='rule'] {
+    --meta-cols: var(--source-col);
   }
 
   .list-row.columns .cell.type,
@@ -3501,4 +3510,47 @@ input[type='range'].wide {
 
 .session-recap .note-body {
   min-height: 120px;
+}
+
+/* A rule's text (ADR 0041): markdown read-only, headings and tables like a note's. */
+.rule-section {
+  margin: -4px 0 8px;
+}
+
+.markdown-view {
+  outline: none;
+}
+
+.markdown-view h1,
+.markdown-view h2,
+.markdown-view h3 {
+  margin: 14px 0 6px;
+  font-size: 15px;
+}
+
+.markdown-view p {
+  margin: 0 0 8px;
+}
+
+.markdown-view .tableWrapper {
+  overflow-x: auto;
+  margin: 4px 0 10px;
+}
+
+.markdown-view table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdown-view th,
+.markdown-view td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  vertical-align: top;
+  text-align: left;
+}
+
+.markdown-view th {
+  background: var(--bg-hover);
+  font-weight: 600;
 }

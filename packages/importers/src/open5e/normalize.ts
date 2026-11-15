@@ -26,6 +26,7 @@ import type {
   O5eBase,
   O5eClass,
   O5eCondition,
+  O5eRuleset,
   O5eCreature,
   O5eFeat,
   O5eItem,
@@ -707,4 +708,106 @@ export function normalizeOpen5e(kind: O5eKind, raw: O5eBase, ctx: Open5eContext)
     case 'classes':
       return normalizeClass(raw as O5eClass, ctx);
   }
+}
+
+const SMALL_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'as',
+  'at',
+  'by',
+  'for',
+  'in',
+  'of',
+  'on',
+  'or',
+  'the',
+  'to',
+  'with',
+]);
+
+/** A rule's name from its key: `srd_actions-in-combat_use-an-object` → "Use an Object". */
+export function nameFromKey(ruleKey: string, rulesetKey: string): string {
+  const slug = ruleKey.startsWith(`${rulesetKey}_`) ? ruleKey.slice(rulesetKey.length + 1) : '';
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((w, i) => (i > 0 && SMALL_WORDS.has(w) ? w : w[0]!.toUpperCase() + w.slice(1)))
+    .join(' ');
+}
+
+/** Which document a ruleset belongs to: the API gives it as an object or a bare key. */
+export function rulesetDocument(raw: O5eRuleset): string {
+  const doc = raw.document;
+  return (typeof doc === 'string' ? doc : doc?.key) ?? '';
+}
+
+/**
+ * Rules for one document (ADR 0041): one record per rule, in its section's order, and one for a
+ * section that has text but no rules of its own. A name shared by two rules in one document
+ * ("Ability Checks" under D20 Tests and under Social Interaction) gets its section in front,
+ * so each stays its own entry. Empty rules are skipped with a warning.
+ */
+export function normalizeRulesets(
+  rulesets: readonly O5eRuleset[],
+  ctx: Open5eContext,
+): CompendiumRecord[] {
+  const entries: Array<{
+    key: string;
+    name: string;
+    desc: string;
+    section: string;
+    order: number;
+  }> = [];
+  for (const set of rulesets) {
+    const rules = [...(set.rules ?? [])].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+    if (rules.length === 0) {
+      if (text(set.desc)) {
+        entries.push({
+          key: set.key,
+          name: set.name,
+          desc: set.desc ?? '',
+          section: set.name,
+          order: 0,
+        });
+      } else ctx.warn(`ruleset ${set.key}: no text`);
+      continue;
+    }
+    // Some rules carry the name of the rule before them ("Use an Object" named "Search"); their
+    // key still says what they are, so a name repeated within a section is taken from the key.
+    const seen = new Map<string, number>();
+    for (const rule of rules)
+      seen.set(normalizeKey(rule.name), (seen.get(normalizeKey(rule.name)) ?? 0) + 1);
+    rules.forEach((rule, i) => {
+      if (!text(rule.desc)) {
+        ctx.warn(`rule ${rule.key}: no text`);
+        return;
+      }
+      const fromKey = nameFromKey(rule.key, set.key);
+      const repeated = (seen.get(normalizeKey(rule.name)) ?? 0) > 1;
+      const misnamed = repeated && fromKey && normalizeKey(fromKey) !== normalizeKey(rule.name);
+      if (misnamed)
+        ctx.warn(`rule ${rule.key}: named "${rule.name}"; using "${fromKey}" from its key`);
+      entries.push({
+        key: rule.key,
+        name: misnamed ? fromKey : rule.name,
+        desc: rule.desc ?? '',
+        section: set.name,
+        order: i + 1,
+      });
+    });
+  }
+  const count = new Map<string, number>();
+  for (const e of entries)
+    count.set(normalizeKey(e.name), (count.get(normalizeKey(e.name)) ?? 0) + 1);
+  return entries.map((e) => {
+    const shared = (count.get(normalizeKey(e.name)) ?? 0) > 1 && e.section !== e.name;
+    const name = shared ? `${e.section}: ${e.name.trim()}` : e.name;
+    return {
+      ...header({ key: e.key, name } as O5eBase, ctx, 'rule'),
+      kind: 'rule',
+      data: { text: text(e.desc), section: e.section.trim(), order: e.order, extra: {} },
+    };
+  });
 }

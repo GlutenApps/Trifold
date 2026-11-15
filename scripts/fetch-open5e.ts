@@ -11,11 +11,14 @@ import {
   describesDocument,
   IMPORTER_VERSION,
   normalizeOpen5e,
+  normalizeRulesets,
+  rulesetDocument,
   O5E_KINDS,
   O5E_SHARED_KINDS,
   type O5eBase,
   type O5eCondition,
   type O5eKind,
+  type O5eRuleset,
   type SrdManifest,
   type SrdManifestDocument,
 } from '@trifold/importers';
@@ -113,6 +116,10 @@ async function main(): Promise<void> {
     shared.set(kind, all);
   }
 
+  // The rules chapters (ADR 0041): sections with their rules nested, filed per document.
+  const rulesets: O5eRuleset[] = [];
+  for await (const raw of paginate<O5eRuleset>('rulesets/?limit=100')) rulesets.push(raw);
+
   const documents: SrdManifestDocument[] = [];
   for (const { key, edition } of DOCUMENTS) {
     const doc = await getJson<ApiDocument>(`${API}/documents/${key}/`);
@@ -164,6 +171,23 @@ async function main(): Promise<void> {
         n += 1;
       }
       console.log(`  ${key} ${kind}: ${n}`);
+    }
+    {
+      let n = 0;
+      const own = rulesets.filter((r) => rulesetDocument(r) === key);
+      for (const record of normalizeRulesets(own, ctx)) {
+        const parsed = CompendiumRecord.safeParse(record);
+        if (!parsed.success) {
+          warnings.push(
+            `rule ${record.id}: invalid (${parsed.error.issues[0]?.path.join('.')}: ${parsed.error.issues[0]?.message})`,
+          );
+          continue;
+        }
+        lines.push(JSON.stringify(parsed.data));
+        counts[parsed.data.kind] = (counts[parsed.data.kind] ?? 0) + 1;
+        n += 1;
+      }
+      console.log(`  ${key} rules: ${n}`);
     }
     const file = `${key}.jsonl`;
     const content = `${lines.join('\n')}\n`;

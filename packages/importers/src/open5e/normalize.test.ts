@@ -2,8 +2,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CompendiumRecord } from '@trifold/schema';
 import { describe, expect, it } from 'vitest';
-import { describesDocument, normalizeOpen5e, type Open5eContext } from './normalize';
-import type { O5eBase, O5eCondition, O5eKind } from './types';
+import {
+  describesDocument,
+  nameFromKey,
+  normalizeOpen5e,
+  normalizeRulesets,
+  rulesetDocument,
+  type Open5eContext,
+} from './normalize';
+import type { O5eBase, O5eCondition, O5eKind, O5eRuleset } from './types';
 
 const FIXTURE = join(__dirname, '..', '..', '..', '..', 'fixtures', 'open5e-sample.json');
 const sample = JSON.parse(readFileSync(FIXTURE, 'utf8')) as Record<O5eKind, O5eBase[]>;
@@ -200,5 +207,106 @@ describe('normalizeOpen5e', () => {
     expect(wizard.data.levels.map((l) => l.level)).toEqual([1, 4, 5, 8, 12, 16]);
     expect(wizard.data.levels.find((l) => l.level === 4)?.scoreImprovement).toBe(true);
     expect(wizard.data.levels[0]?.features[0]?.name).toBe('Arcane Recovery');
+  });
+});
+
+describe('rules (ADR 0041)', () => {
+  const warnings: string[] = [];
+  const ctx: Open5eContext = { ...ctx2014, warn: (m) => warnings.push(m) };
+  const sets: O5eRuleset[] = [
+    {
+      key: 'srd_actions-in-combat',
+      name: 'Actions in Combat',
+      desc: 'When you take your action on your turn, you can take one of the actions presented here.',
+      document: { key: 'srd-2014' },
+      rules: [
+        {
+          key: 'srd_actions-in-combat_search',
+          name: 'Search',
+          index: 2,
+          desc: 'When you take the **Search** action, you devote your attention to finding something.',
+        },
+        {
+          key: 'srd_actions-in-combat_dash',
+          name: 'Dash',
+          index: 1,
+          desc: 'When you take the Dash action, you gain extra movement for the current turn.',
+        },
+        {
+          key: 'srd_actions-in-combat_use-an-object',
+          name: 'Search',
+          index: 3,
+          desc: 'You normally interact with an object while doing something else.',
+        },
+        { key: 'srd_actions-in-combat_empty', name: 'Empty', index: 4, desc: '' },
+      ],
+    },
+    {
+      key: 'srd_cover',
+      name: 'Cover',
+      desc: 'Walls, trees, creatures, and other obstacles can provide cover during combat.',
+      document: 'srd-2014',
+      rules: [],
+    },
+    {
+      key: 'srd_d20-tests',
+      name: 'D20 Tests',
+      document: { key: 'srd-2014' },
+      rules: [
+        {
+          key: 'srd_d20-tests_ability-checks',
+          name: 'Ability Checks',
+          desc: 'An ability check tests a creature’s innate talent.',
+        },
+      ],
+    },
+    {
+      key: 'srd_social-interaction',
+      name: 'Social Interaction',
+      document: { key: 'srd-2014' },
+      rules: [
+        {
+          key: 'srd_social-interaction_ability-checks',
+          name: 'Ability Checks',
+          desc: 'Ability checks are key in social interactions.',
+        },
+      ],
+    },
+  ];
+  const records = normalizeRulesets(sets, ctx);
+
+  it('makes one valid record per rule in section order, and one for a section with only text', () => {
+    for (const r of records) expect(CompendiumRecord.safeParse(r).success).toBe(true);
+    expect(records.map((r) => r.name)).toEqual([
+      'Dash',
+      'Search',
+      'Use an Object',
+      'Cover',
+      'D20 Tests: Ability Checks',
+      'Social Interaction: Ability Checks',
+    ]);
+    const dash = records[0]!;
+    expect(dash).toMatchObject({
+      id: 'srd-2014:rule:srd_actions-in-combat_dash',
+      key: 'dash',
+      kind: 'rule',
+      edition: '2014',
+      data: { section: 'Actions in Combat', order: 1 },
+    });
+    // Markdown is kept as it is, for the compendium to render.
+    expect(records[1]!.data).toMatchObject({ text: expect.stringContaining('**Search**') });
+    expect(records[3]!.data).toMatchObject({ section: 'Cover', order: 0 });
+  });
+
+  it('names a misnamed rule from its key, skips empty ones, and says so', () => {
+    expect(nameFromKey('srd_actions-in-combat_use-an-object', 'srd_actions-in-combat')).toBe(
+      'Use an Object',
+    );
+    expect(warnings).toEqual([
+      'rule srd_actions-in-combat_use-an-object: named "Search"; using "Use an Object" from its key',
+      'rule srd_actions-in-combat_empty: no text',
+    ]);
+    expect(rulesetDocument(sets[1]!)).toBe('srd-2014');
+    expect(rulesetDocument(sets[0]!)).toBe('srd-2014');
   });
 });

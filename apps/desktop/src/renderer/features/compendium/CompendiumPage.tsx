@@ -27,6 +27,7 @@ const KINDS: Array<{ id: RecordKind; label: string }> = [
   { id: 'background', label: 'Backgrounds' },
   { id: 'class', label: 'Classes' },
   { id: 'condition', label: 'Conditions' },
+  { id: 'rule', label: 'Rules' },
 ];
 
 function editionLabel(edition: string): string {
@@ -358,6 +359,11 @@ export function CompendiumPage() {
                   </span>
                   <span className="cell rarity">{r.rarity ?? ''}</span>
                 </>
+              )}
+              {kind === 'rule' && (
+                <span className="cell type" title={r.type ?? undefined}>
+                  {r.type ?? ''}
+                </span>
               )}
               {/* One pill: the source that answers by the DM's priority (ADR 0027), and a "+"
                   when the record is also somewhere else. */}

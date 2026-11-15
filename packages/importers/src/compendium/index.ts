@@ -197,6 +197,9 @@ function normalize(
     case 'condition':
       // Compendium XML has no condition element; conditions come from the SRD snapshot only.
       return null;
+    case 'rule':
+      // Nor rules: they come from the SRD snapshot's rules chapters only (ADR 0041).
+      return null;
   }
 }
 
