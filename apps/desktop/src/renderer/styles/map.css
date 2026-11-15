@@ -650,8 +650,10 @@
 
 .join-code {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   align-items: flex-start;
+  width: 100%;
 }
 
 .join-addresses {
@@ -664,12 +666,12 @@
 
 .join-local {
   font-size: 15px;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .join-ip {
   font-family: var(--font-mono);
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .join-qr {

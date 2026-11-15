@@ -93,6 +93,17 @@ Tokens snap to the grid; hold Alt for free placement; Delete removes the selecte
 
 **Fog of war.** **Fog of war** in the map toolbar (`F`) opens the fog bar under the map. Tick **Fog on** to cover the whole map on the TV; you still see it, under a light hatched mist. Pick **Reveal** or **Hide**, then a **Rectangle** (drag across the map; on a grid it takes whole cells, hold Alt to draw freely) or a **Polygon** (click its corners; click the first corner again, double-click or press Enter to finish, Backspace drops a corner, Escape drops the shape). **Reveal all** and **Hide all** do the whole map, and **Undo** (`Ctrl+Z` while the bar is open) steps back. Right-drag pans while you draw. Tokens whose centre is under fog are not shown on the TV at all, and the player camera ignores them, as it does tokens you have hidden. Untick **Fog on** to show the whole map again; your shapes are kept for next time. **Done** closes the bar.
 
+## Players on their phones
+
+Players on the same Wi-Fi can follow the table from a phone, tablet or laptop browser: no install, no account, and nothing leaves your network. In this first version they pick a character and see the map that is on the TV and their own HP, temp HP, AC and conditions; editing and moving come later.
+
+1. On a PC card or NPC, tick **Players can claim this character**. An NPC is only offered while it is not marked enemy on the live map or in the running fight.
+2. In the VTT tab, open **Player devices** (the phone icon in the TV tools) and press **Let players join**. The first time, your computer may ask whether Trifold can accept connections: allow it on private networks.
+3. Players scan the QR code, or type the address shown (`http://trifold.local`, or the number below it). **Copy link** puts both on the clipboard for the group chat; **Show join code on TV** puts the QR on the TV until you untick it.
+4. Each player picks a character and can name their device. Next session the same browser lands straight back on it.
+
+Phones show the map that is on the TV, every revealed part of it, with fogged areas blacked out; hidden tokens and anything under fog never reach a phone. A title card, an image, nothing on the TV or a blackout shows no map. The device list shows who holds what and whether they are online; **Release** (or **Release all**) hands a character back to you without changing it. **Stop** disconnects everyone. Trifold uses port 80 when it is free, otherwise 8130 to 8139, and keeps the same one after that. If nobody can connect, the firewall may be blocking Trifold, or the Wi-Fi may keep devices apart (guest and school networks often do); a phone hotspot works.
+
 ## Music
 
 **Library › Music folders › Add folder…** points Trifold at folders of MP3, OGG, FLAC, WAV or M4A files. Files stay where they are; the refresh icon rescans. A track whose file has gone shows "missing".

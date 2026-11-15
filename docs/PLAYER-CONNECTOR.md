@@ -365,15 +365,22 @@ Four phases; each ships something usable and testable at a real table.
 
 **Phase 1: connect, claim and view**
 
-- [ ] DM starts and stops the server from the console; the join QR and address appear on the console and can be shown on the TV
+- [x] DM starts and stops the server from the console; the join QR and address appear on the console and can be shown on the TV
 - [ ] A phone and a laptop on the same Wi-Fi open the client with no install
-- [ ] Players claim a creature and see the filtered map and their creature's stats, read-only
-- [ ] Reopening the page next session reconnects automatically
-- [ ] Fogged areas and hidden creatures never reach a client (verified by inspecting WebSocket traffic)
+- [x] Players claim a creature and see the filtered map and their creature's stats, read-only
+- [x] Reopening the page next session reconnects automatically
+- [x] Fogged areas and hidden creatures never reach a client (verified by inspecting WebSocket traffic)
 - [ ] On a 360 px portrait phone the client fits with no horizontal scrolling, every control is reachable, and it is recognisably the same visual language as the console
 - [ ] A Windows laptop and a Mac join by typing the `http://trifold.local` address shown on the console, and by the IP fallback
 - [ ] An Android phone (Android 12 or later) opens the `.local` address typed in Chrome (secondary path; phones normally use the QR code)
 - [ ] With port 80 occupied, Trifold falls back to the alternative port, keeps it across restarts, and shows it in every address
+
+Phase 1 status (2026-11-14): the four ticked items pass in `smoke/players.spec.ts` on Windows,
+which joins from a browser window on the machine's own LAN address and checks every WebSocket
+frame. The 360 px layout was checked by screenshot. Still to check by hand on real devices: a
+phone and a laptop on the Wi-Fi, a Mac running Trifold (and port 80 there), `trifold.local` from
+Windows, macOS and Android, and the port fallback with port 80 held by another program (unit
+tested only).
 
 **Phase 2: edits, reclaim and release**
 
