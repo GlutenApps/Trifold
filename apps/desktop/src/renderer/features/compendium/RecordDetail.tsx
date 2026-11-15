@@ -7,6 +7,7 @@ import { Icon } from '../shell/icons';
 import { compendiumActions, logDiceRoll } from './compendiumRolls';
 import { itemTypeName } from './formatting';
 import { isCampaignSource, isOwnRecord } from './homebrew';
+import { MarkdownView } from './MarkdownView';
 import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
 import { ReplaceInCampaign } from './ReplaceInCampaign';
@@ -330,6 +331,16 @@ function Body({
           <Text text={record.data.text} />
         </article>
       );
+    case 'rule':
+      return (
+        <article className="statblock rule">
+          <h2>{record.displayName}</h2>
+          {record.data.section && record.data.section !== record.displayName && (
+            <p className="muted small rule-section">{record.data.section}</p>
+          )}
+          <MarkdownView markdown={record.data.text} />
+        </article>
+      );
     case 'species':
     case 'background': {
       const d = record.data;
@@ -462,7 +473,8 @@ export function RecordDetail({
             </span>
           )}
         <span className="spacer" />
-        {homebrew && !isOwnRecord(record) && (
+        {/* SRD rules are read, not copied: house rules belong in notes (ADR 0041). */}
+        {homebrew && !isOwnRecord(record) && record.kind !== 'rule' && (
           <button
             type="button"
             className="btn"

@@ -69,6 +69,10 @@ export function recordColumns(record: CompendiumRecord): RecordColumns {
       base.type_code = record.data.typeCode || null;
       base.rarity = record.data.rarity ?? null;
       break;
+    case 'rule':
+      // A rule's section (Combat, Exploration…) is what the list shows beside it (ADR 0041).
+      base.type = record.data.section || null;
+      break;
     default:
       break;
   }
@@ -116,6 +120,9 @@ export function indexText(record: CompendiumRecord): string {
       break;
     case 'condition':
       parts.push(record.data.text);
+      break;
+    case 'rule':
+      parts.push(record.data.section, record.data.text);
       break;
     case 'species':
     case 'background':

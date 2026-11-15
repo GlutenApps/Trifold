@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fetchedAt": "2026-11-09T19:59:28.190Z",
+  "fetchedAt": "2026-11-15T01:11:48.875Z",
   "apiBase": "https://api.open5e.com/v2",
   "importerVersion": 3,
   "documents": [
@@ -19,7 +19,7 @@
       ],
       "attribution": "This work includes material taken from the System Reference Document 5.2 by Wizards of the Coast, available at https://dnd.wizards.com/resources/systems-reference-document. It is licensed under the Creative Commons Attribution 4.0.",
       "file": "srd-2024.jsonl",
-      "sha256": "cc6ca8fa36a7985ab6d960b01aefde3bb3d2bc3c35015b7c474a1e0e589e633d",
+      "sha256": "378a78e3e856f009890a30bee3b7eaf7bfcf8dbe12246d8550394c5206f0ad70",
       "counts": {
         "monster": 331,
         "spell": 339,
@@ -28,7 +28,8 @@
         "species": 9,
         "background": 4,
         "class": 24,
-        "condition": 15
+        "condition": 15,
+        "rule": 58
       },
       "warnings": []
     },
@@ -51,7 +52,7 @@
       ],
       "attribution": "This work includes material taken from the System Reference Document 5.1 by Wizards of the Coast, available at https://dnd.wizards.com/resources/systems-reference-document. It is licensed under the Creative Commons Attribution 4.0 and OPEN GAME LICENSE Version 1.0a.",
       "file": "srd-2014.jsonl",
-      "sha256": "262ca3f8b2ad69022da1d36469070be429cf592b716993b150081accbf3f5919",
+      "sha256": "5cd6ea8a6c81d59ed3ef5ed02925ef7277def9c02e837e6c248a10d1ed2b096b",
       "counts": {
         "monster": 325,
         "spell": 319,
@@ -60,9 +61,17 @@
         "species": 13,
         "background": 1,
         "class": 24,
-        "condition": 15
+        "condition": 15,
+        "rule": 239
       },
-      "warnings": []
+      "warnings": [
+        "rule srd_actions-in-combat_use-an-object: named \"Search\"; using \"Use an Object\" from its key",
+        "rule srd_environment_darkvision: named \"Blindsight\"; using \"Darkvision\" from its key",
+        "rule srd_magic-items_spells: named \"Consumables\"; using \"Spells\" from its key",
+        "rule srd_monsters_reactions: named \"Ammunition\"; using \"Reactions\" from its key",
+        "rule srd_multiclassing_proficiency-bonus: named \"Hit Points and Hit Dice\"; using \"Proficiency Bonus\" from its key",
+        "rule srd_spellcasting_reactions: named \"Bonus Action\"; using \"Reactions\" from its key"
+      ]
     }
   ],
   "licenses": {

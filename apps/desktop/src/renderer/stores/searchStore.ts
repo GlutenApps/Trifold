@@ -124,6 +124,7 @@ const KIND_LABELS: Record<RecordKind, string> = {
   background: 'Background',
   class: 'Class',
   condition: 'Condition',
+  rule: 'Rule',
 };
 
 const SCENE_LABELS: Record<SceneKind, string> = {

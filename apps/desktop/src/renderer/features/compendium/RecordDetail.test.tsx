@@ -64,6 +64,51 @@ describe('RecordDetail', () => {
     expect(items.map((li) => li.textContent)).toEqual(['First. One thing.', 'Second. Another.']);
   });
 
+  it('shows a rule as formatted text under its section, with no Edit (ADR 0041)', async () => {
+    const cover: CompendiumRecord = {
+      schemaVersion: 1,
+      id: 'srd-2014:rule:srd_cover',
+      kind: 'rule',
+      key: 'cover',
+      name: 'Cover',
+      displayName: 'Cover',
+      sourceId: 'srd-2014',
+      edition: '2014',
+      tags: [],
+      data: {
+        text: [
+          'Walls, trees, creatures, and other obstacles can provide cover.',
+          '',
+          'A target with **half cover** has a +2 bonus to AC.',
+          '',
+          '| Cover | AC bonus |',
+          '| --- | --- |',
+          '| Half | +2 |',
+        ].join('\n'),
+        section: 'Combat',
+        order: 3,
+        extra: {},
+      },
+    };
+    render(
+      <RecordDetail
+        record={cover}
+        editions={[cover]}
+        canGoBack={false}
+        onBack={() => undefined}
+        onSwitchEdition={() => undefined}
+        onOpenSpell={() => undefined}
+        homebrew={{ onEdit: vi.fn() } as never}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: 'Cover' })).toBeInTheDocument();
+    expect(screen.getByText('Combat')).toBeInTheDocument();
+    const view = await screen.findByTestId('markdown-view');
+    expect(await within(view).findByText('half cover')).toHaveProperty('tagName', 'STRONG');
+    expect(within(view).getByRole('table')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+  });
+
   it('offers both rulesets of a record and switches between them', async () => {
     const legacy = record('Aboleth');
     const modern = record('Aboleth [5.5e]');
