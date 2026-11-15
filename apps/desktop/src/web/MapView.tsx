@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ClientMap, ClientToken } from '@trifold/api';
 import type { FogShape } from '@trifold/schema';
-import { FogLayer, GridLines } from '../renderer/features/presenter/MapLayer';
+import { FogLayer, GridLines, RulerLayer } from '../renderer/features/presenter/MapLayer';
+import { cellCentre, squaresBetween } from '../renderer/features/presenter/ruler';
 import { TokenDisc } from '../renderer/features/presenter/TokenDisc';
 
 /**
@@ -80,7 +81,13 @@ export function MapView({
   const [drag, setDrag] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
   /** A drop waiting for the server: shown where it was put until the map agrees or refuses. */
-  const [pending, setPending] = useState<{ tokenId: string; x: number; y: number } | null>(null);
+  /** A move waiting for the server: shown where it was put, with where it began. */
+  const [pending, setPending] = useState<{
+    tokenId: string;
+    x: number;
+    y: number;
+    from: { x: number; y: number };
+  } | null>(null);
   const lastPreview = useRef(0);
 
   const setDragBoth = (d: Drag | null) => {
@@ -255,7 +262,7 @@ export function MapView({
       } else {
         const x = Math.round(d.at.x);
         const y = Math.round(d.at.y);
-        setPending({ tokenId: d.tokenId, x, y });
+        setPending({ tokenId: d.tokenId, x, y, from: d.start });
         handlers?.drop(d.tokenId, x, y, d.start);
       }
       return;
@@ -271,7 +278,7 @@ export function MapView({
         const cells = toCells(local(e));
         const x = Math.round(cells.x - moving.footprint / 2);
         const y = Math.round(cells.y - moving.footprint / 2);
-        setPending({ tokenId: moving.id, x, y });
+        setPending({ tokenId: moving.id, x, y, from: { x: moving.x, y: moving.y } });
         handlers.grab(moving.id);
         handlers.drop(moving.id, x, y, { x: moving.x, y: moving.y });
       }
@@ -313,6 +320,8 @@ export function MapView({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onWheel={onWheel}
+      // A long press is a drag or a pan here: never the browser's image menu.
+      onContextMenu={(e) => e.preventDefault()}
       aria-label={`Map: ${map.title}`}
       role="img"
     >
@@ -348,16 +357,50 @@ export function MapView({
               shapes={map.fog as unknown as FogShape[]}
             />
           )}
-          {drag?.moved && (
-            <div
-              className="token-slot pc-token ghost"
-              aria-hidden="true"
-              style={place({
-                ...drag.start,
-                footprint: tokenOf(map, drag.tokenId)?.footprint ?? 1,
-              })}
-            />
-          )}
+          {(() => {
+            // While a move is in hand or waiting: a faded copy where it began and the ruler from
+            // there, so the player sees how far it went and where it came from.
+            const move = drag?.moved
+              ? {
+                  tokenId: drag.tokenId,
+                  from: drag.start,
+                  to: { x: Math.round(drag.at.x), y: Math.round(drag.at.y) },
+                }
+              : pending
+                ? {
+                    tokenId: pending.tokenId,
+                    from: pending.from,
+                    to: { x: pending.x, y: pending.y },
+                  }
+                : null;
+            const token = move ? tokenOf(map, move.tokenId) : undefined;
+            if (!move || !token || !view) return null;
+            const fp = token.footprint;
+            const size = fp * cell;
+            const squares = squaresBetween(move.from, move.to);
+            return (
+              <>
+                {squares > 0 && (
+                  <RulerLayer
+                    width={map.width}
+                    height={map.height}
+                    from={cellCentre(move.from, map.grid, fp)}
+                    to={cellCentre(move.to, map.grid, fp)}
+                    squares={squares}
+                    zoom={view.scale}
+                  />
+                )}
+                <div
+                  className="token-slot pc-token ghost"
+                  data-testid="pc-move-ghost"
+                  aria-hidden="true"
+                  style={place({ ...move.from, footprint: fp })}
+                >
+                  <TokenDisc token={token} style={map.tokenStyle} size={size} showLabel={false} />
+                </div>
+              </>
+            );
+          })()}
           {map.tokens.map((t) => {
             const at =
               drag?.tokenId === t.id

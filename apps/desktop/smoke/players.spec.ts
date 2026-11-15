@@ -322,6 +322,11 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     // The DM grabbing Brannoc mid-drag wins; the phone's drag ends.
     await dragOnPhone(1, false);
     await expect(page.getByTestId('token-mover')).toHaveText('Smoke phone');
+    // Mid-drag the phone keeps a faded copy where Brannoc started and measures the move.
+    await expect(phone.getByTestId('pc-move-ghost')).toBeVisible();
+    await expect(phone.getByTestId('ruler-label')).toHaveText('1 square · 5 ft');
+    // A long press on the map never offers to save the image.
+    await expect(phone.locator('.pc-map-art')).toHaveCSS('pointer-events', 'none');
     const dmBox = (await consoleBrannoc.boundingBox())!;
     await page.mouse.move(dmBox.x + dmBox.width / 2, dmBox.y + dmBox.height / 2);
     await page.mouse.down();

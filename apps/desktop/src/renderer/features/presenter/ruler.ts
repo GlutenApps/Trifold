@@ -19,7 +19,11 @@ export function cellAt(p: Point, grid: GridSpec): Point {
 }
 
 /** The centre of a cell, or of a token's footprint at grid position `cell`, in map pixels. */
-export function cellCentre(cell: Point, grid: GridSpec, footprint = 1): Point {
+export function cellCentre(
+  cell: Point,
+  grid: Pick<GridSpec, 'cellPx' | 'offsetX' | 'offsetY'>,
+  footprint = 1,
+): Point {
   return {
     x: grid.offsetX + (cell.x + footprint / 2) * grid.cellPx,
     y: grid.offsetY + (cell.y + footprint / 2) * grid.cellPx,
