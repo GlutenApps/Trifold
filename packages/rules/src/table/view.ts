@@ -146,6 +146,7 @@ export function viewFor(
         ...(scene.hasImage && hasImage ? { imageUrl: tablePaths.map(scene.id, scene.fogKey) } : {}),
         grid: scene.grid,
         fog: scene.fog ? scene.fog.shapes : null,
+        tokenStyle: scene.tokenStyle,
         tokens,
       }
     : null;

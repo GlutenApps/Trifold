@@ -397,6 +397,13 @@ export class TableHub {
       this.emit();
     });
     socket.on('error', () => undefined);
+    if (this.campaignId) {
+      this.send(client, {
+        type: 'campaign',
+        campaignId: this.campaignId,
+        campaignName: this.snapshot?.campaignName ?? '',
+      });
+    }
     this.emit();
   }
 

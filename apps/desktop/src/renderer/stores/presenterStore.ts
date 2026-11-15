@@ -190,6 +190,8 @@ interface PresenterStore {
    * players may see it; pushes are coalesced to one per frame like a token drag.
    */
   setRuler(ruler: LiveRuler | null): void;
+  /** The player connector's join code on the TV (ADR 0043), or null to take it down. */
+  setJoinCode(joinCode: PresenterState['joinCode']): void;
 }
 
 /**
@@ -386,6 +388,12 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
       const { state } = get();
       if (JSON.stringify(state.ruler ?? null) === JSON.stringify(ruler)) return;
       commitCoalesced({ ...state, ruler });
+    },
+
+    setJoinCode(joinCode) {
+      const { state } = get();
+      if (JSON.stringify(state.joinCode ?? null) === JSON.stringify(joinCode ?? null)) return;
+      commit({ ...state, joinCode });
     },
   };
 });

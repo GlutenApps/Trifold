@@ -12,6 +12,7 @@ import {
   type Cols,
 } from '../compendium/editorParts';
 import { Icon } from '../shell/icons';
+import { PlayerAccess } from '../players/PlayerAccess';
 
 /**
  * The PC card and NPC forms (DESIGN.md §6.3, §10 Bugs) and the "From another campaign…"
@@ -135,7 +136,12 @@ export function PcEditor({
     basics:
       !isNew &&
       Boolean(
-        pc.playerName || pc.classText || pc.level > 1 || pc.initiativeBonus || pc.speed !== 30,
+        pc.playerName ||
+        pc.classText ||
+        pc.level > 1 ||
+        pc.initiativeBonus ||
+        pc.speed !== 30 ||
+        pc.playerControllable,
       ),
     senses:
       !isNew &&
@@ -229,6 +235,12 @@ export function PcEditor({
           min={0}
           value={draft.speed}
           onChange={(v) => patch({ speed: int(v, 30) })}
+        />
+        <PlayerAccess
+          kind="pc"
+          id={pc.id}
+          checked={!!draft.playerControllable}
+          onChange={(playerControllable) => patch({ playerControllable })}
         />
       </FoldSection>
       <FoldSection
@@ -518,7 +530,7 @@ export function NpcEditor({
   const isNew = !npc.id;
   const [draft, setDraft] = useState<NPC>(npc);
   const [open, setOpen] = useState(() => ({
-    basics: !isNew && Boolean(npc.role || npc.location || !npc.isAlive),
+    basics: !isNew && Boolean(npc.role || npc.location || !npc.isAlive || npc.playerControllable),
     statBlock: !isNew && npc.recordRef !== undefined,
     notes: !isNew && npc.notes.trim() !== '',
   }));
@@ -586,6 +598,12 @@ export function NpcEditor({
         <div className="span-all">
           <Check label="Alive" checked={draft.isAlive} onChange={(isAlive) => patch({ isAlive })} />
         </div>
+        <PlayerAccess
+          kind="npc"
+          id={npc.id}
+          checked={!!draft.playerControllable}
+          onChange={(playerControllable) => patch({ playerControllable })}
+        />
       </FoldSection>
       <FoldSection
         title="Notes"

@@ -52,6 +52,7 @@ export interface TableScene {
   fog: { enabled: true; shapes: FogShapeLike[] } | null;
   /** `fogKey(fog)`: which fogged map image goes with this state. */
   fogKey: string;
+  tokenStyle: 'engraved' | 'flat' | 'twoTone' | 'plain';
   tokens: TableToken[];
 }
 
@@ -111,6 +112,7 @@ export interface ClientMap {
   imageUrl?: string;
   grid: TableGrid;
   fog: FogShapeLike[] | null;
+  tokenStyle: 'engraved' | 'flat' | 'twoTone' | 'plain';
   tokens: ClientToken[];
 }
 
@@ -144,6 +146,8 @@ export interface ClientView {
 }
 
 export type ServerMessage =
+  /** Sent on connect, so the browser answers with the token it stored for this campaign. */
+  | { type: 'campaign'; campaignId: string; campaignName: string }
   | ({ type: 'state' } & ClientView)
   /** A new device token, sent once right after a first claim. */
   | { type: 'token'; token: string; campaignId: string }

@@ -232,7 +232,7 @@ describe('mDNS responder', () => {
     // It encodes to a valid packet.
     const decoded = dnsPacket.decode(dnsPacket.encode(r as never));
     expect(decoded.id).toBe(4242);
-    expect(decoded.answers?.[0]?.data).toBe('192.168.1.23');
+    expect((decoded.answers?.[0] as { data?: unknown } | undefined)?.data).toBe('192.168.1.23');
   });
 
   it('answers AAAA with link-local addresses, or NSEC when there are none', () => {

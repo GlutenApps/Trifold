@@ -11,6 +11,7 @@ import { Icon } from '../shell/icons';
 import { createScene } from './createScene';
 import { MapEditor } from './MapEditor';
 import { MapPop } from './MapPop';
+import { PlayerDevicesPop } from '../players/PlayerDevices';
 import { flattenTree, showableAt } from './sceneTree';
 
 /**
@@ -29,7 +30,7 @@ const OVERLAY_LABELS: { [K in keyof PresenterOverlays]: string } = {
   timers: 'Timers',
 };
 
-type Pop = 'overlays' | 'break';
+type Pop = 'overlays' | 'break' | 'players';
 
 /**
  * The TV major (ADR 0008): the screen. It shows the selected scene of any kind (or the live one
@@ -395,6 +396,11 @@ function TvControls({ shown }: { shown: Scene | null }) {
             ))}
           </div>
         </MapPop>
+        <PlayerDevicesPop
+          open={pop === 'players'}
+          onToggle={() => togglePop('players')}
+          onClose={closePop}
+        />
       </span>
     </>
   );

@@ -13,6 +13,7 @@ import {
   type Combatant,
   type CombatantTemplate,
   type Encounter,
+  type FogShape,
   type NPC,
   type PCCard,
   type Scene,
@@ -376,7 +377,7 @@ export function MapEditor({
     patch({ fog: next });
   };
   /** A drawn shape turns the fog on: drawing is how the DM starts using it. */
-  const addFog = (shape: Parameters<typeof addShape>[1]) =>
+  const addFog = (shape: FogShape) =>
     setFog({ enabled: true, shapes: addShape(fog.shapes, shape) });
   const undoFog = () => {
     const previous = fogUndo[fogUndo.length - 1];

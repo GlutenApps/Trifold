@@ -9,12 +9,13 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "node ../../scripts/dev.mjs",
-    "build:bundle": "electron-vite build",
+    "build:bundle": "electron-vite build && vite build -c vite.web.config.ts",
     "prebuild": "node --import tsx ../../scripts/build-sample.ts && node ../../scripts/check-content.mjs",
-    "build": "electron-vite build && electron-builder --config electron-builder.yml",
+    "build": "electron-vite build && vite build -c vite.web.config.ts && electron-builder --config electron-builder.yml",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "postinstall": "node ../../scripts/rebuild-native.mjs",
-    "smoke": "node --import tsx ../../scripts/build-sample.ts && electron-vite build && playwright test -c smoke/playwright.config.ts"
+    "smoke": "node --import tsx ../../scripts/build-sample.ts && electron-vite build && vite build -c vite.web.config.ts && playwright test -c smoke/playwright.config.ts",
+    "build:web": "vite build -c vite.web.config.ts"
   },
   "dependencies": {
     "better-sqlite3": "12.11.1",

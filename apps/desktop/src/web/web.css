@@ -1,0 +1,427 @@
+/* The player connector's page (ADR 0043): the console's tokens, type and token discs from
+   global.css and map.css, adapted for touch: 44 px targets, a 360 px floor, no hover-only states.
+   Colours come from the tokens only. */
+
+:root {
+  --touch: 44px;
+  font-size: 16px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
+}
+
+.pc-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+}
+
+.pc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--touch);
+  padding: 0 16px;
+  background: var(--bg-rail);
+  border-bottom: 1px solid var(--border);
+}
+
+.pc-brand {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.pc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+
+.pc-link.open .pc-dot {
+  background: var(--ok);
+}
+
+.pc-link.stopped .pc-dot {
+  background: var(--text-muted);
+}
+
+.pc-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg-active);
+  border-bottom: 1px solid var(--warn);
+}
+
+.pc-btn {
+  min-height: var(--touch);
+  min-width: var(--touch);
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  color: var(--text);
+  font: inherit;
+}
+
+.pc-btn.ghost {
+  background: transparent;
+}
+
+.pc-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+main.pc-center {
+  flex: 1;
+}
+
+.pc-lead {
+  font-size: 18px;
+  margin: 0;
+}
+
+.pc-hint {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0;
+  max-width: 34em;
+}
+
+.pc-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.pc-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.pc-pick-list {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .pc-pick-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pc-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.pc-pick:active:not(:disabled) {
+  background: var(--bg-active);
+}
+
+.pc-pick:disabled {
+  opacity: 0.55;
+}
+
+.pc-pick-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-portrait {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--bg-active);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.pc-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pc-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.pc-field {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.pc-field input {
+  min-height: var(--touch);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel);
+  color: var(--text);
+  /* 16 px keeps iOS from zooming the page on focus. */
+  font: inherit;
+  font-size: 16px;
+}
+
+/* Playing: chips, the map, and the numbers below it (beside it from 960 px). */
+.pc-play {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'chips' 'map' 'stats';
+}
+
+@media (min-width: 960px) {
+  .pc-play {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: 'chips chips' 'map stats';
+  }
+}
+
+.pc-chips {
+  grid-area: chips;
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+}
+
+.pc-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--touch);
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel);
+  color: var(--text);
+  font: inherit;
+}
+
+.pc-chip.on {
+  border-color: var(--accent);
+  background: var(--bg-active);
+}
+
+.pc-map {
+  grid-area: map;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pc-map-surface {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.pc-map-art {
+  display: block;
+  -webkit-user-drag: none;
+}
+
+.pc-token.fogged {
+  opacity: 0.55;
+}
+
+.pc-fit {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch);
+  height: var(--touch);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-panel);
+  color: var(--text);
+}
+
+.backdrop-dark {
+  background: var(--tv-dark);
+  color: var(--tv-dark-ink);
+}
+
+.backdrop-parchment {
+  background: var(--tv-parchment);
+  color: var(--tv-parchment-ink);
+}
+
+.backdrop-stone {
+  background: var(--tv-stone);
+  color: var(--tv-stone-ink);
+}
+
+.pc-stats {
+  grid-area: stats;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 960px) {
+  .pc-stats {
+    border-top: 0;
+    border-left: 1px solid var(--border);
+    align-content: start;
+  }
+}
+
+.pc-stats-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pc-stats-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.pc-stat-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+}
+
+.pc-stat {
+  position: relative;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.pc-stat dt {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pc-stat dd {
+  margin: 0;
+  font-size: 22px;
+}
+
+.pc-num {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.pc-of {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.pc-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--bg-active);
+}
+
+.pc-bar span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+
+.pc-stat.hp.bloodied .pc-bar span {
+  background: var(--warn);
+}
+
+.pc-stat.hp.down .pc-bar span {
+  background: var(--danger);
+}
+
+.pc-conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

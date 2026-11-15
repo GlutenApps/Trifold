@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { initialPresenterState, type PresenterState } from '@trifold/api';
 import { MapLayer } from './MapLayer';
 import { TvCorner } from './TvCorner';
+import { JoinQr } from '../players/JoinQr';
 
 /**
  * The `/player` route (ADR 0002): the second screen. It subscribes to the presenter state main
@@ -46,7 +47,16 @@ export function PlayerScreen() {
     };
   }, []);
 
-  if (state.blackout) return <div className="player" data-testid="player-blackout" />;
+  const join = state.joinCode ? <TvJoinCode code={state.joinCode} /> : null;
+  // The join code stays up until the DM unticks it (decision 6), over a blackout too: a session
+  // usually starts blacked out, which is when players join.
+  if (state.blackout) {
+    return (
+      <div className="player" data-testid="player-blackout">
+        {join}
+      </div>
+    );
+  }
 
   const { scene, combat, overlays } = state;
   return (
@@ -142,6 +152,22 @@ export function PlayerScreen() {
           )}
         </div>
       )}
+      {join}
+    </div>
+  );
+}
+
+/** The player connector's join code (ADR 0043): a large QR of the IP address and the addresses. */
+function TvJoinCode({ code }: { code: NonNullable<PresenterState['joinCode']> }) {
+  const size = Math.round(window.innerHeight * 0.3);
+  return (
+    <div className="tv-join" data-testid="tv-join">
+      <JoinQr url={code.url} size={size} label="Scan to join the table" />
+      <div className="tv-join-text">
+        <span>Join the table</span>
+        {code.localUrl && <strong>{code.localUrl}</strong>}
+        <span className="join-ip">{code.url}</span>
+      </div>
     </div>
   );
 }

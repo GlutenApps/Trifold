@@ -1,0 +1,219 @@
+import { useEffect, useState } from 'react';
+import type { TableStatus } from '@trifold/api';
+import { useCampaignStore } from '../../stores/campaignStore';
+import { tableOn, useTableStore } from '../../stores/tableStore';
+import { Icon } from '../shell/icons';
+import { MapPop } from '../presenter/MapPop';
+import { JoinQr } from './JoinQr';
+
+/** How long with nobody connected before the pop-up suggests the firewall or the Wi-Fi. */
+const QUIET_MS = 60_000;
+
+/**
+ * The Player devices pop-up in the VTT tab's TV tools (ADR 0043, decision 5): Let players join
+ * and Stop, the join QR and addresses with Copy link, Show join code on TV (its one home), and
+ * the devices with what each holds and Release. Not modal; usable mid-fight.
+ */
+export function PlayerDevicesPop({
+  open,
+  onToggle,
+  onClose,
+}: {
+  open: boolean;
+  onToggle(): void;
+  onClose(): void;
+}) {
+  const status = useTableStore((s) => s.status);
+  const campaignId = useCampaignStore((s) => s.current?.campaign.id);
+  const on = tableOn(status, campaignId);
+  const online = on ? (status?.devices.filter((d) => d.online).length ?? 0) : 0;
+  return (
+    <MapPop
+      open={open}
+      onClose={onClose}
+      label="Player devices"
+      side="down"
+      trigger={
+        <button
+          type="button"
+          className={`chrome-btn${open ? ' on' : ''}`}
+          aria-label="Player devices"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          title={
+            on
+              ? `Player devices: players can join (${online} connected)`
+              : 'Player devices: let players join from their phones'
+          }
+          onClick={onToggle}
+        >
+          <Icon name="phone" />
+          {on && <span className="pip tally chrome-pip" aria-hidden="true" />}
+        </button>
+      }
+    >
+      <PlayerDevicesBody status={status} on={on} />
+    </MapPop>
+  );
+}
+
+function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boolean }) {
+  const { start, stop, release, joinOnTv, setJoinOnTv, error } = useTableStore();
+  const [copied, setCopied] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!on || status?.anyConnected) return;
+    const t = window.setInterval(() => setNow(Date.now()), 5000);
+    return () => window.clearInterval(t);
+  }, [on, status?.anyConnected]);
+
+  const starting = status?.state === 'starting';
+  const url = status?.urls[0] ?? null;
+  const quiet =
+    on &&
+    !status?.anyConnected &&
+    !!status?.startedAt &&
+    now - Date.parse(status.startedAt) > QUIET_MS;
+  const holding = status?.devices.some((d) => d.claims.length) ?? false;
+
+  const copy = async () => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(status?.localUrl ? `${status.localUrl}\n${url}` : url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="player-devices">
+      <h3>Player devices</h3>
+      {(error || status?.error) && (
+        <p className="banner warn" role="alert">
+          {error ?? status?.error}
+        </p>
+      )}
+      {!on ? (
+        <>
+          <p className="muted">
+            Players on this Wi-Fi open a page in their browser, pick their character and follow the
+            map on their phone. Nothing leaves this network.
+          </p>
+          <p className="muted">
+            The first time, your computer may ask whether Trifold can accept connections: allow it
+            on private networks.
+          </p>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={starting}
+            onClick={() => void start()}
+          >
+            {starting ? 'Starting…' : 'Let players join'}
+          </button>
+        </>
+      ) : (
+        <>
+          {url && (
+            <div className="join-code">
+              <JoinQr url={url} size={148} />
+              <div className="join-addresses">
+                {status?.localUrl && <strong className="join-local">{status.localUrl}</strong>}
+                <span className="join-ip">{url}</span>
+                {status!.urls.slice(1).map((u) => (
+                  <span key={u} className="join-ip muted">
+                    {u}
+                  </span>
+                ))}
+                <button type="button" className="btn" onClick={() => void copy()}>
+                  {copied ? 'Copied' : 'Copy link'}
+                </button>
+              </div>
+            </div>
+          )}
+          {quiet && (
+            <p className="banner warn">
+              No one has connected yet. The firewall may be blocking Trifold, or this Wi-Fi may keep
+              devices apart (guest and school networks often do). A phone hotspot works.
+            </p>
+          )}
+          <label className="field inline">
+            <input
+              type="checkbox"
+              checked={joinOnTv}
+              onChange={(e) => setJoinOnTv(e.target.checked)}
+            />
+            Show join code on TV
+          </label>
+          <DeviceList status={status!} onRelease={(kind, id) => void release({ kind, id })} />
+          <div className="row player-devices-actions">
+            <button
+              type="button"
+              className="btn"
+              disabled={!holding}
+              onClick={() => void release('all')}
+            >
+              Release all
+            </button>
+            <span className="grow" />
+            <button type="button" className="btn" onClick={() => void stop()}>
+              Stop
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function DeviceList({
+  status,
+  onRelease,
+}: {
+  status: TableStatus;
+  onRelease(kind: 'pc' | 'npc', id: string): void;
+}) {
+  if (!status.devices.length) {
+    return (
+      <p className="muted">
+        {status.connections
+          ? `${status.connections} connected, picking a character.`
+          : 'No devices yet.'}
+      </p>
+    );
+  }
+  return (
+    <ul className="device-list" aria-label="Devices">
+      {status.devices.map((d) => (
+        <li key={d.deviceId} className="device-row">
+          <span className="device-head">
+            <span
+              className={`device-dot${d.online ? ' online' : ''}`}
+              aria-label={d.online ? 'online' : 'offline'}
+            />
+            <span className="device-name">{d.label || 'Unnamed device'}</span>
+            <span className="muted">{d.online ? 'online' : 'offline'}</span>
+          </span>
+          <ul className="device-claims">
+            {d.claims.map((c) => (
+              <li key={`${c.kind}:${c.id}`} className="device-claim">
+                <span className="grow">{c.name}</span>
+                <button
+                  type="button"
+                  className="chrome-btn xs"
+                  aria-label={`Release ${c.name}`}
+                  title={`Release ${c.name}: back to DM control, nothing else changes`}
+                  onClick={() => onRelease(c.kind, c.id)}
+                >
+                  <Icon name="linkOff" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  );
+}

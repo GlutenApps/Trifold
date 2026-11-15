@@ -41,6 +41,7 @@ function snapshot(tokens: TableToken[], fogOn = true): TableSnapshot {
       grid,
       fog,
       fogKey: fogKey(fog),
+      tokenStyle: 'engraved',
       tokens,
     },
     creatures: [
