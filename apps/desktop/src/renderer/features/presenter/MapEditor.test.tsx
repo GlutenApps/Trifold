@@ -9,6 +9,7 @@ import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useArtStore } from '../../stores/artStore';
 import { MapEditor } from './MapEditor';
+import { blankPc } from '../campaign/CharacterEditors';
 
 const now = '2026-09-28T00:00:00.000Z';
 
@@ -118,6 +119,42 @@ describe('MapEditor: place encounter', () => {
     expect(fighters.map((c) => c.tokenId).sort()).toEqual(
       [...placed.map((t) => t.id), 'wolf'].sort(),
     );
+  });
+
+  it('brings the party on the map into a linked encounter, and nobody who is elsewhere', async () => {
+    const party: PCCard[] = [
+      { ...blankPc(), id: 'p1', name: 'Thora', maxHp: 30 },
+      { ...blankPc(), id: 'p2', name: 'Bram', maxHp: 20 },
+    ];
+    useCampaignStore.setState({
+      current: {
+        campaign: { settings: { initiativeMode: 'perGroup' } },
+        pcs: party,
+        encounters: [{ ...ambush, sceneId: 's1' }],
+        scenes: [blank],
+      } as unknown as CampaignBundle,
+    });
+    const thora: Token = {
+      id: 'tok-thora',
+      kind: 'pc',
+      ref: { kind: 'pc', pcId: 'p1', name: 'Thora' },
+      label: 'Thora',
+      x: 1,
+      y: 1,
+      footprint: 1,
+      role: 'ally',
+      hidden: false,
+      nameMasked: false,
+      dead: false,
+    };
+    render(<Harness initial={{ ...blank, encounterId: 'e1', tokens: [wolf, thora] }} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Start linked encounter' }));
+    await waitFor(() => expect(useCombatStore.getState().encounterId).toBe('e1'));
+    const pcs = useCombatStore
+      .getState()
+      .state!.combatants.filter((c) => c.ref.kind === 'pc')
+      .map((c) => [c.name, c.tokenId]);
+    expect(pcs).toEqual([['Thora', 'tok-thora']]);
   });
 });
 

@@ -57,7 +57,7 @@ In **Library › Campaigns**, **Create campaign** opens three ways in: **New bla
 
 **Placing on a map.** On a map in the VTT tab, **Place encounter…** drops one hidden token per creature and links the encounter to the scene. Drag them into place, reveal them per token or with **Reveal creatures**, then press **Start linked encounter**. **Start combat from tokens** builds a fight from the creature tokens on an unlinked map.
 
-**Starting.** Press **Start combat** in the builder or the play icon on the list. Creatures roll initiative automatically, one roll per group of identical creatures; PCs wait for a number. Type each PC's initiative, or use the dice icon on a row and **Roll remaining**, then **Begin**.
+**Starting.** Press **Start combat** in the builder or the play icon on the list. Who from the party fights: started from a map, the PCs standing on it (plus any the encounter names), so a split party fights apart; started from the Encounters tab, the PCs the encounter names; and if that leaves nobody, the whole party. Remove anyone at the Set initiative step, or add them with **Add to fight**. Creatures roll initiative automatically, one roll per group of identical creatures; PCs wait for a number. Type each PC's initiative, or use the dice icon on a row and **Roll remaining**, then **Begin**.
 
 **The turn loop.** `N` is next turn, `P` previous. Clicking a row opens its drawer: a toolbar (mask or reveal the name, hide from players, mark dead, Track as NPC, link to the map, remove) and lanes for HP, conditions, concentration, spell slots and recharges.
 

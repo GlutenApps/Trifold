@@ -48,6 +48,7 @@ import {
 import { registerHotkey } from '../../hotkeys';
 import { hk } from '../../platform';
 import { MapPop } from './MapPop';
+import { withParty } from '../encounters/build';
 import { TokenDisc } from './TokenDisc';
 import {
   combatantCandidates,
@@ -914,8 +915,13 @@ export function MapEditor({
     };
   };
 
-  const pcTokenId = (pcId: string) =>
-    scene.tokens.find((t) => t.kind === 'pc' && t.ref.kind === 'pc' && t.ref.pcId === pcId)?.id;
+  /** The party members on this map and their tokens: who is here for a fight (ADR 0044). */
+  const partyOnMap = () =>
+    new Map(
+      scene.tokens.flatMap((t) =>
+        t.kind === 'pc' && t.ref.kind === 'pc' ? [[t.ref.pcId, t.id] as const] : [],
+      ),
+    );
 
   const startCombat = async () => {
     if (linkedEncounter) {
@@ -928,18 +934,21 @@ export function MapEditor({
         openMajor('encounters', { avoid: 'map' });
         return;
       }
-      // Creatures dropped on the map besides the linked ones join the fight; PCs find their tokens.
+      // Creatures dropped on the map besides the linked ones join the fight, and so does the
+      // party on the map (ADR 0044).
       const linked = new Set(
         linkedEncounter.combatants.flatMap((t) => t.tokenIds ?? (t.tokenId ? [t.tokenId] : [])),
       );
       const loose = scene.tokens.filter((t) => t.kind === 'creature' && !linked.has(t.id));
-      const combatants = linkedEncounter.combatants.map((t) => {
-        if (t.ref.kind !== 'pc' || t.tokenId) return t;
-        const tokenId = pcTokenId(t.ref.pcId);
-        return tokenId ? { ...t, tokenId } : t;
-      });
-      combatants.push(...(await Promise.all(loose.map(templateFromToken))));
-      const saved = await saveEncounter({ ...linkedEncounter, combatants, updatedAt: nowIso() });
+      const withLoose = {
+        ...linkedEncounter,
+        combatants: [
+          ...linkedEncounter.combatants,
+          ...(await Promise.all(loose.map(templateFromToken))),
+        ],
+      };
+      const fight = withParty(withLoose, pcs, partyOnMap());
+      const saved = await saveEncounter({ ...fight, updatedAt: nowIso() });
       if (!saved) return;
       await begin(saved, pcs, initiativeMode);
       openMajor('encounters', { avoid: 'map' });
@@ -947,29 +956,22 @@ export function MapEditor({
     }
     const creatures = scene.tokens.filter((t) => t.kind === 'creature');
     const templates: CombatantTemplate[] = await Promise.all(creatures.map(templateFromToken));
-    for (const pc of pcs) {
-      const tokenId = pcTokenId(pc.id);
-      templates.push({
+    const encounter: Encounter = withParty(
+      {
+        schemaVersion: 1,
         id: ulid(),
-        ref: { kind: 'pc', pcId: pc.id, name: pc.name },
-        quantity: 1,
-        role: 'ally',
-        hidden: false,
-        ...(tokenId ? { tokenId } : {}),
-      });
-    }
-    const encounter: Encounter = {
-      schemaVersion: 1,
-      id: ulid(),
-      name: scene.title,
-      sceneId: scene.id,
-      combatants: templates,
-      notes: '',
-      state: null,
-      results: [],
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
-    };
+        name: scene.title,
+        sceneId: scene.id,
+        combatants: templates,
+        notes: '',
+        state: null,
+        results: [],
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      },
+      pcs,
+      partyOnMap(),
+    );
     const saved = await saveEncounter(encounter);
     if (!saved) return;
     patch({ encounterId: saved.id });
@@ -1574,7 +1576,7 @@ export function MapEditor({
           ) : (
             <ul className="picker-list">
               {pcs.map((pc) => {
-                const verb = pcTokenId(pc.id) ? 'Move' : 'Place';
+                const verb = partyOnMap().has(pc.id) ? 'Move' : 'Place';
                 return (
                   <li key={pc.id}>
                     <span>
