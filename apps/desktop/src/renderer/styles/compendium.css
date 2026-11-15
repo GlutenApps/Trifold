@@ -2460,9 +2460,42 @@ input[type='range'].wide {
   white-space: nowrap;
 }
 
-.subtab:hover {
+.subtab:hover,
+.subtab.open {
   background: var(--bg-hover);
   color: var(--text);
+}
+
+/* Tabs that do not fit fold into More (ADR 0042); it sits right after the last one shown. */
+.subtab-more {
+  flex: none;
+  align-self: flex-end;
+}
+
+.subtab-more .subtab {
+  gap: 4px;
+}
+
+.subtab-more .menu {
+  left: 0;
+  right: auto;
+}
+
+/* The hidden copy of the row each tab's width is measured from. */
+.subtabbar {
+  position: relative;
+}
+
+.subtab-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  gap: 2px;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .subtab:focus-visible {

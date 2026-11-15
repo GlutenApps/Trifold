@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type WheelEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CR_ORDER, crToNumber } from '@trifold/rules';
 import type { RecordKind } from '@trifold/schema';
 import { landOn, navKey, useNavTarget } from '../../navigate';
@@ -9,6 +9,7 @@ import { itemTypeName, shortSourceName } from './formatting';
 import { CreatureEditor } from './CreatureEditor';
 import { KIND_NAMES } from './homebrew';
 import { RecordDetail } from './RecordDetail';
+import { SubTabs } from '../shell/SubTabs';
 
 /**
  * The Compendium browser (DESIGN.md §6.1): kind tabs, a filter bar that re-runs the search
@@ -18,16 +19,18 @@ import { RecordDetail } from './RecordDetail';
  * 960 px the list and the record take turns (ADR 0014). The same component serves the console's
  * Compendium tab and Library › Compendium.
  */
+// In the order a DM reaches for them at the table (ADR 0042): what a fight and a ruling need
+// first, then what character building needs, which folds into More first in a narrow panel.
 const KINDS: Array<{ id: RecordKind; label: string }> = [
   { id: 'monster', label: 'Monsters' },
   { id: 'spell', label: 'Spells' },
+  { id: 'condition', label: 'Conditions' },
+  { id: 'rule', label: 'Rules' },
   { id: 'item', label: 'Items' },
+  { id: 'class', label: 'Classes' },
   { id: 'feat', label: 'Feats' },
   { id: 'species', label: 'Species' },
   { id: 'background', label: 'Backgrounds' },
-  { id: 'class', label: 'Classes' },
-  { id: 'condition', label: 'Conditions' },
-  { id: 'rule', label: 'Rules' },
 ];
 
 function editionLabel(edition: string): string {
@@ -81,7 +84,6 @@ export function CompendiumPage() {
   const debounce = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const listScroll = useRef(0);
-  const activeTab = useRef<HTMLButtonElement>(null);
   // Below 960 px the list and the record take turns (see `.split` in compendium.css): an open
   // record replaces the list until Back to results, a new search or a new kind brings it back.
   const [backedOut, setBackedOut] = useState(false);
@@ -116,25 +118,6 @@ export function CompendiumPage() {
     if (!showDetail && listRef.current) listRef.current.scrollTop = listScroll.current;
   }, [showDetail]);
 
-  // The kind tabs scroll inside their strip in a narrow panel; keep the active one in view
-  // when it is picked and when the panel narrows.
-  useEffect(() => {
-    const reveal = () => {
-      const tab = activeTab.current;
-      const strip = tab?.parentElement;
-      if (!tab || !strip) return;
-      if (tab.offsetLeft < strip.scrollLeft) strip.scrollLeft = tab.offsetLeft;
-      const end = tab.offsetLeft + tab.offsetWidth - strip.clientWidth;
-      if (end > strip.scrollLeft) strip.scrollLeft = end;
-    };
-    reveal();
-    const strip = activeTab.current?.parentElement;
-    if (!strip || typeof ResizeObserver === 'undefined') return;
-    const watch = new ResizeObserver(reveal);
-    watch.observe(strip);
-    return () => watch.disconnect();
-  }, [kind]);
-
   const update = (patch: Parameters<typeof setFilters>[0]) => {
     setBackedOut(true);
     setFilters(patch);
@@ -143,13 +126,6 @@ export function CompendiumPage() {
     if (listRef.current) listScroll.current = listRef.current.scrollTop;
     setBackedOut(false);
     void select(id);
-  };
-  // A mouse wheel scrolls the tab strip sideways when it overflows.
-  const wheelTabs = (e: WheelEvent<HTMLDivElement>) => {
-    const strip = e.currentTarget;
-    if (strip.scrollWidth > strip.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      strip.scrollLeft += e.deltaY;
-    }
   };
   const sourceId = filters.sourceIds?.[0] ?? '';
 
@@ -164,26 +140,15 @@ export function CompendiumPage() {
         </div>
       )}
 
-      <div className="subtabbar">
-        <div className="subtablist" role="tablist" aria-label="Record kind" onWheel={wheelTabs}>
-          {KINDS.map((k) => (
-            <button
-              key={k.id}
-              ref={k.id === kind ? activeTab : undefined}
-              type="button"
-              role="tab"
-              className={`subtab${k.id === kind ? ' active' : ''}`}
-              aria-selected={k.id === kind}
-              onClick={() => {
-                setBackedOut(true);
-                void setKind(k.id);
-              }}
-            >
-              {k.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <SubTabs
+        label="Record kind"
+        tabs={KINDS}
+        active={kind}
+        onSelect={(id) => {
+          setBackedOut(true);
+          void setKind(id);
+        }}
+      />
 
       <div className="row filters">
         <input
