@@ -9,11 +9,13 @@ export const TABLE_PORTS: readonly number[] = [
 ];
 
 /**
- * The ports to try, in order: the saved one alone when there is one (80 is never retried after
- * it failed once, and a saved port keeps players' stored tokens valid), else the full list.
+ * The ports to try, in order. With no saved port, the full list. With one, that port first (it
+ * keeps players' stored tokens valid), then 8130–8139 should something else hold it; 80 is never
+ * retried once it failed.
  */
 export function portsToTry(saved: number | null): number[] {
-  return saved ? [saved] : [...TABLE_PORTS];
+  if (!saved) return [...TABLE_PORTS];
+  return [saved, ...TABLE_PORTS.filter((p) => p !== 80 && p !== saved)];
 }
 
 /** Whether an IPv4 address is on a private LAN (10/8, 172.16/12, 192.168/16). */

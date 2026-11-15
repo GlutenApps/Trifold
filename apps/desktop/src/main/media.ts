@@ -37,31 +37,57 @@ async function serveFile(path: string, request: Request): Promise<Response> {
   return new Response(upstream.body, { status: upstream.status, headers });
 }
 
+/**
+ * The file a `trifold-media://` URL names, or null when it names nothing servable: a bundled
+ * icon, a music track, or a file inside the open Library. The table server reuses it to serve
+ * token art to browsers (ADR 0043).
+ */
+export function resolveMediaPath(
+  rawUrl: string,
+  session: LibrarySession,
+  icons: IconResources,
+): string | null {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== `${MEDIA_SCHEME}:`) return null;
+  if (url.host === 'icons') {
+    return icons.svgPath(decodeURIComponent(url.pathname.replace(/^\//, ''))) ?? null;
+  }
+  if (url.host === 'track') {
+    return session.music?.trackPath(decodeURIComponent(url.pathname.replace(/^\//, ''))) ?? null;
+  }
+  if (url.host !== 'library' || !session.store) return null;
+  const relative = url.pathname
+    .split('/')
+    .filter(Boolean)
+    .map((p) => decodeURIComponent(p))
+    .join('/');
+  try {
+    return session.store.resolvePath(relative);
+  } catch {
+    return null;
+  }
+}
+
 export function installMediaHandler(session: LibrarySession, icons: IconResources): void {
   protocol.handle(MEDIA_SCHEME, (request) => {
     const url = new URL(request.url);
-    if (url.host === 'icons') {
-      const file = icons.svgPath(decodeURIComponent(url.pathname.replace(/^\//, '')));
-      return file ? serveFile(file, request) : new Response('not found', { status: 404 });
+    if (url.host === 'library' && !session.store) {
+      return new Response('no library', { status: 503 });
     }
-    if (url.host === 'track') {
-      const file = session.music?.trackPath(decodeURIComponent(url.pathname.replace(/^\//, '')));
-      return file ? serveFile(file, request) : new Response('not found', { status: 404 });
+    if (!['icons', 'track', 'library'].includes(url.host)) {
+      return new Response('not found', { status: 404 });
     }
-    if (url.host !== 'library') return new Response('not found', { status: 404 });
-    const store = session.store;
-    if (!store) return new Response('no library', { status: 503 });
-    const relative = url.pathname
-      .split('/')
-      .filter(Boolean)
-      .map((p) => decodeURIComponent(p))
-      .join('/');
-    let absolute: string;
-    try {
-      absolute = store.resolvePath(relative);
-    } catch {
-      return new Response('forbidden', { status: 403 });
+    const file = resolveMediaPath(request.url, session, icons);
+    if (!file) {
+      return new Response(url.host === 'library' ? 'forbidden' : 'not found', {
+        status: url.host === 'library' ? 403 : 404,
+      });
     }
-    return serveFile(absolute, request);
+    return serveFile(file, request);
   });
 }

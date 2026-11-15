@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@trifold/schema": "workspace:*"
+    "@trifold/schema": "workspace:*",
+    "@trifold/rules": "workspace:*"
   }
 }

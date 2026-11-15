@@ -70,8 +70,8 @@ export const PCCard = z.object({
   dndBeyondUrl: z.string().optional(),
   notes: z.string().default(''),
   tokenStyleOverride: z.enum(['engraved', 'flat', 'twoTone', 'plain']).optional(),
-  /** Offered to players at the table to claim (ADR 0043); off unless the DM turns it on. */
-  playerControllable: z.boolean().default(false),
+  /** Offered to players at the table to claim (ADR 0043); absent means off. */
+  playerControllable: z.boolean().optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -320,7 +320,7 @@ export const NPC = z.object({
    * Offered to players at the table to claim (ADR 0043) while it is not marked enemy on the live
    * scene or in the running fight.
    */
-  playerControllable: z.boolean().default(false),
+  playerControllable: z.boolean().optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });

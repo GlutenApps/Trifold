@@ -177,10 +177,12 @@ describe('viewFor', () => {
 });
 
 describe('network', () => {
-  it('tries 80 then 8130–8139, or only the saved port', () => {
+  it('tries 80 then 8130–8139, or the saved port first and never 80 again', () => {
     expect(TABLE_PORTS).toEqual([80, 8130, 8131, 8132, 8133, 8134, 8135, 8136, 8137, 8138, 8139]);
     expect(portsToTry(null)).toEqual(TABLE_PORTS);
-    expect(portsToTry(8131)).toEqual([8131]);
+    expect(portsToTry(8131)).toEqual([8131, 8130, 8132, 8133, 8134, 8135, 8136, 8137, 8138, 8139]);
+    expect(portsToTry(80)[0]).toBe(80);
+    expect(portsToTry(80).filter((p) => p === 80)).toHaveLength(1);
   });
 
   it('accepts private LAN addresses only', () => {

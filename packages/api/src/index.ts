@@ -24,6 +24,22 @@ import type {
   Source,
   Track,
 } from '@trifold/schema';
+import type { CreatureKind, TableSnapshot } from '@trifold/rules';
+
+export type {
+  ClientMap,
+  ClientMessage,
+  ClientToken,
+  ClientView,
+  CreatureKind,
+  CreatureView,
+  PickerEntry,
+  ServerMessage,
+  TableCreature,
+  TableScene,
+  TableSnapshot,
+  TableToken,
+} from '@trifold/rules';
 
 /**
  * The one interface between the renderer and the main process (DESIGN.md §4.4).
@@ -235,6 +251,11 @@ export interface PresenterState {
    * may see is sent: never one that starts or ends under fog, nor one on a hidden token.
    */
   ruler?: LiveRuler | null;
+  /**
+   * The player connector's join code on the TV (ADR 0043), while Show join code on TV is
+   * ticked: the address the QR encodes (always the IP) and the local name, when there is one.
+   */
+  joinCode?: { url: string; localUrl: string | null } | null;
   /** Milliseconds since epoch; lets the player ignore stale updates. */
   updatedAt: number;
 }
@@ -680,6 +701,36 @@ export interface CampaignImportReport {
   warnings: string[];
 }
 
+// ---------- player connector (ADR 0043, docs/PLAYER-CONNECTOR.md) ----------
+
+/** A browser that has claimed something in the open campaign. */
+export interface TableDeviceView {
+  deviceId: string;
+  label: string;
+  online: boolean;
+  lastSeen: string;
+  claims: Array<{ kind: CreatureKind; id: string; name: string }>;
+}
+
+export interface TableStatus {
+  state: 'off' | 'starting' | 'on';
+  campaignId: string | null;
+  port: number | null;
+  /** `http://<ip>[:port]` for each private address it listens on; the first goes in the QR. */
+  urls: string[];
+  /** `http://trifold.local[:port]` (or the suffixed name it won), null until mDNS is up. */
+  localUrl: string | null;
+  devices: TableDeviceView[];
+  /** Browsers connected now, claimed or not. */
+  connections: number;
+  /** Any browser has connected since Let players join; the firewall hint goes once one has. */
+  anyConnected: boolean;
+  startedAt: string | null;
+  error: string | null;
+}
+
+export type TableReleaseTarget = { kind: CreatureKind; id: string } | 'all';
+
 export interface TrifoldApi {
   app: {
     getInfo(): Promise<AppInfo>;
@@ -732,6 +783,23 @@ export interface TrifoldApi {
     open(displayId?: number | null): Promise<void>;
     close(): Promise<void>;
     isOpen(): Promise<boolean>;
+  };
+  /**
+   * The table server for the player connector (ADR 0043): off until the DM starts it, private
+   * LAN only. The console pushes what the table may see; main filters it per device.
+   */
+  table: {
+    status(): Promise<TableStatus>;
+    /** Starts serving this campaign; the answer also arrives as `tableStatus` events. */
+    start(campaignId: string): Promise<TableStatus>;
+    /** Disconnects every browser and stops listening. */
+    stop(): Promise<TableStatus>;
+    /** Releases one creature's claim, or all of them; creature data never changes. */
+    release(target: TableReleaseTarget): Promise<TableStatus>;
+    /** The console's latest table state; ignored while the server is off. */
+    push(snapshot: TableSnapshot): Promise<void>;
+    /** The live map image with fog filled black, as a JPEG (decision 11). */
+    setMapImage(sceneId: string, fogKey: string, jpeg: Uint8Array): Promise<void>;
   };
   presenter: {
     /**
@@ -1091,6 +1159,7 @@ export const API_METHODS = {
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],
   presenter: ['push', 'get'],
+  table: ['status', 'start', 'stop', 'release', 'push', 'setMapImage'],
   sources: [
     'list',
     'chooseFile',
@@ -1206,6 +1275,8 @@ export interface TrifoldEvents {
   backupCopy: BackupCopyStatus;
   /** An update check started or answered, or the DM changed the setting. */
   updateStatus: UpdateStatus;
+  /** The table server started, stopped, or a device came, went, claimed or was released. */
+  tableStatus: TableStatus;
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -1218,6 +1289,7 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   flushSaves: 'trifold:event:flush-saves',
   backupCopy: 'trifold:event:backup-copy',
   updateStatus: 'trifold:event:update-status',
+  tableStatus: 'trifold:event:table-status',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */
