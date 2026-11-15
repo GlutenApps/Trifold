@@ -1,6 +1,6 @@
 # Player connector
 
-**Status:** Phase 1 built and checked on real hardware (2026-11-14, ADR 0043); Phase 2 next. Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
+**Status:** Phase 1 built and checked on real hardware (2026-11-14, ADR 0043); Phase 2 in progress. Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
 The [decisions](#decisions) below settle where the original spec and the repo disagreed; where
 they differ from a later section, the decisions win. Before Phase 1 starts, a Phase 1 plan is
 confirmed and an ADR amends `DESIGN.md` §1.2 and `CLAUDE.md` ground rule 1.
@@ -225,6 +225,104 @@ three packages above and records the claims-file deviation if that is confirmed.
   a PC, off for an NPC). Ticking each party member was easy to miss.
 - The switch is also on the map: a **Players can claim …** button in the selected token's
   actions, for a PC token and an NPC token not marked enemy. The forms keep their tick box.
+
+## Phase 2 plan
+
+**Status:** confirmed by the DM, 2026-11-14: conditions only during a fight, the reclaim mode in
+the Player devices pop-up, name and portrait after Phase 4.
+
+### How a player's edit travels
+
+Phase 1's rule holds: the console owns game state. A phone sends an intent; main checks it (the
+device holds that creature, the field is allowed, the value is in range, the server is on) and
+forwards it to the console as a `tableIntent` event; the console applies it through the same
+store actions a DM click uses, in its one thread, so player and DM edits are applied in order and
+nothing is written twice. The result reaches every screen the usual way: the console saves, the
+TV and the snapshot update, and main sends each phone its new view. No `version` field yet: HP
+and temp HP travel as changes, and max HP and AC are last-write-wins (Concurrency), so versions
+wait for movement in Phase 3.
+
+| Intent | In the loaded fight | Outside it |
+| --- | --- | --- |
+| `hp {delta}` | `damage` or `heal` on its combatant (so concentration checks and death saves still fire) | PC card `currentHp`, or the NPC's carried HP, clamped to 0…max |
+| `temp {delta}` | combatant temp HP, clamped at 0 | PC card `tempHp` (NPC: carried temp) |
+| `maxHp {value}`, `ac {value}` | the combatant and the PC card (NPC: the combatant only) | the PC card; an NPC's come from its stat block and are not player-editable outside a fight |
+| `addCondition {name, level?}`, `removeCondition {id}` | the combatant | see Conditions |
+| `initiative {value}` | sets it only while it is still empty (decision 8) | ignored |
+
+Ranges main enforces: deltas within ±999, max HP 1–999, AC 0–40, initiative −20–60, condition
+names from the shared list (which moves from the tracker to `packages/rules`), exhaustion 1–6.
+A rejected intent gets an inline message on the phone and a log line, never a change.
+
+### Initiative
+
+The snapshot marks a claimed creature `needsInitiative` while the loaded fight has its combatant
+with no initiative. The phone shows one number box and Submit above the stats; on Submit the box
+goes, and it also goes the moment the DM types a number. Only the loaded fight counts: a paused
+fight asks again when it is loaded.
+
+### Conditions outside a fight
+
+- Conditions are editable only during a fight, where the tracker keeps
+  them. Outside one the phone shows "Conditions are tracked during fights." A later option adds
+  a `conditions` list to PC cards and NPCs, carried into and out of fights like HP (ADR 0012);
+  that is a bigger change to the tracker and can come later if the table wants it.
+
+### Getting a character back, and taking over
+
+- **The reclaim mode** (Open, PIN or Approval, default Open) is enforced by main, so it lives in
+  `players.json` beside the claims, not in the campaign file. It is set in the
+  Player devices pop-up, under the device list.
+- The picker shows claimed creatures as **In use**, now tappable. Tapping one held by an offline
+  device is a reclaim; held by an online device, the phone first asks "Brannoc is in use on
+  another device. Take over?" Either way the reclaim mode then applies:
+  - **Open:** done at once.
+  - **PIN:** in PIN mode the first claim asks for a 4-digit PIN (stored salted and hashed on the
+    claim, never in plain text). A reclaim asks for it; five wrong tries lock that creature's
+    PIN for a minute.
+  - **Approval:** the phone waits ("Asked the DM…"); main holds the request in memory. A dot shows
+    on the Player devices button, the VTT tab and the strip's VTT section; Accept and Deny sit in
+    the device list. Stop or a closed page drops the request.
+- A successful reclaim moves the claim to the asking device (a new device gets a fresh token) and
+  the old device drops to the picker. Creature data never changes.
+
+### Switch character and undo
+
+**Switch character** sits in the phone's top bar. It releases every claim the device holds and
+shows "Released Brannoc · Undo" for 5 seconds; Undo takes them back without the reclaim mode as
+long as nobody else claimed them meanwhile. Main keeps that grace for 5 seconds in memory only.
+
+### Name and portrait
+
+- Name and portrait editing waits until after Phase 4. A portrait means
+  an image upload from a phone, shrunk to 512 px as creature art (decision 13), which deserves its
+  own small piece of work. The spec's acceptance list for Phase 2 does not include them.
+
+### Console
+
+- The Player devices pop-up gains the reclaim mode, pending approvals with Accept and Deny, and
+  the dot on its button; the VTT tab and the strip's VTT section get the same dot (no toasts,
+  decision 4).
+- Nothing else changes for the DM: player edits arrive in the tracker, the forms and the TV as if
+  the DM had made them, and the fight log names the device ("Sam's phone: Brannoc heals 5").
+
+### The phone
+
+- The stats panel becomes editable: HP with a number pad and Damage and Heal buttons, temp HP the
+  same, max HP and AC as numbers, conditions as tappable tags with an Add list, and the initiative
+  box when asked. 44 px targets, one-handed, no hover.
+- The UI updates at once and takes the next view from main as final (Concurrency).
+
+### Tests
+
+- Unit (`packages/rules`): intent validation and ranges; the reclaim decision for each mode, online
+  and offline holders; PIN lockout; the undo grace window.
+- Unit (renderer): applying each intent in and out of a fight, including clamps, and initiative
+  only while empty; the approval dot.
+- Unit (main): PIN hashing and lockout, the approval queue, takeover moving the claim.
+- Smoke: a phone heals Brannoc during a fight while the DM damages him and both apply; the phone
+  submits initiative; Switch character and Undo; a second window takes Brannoc over in Approval
+  mode after the DM accepts.
 
 ## Goals and non-goals
 
