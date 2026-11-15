@@ -234,3 +234,26 @@ describe('network', () => {
     expect(hostAllowed(undefined, hosts, 80)).toBe(false);
   });
 });
+
+describe('viewFor: screens', () => {
+  it('gives an image scene by the server’s own path, never the file', () => {
+    const snap = {
+      ...snapshot([brannocToken(1)]),
+      scene: null,
+      screen: {
+        kind: 'image' as const,
+        id: 'i1',
+        title: 'Greyford',
+        src: 'trifold-media://library/campaigns/g/images/v.jpg',
+        width: 10,
+        height: 10,
+      },
+    };
+    const view = viewFor(snap, claims, 'd1', false);
+    expect(view.screen).toMatchObject({
+      kind: 'image',
+      imageUrl: expect.stringMatching(/^\/screen\/i1\/image\?v=/),
+    });
+    expect(JSON.stringify(view)).not.toContain('images/v.jpg');
+  });
+});

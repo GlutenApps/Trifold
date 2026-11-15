@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ClientView, CreatureView, TableIntent } from '@trifold/api';
 import type { Connection } from './connection';
 import { AddCompanion } from './AddCompanion';
-import { MapView, type DragHandlers } from './MapView';
+import { MapView, type DragHandlers, type MovePlan } from './MapView';
+import { ScreenView } from './ScreenView';
+import { rulerLabel, squaresBetween } from '../renderer/features/presenter/ruler';
 import {
   CompanionsTool,
   ConditionsTool,
@@ -71,15 +73,82 @@ export function Playing({
     () => new Set(view.mine.flatMap((c) => (c.tokenId && !c.movementLocked ? [c.tokenId] : []))),
     [view.mine],
   );
+  // A move is a plan until Done (player feedback, 2026-11-15): the token waits where it was put,
+  // the DM's Trifold holds it for this phone, and the TV shows the planned spot and the ruler.
+  const [plan, setPlan] = useState<MovePlan | null>(null);
+  const [holding, setHolding] = useState<string | null>(null);
+  const preview = (tokenId: string, at: { x: number; y: number }, from: { x: number; y: number }) =>
+    conn.send({ type: 'preview', tokenId, x: at.x, y: at.y, from });
+  const cancelMove = () => {
+    if (holding && !plan?.sending) conn.send({ type: 'letGo', tokenId: holding });
+    setHolding(null);
+    setPlan(null);
+  };
+  const confirmMove = () => {
+    if (!plan || plan.sending) return;
+    if (plan.at.x === plan.origin.x && plan.at.y === plan.origin.y) return cancelMove();
+    conn.send({
+      type: 'drop',
+      tokenId: plan.tokenId,
+      x: plan.at.x,
+      y: plan.at.y,
+      from: plan.origin,
+    });
+    setPlan({ ...plan, sending: true });
+  };
   const drag: DragHandlers = {
     movable,
-    grab: (tokenId) => conn.send({ type: 'grab', tokenId }),
-    preview: (tokenId, x, y) => conn.send({ type: 'preview', tokenId, x, y }),
-    hold: (tokenId) => conn.send({ type: 'hold', tokenId }),
-    drop: (tokenId, x, y, from) => conn.send({ type: 'drop', tokenId, x, y, from }),
-    letGo: (tokenId) => conn.send({ type: 'letGo', tokenId }),
+    plan,
+    begin: (tokenId, origin) => {
+      // Moving any token opens Move on that creature, and asks for Done.
+      if (plan && plan.tokenId !== tokenId && !plan.sending) {
+        conn.send({ type: 'letGo', tokenId: plan.tokenId });
+        setPlan(null);
+      }
+      if (holding !== tokenId) conn.send({ type: 'grab', tokenId });
+      setHolding(tokenId);
+      setTool('move');
+      const hit = ordered.find((c) => c.tokenId === tokenId);
+      if (hit) setTarget(creatureKey(hit));
+      void origin;
+    },
+    dragging: (tokenId, at, origin) => preview(tokenId, at, origin),
+    planned: (next) => {
+      setPlan(next);
+      preview(next.tokenId, next.at, next.origin);
+    },
     ended: conn.dragEnded,
   };
+  // The lock is kept alive while the player decides.
+  useEffect(() => {
+    if (!holding) return;
+    const t = window.setInterval(() => conn.send({ type: 'hold', tokenId: holding }), 1000);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holding]);
+  // The server ended the move (refused, lapsed, the DM took it): the plan goes.
+  useEffect(() => {
+    if (conn.dragEnded && conn.dragEnded.tokenId === (plan?.tokenId ?? holding)) {
+      setPlan(null);
+      setHolding(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conn.dragEnded]);
+  // Once the map shows the token where it was sent, the move is done.
+  useEffect(() => {
+    if (!plan?.sending) return;
+    const t = view.map?.tokens.find((x) => x.id === plan.tokenId);
+    if (!t || (t.x === plan.at.x && t.y === plan.at.y)) {
+      setPlan(null);
+      setHolding(null);
+    }
+  }, [view.map, plan]);
+  // Leaving Move with a plan unconfirmed cancels it.
+  useEffect(() => {
+    if (tool !== 'move' && plan && !plan.sending) cancelMove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool]);
+  const planSquares = plan ? squaresBetween(plan.origin, plan.at) : 0;
 
   const conditionCount = me.conditions.length;
   const chips = (
@@ -152,7 +221,17 @@ export function Playing({
     ) : tool === 'move' ? (
       <>
         {chips}
-        <MoveTool creature={current} />
+        <MoveTool
+          creature={current}
+          planSquares={plan ? planSquares : null}
+          sending={!!plan?.sending}
+          {...(layout === 'phonePortrait'
+            ? {}
+            : {
+                onCancel: cancelMove,
+                onDone: confirmMove,
+              })}
+        />
       </>
     ) : null;
   const toolTitle = TOOLS.find((t) => t.id === tool)?.label ?? '';
@@ -203,7 +282,11 @@ export function Playing({
         ))}
         {phoneMove ? (
           <div className="pc-movecard">
-            <MoveTool creature={current} />
+            <MoveTool
+              creature={current}
+              planSquares={plan ? planSquares : null}
+              sending={!!plan?.sending}
+            />
             {chips}
           </div>
         ) : (
@@ -211,17 +294,34 @@ export function Playing({
           current.tokenId &&
           !current.movementLocked && (
             <div className="pc-movebanner" role="status">
-              Moving {current.name}: drag the token or tap a spot.
+              {plan
+                ? `Moving ${current.name}: ${rulerLabel(planSquares)}. Done to confirm.`
+                : `Moving ${current.name}: drag the token or tap a spot.`}
             </div>
           )
         )}
       </div>
       {phoneMove && (
         <div className="pc-movecard-actions" onPointerDown={stop} onPointerUp={stop}>
-          <button type="button" className="pc-btn" onClick={close}>
+          <button
+            type="button"
+            className="pc-btn"
+            onClick={() => {
+              cancelMove();
+              close();
+            }}
+          >
             Cancel
           </button>
-          <button type="button" className="pc-btn primary" onClick={close}>
+          <button
+            type="button"
+            className="pc-btn primary"
+            disabled={!!plan?.sending}
+            onClick={() => {
+              if (plan) confirmMove();
+              close();
+            }}
+          >
             Done
           </button>
         </div>
@@ -244,10 +344,15 @@ export function Playing({
       onFullScreen={() => setFullScreen((f) => !f)}
       overlay={overlay}
     />
+  ) : view.screen ? (
+    <div className="pc-map pc-screen-wrap">
+      <ScreenView screen={view.screen} />
+      {overlay}
+    </div>
   ) : (
     <div className="pc-map pc-center">
       {overlay}
-      <p className="pc-hint">No map right now.</p>
+      <p className="pc-hint">Nothing on the TV right now.</p>
     </div>
   );
 

@@ -9,7 +9,7 @@ import {
   type Token,
 } from '@trifold/schema';
 import { blankNpc, blankPc } from '../campaign/CharacterEditors';
-import { tableSnapshotFrom, type SnapshotInput } from './snapshot';
+import { tableScreen, tableSnapshotFrom, type SnapshotInput } from './snapshot';
 
 const T = '2026-01-01T00:00:00.000Z';
 
@@ -313,5 +313,41 @@ describe('tableSnapshotFrom: summons (Phase 4)', () => {
       }),
     ]);
     expect(snap.scene!.tokens[0]!.creature).toEqual({ kind: 'summon', id: 'to' });
+  });
+});
+
+describe('tableScreen (all screen types on phones)', () => {
+  it('sends a title card, an image scene and the break screen; nothing behind a blackout', () => {
+    expect(
+      tableScreen({
+        blackout: false,
+        scene: { kind: 'title', id: 't', title: 'The Lantern', subtitle: 'Part one' },
+      }),
+    ).toEqual({
+      kind: 'title',
+      id: 't',
+      title: 'The Lantern',
+      subtitle: 'Part one',
+      backdrop: 'dark',
+    });
+    expect(
+      tableScreen({
+        blackout: false,
+        scene: {
+          kind: 'image',
+          id: 'i',
+          title: 'Greyford',
+          imageUrl: 'trifold-media://library/x.jpg',
+          width: 800,
+          height: 600,
+        },
+      }),
+    ).toMatchObject({ kind: 'image', src: 'trifold-media://library/x.jpg' });
+    expect(
+      tableScreen({ blackout: false, scene: null, breakScreen: { title: 'Snacks', endsAt: 5 } }),
+    ).toEqual({ kind: 'break', title: 'Snacks', endsAt: 5 });
+    expect(
+      tableScreen({ blackout: true, scene: { kind: 'title', id: 't', title: 'Hidden' } }),
+    ).toBeNull();
   });
 });

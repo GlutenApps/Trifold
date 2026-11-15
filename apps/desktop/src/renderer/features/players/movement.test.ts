@@ -73,6 +73,42 @@ describe('player drags on the console (Phase 3)', () => {
     expect(liveToken()).toMatchObject({ x: 1, y: 1 });
   });
 
+  it('puts a player’s move on the TV as a ruler from where it began, and takes it off after', () => {
+    emit({
+      kind: 'preview',
+      tokenId: 'tb',
+      x: 4,
+      y: 1,
+      deviceLabel: 'Sam’s phone',
+      from: { x: 1, y: 1 },
+    });
+    expect(usePresenterStore.getState().state.ruler).toMatchObject({ sceneId: 's1', squares: 3 });
+    emit({ kind: 'previewEnd', tokenId: 'tb' });
+    expect(usePresenterStore.getState().state.ruler ?? null).toBeNull();
+  });
+
+  it('shows no ruler for a move that ends under fog', () => {
+    const fogged = {
+      ...grid,
+      fog: {
+        enabled: true,
+        shapes: [
+          { id: 'f', mode: 'reveal' as const, kind: 'rect' as const, x: 0, y: 0, w: 210, h: 700 },
+        ],
+      },
+    };
+    usePresenterStore.getState().showScene(fogged, 'g');
+    emit({
+      kind: 'preview',
+      tokenId: 'tb',
+      x: 6,
+      y: 1,
+      deviceLabel: 'Sam’s phone',
+      from: { x: 1, y: 1 },
+    });
+    expect(usePresenterStore.getState().state.ruler ?? null).toBeNull();
+  });
+
   it('moves the token for real on a drop, through the scene store', () => {
     emit({ kind: 'preview', tokenId: 'tb', x: 4, y: 2, deviceLabel: 'Sam’s phone' });
     emit({ kind: 'move', tokenId: 'tb', x: 5, y: 3, deviceLabel: 'Sam’s phone' });

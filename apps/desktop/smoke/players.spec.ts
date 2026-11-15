@@ -255,6 +255,16 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     expect(wire).not.toContain('tok-lurker');
     expect(wire).not.toContain('tok-gorm');
 
+    // Every kind of screen reaches the phone: a title card on the TV shows there too.
+    const titleRow = page.getByTestId('scene-row').filter({ hasText: 'The Lantern at Greyford' });
+    await titleRow.click();
+    await titleRow.press('Enter');
+    await expect(phone.getByTestId('pc-title')).toContainText('The Lantern at Greyford');
+    const innRow = page.getByTestId('scene-row').filter({ hasText: 'The Wayside Lamp' });
+    await innRow.click();
+    await innRow.press('Enter');
+    await expect(phone.getByTestId('pc-token')).toHaveCount(2);
+
     // Phase 2: the fight asks for Brannoc's initiative and the phone answers it once. He joins
     // the linked encounter because his token stands on the map (ADR 0044).
     await page.getByRole('tab', { name: 'VTT', exact: true }).click();
@@ -306,7 +316,19 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
       if (release) await phone.mouse.up();
     };
     await dragOnPhone(2);
-    await expect.poll(consoleLeft).not.toBe(before);
+    // A move waits for Done: it opened the Move tool, and the console has not moved Brannoc.
+    const done = phone.getByRole('button', { name: 'Done', exact: true });
+    await expect(done).toBeVisible();
+    await expect(phone.getByTestId('ruler-label')).toHaveText('2 squares · 10 ft');
+    // The DM's map shows the planned spot as a player's move in progress, not saved yet.
+    await expect(consoleBrannoc).toHaveClass(/player-moving/);
+    // Adjusting the plan keeps measuring from where the move began (no snap back).
+    await dragOnPhone(1);
+    await expect(phone.getByTestId('ruler-label')).toHaveText('3 squares · 15 ft');
+    await dragOnPhone(-1);
+    await expect(phone.getByTestId('ruler-label')).toHaveText('2 squares · 10 ft');
+    await done.click();
+    await expect(consoleBrannoc).not.toHaveClass(/player-moving/);
     const afterMove = await consoleLeft();
     const cellPx = await consoleBrannoc.evaluate((el) =>
       parseFloat((el as unknown as { style: { width: string } }).style.width),
@@ -315,6 +337,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
 
     // A drop under fog is refused and Brannoc stays put.
     await dragOnPhone(4);
+    await phone.getByRole('button', { name: 'Done', exact: true }).click();
     await expect(phone.getByText('You can’t see that spot.')).toBeVisible();
     await phone.getByRole('button', { name: 'OK', exact: true }).click();
     expect(await consoleLeft()).toBe(afterMove);

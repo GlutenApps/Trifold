@@ -37,6 +37,7 @@ import type {
 export type {
   ClientMap,
   ClientMessage,
+  ClientScreen,
   ClientToken,
   ClientView,
   CreatureKind,

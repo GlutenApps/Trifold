@@ -17,6 +17,9 @@ import { useCampaignStore } from './campaignStore';
 import { useCombatStore } from './combatStore';
 import { usePresenterStore } from './presenterStore';
 import { useSceneStore } from './sceneStore';
+import { activeFog, isRevealed } from '@trifold/rules';
+import { DEFAULT_GRID } from '../features/presenter/mapMath';
+import { cellCentre, squaresBetween } from '../features/presenter/ruler';
 
 /**
  * The player connector as the console sees it (ADR 0043). Main owns the server, the devices and
@@ -190,11 +193,14 @@ export function installTableSync(): () => void {
       const presenter = usePresenterStore.getState();
       if (event.kind === 'preview') {
         presenter.setMoving(event.tokenId, { x: event.x, y: event.y, label: event.deviceLabel });
+        showPlayerRuler(event.tokenId, event.from, { x: event.x, y: event.y });
       } else if (event.kind === 'previewEnd') {
         presenter.setMoving(event.tokenId, null);
+        showPlayerRuler(event.tokenId, undefined, undefined);
       } else {
         useSceneStore.getState().patchTokenAnywhere(event.tokenId, { x: event.x, y: event.y });
         presenter.setMoving(event.tokenId, null);
+        showPlayerRuler(event.tokenId, undefined, undefined);
       }
     }),
     useTableStore.subscribe(onTable),
@@ -216,6 +222,7 @@ export function installTableSync(): () => void {
         s.liveSource !== prev.liveSource ||
         s.moving !== prev.moving ||
         s.state.scene !== prev.state.scene ||
+        s.state.breakScreen !== prev.state.breakScreen ||
         s.state.blackout !== prev.state.blackout
       ) {
         schedule();
@@ -230,4 +237,45 @@ export function installTableSync(): () => void {
   ];
   void useTableStore.getState().load();
   return () => offs.forEach((off) => off());
+}
+
+/** The token whose player ruler is on the TV, so clearing it never clears the DM's own ruler. */
+let rulerToken: string | null = null;
+
+/**
+ * A player's move on the TV (all can see how far it goes): the same ruler the DM's map draws,
+ * from where the move began to where the token is planned. Like the DM's, it never shows a line
+ * that starts or ends under fog, nor one on a hidden token.
+ */
+function showPlayerRuler(
+  tokenId: string,
+  from: { x: number; y: number } | undefined,
+  to: { x: number; y: number } | undefined,
+): void {
+  const presenter = usePresenterStore.getState();
+  const scene = presenter.liveSource?.scene;
+  const token = scene?.tokens.find((t) => t.id === tokenId);
+  if (!scene || !token || !from || !to) {
+    if (rulerToken === tokenId) {
+      rulerToken = null;
+      presenter.setRuler(null);
+    }
+    return;
+  }
+  const grid = scene.grid ?? DEFAULT_GRID;
+  const fog = activeFog(scene.fog);
+  const a = cellCentre(from, grid, token.footprint);
+  const b = cellCentre(to, grid, token.footprint);
+  const squares = squaresBetween(from, to);
+  const shown = !token.hidden && squares > 0 && isRevealed(fog, a) && isRevealed(fog, b);
+  if (!shown) {
+    // Under fog, on a hidden token or not moved yet: the TV shows no line for it.
+    if (rulerToken === tokenId) {
+      rulerToken = null;
+      presenter.setRuler(null);
+    }
+    return;
+  }
+  rulerToken = tokenId;
+  presenter.setRuler({ sceneId: scene.id, from: a, to: b, squares });
 }

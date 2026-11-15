@@ -39,7 +39,8 @@ export interface SnapshotInput {
   };
   pcs: readonly PCCard[];
   npcs: readonly NPC[];
-  presenter: Pick<PresenterState, 'blackout' | 'scene'>;
+  presenter: Pick<PresenterState, 'blackout' | 'scene'> &
+    Partial<Pick<PresenterState, 'breakScreen'>>;
   liveScene: Scene | null;
   combat: CombatState | null;
   /** A token's picture (ADR 0033), as a `trifold-media://` URL. */
@@ -218,6 +219,7 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
     campaignId: input.campaign.id,
     campaignName: input.campaign.name,
     scene,
+    screen: tableScreen(input.presenter),
     creatures,
     summonOptions: (input.campaign.summonable ?? []).map((e) => ({
       key: e.ref.recordId,
@@ -227,4 +229,42 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       hp: e.hp,
     })),
   };
+}
+
+/**
+ * What the TV shows when it is not a map (all screen types on phones): the break screen over
+ * everything, else a title card or an image scene; nothing behind a blackout.
+ */
+export function tableScreen(presenter: SnapshotInput['presenter']): TableSnapshot['screen'] {
+  if (presenter.blackout) return null;
+  const brk = presenter.breakScreen;
+  if (brk) {
+    return {
+      kind: 'break',
+      title: brk.title,
+      ...(brk.subtitle ? { subtitle: brk.subtitle } : {}),
+      ...(brk.endsAt !== undefined ? { endsAt: brk.endsAt } : {}),
+    };
+  }
+  const live = presenter.scene;
+  if (live?.kind === 'title') {
+    return {
+      kind: 'title',
+      id: live.id,
+      title: live.title,
+      ...(live.subtitle ? { subtitle: live.subtitle } : {}),
+      backdrop: live.backdrop ?? 'dark',
+    };
+  }
+  if (live?.kind === 'image') {
+    return {
+      kind: 'image',
+      id: live.id,
+      title: live.title,
+      src: live.imageUrl,
+      width: live.width,
+      height: live.height,
+    };
+  }
+  return null;
 }

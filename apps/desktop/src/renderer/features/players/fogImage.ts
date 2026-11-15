@@ -6,8 +6,15 @@ import type { FogShapeLike } from '@trifold/rules';
  * packages; the console draws it once per fog change and main caches it in memory.
  */
 
-/** The longest side of the JPEG; the phone scales it back to the map's size. */
-const MAX_SIDE = 4096;
+/**
+ * The longest side of the JPEG; the phone scales it back to the map's size. 2048 px is sharp on
+ * a phone and quick to draw, encode, send and decode; a bigger image was what kept the map from
+ * appearing as soon as the tokens did.
+ */
+const MAX_SIDE = 2048;
+
+/** Decoded map pictures by URL, so a fog change redraws without loading the picture again. */
+const decoded = new Map<string, Promise<HTMLImageElement>>();
 
 /** Paints the fog as black on a transparent layer: the fog starts whole, shapes apply in order. */
 export function paintFog(
@@ -55,7 +62,7 @@ function toJpeg(canvas: HTMLCanvasElement): Promise<Uint8Array> {
         void blob.arrayBuffer().then((buf) => resolve(new Uint8Array(buf)), reject);
       },
       'image/jpeg',
-      0.85,
+      0.8,
     );
   });
 }
@@ -70,7 +77,14 @@ export async function fogMapJpeg(
   mapHeight: number,
   fog: readonly FogShapeLike[] | null,
 ): Promise<Uint8Array> {
-  const img = await loadImage(imageUrl);
+  let pending = decoded.get(imageUrl);
+  if (!pending) {
+    pending = loadImage(imageUrl);
+    decoded.set(imageUrl, pending);
+    if (decoded.size > 4) decoded.delete(decoded.keys().next().value!);
+    pending.catch(() => decoded.delete(imageUrl));
+  }
+  const img = await pending;
   const k = Math.min(1, MAX_SIDE / Math.max(mapWidth, mapHeight));
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(mapWidth * k));

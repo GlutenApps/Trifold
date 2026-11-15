@@ -23,6 +23,8 @@ export const tablePaths = {
     `/map/${encodeURIComponent(sceneId)}/${encodeURIComponent(fogKey)}.jpg`,
   tokenArt: (tokenId: string, src: string) =>
     `/t/${encodeURIComponent(tokenId)}/art?v=${shortHash(src)}`,
+  screenImage: (sceneId: string, src: string) =>
+    `/screen/${encodeURIComponent(sceneId)}/image?v=${shortHash(src)}`,
   tokenGlyph: (tokenId: string, src: string) =>
     `/t/${encodeURIComponent(tokenId)}/glyph?v=${shortHash(src)}`,
   portrait: (kind: AnyCreatureKind, id: string, src: string) =>
@@ -221,11 +223,23 @@ export function viewFor(
       };
     });
 
+  const screen = snapshot.screen ?? null;
   return {
     campaignName: snapshot.campaignName,
     mine,
     picker: [],
     map,
+    screen:
+      screen?.kind === 'image'
+        ? {
+            kind: 'image',
+            id: screen.id,
+            title: screen.title,
+            imageUrl: tablePaths.screenImage(screen.id, screen.src),
+            width: screen.width,
+            height: screen.height,
+          }
+        : screen,
     reclaimMode,
     ...(options.summoning
       ? { summoning: { ...options.summoning, options: snapshot.summonOptions ?? [] } }

@@ -97,6 +97,7 @@ const ClientMessageSchema: z.ZodType<ClientMessage> = z.discriminatedUnion('type
     tokenId: z.string().min(1).max(64),
     x: z.number().finite(),
     y: z.number().finite(),
+    from: z.object({ x: z.number().finite(), y: z.number().finite() }).optional(),
   }),
   z.object({ type: z.literal('hold'), tokenId: z.string().min(1).max(64) }),
   z.object({
@@ -655,7 +656,7 @@ export class TableHub {
       case 'grab':
         return this.grab(client, msg.tokenId);
       case 'preview':
-        return this.preview(client, msg.tokenId, msg.x, msg.y);
+        return this.preview(client, msg.tokenId, msg.x, msg.y, msg.from);
       case 'hold':
         if (client.deviceId) this.locks.refresh(msg.tokenId, client.deviceId, Date.now());
         return;
@@ -888,7 +889,13 @@ export class TableHub {
     this.scheduleBroadcast();
   }
 
-  private preview(client: Client, tokenId: string, x: number, y: number): void {
+  private preview(
+    client: Client,
+    tokenId: string,
+    x: number,
+    y: number,
+    from?: { x: number; y: number },
+  ): void {
     const now = Date.now();
     if (!client.deviceId || !this.locks.refresh(tokenId, client.deviceId, now)) return;
     const last = this.lastPreview.get(tokenId) ?? 0;
@@ -900,6 +907,7 @@ export class TableHub {
       x,
       y,
       deviceLabel: this.device(client)?.label || 'A player',
+      ...(from ? { from } : {}),
     });
   }
 
@@ -1262,6 +1270,14 @@ export class TableHub {
       const tokenArt = /^\/t\/([^/]+)\/(art|glyph)$/.exec(path);
       if (tokenArt)
         return await this.serveTokenArt(res, tokenArt[1]!, tokenArt[2] as 'art' | 'glyph', common);
+      // An image scene's picture, while it is on the TV (all screen types on phones).
+      const screenImage = /^\/screen\/([^/]+)\/image$/.exec(path);
+      if (screenImage) {
+        const screen = this.snapshot?.screen;
+        const src =
+          screen?.kind === 'image' && screen.id === screenImage[1] ? screen.src : undefined;
+        return await this.serveMedia(res, src, common);
+      }
       const portrait = /^\/c\/(pc|npc|summon)\/([^/]+)\/portrait$/.exec(path);
       if (portrait) {
         const c = this.snapshot?.creatures.find(

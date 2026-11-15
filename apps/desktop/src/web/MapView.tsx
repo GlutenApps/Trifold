@@ -8,9 +8,13 @@ import { TokenDisc } from '../renderer/features/presenter/TokenDisc';
 /**
  * The live map on a phone (docs/PLAYER-CONNECTOR.md): the fogged image the console drew, the fog
  * shapes over it for clean edges, the grid and the tokens this device may see. One finger on one
- * of the player's own tokens drags it (Phase 3); one finger anywhere else pans; a second finger
- * cancels a drag and pinch-zooms. A tap on an own token selects it. It fits the whole map on
- * first sight and keeps the player's framing after that.
+ * of the player's own tokens drags it; one finger anywhere else pans; a second finger cancels a
+ * drag and pinch-zooms. A tap on an own token selects it. It fits the whole map on first sight
+ * and keeps the player's framing after that.
+ *
+ * A move is a plan until the player confirms it (Move tool, Done): the token sits where it was
+ * put, a faded copy marks where the move began and the ruler measures from there. Dragging the
+ * planned token again adjusts the plan; it never snaps back to the start.
  */
 
 interface View {
@@ -19,23 +23,36 @@ interface View {
   scale: number;
 }
 
-/** What the page does with a drag; the server decides whether it lands. */
+/** A move in hand: where it began and where the token is planned to go (grid cells). */
+export interface MovePlan {
+  tokenId: string;
+  origin: { x: number; y: number };
+  at: { x: number; y: number };
+  /** Done was pressed: waiting for the DM's Trifold to move it. */
+  sending: boolean;
+}
+
+/** What the page does with moves; the server decides whether one lands. */
 export interface DragHandlers {
-  /** Token ids the player may drag now (own, not locked). */
+  /** Token ids the player may move now (own, not locked). */
   movable: ReadonlySet<string>;
-  grab(tokenId: string): void;
-  preview(tokenId: string, x: number, y: number): void;
-  hold(tokenId: string): void;
-  drop(tokenId: string, x: number, y: number, from: { x: number; y: number }): void;
-  letGo(tokenId: string): void;
-  /** Bumps when the server ended a drag without a move: the token snaps back. */
+  plan: MovePlan | null;
+  /** A move starts (the first movement of a drag, or a tap with Move open). */
+  begin(tokenId: string, origin: { x: number; y: number }): void;
+  /** The finger is moving the token: where it is now, for the TV. */
+  dragging(tokenId: string, at: { x: number; y: number }, origin: { x: number; y: number }): void;
+  /** The token was put down here: the plan to confirm. */
+  planned(plan: MovePlan): void;
+  /** Bumps when the server ended a move without it landing: the token goes back. */
   ended: { tokenId: string; n: number } | null;
 }
 
 interface Drag {
   tokenId: string;
   pointerId: number;
-  start: { x: number; y: number };
+  origin: { x: number; y: number };
+  /** Where this drag picked the token up (the plan's spot when adjusting one). */
+  startAt: { x: number; y: number };
   /** Grid cells between the finger and the token's top-left corner. */
   offset: { x: number; y: number };
   at: { x: number; y: number };
@@ -45,7 +62,8 @@ interface Drag {
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 6;
 const PREVIEW_MS = 100;
-const HOLD_MS = 1000;
+
+const rounded = (p: { x: number; y: number }) => ({ x: Math.round(p.x), y: Math.round(p.y) });
 
 export function MapView({
   map,
@@ -62,7 +80,7 @@ export function MapView({
   selectedTokenId: string | null;
   onSelectToken(tokenId: string): void;
   drag?: DragHandlers;
-  /** With the Move tool open: a tap on the map moves this token there (player UI redesign). */
+  /** With the Move tool open: a tap on the map plans a move of this token there. */
   tapMove?: string | null;
   /** The token Center on my token frames. */
   centerOn?: string | null;
@@ -80,20 +98,33 @@ export function MapView({
   const fittedFor = useRef<string | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
-  /** A drop waiting for the server: shown where it was put until the map agrees or refuses. */
-  /** A move waiting for the server: shown where it was put, with where it began. */
-  const [pending, setPending] = useState<{
-    tokenId: string;
-    x: number;
-    y: number;
-    from: { x: number; y: number };
-  } | null>(null);
   const lastPreview = useRef(0);
+  const plan = handlers?.plan ?? null;
+  const planRef = useRef<MovePlan | null>(plan);
+  planRef.current = plan;
 
   const setDragBoth = (d: Drag | null) => {
     dragRef.current = d;
     setDrag(d);
   };
+
+  // The map picture: a new one (a fog change) replaces the old only once it has loaded, so the
+  // map never goes blank while the console draws and sends it.
+  const [shown, setShown] = useState<{ mapId: string; url: string } | null>(null);
+  useEffect(() => {
+    const url = map.imageUrl;
+    if (!url || (shown?.mapId === map.id && shown.url === url)) return;
+    let live = true;
+    const img = new Image();
+    img.onload = () => {
+      if (live) setShown({ mapId: map.id, url });
+    };
+    img.src = url;
+    return () => {
+      live = false;
+    };
+  }, [map.id, map.imageUrl, shown]);
+  const imageUrl = shown?.mapId === map.id ? shown.url : undefined;
 
   const fit = useCallback(() => {
     const el = box.current;
@@ -129,34 +160,20 @@ export function MapView({
     const ro = new ResizeObserver(([entry]) => {
       const r = entry!.contentRect;
       const size = `${Math.round(r.width)}x${Math.round(r.height)}`;
-      if (last && size !== last) fit();
+      // Never re-frame under a move: the finger's spot on the map would jump (opening Move hides
+      // the character strip and the map area grows mid-drag).
+      if (last && size !== last && !dragRef.current && !planRef.current) fit();
       last = size;
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, [fit]);
 
-  // The server refused or ended a drag: the token goes back where the map has it.
+  // The server ended a move (refused, lapsed, or the DM took the token): drop the finger's drag.
   useEffect(() => {
     if (!handlers?.ended) return;
-    const { tokenId } = handlers.ended;
-    if (dragRef.current?.tokenId === tokenId) setDragBoth(null);
-    setPending((p) => (p?.tokenId === tokenId ? null : p));
+    if (dragRef.current?.tokenId === handlers.ended.tokenId) setDragBoth(null);
   }, [handlers?.ended]);
-
-  // A drop the map now shows (or that moved elsewhere) is no longer pending.
-  useEffect(() => {
-    if (!pending) return;
-    const t = map.tokens.find((x) => x.id === pending.tokenId);
-    if (!t || (t.x === pending.x && t.y === pending.y)) setPending(null);
-  }, [map.tokens, pending]);
-
-  // A finger held still keeps the lock alive.
-  useEffect(() => {
-    if (!drag || !handlers) return;
-    const t = window.setInterval(() => handlers.hold(drag.tokenId), HOLD_MS);
-    return () => window.clearInterval(t);
-  }, [drag?.tokenId, handlers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const zoomAt = (factor: number, cx: number, cy: number) =>
     setView((v) => {
@@ -181,33 +198,33 @@ export function MapView({
     };
   };
 
-  const cancelDrag = () => {
-    const d = dragRef.current;
-    if (!d) return;
-    handlers?.letGo(d.tokenId);
-    setDragBoth(null);
-  };
+  /** Where a token is shown: in the finger, at its planned spot, or where the map has it. */
+  const shownAt = (t: Pick<ClientToken, 'id' | 'x' | 'y'>) =>
+    drag?.tokenId === t.id ? drag.at : plan?.tokenId === t.id ? plan.at : { x: t.x, y: t.y };
 
   const onPointerDown = (e: React.PointerEvent) => {
     box.current?.setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, local(e));
     const pts = [...pointers.current.values()];
-    if (pts.length > 1) cancelDrag();
+    // A second finger is a pinch: a drag in progress stops where it was (the plan stays).
+    if (pts.length > 1 && dragRef.current) setDragBoth(null);
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-token-id]');
     const tokenId = target?.dataset['tokenId'];
     const token = tokenId ? map.tokens.find((t) => t.id === tokenId) : undefined;
-    if (pts.length === 1 && token && view && handlers?.movable.has(token.id)) {
+    const sending = plan?.tokenId === token?.id && plan?.sending;
+    if (pts.length === 1 && token && view && handlers?.movable.has(token.id) && !sending) {
       const cells = toCells(local(e));
-      const d: Drag = {
+      const ownPlan = plan?.tokenId === token.id ? plan : null;
+      const startAt = ownPlan ? ownPlan.at : { x: token.x, y: token.y };
+      setDragBoth({
         tokenId: token.id,
         pointerId: e.pointerId,
-        start: { x: token.x, y: token.y },
-        offset: { x: cells.x - token.x, y: cells.y - token.y },
-        at: { x: token.x, y: token.y },
+        origin: ownPlan ? ownPlan.origin : { x: token.x, y: token.y },
+        startAt,
+        offset: { x: cells.x - startAt.x, y: cells.y - startAt.y },
+        at: startAt,
         moved: false,
-      };
-      setDragBoth(d);
-      handlers.grab(token.id);
+      });
       gesture.current = null;
       return;
     }
@@ -225,12 +242,14 @@ export function MapView({
     if (d && d.pointerId === e.pointerId) {
       const cells = toCells(local(e));
       const at = { x: cells.x - d.offset.x, y: cells.y - d.offset.y };
-      const moved = d.moved || Math.abs(at.x - d.start.x) + Math.abs(at.y - d.start.y) > 0.2;
+      const moved = d.moved || Math.abs(at.x - d.startAt.x) + Math.abs(at.y - d.startAt.y) > 0.2;
+      // The move begins with the first movement, so a tap to select never takes the token.
+      if (moved && !d.moved) handlers?.begin(d.tokenId, d.origin);
       setDragBoth({ ...d, at, moved });
       const now = Date.now();
       if (moved && handlers && now - lastPreview.current >= PREVIEW_MS) {
         lastPreview.current = now;
-        handlers.preview(d.tokenId, at.x, at.y);
+        handlers.dragging(d.tokenId, at, d.origin);
       }
       return;
     }
@@ -256,15 +275,14 @@ export function MapView({
     pointers.current.delete(e.pointerId);
     if (d && d.pointerId === e.pointerId) {
       setDragBoth(null);
-      if (!d.moved) {
-        handlers?.letGo(d.tokenId);
-        onSelectToken(d.tokenId);
-      } else {
-        const x = Math.round(d.at.x);
-        const y = Math.round(d.at.y);
-        setPending({ tokenId: d.tokenId, x, y, from: d.start });
-        handlers?.drop(d.tokenId, x, y, d.start);
-      }
+      if (!d.moved) onSelectToken(d.tokenId);
+      else
+        handlers?.planned({
+          tokenId: d.tokenId,
+          origin: d.origin,
+          at: rounded(d.at),
+          sending: false,
+        });
       return;
     }
     const g = gesture.current;
@@ -273,14 +291,16 @@ export function MapView({
       const moving = tapMove ? map.tokens.find((t) => t.id === tapMove) : undefined;
       if (target?.dataset['mine'] === 'true') {
         onSelectToken(target.dataset['tokenId']!);
-      } else if (moving && view && handlers?.movable.has(moving.id)) {
-        // Tap a spot: the same grab and drop as a drag, with the same checks.
+      } else if (moving && view && handlers?.movable.has(moving.id) && !plan?.sending) {
+        // Tap a spot with Move open: the token's planned spot, the same as a drag.
         const cells = toCells(local(e));
-        const x = Math.round(cells.x - moving.footprint / 2);
-        const y = Math.round(cells.y - moving.footprint / 2);
-        setPending({ tokenId: moving.id, x, y, from: { x: moving.x, y: moving.y } });
-        handlers.grab(moving.id);
-        handlers.drop(moving.id, x, y, { x: moving.x, y: moving.y });
+        const origin = plan?.tokenId === moving.id ? plan.origin : { x: moving.x, y: moving.y };
+        const at = rounded({
+          x: cells.x - moving.footprint / 2,
+          y: cells.y - moving.footprint / 2,
+        });
+        handlers.begin(moving.id, origin);
+        handlers.planned({ tokenId: moving.id, origin, at, sending: false });
       }
     }
     const pts = [...pointers.current.values()];
@@ -296,10 +316,11 @@ export function MapView({
     const el = box.current;
     const t = centerOn ? map.tokens.find((x) => x.id === centerOn) : undefined;
     if (!el || !t || !view) return;
+    const at = shownAt(t);
     const { width, height } = el.getBoundingClientRect();
     const scale = Math.max(view.scale, Math.min(width, height) / (map.grid.cellPx * 8));
-    const px = map.grid.offsetX + (t.x + t.footprint / 2) * map.grid.cellPx;
-    const py = map.grid.offsetY + (t.y + t.footprint / 2) * map.grid.cellPx;
+    const px = map.grid.offsetX + (at.x + t.footprint / 2) * map.grid.cellPx;
+    const py = map.grid.offsetY + (at.y + t.footprint / 2) * map.grid.cellPx;
     setView({ scale, x: width / 2 - px * scale, y: height / 2 - py * scale });
   };
 
@@ -310,6 +331,13 @@ export function MapView({
     width: t.footprint * cell,
     height: t.footprint * cell,
   });
+
+  // The move shown with its ghost and ruler: the finger's drag, else the plan.
+  const move = drag?.moved
+    ? { tokenId: drag.tokenId, from: drag.origin, to: rounded(drag.at) }
+    : plan
+      ? { tokenId: plan.tokenId, from: plan.origin, to: plan.at }
+      : null;
 
   return (
     <div
@@ -334,10 +362,10 @@ export function MapView({
             transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
           }}
         >
-          {map.imageUrl ? (
+          {imageUrl ? (
             <img
               className="pc-map-art"
-              src={map.imageUrl}
+              src={imageUrl}
               width={map.width}
               height={map.height}
               alt=""
@@ -358,25 +386,11 @@ export function MapView({
             />
           )}
           {(() => {
-            // While a move is in hand or waiting: a faded copy where it began and the ruler from
-            // there, so the player sees how far it went and where it came from.
-            const move = drag?.moved
-              ? {
-                  tokenId: drag.tokenId,
-                  from: drag.start,
-                  to: { x: Math.round(drag.at.x), y: Math.round(drag.at.y) },
-                }
-              : pending
-                ? {
-                    tokenId: pending.tokenId,
-                    from: pending.from,
-                    to: { x: pending.x, y: pending.y },
-                  }
-                : null;
+            // A faded copy where the move began and the ruler from there, so the player sees how
+            // far it goes and where it came from before confirming.
             const token = move ? tokenOf(map, move.tokenId) : undefined;
             if (!move || !token || !view) return null;
             const fp = token.footprint;
-            const size = fp * cell;
             const squares = squaresBetween(move.from, move.to);
             return (
               <>
@@ -390,24 +404,25 @@ export function MapView({
                     zoom={view.scale}
                   />
                 )}
-                <div
-                  className="token-slot pc-token ghost"
-                  data-testid="pc-move-ghost"
-                  aria-hidden="true"
-                  style={place({ ...move.from, footprint: fp })}
-                >
-                  <TokenDisc token={token} style={map.tokenStyle} size={size} showLabel={false} />
-                </div>
+                {squares > 0 && (
+                  <div
+                    className="token-slot pc-token ghost"
+                    data-testid="pc-move-ghost"
+                    aria-hidden="true"
+                    style={place({ ...move.from, footprint: fp })}
+                  >
+                    <TokenDisc
+                      token={token}
+                      style={map.tokenStyle}
+                      size={fp * cell}
+                      showLabel={false}
+                    />
+                  </div>
+                )}
               </>
             );
           })()}
           {map.tokens.map((t) => {
-            const at =
-              drag?.tokenId === t.id
-                ? drag.at
-                : pending?.tokenId === t.id
-                  ? pending
-                  : { x: t.x, y: t.y };
             const movable = !!handlers?.movable.has(t.id);
             return (
               <div
@@ -419,6 +434,7 @@ export function MapView({
                   t.fogged ? 'fogged' : '',
                   movable ? 'movable' : '',
                   drag?.tokenId === t.id ? 'dragging' : '',
+                  plan?.tokenId === t.id ? 'planned' : '',
                   t.movingBy ? 'moving' : '',
                 ]
                   .filter(Boolean)
@@ -426,7 +442,7 @@ export function MapView({
                 data-token-id={t.id}
                 data-mine={t.mine}
                 data-testid="pc-token"
-                style={place({ ...t, ...at })}
+                style={place({ ...t, ...shownAt(t) })}
               >
                 <TokenDisc
                   token={t}

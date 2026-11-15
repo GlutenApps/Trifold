@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { CreatureView, TableIntent } from '@trifold/api';
+import { rulerLabel } from '../renderer/features/presenter/ruler';
 import { capitalise } from './AddCompanion';
 import { Portrait } from './Portrait';
 
@@ -472,13 +473,60 @@ export function CompanionsTool({
   );
 }
 
-/** Move: which token, and how. The map does the moving. */
-export function MoveTool({ creature }: { creature: CreatureView }) {
+/**
+ * Move: which token, and how. The map does the moving; a move waits for Done (Cancel puts the
+ * token back). `onCancel` and `onDone` are given where the buttons sit in the panel; on a phone in
+ * portrait they float over the map instead.
+ */
+export function MoveTool({
+  creature,
+  planSquares,
+  sending,
+  onCancel,
+  onDone,
+}: {
+  creature: CreatureView;
+  /** Squares the planned move covers, or null with no plan. */
+  planSquares: number | null;
+  sending: boolean;
+  onCancel?: () => void;
+  onDone?: () => void;
+}) {
   if (creature.movementLocked) {
     return <p className="pc-locked">Movement locked by the DM</p>;
   }
   if (!creature.tokenId) {
     return <p className="pc-hint">{creature.name} isn’t on the map right now.</p>;
   }
-  return <p className="pc-move-hint">Drag the token, or tap where it should go.</p>;
+  return (
+    <div className="pc-tool-move">
+      <p className="pc-move-hint">
+        {sending
+          ? 'Moving…'
+          : planSquares !== null
+            ? `${rulerLabel(planSquares)}. Drag again to adjust, then Done.`
+            : 'Drag the token, or tap where it should go.'}
+      </p>
+      {onDone && onCancel && (
+        <div className="pc-row pc-move-actions">
+          <button
+            type="button"
+            className="pc-btn"
+            disabled={planSquares === null || sending}
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="pc-btn primary"
+            disabled={planSquares === null || sending}
+            onClick={onDone}
+          >
+            Done
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }

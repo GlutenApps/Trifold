@@ -134,6 +134,8 @@ export interface TableSnapshot {
   campaignId: string;
   campaignName: string;
   scene: TableScene | null;
+  /** What the TV shows when it is not a map: a title card, an image or the break screen. */
+  screen?: TableScreen | null;
   creatures: TableCreature[];
   /** The DM's summon list (Phase 4). */
   summonOptions?: SummonOption[];
@@ -215,6 +217,8 @@ export interface ClientView {
   /** Empty while the device holds creatures; the picker is for devices with none. */
   picker: PickerEntry[];
   map: ClientMap | null;
+  /** The TV's other screens, when no map is up (title, image, break). */
+  screen?: ClientScreen | null;
   /** The campaign's reclaim mode, so the picker knows to ask for a PIN or to wait. */
   reclaimMode: ReclaimMode;
   /** Summoning (Phase 4): what can be added, whether it may, and how many per character. */
@@ -269,7 +273,8 @@ export type ClientMessage =
   | { type: 'cancel' }
   /** Movement (Phase 3): ask to drag, show where it is, keep the lock, put it down or let go. */
   | { type: 'grab'; tokenId: string }
-  | { type: 'preview'; tokenId: string; x: number; y: number }
+  /** Where the token is planned to go; `from` is where the move began, for the TV's ruler. */
+  | { type: 'preview'; tokenId: string; x: number; y: number; from?: { x: number; y: number } }
   | { type: 'hold'; tokenId: string }
   | { type: 'drop'; tokenId: string; x: number; y: number; from: { x: number; y: number } }
   | { type: 'letGo'; tokenId: string }
@@ -288,6 +293,31 @@ export type TableSummonEvent =
 
 /** What main hands the console about a token being moved by a player (Phase 3). */
 export type TableTokenEvent =
-  | { kind: 'preview'; tokenId: string; x: number; y: number; deviceLabel: string }
+  | {
+      kind: 'preview';
+      tokenId: string;
+      x: number;
+      y: number;
+      deviceLabel: string;
+      /** Where the move began: the TV draws the ruler from here. */
+      from?: { x: number; y: number };
+    }
   | { kind: 'previewEnd'; tokenId: string }
   | { kind: 'move'; tokenId: string; x: number; y: number; deviceLabel: string };
+
+/** The TV's non-map screens, as the console pushes them (player connector, all screen types). */
+export type TableScreen =
+  | {
+      kind: 'title';
+      id: string;
+      title: string;
+      subtitle?: string;
+      backdrop: 'parchment' | 'stone' | 'dark';
+    }
+  | { kind: 'image'; id: string; title: string; src: string; width: number; height: number }
+  | { kind: 'break'; title: string; subtitle?: string; endsAt?: number };
+
+/** The same, as a phone receives it: an image scene's picture by the server's own path. */
+export type ClientScreen =
+  | Extract<TableScreen, { kind: 'title' | 'break' }>
+  | { kind: 'image'; id: string; title: string; imageUrl: string; width: number; height: number };
