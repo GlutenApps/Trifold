@@ -16,6 +16,7 @@ import { retargetScaled, scaleRows } from './quickScale';
 import { CreatureEditor } from '../compendium/CreatureEditor';
 import { editRow, retargetTokens, useCreatureEditStore } from './creatureEdits';
 import { retargetToNpc, templateTokenIds } from './templates';
+import { withParty } from './build';
 
 /**
  * The Encounters major (DESIGN.md §6.4, ADR 0005): the encounter list and builder while no
@@ -579,7 +580,12 @@ export function EncountersPage() {
     cancelSave(encounterSlot(draft.id));
     const saved = await saveEncounter(draft);
     if (!saved) return;
-    await begin(saved, current.pcs, current.campaign.settings.initiativeMode);
+    // The party joins when the encounter names none of it (ADR 0044).
+    await begin(
+      withParty(saved, current.pcs, null),
+      current.pcs,
+      current.campaign.settings.initiativeMode,
+    );
     setDraft(null);
   };
 
@@ -696,7 +702,11 @@ export function EncountersPage() {
                         title={e.combatants.length === 0 ? 'Add combatants first' : 'Start combat'}
                         disabled={e.combatants.length === 0}
                         onClick={() =>
-                          void begin(e, current.pcs, current.campaign.settings.initiativeMode)
+                          void begin(
+                            withParty(e, current.pcs, null),
+                            current.pcs,
+                            current.campaign.settings.initiativeMode,
+                          )
                         }
                       >
                         <Icon name="play" />

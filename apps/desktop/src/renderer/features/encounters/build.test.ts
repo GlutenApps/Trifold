@@ -2,7 +2,7 @@ import { parseCompendiumXml } from '@trifold/importers';
 import type { Encounter, MonsterRecord, PCCard } from '@trifold/schema';
 import { describe, expect, it } from 'vitest';
 import fixture from '../../../../../../fixtures/compendium-sample.xml?raw';
-import { buildCombatants, countersFromMonster } from './build';
+import { buildCombatants, countersFromMonster, withParty } from './build';
 
 const { records } = parseCompendiumXml(fixture, { sourceId: 'src', defaultEdition: '2014' });
 const byId = new Map(records.map((r) => [r.id, r]));
@@ -271,5 +271,63 @@ describe('what carries between fights (ADR 0012)', () => {
     expect(grak!.initiative).not.toBeNull();
     expect(pete).toMatchObject({ name: 'Old Pete', hp: { max: 1 } });
     expect(result.missing).toEqual(['Old Pete']);
+  });
+});
+
+describe('withParty (ADR 0044): the fight is whoever is here', () => {
+  const bram: PCCard = { ...pc, id: 'pc2', name: 'Bram' };
+  const wren: PCCard = { ...pc, id: 'pc3', name: 'Wren' };
+  const party = [pc, bram, wren];
+  const monstersOnly = (): Encounter => ({
+    ...encounter(),
+    combatants: encounter().combatants.filter((t) => t.ref.kind !== 'pc'),
+  });
+  const pcIds = (e: Encounter) =>
+    e.combatants.flatMap((t) => (t.ref.kind === 'pc' ? [[t.ref.pcId, t.tokenId ?? null]] : []));
+
+  it('adds the party members on the map, with their tokens', () => {
+    const onMap = new Map([
+      ['pc2', 'tok-bram'],
+      ['pc3', 'tok-wren'],
+    ]);
+    expect(pcIds(withParty(monstersOnly(), party, onMap))).toEqual([
+      ['pc2', 'tok-bram'],
+      ['pc3', 'tok-wren'],
+    ]);
+  });
+
+  it('keeps a named PC once, gives it its token, and leaves out PCs elsewhere', () => {
+    // Thora is named by the encounter; Bram stands on the map; Wren is elsewhere (a split party).
+    const onMap = new Map([
+      ['pc1', 'tok-thora'],
+      ['pc2', 'tok-bram'],
+    ]);
+    expect(pcIds(withParty(encounter(), party, onMap))).toEqual([
+      ['pc1', 'tok-thora'],
+      ['pc2', 'tok-bram'],
+    ]);
+  });
+
+  it('brings the whole party when nobody from it is named or on the map', () => {
+    expect(pcIds(withParty(monstersOnly(), party, new Map()))).toEqual([
+      ['pc1', null],
+      ['pc2', null],
+      ['pc3', null],
+    ]);
+  });
+
+  it('started without a map: the named PCs, or the whole party when none is named', () => {
+    expect(pcIds(withParty(encounter(), party, null))).toEqual([['pc1', null]]);
+    expect(pcIds(withParty(monstersOnly(), party, null)).map(([id]) => id)).toEqual([
+      'pc1',
+      'pc2',
+      'pc3',
+    ]);
+  });
+
+  it('leaves the monsters as they were', () => {
+    const before = monstersOnly();
+    const after = withParty(before, party, null);
+    expect(after.combatants.slice(0, before.combatants.length)).toEqual(before.combatants);
   });
 });
