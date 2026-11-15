@@ -145,20 +145,6 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     };
   });
 
-  // The party joins a fight through its encounter: Brannoc, tied to his token.
-  const ambush = await fileNamed(dir, 'encounters', 'Trouble at the Wayside Lamp');
-  await editJson(ambush.file, (encounter) => {
-    const combatants = encounter['combatants'] as unknown[];
-    combatants.push({
-      id: 'tpl-brannoc',
-      ref: { kind: 'pc', pcId: brannoc.id, name: 'Brannoc Hale' },
-      quantity: 1,
-      role: 'ally',
-      hidden: false,
-      tokenId: 'tok-brannoc',
-    });
-  });
-
   app = await launch(userData, library);
   try {
     const page = await app.firstWindow();
@@ -242,7 +228,8 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     expect(wire).not.toContain('tok-lurker');
     expect(wire).not.toContain('tok-gorm');
 
-    // Phase 2: the fight asks for Brannoc's initiative and the phone answers it once.
+    // Phase 2: the fight asks for Brannoc's initiative and the phone answers it once. He joins
+    // the linked encounter because his token stands on the map (ADR 0044).
     await page.getByRole('tab', { name: 'VTT', exact: true }).click();
     await page.getByRole('button', { name: 'Start linked encounter' }).click();
     const initiative = phone.getByLabel('Initiative');
