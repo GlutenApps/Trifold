@@ -4,7 +4,18 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-15
+
+Everything since 0.3.0: the player connector, creature art, the rules compendium, fog of war, the movement ruler, the session log and the CR scaler, among others.
+
 ### Added
+
+- **Players on their phones** (Beta 14, ADR 0032 and ADR 0043): **Player devices** (the phone icon in the VTT tab's TV tools) → **Let players join** starts a table server on your private network; it is off until you start it and nothing leaves the LAN. Players scan the join code in a browser (no install, no account) and pick a character: every party member by default, and an NPC once you tick **Players can claim this character** (or use the phone button in a selected token's actions). From then on their phone shows:
+  - **What the TV shows**: the map with fog (only what is revealed, and only tokens they may see), title cards, images and the break screen.
+  - **Their character** (Health, Conditions, Companions and Move tools, laid out for portrait, landscape and tablets): damage, healing, temp HP, max HP and AC; conditions during a fight; a box asking for initiative when the fight waits on them. The fight log names the device.
+  - **Move**: any drag opens Move and waits for **Done**; a faded copy marks where the move began and a ruler measures it, on the phone and on the TV. Adjusting a planned move keeps measuring from the start. A drop under fog or off the map is refused, and your own grab always wins.
+  - **Summons** from your list in **Campaign › Summons**: add from the compendium, make a new one or customise one. A player picks a summon, it appears next to their token, joins the fight on their side and goes when they dismiss it.
+  - **Player devices** in the console: who is connected and as whom, release a claim, how a dropped phone gets back in (PIN or your approval), **Lock movement** for everyone or one device, and **Give to** a player for an NPC. An NPC can be a **Companion of** a PC.
 
 - **Creature art** (ADR 0033): set a creature's art once and it shows on every token of it in every campaign and on its compendium page; PCs and NPCs get a portrait on their card and tokens. **Library › Images** shows what still needs art, with Add from folder matching files by name. Pictures are fitted to 512 px as they come in, so backups stay small.
 - **Compendium tabs fold into More** (ADR 0042): the kinds never scroll out of sight; those that do not fit go into a **More** menu, and they are now in table-time order (Monsters, Spells, Conditions, Rules, Items first).
@@ -37,6 +48,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ### Fixed
 
+- **The fight is whoever is here** (ADR 0044): starting a fight from a map brings in the PCs with a token on that map, linked encounter or not; from the Encounters tab, the PCs the encounter names; and the whole party when either would leave nobody. Before, a party standing on the map was left out of its linked encounter, and an unlinked map pulled in PCs from elsewhere.
 - NPCs can be added and edited on the NPCs tab (**New NPC**, and Edit on every row); before, an NPC came only from an import or Track as NPC and could not be changed afterwards.
 - The PC card form is in titled sections: Name, Max HP and AC are required and start empty (they used to default to 10 without saying so); Basics, Senses, Combat and Notes are optional and folded on a new card. **Save and add another** replaces the one-line Quick add box, which is removed.
 - **From another campaign…** on the Party and NPCs tabs copies a PC or NPC from any other campaign in the Library, at full HP, independent of the original.
