@@ -400,6 +400,96 @@ actions on the map and on the PC and NPC forms, listing the devices online now. 
   snaps back; Lock movement stops a drag; the DM grabbing a token mid-drag cancels the phone's;
   Give to… hands Tobin to the phone.
 
+## Phase 4 plan
+
+**Status:** confirmed by the DM, 2026-11-15: the DM's summon list, remembered options in place of
+presets. It folds in the player-page redesign the DM made with Claude
+(the "player UI handoff", 2026-11-15): four tools in place of one long page.
+
+### Part A: the redesigned page (no behaviour change)
+
+Built first, on its own commit, so Phase 4 lands in its final home.
+
+- **Four tools:** Health, Conditions, Companions, Move, always one tap away; the map takes the rest
+  of the screen; one tool's controls show at a time.
+- **Four layouts, chosen by the viewport's size and shape** (CSS media queries plus a `matchMedia`
+  listener, live on rotation): phone portrait (width under 600 px: header, map, a one-row
+  character strip, a bottom tab bar; tools open as a bottom sheet above it), phone landscape
+  (height under 500 px: map left, an 84 px rail of tool buttons right, a 340 px panel between when
+  a tool is open, campaign name and Switch as pills on the map), tablet portrait (map above a
+  500 px panel: character card and a 2×2 tool grid beside the open tool), and laptop or tablet
+  landscape (a permanent 400 px or 360 px right panel; Health open by default; tabs only switch).
+- **Shared pieces:** the header (name, connection, Switch); the character summary (initials or
+  portrait, name, conditions as text, HP bar, temp chip, AC badge); tool tabs with a condition
+  count badge; target chips at the top of Health, Conditions and Move (the character first, then
+  each companion in play), which replace today's chips above the map; **Center on my token** and
+  **Full-screen map** buttons on the map (full screen hides the panels; the browser's own full
+  screen where it exists).
+- **Health:** current, max, bar and temp; a Current HP | Max HP switch; an amount with − and +
+  (default 5) and **Damage**, **Heal**, **Temp**; a max HP stepper with **Save max HP**.
+- **Conditions:** the 14 SRD conditions as toggles, an Exhaustion stepper (0–6), and the existing
+  "Conditions are tracked during fights."
+- **Move:** the target chips, "Drag a token, or tap where it should go", and on phone portrait a
+  floating card over the map with Cancel and Done. Tap-to-move is new: with Move open, a tap on
+  the map moves the chosen token there through the same grab and drop as a drag, with the same
+  checks. Dragging still works whichever tool is open.
+- **Kept as they are:** the initiative box (a card floating over the top of the map), the picker
+  and its PIN, takeover and waiting screens, Switch and Undo, the drag and lock behaviour, and the
+  "Movement locked by the DM" note.
+- **Colours come from `global.css` tokens** (`CLAUDE.md`). The handoff's values map onto the
+  existing slate-and-bone tokens; four tint pairs are added as tokens: damage, heal, temp HP and
+  an active condition. Outfit stays the font.
+- **Two behaviour changes the handoff asks for:** **Temp** sets temp HP to the amount (0 clears
+  it), which is how temp HP works in the rules, so it travels as a value, not a change (the only
+  exception to Concurrency's delta rule, and a harmless one: temp HP never stacks). Damage outside
+  a fight now takes temp HP first, as the tracker already does in one.
+
+### Part B: summoning
+
+**What a summon is.** A token on the live map with a summon record (`Token.summon`: owner PC or
+NPC, the device that spawned it, the creature it is (a compendium creature or a custom entry, the
+existing `EntityRef` kinds), its HP and AC outside a fight, and its duration, concentration and
+persistence). In the loaded fight it is also a combatant carrying the same owner link. It belongs
+to whoever holds its owner, like a Phase 3 companion, so there is no separate claim: give the PC
+to another phone and its summons go with it.
+
+**The Companions tool** lists every companion in play: the owner's Phase 3 companions (NPCs) and
+its summons. **Remove** asks in the row ("Take Owl out of play? Your DM keeps the creature.") and
+then releases an NPC companion (Phase 3's release) or dismisses a summon (its token and combatant
+go; nothing in the campaign is deleted). **Add a companion** opens a searchable list; adding
+places a token beside the owner (the nearest free, revealed cell; refused when there is none) and,
+in a fight, a combatant. Health, Conditions and Move then reach it through the target chips.
+
+- **What the list offers** (the handoff's open question 1): **the DM's summon list**, creatures the DM marks as summonable for this campaign from the compendium or
+  the campaign's own creatures (a **Summonable by players** switch on a creature's page, and the
+  list in Player devices). It keeps players away from the enemies and the ancient dragons without
+  asking the DM every time.
+- **Add options**, folded under the creature's Add, with defaults that make it one tap: **count**
+  (1; ×N makes numbered copies, Skeleton 1–4), **initiative** (shares the owner's turn, or rolls
+  its own, which puts an initiative box on the phone as decision 8 says), **lasts** (until
+  dismissed, or N rounds, counted down by the tracker and removed and logged when it runs out),
+  **tied to concentration** (when the owner's concentration breaks, the phone and the tracker's
+  log ask whether to remove it), and **stays after the fight** (a familiar; otherwise summons go
+  when the encounter ends). The add list remembers each player's last options per
+  creature, which is what the spec's presets were for.
+- **DM guardrails** in Player devices, saved in `players.json`: **Player summoning** On, On with
+  approval (a request in the device list with Accept and Deny, like Phase 2's), or Off; and a cap
+  per character (8 by default). The console shows each summon's owner and device on its token's
+  actions and in the tracker, and the DM can edit, move or delete any summon.
+
+### Tests
+
+- Unit (`packages/rules`): picking the cell beside the owner (revealed, free, on the map);
+  numbering ×N copies; the cap and the spawning modes; duration expiry by round; which summons go
+  at the end of an encounter.
+- Unit (renderer): spawning a summon in and out of a fight, its initiative by mode, dismissing it,
+  cleanup at the end of a fight, the concentration prompt; the layouts at each breakpoint and
+  each tool's controls sending the same messages as today's page.
+- Smoke: the existing player flow through the new page at phone portrait and laptop sizes; the
+  phone summons an owl beside Brannoc and the TV shows it; ×3 skeletons come numbered; Remove
+  dismisses one; an Approval-mode summon waits for the DM's Accept; a summon of 2 rounds goes when
+  the round passes.
+
 ## Goals and non-goals
 
 Players get one-tap access to their own creatures on the map; the DM keeps full authority and loses no speed.
