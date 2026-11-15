@@ -20,3 +20,5 @@ export * from './sourceOrder';
 export * from './bookReview';
 export * from './updates';
 export * from './crScale';
+export * from './fog';
+export * from './table/index';

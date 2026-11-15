@@ -70,6 +70,8 @@ export const PCCard = z.object({
   dndBeyondUrl: z.string().optional(),
   notes: z.string().default(''),
   tokenStyleOverride: z.enum(['engraved', 'flat', 'twoTone', 'plain']).optional(),
+  /** Offered to players at the table to claim (ADR 0043); off unless the DM turns it on. */
+  playerControllable: z.boolean().default(false),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -314,6 +316,11 @@ export const NPC = z.object({
   isAlive: z.boolean().default(true),
   /** HP at the end of the last fight this NPC was in; absent until then (ADR 0012). */
   hp: z.object({ current: int.min(0), max: int.min(0), temp: int.min(0).default(0) }).optional(),
+  /**
+   * Offered to players at the table to claim (ADR 0043) while it is not marked enemy on the live
+   * scene or in the running fight.
+   */
+  playerControllable: z.boolean().default(false),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -596,3 +603,34 @@ export const CampaignExportOptions = z.object({
   layout: z.boolean().default(false),
 });
 export type CampaignExportOptions = z.infer<typeof CampaignExportOptions>;
+
+// ---------- player connector (ADR 0043, docs/PLAYER-CONNECTOR.md) ----------
+
+/** A browser at the table that has claimed something. Only a hash of its token is kept. */
+export const PlayerDevice = z.object({
+  deviceId: z.string().min(1),
+  /** SHA-256 of the device token, hex. The token itself never touches disk. */
+  tokenHash: z.string().regex(/^[0-9a-f]{64}$/),
+  label: z.string().default(''),
+  lastSeen: IsoDateTime,
+});
+export type PlayerDevice = z.infer<typeof PlayerDevice>;
+
+export const PlayerClaim = z.object({
+  creatureKind: z.enum(['pc', 'npc']),
+  creatureId: z.string().min(1),
+  deviceId: z.string().min(1),
+  claimedAt: IsoDateTime,
+});
+export type PlayerClaim = z.infer<typeof PlayerClaim>;
+
+/**
+ * `campaigns/<slug>/players.json`: the table server's devices and claims, written only by main
+ * so the console's whole-file saves of PC cards and NPCs never erase a claim (ADR 0043).
+ */
+export const PlayersFile = z.object({
+  schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+  devices: z.array(PlayerDevice).default([]),
+  claims: z.array(PlayerClaim).default([]),
+});
+export type PlayersFile = z.infer<typeof PlayersFile>;
