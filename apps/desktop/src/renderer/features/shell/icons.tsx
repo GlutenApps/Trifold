@@ -98,6 +98,8 @@ export type IconName =
   | 'ruler'
   | 'imageOff'
   | 'tally'
+  | 'lock'
+  | 'unlock'
   | 'stopwatch'
   | 'sliders'
   | 'bell'
@@ -230,6 +232,9 @@ const PATHS: Record<IconName, string> = {
   // Heal and temporary HP in the combat drawer.
   heart: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z',
   shield: 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z',
+  // A padlock: movement locked by the DM (ADR 0043).
+  lock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4',
+  unlock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 7.5-2',
   fog: 'M7 15h10a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 6.6 9.2 3 3 0 0 0 7 15zM5 19h14M8 22h8',
   square: 'M5 5h14v14H5z',
   polygon: 'M5 8l6-4 9 3-3 6 2 6-8 1-7-5z',

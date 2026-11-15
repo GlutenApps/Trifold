@@ -1,5 +1,6 @@
 import { useTableStore } from '../../stores/tableStore';
 import { Check } from '../compendium/editorParts';
+import { GiveTo } from './GiveTo';
 
 /**
  * The player connector on a PC card or NPC form (ADR 0043): whether players can claim the
@@ -9,11 +10,13 @@ import { Check } from '../compendium/editorParts';
 export function PlayerAccess({
   kind,
   id,
+  name,
   checked,
   onChange,
 }: {
   kind: 'pc' | 'npc';
   id: string;
+  name: string;
   checked: boolean;
   onChange(checked: boolean): void;
 }) {
@@ -24,7 +27,10 @@ export function PlayerAccess({
     : undefined;
   return (
     <div className="span-all player-access">
-      <Check label="Players can claim this character" checked={checked} onChange={onChange} />
+      <div className="row">
+        <Check label="Players can claim this character" checked={checked} onChange={onChange} />
+        <GiveTo kind={kind} id={id} name={name} variant="button" />
+      </div>
       {holder && (
         <p className="row player-access-claim">
           <span className="muted">

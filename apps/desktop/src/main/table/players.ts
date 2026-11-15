@@ -45,6 +45,7 @@ const empty = (): PlayersFile => ({
   devices: [],
   claims: [],
   reclaimMode: 'open',
+  movement: { all: false, creatures: [] },
 });
 
 /**
@@ -80,6 +81,26 @@ export class PlayersStore {
 
   get reclaimMode(): ReclaimMode {
     return this.data.reclaimMode;
+  }
+
+  get movement(): { all: boolean; creatures: string[] } {
+    return this.data.movement;
+  }
+
+  /** Lock movement (Phase 3): for everyone, or one creature (`kind:id`). */
+  async setMovementLock(target: 'all' | string, locked: boolean): Promise<void> {
+    const m = this.data.movement;
+    const movement =
+      target === 'all'
+        ? { ...m, all: locked }
+        : {
+            ...m,
+            creatures: locked
+              ? [...new Set([...m.creatures, target])]
+              : m.creatures.filter((k) => k !== target),
+          };
+    this.data = { ...this.data, movement };
+    await this.save();
   }
 
   async setReclaimMode(mode: ReclaimMode): Promise<void> {

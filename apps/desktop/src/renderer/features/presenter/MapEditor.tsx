@@ -23,6 +23,7 @@ import {
 import { capitalize } from '../compendium/formatting';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { npcOffered, pcOffered } from '../players/claimFlag';
+import { GiveTo } from '../players/GiveTo';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useIconStore } from '../../stores/iconStore';
@@ -152,6 +153,7 @@ export function MapEditor({
   );
   const saveEncounter = useCampaignStore((s) => s.saveEncounter);
   const savePc = useCampaignStore((s) => s.savePc);
+  const moving = usePresenterStore((s) => s.moving);
   const saveNpc = useCampaignStore((s) => s.saveNpc);
   const importSceneImage = useCampaignStore((s) => s.importSceneImage);
   const combatState = useCombatStore((s) => s.state);
@@ -687,6 +689,8 @@ export function MapEditor({
     if (mode !== 'select') return;
     const at = mapPoint(e);
     const cell = pixelToGrid(at.x, at.y, grid);
+    // A player dragging this token on their phone lets go: the DM never waits (ADR 0043).
+    if (moving[token.id]) void window.trifold.table.dmGrab(token.id);
     drag.current = {
       tokenId: token.id,
       dx: cell.x - token.x,
@@ -1807,14 +1811,16 @@ export function MapEditor({
           />
           {scene.tokens.map((token) => {
             const px = token.footprint * grid.cellPx;
+            // A player's drag in progress shows where their finger is (Phase 3).
+            const playerDrag = moving[token.id];
             return (
               <div
                 key={token.id}
-                className="token-slot"
+                className={`token-slot${playerDrag ? ' player-moving' : ''}`}
                 data-testid="console-token"
                 style={{
-                  left: grid.offsetX + token.x * grid.cellPx,
-                  top: grid.offsetY + token.y * grid.cellPx,
+                  left: grid.offsetX + (playerDrag?.x ?? token.x) * grid.cellPx,
+                  top: grid.offsetY + (playerDrag?.y ?? token.y) * grid.cellPx,
                   width: px,
                   height: px,
                 }}
@@ -1836,6 +1842,11 @@ export function MapEditor({
                   selected={token.id === selectedTokenId}
                   hidden={token.hidden}
                 />
+                {playerDrag && (
+                  <span className="token-mover" data-testid="token-mover">
+                    {playerDrag.label}
+                  </span>
+                )}
                 {turnOrder.has(token.id) && (
                   <span
                     className="token-order"
@@ -2263,6 +2274,17 @@ export function MapEditor({
                     <Icon name="phone" />
                   </button>
                 );
+              })()}
+              {(() => {
+                // Give to… (Phase 3): any PC or NPC, enemy or not; the DM's call.
+                const ref = selectedToken.ref;
+                if (ref.kind !== 'pc' && ref.kind !== 'npc') return null;
+                const id = ref.kind === 'pc' ? ref.pcId : ref.npcId;
+                const name =
+                  (ref.kind === 'pc'
+                    ? pcs.find((p) => p.id === id)?.name
+                    : npcs.find((n) => n.id === id)?.name) ?? ref.name;
+                return <GiveTo kind={ref.kind} id={id} name={name} variant="icon" />;
               })()}
               {selectedToken.kind === 'creature' && (
                 <button

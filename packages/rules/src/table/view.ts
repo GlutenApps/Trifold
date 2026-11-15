@@ -37,7 +37,7 @@ export function shortHash(text: string): string {
   return (h >>> 0).toString(36);
 }
 
-const creatureKey = (kind: CreatureKind, id: string) => `${kind}:${id}`;
+import { creatureKey, movementLocked, type MovementLocks } from './movement';
 
 /** The creature keys a device holds. */
 export function claimedBy(claims: readonly Claim[], deviceId: string | null): Set<string> {
@@ -91,9 +91,19 @@ export function viewFor(
   claims: readonly Claim[],
   deviceId: string | null,
   hasImage: boolean,
-  reclaimMode: ReclaimMode = 'open',
-  online: ReadonlySet<string> = new Set(),
+  options: {
+    reclaimMode?: ReclaimMode;
+    /** Devices connected now. */
+    online?: ReadonlySet<string>;
+    movement?: MovementLocks;
+    /** Tokens being dragged: token id → the dragging device's id and name. */
+    dragging?: ReadonlyMap<string, { deviceId: string; label: string }>;
+  } = {},
 ): ClientView {
+  const reclaimMode = options.reclaimMode ?? 'open';
+  const online = options.online ?? new Set<string>();
+  const movement = options.movement ?? { all: false, creatures: [] };
+  const dragging = options.dragging ?? new Map();
   const mineKeys = claimedBy(claims, deviceId);
   const known = new Set(snapshot.creatures.map((c) => creatureKey(c.kind, c.id)));
   const holding = [...mineKeys].filter((k) => known.has(k));
@@ -139,6 +149,9 @@ export function viewFor(
       ...(t.glyphSrc ? { glyphUrl: tablePaths.tokenGlyph(t.id, t.glyphSrc) } : {}),
       mine: seen.owned,
       ...(seen.fogged ? { fogged: true } : {}),
+      ...(dragging.get(t.id) && dragging.get(t.id)!.deviceId !== deviceId
+        ? { movingBy: dragging.get(t.id)!.label }
+        : {}),
     });
   }
 
@@ -172,6 +185,8 @@ export function viewFor(
         inFight: c.inFight,
         needsInitiative: c.needsInitiative,
         editable: c.editable,
+        movementLocked: movementLocked(movement, c.kind, c.id),
+        ...(c.companionOf ? { companionOf: c.companionOf } : {}),
         ...(tokenId ? { tokenId } : {}),
       };
     });

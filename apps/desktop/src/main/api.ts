@@ -220,6 +220,16 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       answer(requestId, accept) {
         return ctx.table.answer(requestId, accept);
       },
+      dmGrab(tokenId) {
+        ctx.table.dmGrab(tokenId);
+        return Promise.resolve();
+      },
+      give(target, deviceId) {
+        return ctx.table.give(target, deviceId);
+      },
+      setMovementLock(target, locked) {
+        return ctx.table.setMovementLock(target, locked);
+      },
     },
     presenter: {
       async push(state) {

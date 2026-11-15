@@ -1,6 +1,6 @@
 # Player connector
 
-**Status:** Phase 1 built and checked on real hardware (2026-11-14, ADR 0043); Phase 2 built (2026-11-14); Phase 3 next. Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
+**Status:** Phase 1 built and checked on real hardware (2026-11-14, ADR 0043); Phase 2 built (2026-11-14); Phase 3 built (2026-11-15); Phase 4 next. Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
 The [decisions](#decisions) below settle where the original spec and the repo disagreed; where
 they differ from a later section, the decisions win. Before Phase 1 starts, a Phase 1 plan is
 confirmed and an ADR amends `DESIGN.md` §1.2 and `CLAUDE.md` ground rule 1.
@@ -576,11 +576,18 @@ and the 250 ms figure on a home network.
 
 **Phase 3: movement and multiple tokens**
 
-- [ ] Players drag their tokens; locks, DM priority and lock expiry behave as specified
-- [ ] Placement into unseen areas is rejected
-- [ ] Lock movement works globally and per creature
-- [ ] Linked companions are claimed and released with their parent; Give to… hands any creature to a device
+- [x] Players drag their tokens; locks, DM priority and lock expiry behave as specified
+- [x] Placement into unseen areas is rejected
+- [x] Lock movement works globally and per creature
+- [x] Linked companions are claimed and released with their parent; Give to… hands any creature to a device
 - [ ] On phones, dragging a token, panning and pinch-zooming never conflict, and dragging works one-handed
+
+Phase 3 status (2026-11-15): built. `smoke/players.spec.ts` drags Brannoc on the phone and sees
+the console move him, has a drop under fog refused, has the DM grab Brannoc mid-drag, locks and
+unlocks movement, gives Tobin to the phone, and checks Brannoc's companion travels with him on a
+claim and a takeover; unit tests cover the lock table and expiry, the drop checks and the
+per-creature lock. Still to check by hand: dragging, panning and pinching with real touch on an
+iPhone and an Android phone (the smoke test drives a mouse).
 
 **Phase 4: player spawning**
 

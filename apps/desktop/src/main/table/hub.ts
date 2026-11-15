@@ -14,6 +14,14 @@ import {
   viewFor,
   visibleTokenIds,
   afterWrongPin,
+  companionsOf,
+  creatureKey,
+  DragLocks,
+  dropProblem,
+  movementLocked,
+  snapToCell,
+  PREVIEWS_PER_SECOND,
+  type TableToken,
   decideClaim,
   intentProblem,
   pinLocked,
@@ -28,6 +36,7 @@ import type {
   ServerMessage,
   TableIntent,
   TableIntentEvent,
+  TableTokenEvent,
   TableReleaseTarget,
   TableSnapshot,
   TableStatus,
@@ -76,10 +85,33 @@ const ClientMessageSchema: z.ZodType<ClientMessage> = z.discriminatedUnion('type
   z.object({ type: z.literal('switch') }),
   z.object({ type: z.literal('undo') }),
   z.object({ type: z.literal('cancel') }),
+  z.object({ type: z.literal('grab'), tokenId: z.string().min(1).max(64) }),
+  z.object({
+    type: z.literal('preview'),
+    tokenId: z.string().min(1).max(64),
+    x: z.number().finite(),
+    y: z.number().finite(),
+  }),
+  z.object({ type: z.literal('hold'), tokenId: z.string().min(1).max(64) }),
+  z.object({
+    type: z.literal('drop'),
+    tokenId: z.string().min(1).max(64),
+    x: z.number().finite(),
+    y: z.number().finite(),
+    from: z.object({ x: z.number().finite(), y: z.number().finite() }),
+  }),
+  z.object({ type: z.literal('letGo'), tokenId: z.string().min(1).max(64) }),
+  z.object({
+    type: z.literal('releaseOne'),
+    creatureKind: CreatureKindSchema,
+    creatureId: z.string().min(1).max(64),
+  }),
 ]);
 
-/** More than this many messages in a second from one browser are dropped. */
-const MESSAGES_PER_SECOND = 20;
+/** More than this many messages in a second from one browser are dropped (previews included). */
+const MESSAGES_PER_SECOND = 30;
+/** How often lapsed drag locks are swept. */
+const LOCK_SWEEP_MS = 500;
 
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -133,6 +165,8 @@ export interface TableHubOptions {
   onStatus(status: TableStatus): void;
   /** A checked player change for the console to apply (Phase 2). */
   onIntent(intent: TableIntentEvent): void;
+  /** A player dragging or dropping a token (Phase 3). */
+  onToken(event: TableTokenEvent): void;
   /** Tests replace the network lookups. */
   addresses?: () => LanAddress[];
   mdns?: { start(): Promise<string>; announce(): void; stop(): Promise<void> } | null;
@@ -168,6 +202,8 @@ export class TableHub {
   private pinTries = new Map<string, PinTries>();
   /** Switch character's undo: what each device released, until when. */
   private grace = new Map<string, { keys: Set<string>; until: number }>();
+  private locks = new DragLocks();
+  private lastPreview = new Map<string, number>();
 
   constructor(private readonly opts: TableHubOptions) {
     this.mdns = opts.mdns;
@@ -210,6 +246,7 @@ export class TableHub {
       startedAt: this.startedAt,
       error: this.error,
       reclaimMode: this.players?.reclaimMode ?? 'open',
+      movement: this.players?.movement ?? { all: false, creatures: [] },
       approvals: this.approvals.map((a) => ({
         requestId: a.requestId,
         label: a.label,
@@ -269,6 +306,7 @@ export class TableHub {
       );
       this.timers.push(setInterval(() => void this.refreshInterfaces(), INTERFACE_POLL_MS));
       this.timers.push(setInterval(() => this.heartbeat(), HEARTBEAT_MS));
+      this.timers.push(setInterval(() => this.sweepLocks(), LOCK_SWEEP_MS));
       this.emit();
       void this.startMdns();
     } catch (err) {
@@ -320,6 +358,8 @@ export class TableHub {
     this.approvals = [];
     this.pinTries.clear();
     this.grace.clear();
+    this.locks.clear();
+    this.lastPreview.clear();
     this.snapshot = null;
     this.mapImage = null;
     this.state = 'off';
@@ -334,7 +374,14 @@ export class TableHub {
 
   async release(target: TableReleaseTarget): Promise<TableStatus> {
     if (!this.players) return this.status();
+    const holder =
+      target === 'all' ? null : (this.players.claimOf(target.kind, target.id)?.deviceId ?? null);
     if (await this.players.release(target)) {
+      if (target !== 'all' && target.kind === 'pc' && holder) {
+        await this.releaseCompanions(target.id, holder);
+      }
+      if (holder) this.locks.releaseDevice(holder);
+      if (target === 'all') this.locks.clear();
       const what = target === 'all' ? 'every claim' : `${target.kind} ${target.id}`;
       this.opts.logger.info(`table server: DM released ${what}`);
       this.scheduleBroadcast();
@@ -498,6 +545,12 @@ export class TableHub {
       this.clients.delete(client);
       this.approvals = this.approvals.filter((a) => a.client !== client);
       if (client.deviceId) this.players?.touch(client.deviceId);
+      // A drag dies with its page (when no other page of that device is open).
+      if (client.deviceId && !this.clientsOf(client.deviceId).length) {
+        for (const tokenId of this.locks.releaseDevice(client.deviceId)) {
+          this.opts.onToken({ kind: 'previewEnd', tokenId });
+        }
+      }
       this.emit();
     });
     socket.on('error', () => undefined);
@@ -560,6 +613,19 @@ export class TableHub {
         this.approvals = this.approvals.filter((r) => r.client !== client);
         this.emit();
         return;
+      case 'grab':
+        return this.grab(client, msg.tokenId);
+      case 'preview':
+        return this.preview(client, msg.tokenId, msg.x, msg.y);
+      case 'hold':
+        if (client.deviceId) this.locks.refresh(msg.tokenId, client.deviceId, Date.now());
+        return;
+      case 'drop':
+        return this.drop(client, msg.tokenId, { x: msg.x, y: msg.y }, msg.from);
+      case 'letGo':
+        return this.letGo(client, msg.tokenId);
+      case 'releaseOne':
+        return this.releaseOne(client, msg.creatureKind, msg.creatureId);
     }
   }
 
@@ -673,10 +739,12 @@ export class TableHub {
         { ...(pin ? { pin } : {}), takeOver: true },
       );
       client.deviceId = device.deviceId;
+      if (kind === 'pc') await this.companionsFollow(id, device.deviceId, from);
       if (token && this.campaignId) {
         this.send(client, { type: 'token', token, campaignId: this.campaignId });
       }
       if (from && from !== device.deviceId) {
+        this.locks.releaseDevice(from);
         for (const c of this.clients) {
           if (c.deviceId === from) {
             this.send(c, { type: 'error', message: `${name} was picked up on another device.` });
@@ -713,11 +781,228 @@ export class TableHub {
     });
   }
 
+  // ---------- movement (Phase 3) ----------
+
+  /** Token id → who is dragging it, for the phones' "moving" mark. */
+  private draggingNow(): Map<string, { deviceId: string; label: string }> {
+    const out = new Map<string, { deviceId: string; label: string }>();
+    for (const [tokenId, deviceId] of this.locks.active(Date.now())) {
+      const label = this.players?.devices.find((d) => d.deviceId === deviceId)?.label;
+      out.set(tokenId, { deviceId, label: label || 'Another player' });
+    }
+    return out;
+  }
+
+  private clientsOf(deviceId: string): Client[] {
+    return [...this.clients].filter((c) => c.deviceId === deviceId);
+  }
+
+  /** Ends a drag without moving the token, telling its phone why and the console to forget it. */
+  private endDrag(tokenId: string, deviceId: string, reason: string): void {
+    for (const c of this.clientsOf(deviceId)) this.send(c, { type: 'dragEnded', tokenId, reason });
+    this.lastPreview.delete(tokenId);
+    this.opts.onToken({ kind: 'previewEnd', tokenId });
+    this.scheduleBroadcast();
+  }
+
+  /** The token a device may drag, or why not. */
+  private movable(client: Client, tokenId: string): { token: TableToken } | { problem: string } {
+    const scene = this.snapshot?.scene;
+    const token = scene?.tokens.find((t) => t.id === tokenId);
+    const creature = token?.creature;
+    if (!scene || !token || !creature) return { problem: 'That token isn’t on the map.' };
+    const held = this.players?.claimOf(creature.kind, creature.id);
+    if (!held || held.deviceId !== client.deviceId) return { problem: 'That token isn’t yours.' };
+    if (token.hidden) return { problem: 'That token is hidden.' };
+    if (movementLocked(this.players!.movement, creature.kind, creature.id)) {
+      return { problem: 'Movement locked by the DM.' };
+    }
+    return { token };
+  }
+
+  private grab(client: Client, tokenId: string): void {
+    const ok = this.movable(client, tokenId);
+    if ('problem' in ok) {
+      return this.send(client, { type: 'dragEnded', tokenId, reason: ok.problem });
+    }
+    if (!this.locks.grant(tokenId, client.deviceId!, Date.now())) {
+      return this.send(client, {
+        type: 'dragEnded',
+        tokenId,
+        reason: 'Someone else is moving it.',
+      });
+    }
+    this.send(client, { type: 'grabbed', tokenId });
+    this.scheduleBroadcast();
+  }
+
+  private preview(client: Client, tokenId: string, x: number, y: number): void {
+    const now = Date.now();
+    if (!client.deviceId || !this.locks.refresh(tokenId, client.deviceId, now)) return;
+    const last = this.lastPreview.get(tokenId) ?? 0;
+    if (now - last < 1000 / PREVIEWS_PER_SECOND) return;
+    this.lastPreview.set(tokenId, now);
+    this.opts.onToken({
+      kind: 'preview',
+      tokenId,
+      x,
+      y,
+      deviceLabel: this.device(client)?.label || 'A player',
+    });
+  }
+
+  private drop(
+    client: Client,
+    tokenId: string,
+    to: { x: number; y: number },
+    from: { x: number; y: number },
+  ): void {
+    const deviceId = client.deviceId;
+    if (!deviceId || this.locks.holder(tokenId, Date.now()) !== deviceId) {
+      return this.send(client, {
+        type: 'dragEnded',
+        tokenId,
+        reason: 'The drag ran out. Try again.',
+      });
+    }
+    this.locks.release(tokenId);
+    const ok = this.movable(client, tokenId);
+    const scene = this.snapshot?.scene;
+    const target = snapToCell(to);
+    const problem =
+      'problem' in ok ? ok.problem : scene ? dropProblem(scene, ok.token, target, from) : 'No map.';
+    if (problem) {
+      this.opts.logger.info(`table server: refused a drop of ${tokenId} (${problem})`);
+      return this.endDrag(tokenId, deviceId, problem);
+    }
+    this.lastPreview.delete(tokenId);
+    this.opts.onToken({
+      kind: 'move',
+      tokenId,
+      x: target.x,
+      y: target.y,
+      deviceLabel: this.device(client)?.label || 'A player',
+    });
+    this.scheduleBroadcast();
+  }
+
+  private letGo(client: Client, tokenId: string): void {
+    if (!client.deviceId || this.locks.holder(tokenId, Date.now()) !== client.deviceId) return;
+    this.locks.release(tokenId);
+    this.lastPreview.delete(tokenId);
+    this.opts.onToken({ kind: 'previewEnd', tokenId });
+    this.scheduleBroadcast();
+  }
+
+  private sweepLocks(): void {
+    for (const { tokenId, deviceId } of this.locks.sweep(Date.now())) {
+      this.endDrag(tokenId, deviceId, 'The drag ran out. Try again.');
+    }
+  }
+
+  /** The DM grabbed a token: a player's drag on it ends at once (DM priority). */
+  dmGrab(tokenId: string): void {
+    const holder = this.locks.release(tokenId);
+    if (!holder) return;
+    const token = this.snapshot?.scene?.tokens.find((t) => t.id === tokenId);
+    this.endDrag(tokenId, holder, `The DM moved ${token?.label ?? 'it'}.`);
+  }
+
+  async setMovementLock(
+    target: 'all' | { kind: CreatureKind; id: string },
+    locked: boolean,
+  ): Promise<TableStatus> {
+    if (this.players) {
+      await this.players.setMovementLock(
+        target === 'all' ? 'all' : creatureKey(target.kind, target.id),
+        locked,
+      );
+      if (locked) {
+        // Drags already going on stop with the lock.
+        for (const [tokenId, deviceId] of this.locks.active(Date.now())) {
+          const c = this.snapshot?.scene?.tokens.find((t) => t.id === tokenId)?.creature;
+          if (c && movementLocked(this.players.movement, c.kind, c.id)) {
+            this.locks.release(tokenId);
+            this.endDrag(tokenId, deviceId, 'Movement locked by the DM.');
+          }
+        }
+      }
+      this.opts.logger.info(
+        `table server: movement ${locked ? 'locked' : 'unlocked'} for ${target === 'all' ? 'everyone' : `${target.kind} ${target.id}`}`,
+      );
+      this.scheduleBroadcast(0);
+    }
+    this.emit();
+    return this.status();
+  }
+
+  // ---------- companions and Give to… (Phase 3) ----------
+
+  /** A PC's companions follow it to a device, unless another device holds them. */
+  private async companionsFollow(pcId: string, deviceId: string, from: string | null) {
+    const players = this.players;
+    if (!players || !this.snapshot) return;
+    const device = players.devices.find((d) => d.deviceId === deviceId) ?? null;
+    for (const c of companionsOf(this.snapshot.creatures, pcId)) {
+      const held = players.claimOf(c.kind, c.id);
+      if (held && held.deviceId !== from) continue;
+      if (held?.deviceId === deviceId) continue;
+      await players.claim(c.kind, c.id, device, '', new Date(), { takeOver: true });
+    }
+  }
+
+  /** Releasing a PC releases the companions the same device holds. */
+  private async releaseCompanions(pcId: string, deviceId: string | null) {
+    const players = this.players;
+    if (!players || !this.snapshot) return;
+    for (const c of companionsOf(this.snapshot.creatures, pcId)) {
+      const held = players.claimOf(c.kind, c.id);
+      if (held && (deviceId === null || held.deviceId === deviceId)) {
+        await players.release({ kind: c.kind, id: c.id });
+      }
+    }
+  }
+
+  /** A companion's chip Release: that creature alone. */
+  private async releaseOne(client: Client, kind: CreatureKind, id: string): Promise<void> {
+    const held = this.players?.claimOf(kind, id);
+    if (!held || held.deviceId !== client.deviceId) return;
+    await this.players!.release({ kind, id });
+    this.locks.releaseDevice(client.deviceId!);
+    this.scheduleBroadcast(0);
+    this.emit();
+  }
+
+  /** Give to…: the DM hands a PC or NPC to a connected device. */
+  async give(target: { kind: CreatureKind; id: string }, deviceId: string): Promise<TableStatus> {
+    const players = this.players;
+    const device = players?.devices.find((d) => d.deviceId === deviceId);
+    if (!players || !device) return this.status();
+    const before = players.claimOf(target.kind, target.id)?.deviceId ?? null;
+    const { from } = await players.claim(target.kind, target.id, device, '', new Date(), {
+      takeOver: true,
+    });
+    if (target.kind === 'pc') await this.companionsFollow(target.id, deviceId, before);
+    const name = this.nameOf(target.kind, target.id);
+    if (from && from !== deviceId) {
+      for (const c of this.clientsOf(from)) {
+        this.send(c, { type: 'error', message: `The DM gave ${name} to another device.` });
+      }
+    }
+    this.opts.logger.info(`table server: DM gave ${target.kind} ${target.id} to ${deviceId}`);
+    this.scheduleBroadcast(0);
+    this.emit();
+    return this.status();
+  }
+
   /** Switch character: release everything this device holds, with a few seconds to undo. */
   private async switchCharacter(client: Client): Promise<void> {
     const deviceId = client.deviceId;
     if (!deviceId || !this.players) return;
     const released = await this.players.releaseDevice(deviceId);
+    for (const tokenId of this.locks.releaseDevice(deviceId)) {
+      this.opts.onToken({ kind: 'previewEnd', tokenId });
+    }
     if (!released.length) return this.sendState(client);
     this.grace.set(deviceId, {
       keys: new Set(released.map((c) => `${c.creatureKind}:${c.creatureId}`)),
@@ -775,14 +1060,12 @@ export class TableHub {
   private sendState(client: Client): void {
     const snapshot = this.snapshot;
     if (!snapshot) return;
-    const view = viewFor(
-      snapshot,
-      this.claimList(),
-      client.deviceId,
-      this.hasImageFor(snapshot),
-      this.players?.reclaimMode ?? 'open',
-      this.online(),
-    );
+    const view = viewFor(snapshot, this.claimList(), client.deviceId, this.hasImageFor(snapshot), {
+      reclaimMode: this.players?.reclaimMode ?? 'open',
+      online: this.online(),
+      movement: this.players?.movement ?? { all: false, creatures: [] },
+      dragging: this.draggingNow(),
+    });
     const text = JSON.stringify({ type: 'state', ...view } satisfies ServerMessage);
     if (text === client.last) return;
     client.last = text;

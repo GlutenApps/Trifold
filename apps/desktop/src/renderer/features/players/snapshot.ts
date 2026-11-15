@@ -32,6 +32,13 @@ export interface SnapshotInput {
   artFor(token: Token): string | undefined;
   /** A campaign-relative portrait path as a `trifold-media://` URL. */
   portraitUrl(path: string): string;
+  /** Players' drags in progress: token id → where the drag is (Phase 3). */
+  moving?: Readonly<Record<string, { x: number; y: number }>>;
+  /**
+   * `kind:id` of the creatures a device holds now: on the table even when not offered, since
+   * the DM's Give to… skips the offer (Phase 3).
+   */
+  held?: ReadonlySet<string>;
 }
 
 const creatureOf = (ref: Token['ref']): TableToken['creature'] =>
@@ -82,11 +89,13 @@ export function tableScene(input: SnapshotInput): TableSnapshot['scene'] {
     tokens: liveScene.tokens.map((t) => {
       const art = input.artFor(t);
       const creature = creatureOf(t.ref);
+      const drag = input.moving?.[t.id];
       return {
         id: t.id,
         kind: t.kind,
-        x: t.x,
-        y: t.y,
+        x: drag?.x ?? t.x,
+        y: drag?.y ?? t.y,
+        ...(drag ? { restsAt: { x: t.x, y: t.y } } : {}),
         footprint: t.footprint,
         label: t.kind === 'creature' && t.nameMasked ? (t.maskedLabel ?? 'Creature') : t.label,
         role: t.role,
@@ -117,15 +126,16 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
     ...combatants.filter((c) => c.ref.kind === 'npc' && c.ref.npcId === id).map((c) => c.role),
   ];
   const creatures: TableSnapshot['creatures'] = [];
+  const held = input.held ?? new Set<string>();
   for (const pc of input.pcs) {
-    if (!pcOffered(pc)) continue;
+    if (!pcOffered(pc) && !held.has(`pc:${pc.id}`)) continue;
     const f = fighterFor('pc', pc.id);
     creatures.push({
       kind: 'pc',
       id: pc.id,
       name: pc.name,
       ...(pc.portrait ? { portraitSrc: input.portraitUrl(pc.portrait) } : {}),
-      claimable: isClaimable('pc', true, []),
+      claimable: isClaimable('pc', pcOffered(pc), []),
       hp: f
         ? { current: f.hp.current, max: f.hp.max, temp: f.hp.temp }
         : { current: pc.currentHp ?? pc.maxHp, max: pc.maxHp, temp: pc.tempHp ?? 0 },
@@ -137,14 +147,16 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
     });
   }
   for (const npc of input.npcs) {
-    if (!npcOffered(npc)) continue;
+    // A PC's companion is on the table with its PC, offered in the picker or not.
+    if (!npcOffered(npc) && !npc.companionOf && !held.has(`npc:${npc.id}`)) continue;
     const f = fighterFor('npc', npc.id);
     creatures.push({
       kind: 'npc',
       id: npc.id,
       name: npc.name,
       ...(npc.portrait ? { portraitSrc: input.portraitUrl(npc.portrait) } : {}),
-      claimable: isClaimable('npc', true, rolesFor(npc.id)),
+      claimable: isClaimable('npc', npcOffered(npc), rolesFor(npc.id)),
+      ...(npc.companionOf ? { companionOf: npc.companionOf } : {}),
       hp: f
         ? { current: f.hp.current, max: f.hp.max, temp: f.hp.temp }
         : npc.hp

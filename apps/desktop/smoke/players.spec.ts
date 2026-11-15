@@ -86,6 +86,12 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
 
   const brannoc = await fileNamed(dir, 'pcs', 'Brannoc Hale');
   const gorm = await fileNamed(dir, 'npcs', 'Gorm Tallow');
+  const tobin = await fileNamed(dir, 'npcs', 'Tobin Marsh');
+  // Hesper travels with Brannoc as his companion (Phase 3).
+  const hesper = await fileNamed(dir, 'npcs', 'Hesper Quill');
+  await editJson(hesper.file, (npc) => {
+    npc['companionOf'] = brannoc.id;
+  });
   const inn = await fileNamed(dir, 'scenes', 'The Wayside Lamp');
   // Brannoc is left as the sample has him: party members are claimable by default.
   await editJson(inn.file, (scene) => {
@@ -119,6 +125,17 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
       },
       {
         ...base,
+        id: 'tok-tobin',
+        kind: 'creature',
+        ref: { kind: 'npc', npcId: tobin.id, name: 'Tobin Marsh' },
+        label: 'Tobin Marsh',
+        x: 2,
+        y: 3,
+        role: 'ally',
+        hidden: false,
+      },
+      {
+        ...base,
         id: 'tok-lurker',
         kind: 'creature',
         ref: { kind: 'custom', name: 'Lurker in the dark' },
@@ -138,7 +155,9 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
           kind: 'rect',
           x: 0,
           y: 0,
-          w: image.width / 2,
+          // The first five columns: Brannoc, Tobin and a two-cell move fit; a four-cell move
+          // from there lands under fog and still on the map.
+          w: 5 * cell,
           h: image.height,
         },
       ],
@@ -197,8 +216,12 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
 
     const stats = phone.getByRole('region', { name: 'Brannoc Hale’s numbers' });
     await expect(stats).toBeVisible();
-    // Only Brannoc: Gorm is hidden and the lurker stands under fog.
-    await expect(phone.getByTestId('pc-token')).toHaveCount(1);
+    // His companion came with him, with a Release of her own.
+    const chips = phone.getByRole('navigation', { name: 'Your characters' });
+    await expect(chips.getByRole('button', { name: 'Hesper Quill', exact: true })).toBeVisible();
+    await expect(chips.getByRole('button', { name: 'Release Hesper Quill' })).toBeVisible();
+    // Brannoc and Tobin: Gorm is hidden and the lurker stands under fog.
+    await expect(phone.getByTestId('pc-token')).toHaveCount(2);
     // The fogged map image the console drew arrives and loads.
     await expect
       .poll(
@@ -217,7 +240,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     // A reload reconnects with the stored token, straight to Brannoc.
     await phone.reload();
     await expect(stats).toBeVisible({ timeout: 15_000 });
-    await expect(phone.getByTestId('pc-token')).toHaveCount(1);
+    await expect(phone.getByTestId('pc-token')).toHaveCount(2);
 
     // Nothing hidden or fogged has reached the phone. (Checked before the fight, which may
     // reveal its own creatures.)
@@ -252,6 +275,62 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await phone.getByRole('button', { name: 'Undo' }).click();
     await expect(stats).toBeVisible();
 
+    // Phase 3: the phone drags Brannoc two cells right, into the revealed half.
+    await page.getByRole('tab', { name: 'VTT', exact: true }).click();
+    const consoleBrannoc = page
+      .getByTestId('console-token')
+      .filter({ has: page.locator('[title="Brannoc Hale"]') });
+    const consoleLeft = () =>
+      consoleBrannoc.evaluate((el) => (el as unknown as { style: { left: string } }).style.left);
+    const before = await consoleLeft();
+    const phoneBrannoc = phone.locator('[data-token-id="tok-brannoc"]');
+    const dragOnPhone = async (cells: number, release = true) => {
+      const box = (await phoneBrannoc.boundingBox())!;
+      const cx = box.x + box.width / 2;
+      const cy = box.y + box.height / 2;
+      await phone.mouse.move(cx, cy);
+      await phone.mouse.down();
+      await phone.mouse.move(cx + (box.width * cells) / 2, cy, { steps: 4 });
+      await phone.mouse.move(cx + box.width * cells, cy, { steps: 4 });
+      if (release) await phone.mouse.up();
+    };
+    await dragOnPhone(2);
+    await expect.poll(consoleLeft).not.toBe(before);
+    const afterMove = await consoleLeft();
+    const cellPx = await consoleBrannoc.evaluate((el) =>
+      parseFloat((el as unknown as { style: { width: string } }).style.width),
+    );
+    expect(parseFloat(afterMove) - parseFloat(before)).toBeCloseTo(2 * cellPx, 0);
+
+    // A drop under fog is refused and Brannoc stays put.
+    await dragOnPhone(4);
+    await expect(phone.getByText('You can’t see that spot.')).toBeVisible();
+    await phone.getByRole('button', { name: 'OK' }).click();
+    expect(await consoleLeft()).toBe(afterMove);
+
+    // The DM grabbing Brannoc mid-drag wins; the phone's drag ends.
+    await dragOnPhone(1, false);
+    await expect(page.getByTestId('token-mover')).toHaveText('Smoke phone');
+    const dmBox = (await consoleBrannoc.boundingBox())!;
+    await page.mouse.move(dmBox.x + dmBox.width / 2, dmBox.y + dmBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(dmBox.x + dmBox.width / 2, dmBox.y + dmBox.height * 1.6, { steps: 4 });
+    await page.mouse.up();
+    await expect(phone.getByText('The DM moved Brannoc Hale.')).toBeVisible();
+    await phone.mouse.up();
+    await phone.getByRole('button', { name: 'OK' }).click();
+
+    // Lock movement: the phone says so.
+    await page.getByRole('button', { name: 'Player devices', exact: true }).click();
+    // The box shows main's answer, so click and wait rather than check().
+    const lockAll = pop.getByRole('checkbox', { name: 'Lock movement' });
+    await lockAll.click();
+    await expect(lockAll).toBeChecked();
+    await expect(phone.getByText('Movement locked by the DM')).toBeVisible();
+    await lockAll.click();
+    await expect(lockAll).not.toBeChecked();
+    await expect(phone.getByText('Movement locked by the DM')).toBeHidden();
+
     // Approval mode: a second device asks to take Brannoc over and the DM accepts.
     const openPop = async () => {
       await page.getByRole('tab', { name: 'VTT', exact: true }).click();
@@ -284,8 +363,27 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await expect(pop.getByText('Smoke tablet wants to take over Brannoc Hale')).toBeVisible();
     await pop.getByRole('button', { name: 'Accept' }).click();
     await expect(tablet.getByRole('region', { name: 'Brannoc Hale’s numbers' })).toBeVisible();
+    await expect(
+      tablet.getByRole('navigation', { name: 'Your characters' }).getByRole('button', {
+        name: 'Hesper Quill',
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(phone.getByRole('heading', { name: 'Pick your character' })).toBeVisible();
     await expect(phone.getByText('Brannoc Hale was picked up on another device.')).toBeVisible();
+
+    // Give to…: the DM hands Tobin to the phone from his token on the map.
+    await page.getByRole('tab', { name: 'VTT', exact: true }).click();
+    await page
+      .getByTestId('console-token')
+      .filter({ has: page.locator('[title="Tobin Marsh"]') })
+      .click();
+    await page.getByRole('button', { name: 'Give Tobin Marsh to a player' }).click();
+    await page
+      .getByRole('dialog', { name: 'Give Tobin Marsh to a player' })
+      .getByRole('button', { name: 'Smoke phone' })
+      .click();
+    await expect(phone.getByRole('region', { name: 'Tobin Marsh’s numbers' })).toBeVisible();
 
     // The DM releases him: back to the picker, nothing else changes.
     await openPop();

@@ -791,3 +791,22 @@
 .player-devices .reclaim-mode {
   width: 100%;
 }
+
+/* A token a player is dragging on their phone (ADR 0043, Phase 3): their name under it. */
+.token-slot.player-moving {
+  opacity: 0.85;
+}
+
+.token-mover {
+  position: absolute;
+  left: 50%;
+  bottom: -20px;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--tv-scrim-label);
+  color: var(--tv-dark-ink);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}

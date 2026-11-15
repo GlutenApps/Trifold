@@ -127,6 +127,17 @@ describe('PlayersStore', () => {
     expect(players.devices).toHaveLength(1);
   });
 
+  it('saves movement locks, for everyone and per creature', async () => {
+    const players = await PlayersStore.open(store, 'campaigns/g/players.json');
+    expect(players.movement).toEqual({ all: false, creatures: [] });
+    await players.setMovementLock('pc:brannoc', true);
+    await players.setMovementLock('all', true);
+    const again = await PlayersStore.open(store, 'campaigns/g/players.json');
+    expect(again.movement).toEqual({ all: true, creatures: ['pc:brannoc'] });
+    await again.setMovementLock('pc:brannoc', false);
+    expect(again.movement.creatures).toEqual([]);
+  });
+
   it('saves the reclaim mode with the campaign', async () => {
     const players = await PlayersStore.open(store, 'campaigns/g/players.json');
     expect(players.reclaimMode).toBe('open');

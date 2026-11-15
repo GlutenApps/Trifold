@@ -594,3 +594,62 @@ main.pc-center {
     max-height: none;
   }
 }
+
+/* Phase 3: dragging tokens. The shared token slots ignore the pointer; the phone's take it. */
+.pc-token {
+  pointer-events: auto;
+}
+
+.pc-token.dragging {
+  z-index: 2;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+}
+
+.pc-token.ghost {
+  border: 2px dashed var(--accent);
+  border-radius: 50%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.pc-token.moving {
+  opacity: 0.7;
+}
+
+.pc-mover {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--tv-scrim-label);
+  color: var(--tv-dark-ink);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.pc-chip-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+
+.pc-chip-release {
+  min-width: var(--touch);
+  min-height: var(--touch);
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+.pc-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--warn);
+  font-size: 14px;
+}

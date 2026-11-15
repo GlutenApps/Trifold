@@ -24,7 +24,13 @@ import type {
   Source,
   Track,
 } from '@trifold/schema';
-import type { CreatureKind, ReclaimMode, TableIntent, TableSnapshot } from '@trifold/rules';
+import type {
+  CreatureKind,
+  ReclaimMode,
+  TableIntent,
+  TableSnapshot,
+  TableTokenEvent,
+} from '@trifold/rules';
 
 export type {
   ClientMap,
@@ -41,6 +47,7 @@ export type {
   TableScene,
   TableSnapshot,
   TableToken,
+  TableTokenEvent,
 } from '@trifold/rules';
 
 /**
@@ -732,6 +739,8 @@ export interface TableStatus {
   reclaimMode: ReclaimMode;
   /** Approval mode: devices waiting for the DM, oldest first. */
   approvals: Array<{ requestId: string; label: string; creatureName: string; takeover: boolean }>;
+  /** Lock movement: everyone's, and `kind:id` of single creatures (Phase 3). */
+  movement: { all: boolean; creatures: string[] };
 }
 
 /** A player's change, checked by main and handed to the console to apply (Phase 2). */
@@ -817,6 +826,15 @@ export interface TrifoldApi {
     setReclaimMode(mode: ReclaimMode): Promise<TableStatus>;
     /** Accept or Deny a device waiting in Approval mode. */
     answer(requestId: string, accept: boolean): Promise<TableStatus>;
+    /** The DM started dragging a token: any player's drag on it ends (DM priority). */
+    dmGrab(tokenId: string): Promise<void>;
+    /** Hands a PC card or NPC to a connected device, companions with a PC (Give to…). */
+    give(target: { kind: CreatureKind; id: string }, deviceId: string): Promise<TableStatus>;
+    /** Locks or unlocks movement for everyone, or for one creature. */
+    setMovementLock(
+      target: 'all' | { kind: CreatureKind; id: string },
+      locked: boolean,
+    ): Promise<TableStatus>;
   };
   presenter: {
     /**
@@ -1176,7 +1194,19 @@ export const API_METHODS = {
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],
   presenter: ['push', 'get'],
-  table: ['status', 'start', 'stop', 'release', 'push', 'setMapImage', 'setReclaimMode', 'answer'],
+  table: [
+    'status',
+    'start',
+    'stop',
+    'release',
+    'push',
+    'setMapImage',
+    'setReclaimMode',
+    'answer',
+    'dmGrab',
+    'give',
+    'setMovementLock',
+  ],
   sources: [
     'list',
     'chooseFile',
@@ -1296,6 +1326,8 @@ export interface TrifoldEvents {
   tableStatus: TableStatus;
   /** A player's change for the console to apply. */
   tableIntent: TableIntentEvent;
+  /** A player dragging or dropping a token (Phase 3). */
+  tableToken: TableTokenEvent;
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -1310,6 +1342,7 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   updateStatus: 'trifold:event:update-status',
   tableStatus: 'trifold:event:table-status',
   tableIntent: 'trifold:event:table-intent',
+  tableToken: 'trifold:event:table-token',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */

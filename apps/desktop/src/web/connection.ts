@@ -46,6 +46,8 @@ export interface Connection {
   /** Switch character: what was released and until when Undo works. */
   released: { names: string[]; until: number } | null;
   clearReleased(): void;
+  /** The last drag that ended without a move (refused, lapsed, or taken by the DM). */
+  dragEnded: { tokenId: string; n: number } | null;
   send(msg: ClientMessage): void;
 }
 
@@ -55,6 +57,7 @@ export function useConnection(): Connection {
   const [error, setError] = useState<string | null>(null);
   const [waiting, setWaiting] = useState<string | null>(null);
   const [released, setReleased] = useState<Connection['released']>(null);
+  const [dragEnded, setDragEnded] = useState<Connection['dragEnded']>(null);
   const socket = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -103,6 +106,12 @@ export function useConnection(): Connection {
           case 'released':
             setReleased({ names: msg.names, until: Date.now() + msg.undoMs });
             break;
+          case 'grabbed':
+            break;
+          case 'dragEnded':
+            setError(msg.reason);
+            setDragEnded((d) => ({ tokenId: msg.tokenId, n: (d?.n ?? 0) + 1 }));
+            break;
           case 'closed':
             stopped = true;
             setLink('stopped');
@@ -134,6 +143,7 @@ export function useConnection(): Connection {
     waiting,
     released,
     clearReleased: () => setReleased(null),
+    dragEnded,
     send: (msg) => {
       const ws = socket.current;
       if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));

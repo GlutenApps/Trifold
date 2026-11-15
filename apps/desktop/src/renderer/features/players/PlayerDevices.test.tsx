@@ -162,7 +162,15 @@ describe('Player devices pop-up, Phase 2', () => {
 describe('PlayerAccess on the forms', () => {
   it('shows who holds the character and releases it', async () => {
     useTableStore.setState({ status: ON });
-    render(<PlayerAccess kind="pc" id="brannoc" checked onChange={() => undefined} />);
+    render(
+      <PlayerAccess
+        kind="pc"
+        id="brannoc"
+        name="Brannoc Hale"
+        checked
+        onChange={() => undefined}
+      />,
+    );
     expect(
       screen.getByRole('checkbox', { name: 'Players can claim this character' }),
     ).toBeChecked();
@@ -175,7 +183,15 @@ describe('PlayerAccess on the forms', () => {
 
   it('shows no claim line for an unclaimed character', () => {
     useTableStore.setState({ status: ON });
-    render(<PlayerAccess kind="npc" id="tobin" checked={false} onChange={() => undefined} />);
+    render(
+      <PlayerAccess
+        kind="npc"
+        id="tobin"
+        name="Tobin Marsh"
+        checked={false}
+        onChange={() => undefined}
+      />,
+    );
     expect(screen.queryByText(/Claimed by/)).not.toBeInTheDocument();
   });
 });

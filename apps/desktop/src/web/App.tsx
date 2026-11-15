@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ClientView, CreatureView } from '@trifold/api';
 import { useConnection, type Connection } from './connection';
-import { MapView } from './MapView';
+import { MapView, type DragHandlers } from './MapView';
 import { Picker } from './Picker';
 import { Portrait } from './Portrait';
 import { Stats } from './Stats';
@@ -111,23 +111,61 @@ function Joining({ link }: { link: Connection['link'] }) {
 }
 
 function Playing({ view, conn }: { view: ClientView; conn: Connection }) {
-  const [selected, setSelected] = useState<string>(() => key(view.mine[0]!));
-  const current = view.mine.find((c) => key(c) === selected) ?? view.mine[0]!;
+  // PCs first, each followed by its companions (Phase 3).
+  const ordered = useMemo(() => {
+    const pcs = view.mine.filter((c) => !c.companionOf);
+    const out: CreatureView[] = [];
+    for (const pc of pcs) {
+      out.push(pc);
+      out.push(...view.mine.filter((c) => c.companionOf === pc.id));
+    }
+    for (const c of view.mine) if (!out.includes(c)) out.push(c);
+    return out;
+  }, [view.mine]);
+  const [selected, setSelected] = useState<string>(() => key(ordered[0]!));
+  const current = ordered.find((c) => key(c) === selected) ?? ordered[0]!;
+  const movable = useMemo(
+    () => new Set(view.mine.flatMap((c) => (c.tokenId && !c.movementLocked ? [c.tokenId] : []))),
+    [view.mine],
+  );
+  const drag: DragHandlers = {
+    movable,
+    grab: (tokenId) => conn.send({ type: 'grab', tokenId }),
+    preview: (tokenId, x, y) => conn.send({ type: 'preview', tokenId, x, y }),
+    hold: (tokenId) => conn.send({ type: 'hold', tokenId }),
+    drop: (tokenId, x, y, from) => conn.send({ type: 'drop', tokenId, x, y, from }),
+    letGo: (tokenId) => conn.send({ type: 'letGo', tokenId }),
+    ended: conn.dragEnded,
+  };
   return (
     <main className="pc-play">
-      {view.mine.length > 1 && (
+      {ordered.length > 1 && (
         <nav className="pc-chips" aria-label="Your characters">
-          {view.mine.map((c) => (
-            <button
-              key={key(c)}
-              type="button"
-              className={`pc-chip${key(c) === key(current) ? ' on' : ''}`}
-              aria-pressed={key(c) === key(current)}
-              onClick={() => setSelected(key(c))}
-            >
-              <Portrait url={c.portraitUrl} name={c.name} size={28} />
-              {c.name}
-            </button>
+          {ordered.map((c) => (
+            <span key={key(c)} className="pc-chip-wrap">
+              <button
+                type="button"
+                className={`pc-chip${key(c) === key(current) ? ' on' : ''}`}
+                aria-pressed={key(c) === key(current)}
+                onClick={() => setSelected(key(c))}
+              >
+                <Portrait url={c.portraitUrl} name={c.name} size={28} />
+                {c.name}
+              </button>
+              {c.companionOf && (
+                <button
+                  type="button"
+                  className="pc-chip-release"
+                  aria-label={`Release ${c.name}`}
+                  title={`Release ${c.name}`}
+                  onClick={() =>
+                    conn.send({ type: 'releaseOne', creatureKind: c.kind, creatureId: c.id })
+                  }
+                >
+                  ×
+                </button>
+              )}
+            </span>
           ))}
         </nav>
       )}
@@ -139,6 +177,7 @@ function Playing({ view, conn }: { view: ClientView; conn: Connection }) {
             const hit = view.mine.find((c) => c.tokenId === tokenId);
             if (hit) setSelected(key(hit));
           }}
+          drag={drag}
         />
       ) : (
         <div className="pc-map pc-center">

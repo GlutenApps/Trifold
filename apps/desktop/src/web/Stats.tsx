@@ -45,6 +45,11 @@ export function Stats({ creature, conn }: { creature: CreatureView; conn: Connec
         <Portrait url={creature.portraitUrl} name={creature.name} size={40} />
         <h2>{creature.name}</h2>
       </div>
+      {creature.movementLocked && creature.tokenId && (
+        <span className="pc-locked" role="status">
+          Movement locked by the DM
+        </span>
+      )}
 
       {creature.needsInitiative && (
         <InitiativeBox onSubmit={(value) => send({ kind: 'initiative', value })} />

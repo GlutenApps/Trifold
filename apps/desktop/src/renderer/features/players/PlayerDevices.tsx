@@ -68,8 +68,17 @@ export function PlayerDevicesPop({
 }
 
 function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boolean }) {
-  const { start, stop, release, joinOnTv, setJoinOnTv, error, setReclaimMode, answer } =
-    useTableStore();
+  const {
+    start,
+    stop,
+    release,
+    joinOnTv,
+    setJoinOnTv,
+    error,
+    setReclaimMode,
+    answer,
+    setMovementLock,
+  } = useTableStore();
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -185,7 +194,19 @@ function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boo
               ))}
             </ul>
           )}
-          <DeviceList status={status!} onRelease={(kind, id) => void release({ kind, id })} />
+          <label className="field inline">
+            <input
+              type="checkbox"
+              checked={status!.movement.all}
+              onChange={(e) => void setMovementLock('all', e.target.checked)}
+            />
+            Lock movement
+          </label>
+          <DeviceList
+            status={status!}
+            onRelease={(kind, id) => void release({ kind, id })}
+            onLock={(kind, id, locked) => void setMovementLock({ kind, id }, locked)}
+          />
           <label className="field inline reclaim-mode">
             Getting a character back
             <select
@@ -220,9 +241,11 @@ function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boo
 function DeviceList({
   status,
   onRelease,
+  onLock,
 }: {
   status: TableStatus;
   onRelease(kind: 'pc' | 'npc', id: string): void;
+  onLock(kind: 'pc' | 'npc', id: string, locked: boolean): void;
 }) {
   if (!status.devices.length) {
     return (
@@ -249,6 +272,25 @@ function DeviceList({
             {d.claims.map((c) => (
               <li key={`${c.kind}:${c.id}`} className="device-claim">
                 <span className="grow">{c.name}</span>
+                {(() => {
+                  const locked = status.movement.creatures.includes(`${c.kind}:${c.id}`);
+                  return (
+                    <button
+                      type="button"
+                      className={`chrome-btn xs${locked ? ' on' : ''}`}
+                      aria-label={`Lock ${c.name}'s movement`}
+                      aria-pressed={locked}
+                      title={
+                        locked
+                          ? `${c.name} can't be moved from the phone. Click to unlock`
+                          : `Stop ${c.name} being moved from the phone`
+                      }
+                      onClick={() => onLock(c.kind, c.id, !locked)}
+                    >
+                      <Icon name={locked ? 'lock' : 'unlock'} />
+                    </button>
+                  );
+                })()}
                 <button
                   type="button"
                   className="chrome-btn xs"

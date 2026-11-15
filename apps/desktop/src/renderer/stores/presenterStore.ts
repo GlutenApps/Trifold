@@ -158,6 +158,13 @@ interface PresenterStore {
   liveSource: { scene: Scene; campaignSlug: string } | null;
   /** Player display aspect and token style; the shell keeps these current. */
   liveOptions: Pick<LiveOptions, 'aspect' | 'tokenStyle'>;
+  /**
+   * Tokens a player is dragging on their phone (ADR 0043, Phase 3): where the drag is now and
+   * who is dragging. Shown on the TV and the console map, never saved; the drop moves the token
+   * for real.
+   */
+  moving: Record<string, { x: number; y: number; label: string }>;
+  setMoving(tokenId: string, at: { x: number; y: number; label: string } | null): void;
 
   showScene(scene: Scene, campaignSlug: string): boolean;
   /**
@@ -226,6 +233,19 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
     });
   };
 
+  /** The scene as it shows while players drag tokens: their drags in place of the stored spots. */
+  const withMoving = (scene: Scene): Scene => {
+    const moving = get().moving;
+    if (!Object.keys(moving).length) return scene;
+    return {
+      ...scene,
+      tokens: scene.tokens.map((t) => {
+        const m = moving[t.id];
+        return m ? { ...t, x: m.x, y: m.y } : t;
+      }),
+    };
+  };
+
   const optionsFor = (combat: CombatSummary | null): LiveOptions => ({
     ...get().liveOptions,
     activeTokenId: activeTokenOf(combat),
@@ -239,9 +259,26 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
     liveOverride: null,
     liveSource: null,
     liveOptions: { aspect: DEFAULT_OPTIONS.aspect, tokenStyle: DEFAULT_OPTIONS.tokenStyle },
+    moving: {},
+
+    setMoving(tokenId, at) {
+      const moving = { ...get().moving };
+      if (at) moving[tokenId] = at;
+      else if (!(tokenId in moving)) return;
+      else delete moving[tokenId];
+      set({ moving });
+      const { liveSource, state } = get();
+      if (!liveSource || state.scene?.id !== liveSource.scene.id) return;
+      const live = liveSceneFrom(
+        withMoving(liveSource.scene),
+        liveSource.campaignSlug,
+        optionsFor(state.combat),
+      );
+      if (live) commitCoalesced({ ...state, scene: live });
+    },
 
     showScene(scene, campaignSlug) {
-      const live = liveSceneFrom(scene, campaignSlug, optionsFor(get().state.combat));
+      const live = liveSceneFrom(withMoving(scene), campaignSlug, optionsFor(get().state.combat));
       if (!live) return false;
       const { state, history, recent, liveOverride, liveSource } = get();
       set({
@@ -265,7 +302,11 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
     syncLiveScene(scene) {
       const { state, liveSource } = get();
       if (!liveSource || !state.scene || state.scene.id !== scene.id) return;
-      const live = liveSceneFrom(scene, liveSource.campaignSlug, optionsFor(state.combat));
+      const live = liveSceneFrom(
+        withMoving(scene),
+        liveSource.campaignSlug,
+        optionsFor(state.combat),
+      );
       if (!live) return;
       set({ liveSource: { ...liveSource, scene } });
       commitCoalesced({ ...state, scene: live });
@@ -277,7 +318,7 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
       const { liveSource, state } = get();
       if (liveSource && state.scene?.id === liveSource.scene.id) {
         const live = liveSceneFrom(
-          liveSource.scene,
+          withMoving(liveSource.scene),
           liveSource.campaignSlug,
           optionsFor(state.combat),
         );
@@ -366,8 +407,11 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
       // A follow camera moves with the active turn, so re-derive the map when the turn changes.
       const scene =
         liveSource && state.scene?.id === liveSource.scene.id && state.scene.kind !== 'title'
-          ? (liveSceneFrom(liveSource.scene, liveSource.campaignSlug, optionsFor(summary)) ??
-            state.scene)
+          ? (liveSceneFrom(
+              withMoving(liveSource.scene),
+              liveSource.campaignSlug,
+              optionsFor(summary),
+            ) ?? state.scene)
           : state.scene;
       commit({ ...state, combat: summary, scene });
     },

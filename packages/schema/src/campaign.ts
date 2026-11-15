@@ -321,6 +321,8 @@ export const NPC = z.object({
    * scene or in the running fight.
    */
   playerControllable: z.boolean().optional(),
+  /** The PC this NPC is a companion of (Phase 3): claimed and released with that PC. */
+  companionOf: z.string().optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -636,5 +638,12 @@ export const PlayersFile = z.object({
   claims: z.array(PlayerClaim).default([]),
   /** How a claimed character is got back (Phase 2): Open, PIN or the DM's approval. */
   reclaimMode: z.enum(['open', 'pin', 'approval']).default('open'),
+  /** Lock movement (Phase 3): everyone's, and `kind:id` of single creatures. */
+  movement: z
+    .object({
+      all: z.boolean().default(false),
+      creatures: z.array(z.string()).default([]),
+    })
+    .prefault({}),
 });
 export type PlayersFile = z.infer<typeof PlayersFile>;

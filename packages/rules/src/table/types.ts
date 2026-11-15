@@ -36,6 +36,11 @@ export interface TableToken {
   glyphSrc?: string;
   /** The PC card or NPC this token stands for, when it is one. */
   creature?: { kind: CreatureKind; id: string };
+  /**
+   * While a player drags it, `x` and `y` are where the drag is and this is where the token
+   * stands: what a drop's stale check compares against (Phase 3).
+   */
+  restsAt?: { x: number; y: number };
 }
 
 /** The map scene live on the TV, or nothing. */
@@ -83,6 +88,8 @@ export interface TableCreature extends CreatureStats {
   portraitSrc?: string;
   /** Offered in the picker now (decision 13); a claimed creature keeps its claim either way. */
   claimable: boolean;
+  /** An NPC kept as a PC's companion (Phase 3): claimed and released with that PC. */
+  companionOf?: string;
 }
 
 export interface TableSnapshot {
@@ -116,6 +123,8 @@ export interface ClientToken {
   mine: boolean;
   /** Under fog: only ever sent to its owner (decision 12). */
   fogged?: boolean;
+  /** Another device is dragging it: its name (Phase 3). */
+  movingBy?: string;
 }
 
 export interface ClientMap {
@@ -139,6 +148,10 @@ export interface CreatureView extends CreatureStats {
   portraitUrl?: string;
   /** Its token on the live map, when the device can see it there. */
   tokenId?: string;
+  /** The DM has locked its movement (everyone's, or this creature's). */
+  movementLocked: boolean;
+  /** The PC it is a companion of, when it is one. */
+  companionOf?: string;
 }
 
 export interface PickerEntry {
@@ -186,6 +199,10 @@ export type ServerMessage =
   | { type: 'waiting'; creatureName: string }
   /** Switch character released these; Undo takes them back for a few seconds. */
   | { type: 'released'; names: string[]; undoMs: number }
+  /** A drag this device started may go on. */
+  | { type: 'grabbed'; tokenId: string }
+  /** A drag is over without moving the token: refused, expired or taken by the DM. */
+  | { type: 'dragEnded'; tokenId: string; reason: string }
   /** The DM pressed Stop or closed the campaign. */
   | { type: 'closed' };
 
@@ -204,4 +221,18 @@ export type ClientMessage =
   | { type: 'switch' }
   | { type: 'undo' }
   /** Stop waiting for the DM's approval. */
-  | { type: 'cancel' };
+  | { type: 'cancel' }
+  /** Movement (Phase 3): ask to drag, show where it is, keep the lock, put it down or let go. */
+  | { type: 'grab'; tokenId: string }
+  | { type: 'preview'; tokenId: string; x: number; y: number }
+  | { type: 'hold'; tokenId: string }
+  | { type: 'drop'; tokenId: string; x: number; y: number; from: { x: number; y: number } }
+  | { type: 'letGo'; tokenId: string }
+  /** Release one companion on its own. */
+  | { type: 'releaseOne'; creatureKind: CreatureKind; creatureId: string };
+
+/** What main hands the console about a token being moved by a player (Phase 3). */
+export type TableTokenEvent =
+  | { kind: 'preview'; tokenId: string; x: number; y: number; deviceLabel: string }
+  | { kind: 'previewEnd'; tokenId: string }
+  | { kind: 'move'; tokenId: string; x: number; y: number; deviceLabel: string };

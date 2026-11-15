@@ -234,3 +234,19 @@ describe('tableSnapshotFrom', () => {
     expect(snap.scene).toBeNull();
   });
 });
+
+describe('tableSnapshotFrom: what a device holds', () => {
+  it('keeps a held character on the table even when it is not offered (Give to…)', () => {
+    const snap = tableSnapshotFrom(
+      input({
+        pcs: [pc('tamsin', { playerControllable: false })],
+        npcs: [npc('tobin', { playerControllable: undefined })],
+        held: new Set(['pc:tamsin', 'npc:tobin']),
+      }),
+    );
+    expect(snap.creatures.map((c) => [c.id, c.claimable])).toEqual([
+      ['tamsin', false],
+      ['tobin', false],
+    ]);
+  });
+});

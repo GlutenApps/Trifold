@@ -15,6 +15,7 @@ import { useArtStore } from './artStore';
 import { useCampaignStore } from './campaignStore';
 import { useCombatStore } from './combatStore';
 import { usePresenterStore } from './presenterStore';
+import { useSceneStore } from './sceneStore';
 
 /**
  * The player connector as the console sees it (ADR 0043). Main owns the server, the devices and
@@ -33,6 +34,11 @@ interface TableState {
   release(target: TableReleaseTarget): Promise<void>;
   setReclaimMode(mode: ReclaimMode): Promise<void>;
   answer(requestId: string, accept: boolean): Promise<void>;
+  give(target: { kind: 'pc' | 'npc'; id: string }, deviceId: string): Promise<void>;
+  setMovementLock(
+    target: 'all' | { kind: 'pc' | 'npc'; id: string },
+    locked: boolean,
+  ): Promise<void>;
   setJoinOnTv(on: boolean): void;
   receive(status: TableStatus): void;
 }
@@ -58,6 +64,9 @@ export const useTableStore = create<TableState>((set) => {
     release: (target) => run(() => window.trifold.table.release(target)),
     setReclaimMode: (mode) => run(() => window.trifold.table.setReclaimMode(mode)),
     answer: (requestId, accept) => run(() => window.trifold.table.answer(requestId, accept)),
+    give: (target, deviceId) => run(() => window.trifold.table.give(target, deviceId)),
+    setMovementLock: (target, locked) =>
+      run(() => window.trifold.table.setMovementLock(target, locked)),
     setJoinOnTv: (joinOnTv) => set({ joinOnTv }),
     receive: (status) => set({ status }),
   };
@@ -100,6 +109,9 @@ export function installTableSync(): () => void {
       combat: useCombatStore.getState().state,
       artFor: (t) => tokenArtUrl(t, slug),
       portraitUrl: (path) => mediaUrl(slug, path),
+      // Players' drags in progress show to the other phones too (Phase 3).
+      moving: presenter.moving,
+      held: new Set(status!.devices.flatMap((d) => d.claims.map((c) => `${c.kind}:${c.id}`))),
     });
     const text = JSON.stringify(snapshot);
     if (text !== lastSnapshot) {
@@ -166,6 +178,18 @@ export function installTableSync(): () => void {
     window.trifold.on('tableStatus', (status) => useTableStore.getState().receive(status)),
     // A player's change main has checked (Phase 2): applied like a DM's own.
     window.trifold.on('tableIntent', (event) => applyTableIntent(event)),
+    // A player dragging a token (Phase 3): previews show without saving; a drop moves it.
+    window.trifold.on('tableToken', (event) => {
+      const presenter = usePresenterStore.getState();
+      if (event.kind === 'preview') {
+        presenter.setMoving(event.tokenId, { x: event.x, y: event.y, label: event.deviceLabel });
+      } else if (event.kind === 'previewEnd') {
+        presenter.setMoving(event.tokenId, null);
+      } else {
+        useSceneStore.getState().patchTokenAnywhere(event.tokenId, { x: event.x, y: event.y });
+        presenter.setMoving(event.tokenId, null);
+      }
+    }),
     useTableStore.subscribe(onTable),
     useCampaignStore.subscribe((s, prev) => {
       const id = s.current?.campaign.id;
@@ -183,6 +207,7 @@ export function installTableSync(): () => void {
     usePresenterStore.subscribe((s, prev) => {
       if (
         s.liveSource !== prev.liveSource ||
+        s.moving !== prev.moving ||
         s.state.scene !== prev.state.scene ||
         s.state.blackout !== prev.state.blackout
       ) {

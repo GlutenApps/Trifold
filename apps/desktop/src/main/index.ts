@@ -136,6 +136,7 @@ async function main(): Promise<void> {
     webDir: join(app.getAppPath(), 'out', 'web'),
     onStatus: (status) => windows.sendToConsole(EVENT_CHANNELS.tableStatus, status),
     onIntent: (intent) => windows.sendToConsole(EVENT_CHANNELS.tableIntent, intent),
+    onToken: (event) => windows.sendToConsole(EVENT_CHANNELS.tableToken, event),
     ...(smokePort ? { ports: [smokePort] } : {}),
   });
 
