@@ -97,7 +97,7 @@ Tokens snap to the grid; hold Alt for free placement; Delete removes the selecte
 
 Players on the same Wi-Fi can follow the table from a phone, tablet or laptop browser: no install, no account, and nothing leaves your network. In this first version they pick a character and see the map that is on the TV and their own HP, temp HP, AC and conditions; editing and moving come later.
 
-1. On a PC card or NPC, tick **Players can claim this character**. An NPC is only offered while it is not marked enemy on the live map or in the running fight.
+1. Every party member is offered to players unless you untick **Players can claim this character** on the PC card. An NPC is offered once you tick it, and only while it is not marked enemy on the live map or in the running fight. On the map, the phone button in a selected token's actions does the same for a PC or a non-enemy NPC.
 2. In the VTT tab, open **Player devices** (the phone icon in the TV tools) and press **Let players join**. The first time, your computer may ask whether Trifold can accept connections: allow it on private networks.
 3. Players scan the QR code, or type the address shown (`http://trifold.local`, or the number below it). **Copy link** puts both on the clipboard for the group chat; **Show join code on TV** puts the QR on the TV until you untick it.
 4. Each player picks a character and can name their device. Next session the same browser lands straight back on it.

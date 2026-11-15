@@ -8,6 +8,7 @@ import {
 import { activeFog, fogKey, isClaimable, type Role } from '@trifold/rules';
 import type { CombatState, Combatant, NPC, PCCard, Scene, Token } from '@trifold/schema';
 import { DEFAULT_GRID, mapSize } from '../presenter/mapMath';
+import { npcOffered, pcOffered } from './claimFlag';
 
 /**
  * What the table may see, built from the console's stores and pushed to main (ADR 0043). Main
@@ -15,7 +16,7 @@ import { DEFAULT_GRID, mapSize } from '../presenter/mapMath';
  *
  * - The scene is the map live on the TV (phones follow the TV), or none while the TV shows a
  *   title or image scene, nothing, or a blackout.
- * - Creatures are the PC cards and NPCs flagged player-controllable. Their numbers come from
+ * - Creatures are every PC card the DM has not unticked and the NPCs the DM has ticked. Their numbers come from
  *   their combatant in the loaded fight, else from the PC card or the NPC's carried HP.
  * - Whether a creature is offered (decision 13) is decided here, where the live scene's roles
  *   and the fight are known.
@@ -113,7 +114,7 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
   ];
   const creatures: TableSnapshot['creatures'] = [];
   for (const pc of input.pcs) {
-    if (!pc.playerControllable) continue;
+    if (!pcOffered(pc)) continue;
     const f = fighterFor('pc', pc.id);
     creatures.push({
       kind: 'pc',
@@ -129,7 +130,7 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
     });
   }
   for (const npc of input.npcs) {
-    if (!npc.playerControllable) continue;
+    if (!npcOffered(npc)) continue;
     const f = fighterFor('npc', npc.id);
     creatures.push({
       kind: 'npc',

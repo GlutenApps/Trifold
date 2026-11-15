@@ -239,7 +239,7 @@ export function PcEditor({
         <PlayerAccess
           kind="pc"
           id={pc.id}
-          checked={!!draft.playerControllable}
+          checked={draft.playerControllable !== false}
           onChange={(playerControllable) => patch({ playerControllable })}
         />
       </FoldSection>

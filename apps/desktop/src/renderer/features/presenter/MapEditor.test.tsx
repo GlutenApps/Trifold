@@ -147,6 +147,11 @@ describe('MapEditor: tools and selection', () => {
     const pcs = () => latest.tokens.filter((t) => t.kind === 'pc');
     expect(pcs().map((t) => t.label)).toEqual(['Bram']);
     expect(screen.getByTestId('token-inspector')).toHaveTextContent('Player character');
+    // Party members are offered to players by default (ADR 0043).
+    expect(screen.getByRole('button', { name: 'Players can claim Bram' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
 
     await userEvent.click(screen.getByRole('button', { name: 'Add player characters' }));
     await userEvent.click(screen.getByRole('button', { name: 'Move Bram' }));
@@ -280,6 +285,30 @@ describe('MapEditor: placing a campaign NPC', () => {
       footprint: 1,
       dead: true,
     });
+  });
+  it('offers a friendly NPC token to players from the inspector, and not an enemy one', async () => {
+    render(<Harness />);
+    await userEvent.click(screen.getByRole('button', { name: 'Add creature or marker' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Place Mara Venn' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await userEvent.click(screen.getByTestId('map-canvas'));
+
+    const inspector = screen.getByTestId('token-inspector');
+    const offer = within(inspector).getByRole('button', { name: 'Players can claim Mara Venn' });
+    expect(offer).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(offer);
+    expect(window.trifold.npcs.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'n1', playerControllable: true }),
+    );
+
+    fireEvent.change(within(inspector).getByRole('combobox', { name: 'Role' }), {
+      target: { value: 'enemy' },
+    });
+    expect(
+      within(screen.getByTestId('token-inspector')).queryByRole('button', {
+        name: 'Players can claim Mara Venn',
+      }),
+    ).toBeNull();
   });
 });
 

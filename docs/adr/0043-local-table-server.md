@@ -33,6 +33,10 @@ the DM on 2026-11-14.
 5. **Phones follow the TV:** the map scene live on the TV, every revealed area. Anything else
    on the TV, nothing, or a blackout shows no map.
 6. **DM release ships in Phase 1**, per creature and Release all, ahead of Phase 2's reclaim.
+7. **Party members are claimable by default** (amended 2026-11-14, after the first table test):
+   a PC card is offered unless the DM unticks it; an NPC only once the DM ticks it. Besides the
+   forms, the map's token inspector carries the switch for a PC token and an NPC token not marked
+   enemy.
 
 ## Consequences
 

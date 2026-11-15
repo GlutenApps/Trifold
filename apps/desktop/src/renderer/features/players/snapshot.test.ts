@@ -89,7 +89,20 @@ function input(extra: Partial<SnapshotInput> = {}): SnapshotInput {
 }
 
 describe('tableSnapshotFrom', () => {
-  it('lists only flagged PCs and NPCs', () => {
+  it('offers every PC unless unticked, and only ticked NPCs', () => {
+    const snap = tableSnapshotFrom(
+      input({
+        pcs: [
+          pc('wren', { playerControllable: undefined }),
+          pc('tamsin', { playerControllable: false }),
+        ],
+        npcs: [npc('hesper', { playerControllable: undefined }), npc('tobin')],
+      }),
+    );
+    expect(snap.creatures.map((c) => c.id)).toEqual(['wren', 'tobin']);
+  });
+
+  it('leaves out an unticked PC and an unticked NPC', () => {
     const snap = tableSnapshotFrom(
       input({
         pcs: [pc('brannoc'), pc('tamsin', { playerControllable: false })],

@@ -70,7 +70,7 @@ export const PCCard = z.object({
   dndBeyondUrl: z.string().optional(),
   notes: z.string().default(''),
   tokenStyleOverride: z.enum(['engraved', 'flat', 'twoTone', 'plain']).optional(),
-  /** Offered to players at the table to claim (ADR 0043); absent means off. */
+  /** Offered to players at the table to claim (ADR 0043); absent means on, false means not. */
   playerControllable: z.boolean().optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,

@@ -87,9 +87,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
   const brannoc = await fileNamed(dir, 'pcs', 'Brannoc Hale');
   const gorm = await fileNamed(dir, 'npcs', 'Gorm Tallow');
   const inn = await fileNamed(dir, 'scenes', 'The Wayside Lamp');
-  await editJson(brannoc.file, (pc) => {
-    pc['playerControllable'] = true;
-  });
+  // Brannoc is left as the sample has him: party members are claimable by default.
   await editJson(inn.file, (scene) => {
     const image = scene['image'] as { width: number; height: number };
     const grid = (scene['grid'] as { cellPx?: number } | undefined) ?? {};
@@ -204,7 +202,10 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     // The fogged map image the console drew arrives and loads.
     await expect
       .poll(
-        () => phone.locator('.pc-map-art').evaluate((img: HTMLImageElement) => img.naturalWidth),
+        () =>
+          phone
+            .locator('.pc-map-art')
+            .evaluate((img) => (img as unknown as { naturalWidth: number }).naturalWidth),
         {
           timeout: 15_000,
         },

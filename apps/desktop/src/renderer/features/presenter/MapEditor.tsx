@@ -22,6 +22,7 @@ import {
 } from '@trifold/schema';
 import { capitalize } from '../compendium/formatting';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { npcOffered, pcOffered } from '../players/claimFlag';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useIconStore } from '../../stores/iconStore';
@@ -149,6 +150,8 @@ export function MapEditor({
     (s) => s.current?.campaign.settings.initiativeMode ?? 'perGroup',
   );
   const saveEncounter = useCampaignStore((s) => s.saveEncounter);
+  const savePc = useCampaignStore((s) => s.savePc);
+  const saveNpc = useCampaignStore((s) => s.saveNpc);
   const importSceneImage = useCampaignStore((s) => s.importSceneImage);
   const combatState = useCombatStore((s) => s.state);
   const combatEncounterId = useCombatStore((s) => s.encounterId);
@@ -2227,6 +2230,38 @@ export function MapEditor({
               </select>
             </label>
             <span className="icon-toolbar state-toolbar" role="group" aria-label="Token actions">
+              {(() => {
+                // The player connector (ADR 0043): offer this PC or friendly NPC to players.
+                const ref = selectedToken.ref;
+                const pc = ref.kind === 'pc' ? pcs.find((p) => p.id === ref.pcId) : undefined;
+                const npc =
+                  ref.kind === 'npc' && selectedToken.role !== 'enemy'
+                    ? npcs.find((n) => n.id === ref.npcId)
+                    : undefined;
+                if (!pc && !npc) return null;
+                const name = pc?.name ?? npc!.name;
+                const offered = pc ? pcOffered(pc) : npcOffered(npc!);
+                return (
+                  <button
+                    type="button"
+                    className={`chrome-btn${offered ? ' on' : ''}`}
+                    aria-label={`Players can claim ${name}`}
+                    aria-pressed={offered}
+                    title={
+                      offered
+                        ? `Players can pick ${name} on their phones. Click to stop offering`
+                        : `Let players pick ${name} on their phones`
+                    }
+                    onClick={() =>
+                      void (pc
+                        ? savePc({ ...pc, playerControllable: !offered })
+                        : saveNpc({ ...npc!, playerControllable: !offered }))
+                    }
+                  >
+                    <Icon name="phone" />
+                  </button>
+                );
+              })()}
               {selectedToken.kind === 'creature' && (
                 <button
                   type="button"

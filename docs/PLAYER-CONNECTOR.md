@@ -219,6 +219,13 @@ network use, started by the DM, local network only, off until started and off ag
 quit, serving one campaign to browsers on the LAN, with nothing sent beyond it. It names the
 three packages above and records the claims-file deviation if that is confirmed.
 
+### Amended after the first table test (2026-11-14)
+
+- Every PC card is claimable unless the DM unticks it (`playerControllable` absent means on for
+  a PC, off for an NPC). Ticking each party member was easy to miss.
+- The switch is also on the map: a **Players can claim …** button in the selected token's
+  actions, for a PC token and an NPC token not marked enemy. The forms keep their tick box.
+
 ## Goals and non-goals
 
 Players get one-tap access to their own creatures on the map; the DM keeps full authority and loses no speed.
