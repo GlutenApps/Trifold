@@ -41,8 +41,12 @@ const creatureOf = (ref: Token['ref']): TableToken['creature'] =>
       ? { kind: 'npc', id: ref.npcId }
       : undefined;
 
-const conditionText = (c: Combatant['conditions'][number]) =>
-  c.level ? `${c.name} ${c.level}` : c.name;
+const conditionsOf = (f: Combatant | undefined) =>
+  (f?.conditions ?? []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    ...(c.level ? { level: c.level } : {}),
+  }));
 
 /** The live map scene the phones may follow, or null. */
 export function tableScene(input: SnapshotInput): TableSnapshot['scene'] {
@@ -126,7 +130,10 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
         ? { current: f.hp.current, max: f.hp.max, temp: f.hp.temp }
         : { current: pc.currentHp ?? pc.maxHp, max: pc.maxHp, temp: pc.tempHp ?? 0 },
       ac: f?.ac ?? pc.ac,
-      conditions: f ? f.conditions.map(conditionText) : [],
+      conditions: conditionsOf(f),
+      inFight: !!f,
+      needsInitiative: !!f && f.initiative === null,
+      editable: { hp: true, maxHp: true, ac: true, conditions: !!f },
     });
   }
   for (const npc of input.npcs) {
@@ -144,7 +151,11 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
           ? { current: npc.hp.current, max: npc.hp.max, temp: npc.hp.temp }
           : null,
       ac: f?.ac ?? null,
-      conditions: f ? f.conditions.map(conditionText) : [],
+      conditions: conditionsOf(f),
+      inFight: !!f,
+      needsInitiative: !!f && f.initiative === null,
+      // Outside a fight an NPC's max HP and AC come from its stat block.
+      editable: { hp: !!f || !!npc.hp, maxHp: !!f, ac: !!f, conditions: !!f },
     });
   }
   return { campaignId: input.campaign.id, campaignName: input.campaign.name, scene, creatures };

@@ -1,6 +1,6 @@
 # Player connector
 
-**Status:** Phase 1 built and checked on real hardware (2026-11-14, ADR 0043); Phase 2 in progress. Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
+**Status:** Phase 1 built and checked on real hardware (2026-11-14, ADR 0043); Phase 2 built (2026-11-14); Phase 3 next. Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
 The [decisions](#decisions) below settle where the original spec and the repo disagreed; where
 they differ from a later section, the decisions win. Before Phase 1 starts, a Phase 1 plan is
 confirmed and an ADR amends `DESIGN.md` §1.2 and `CLAUDE.md` ground rule 1.
@@ -488,9 +488,15 @@ a laptop, a Mac, `trifold.local` and the port fallback).
 
 - [ ] Players edit HP (as deltas), temp HP, max HP, AC, conditions and initiative; changes appear on the console and TV within 250 ms on a normal home network
 - [ ] Open, PIN and Approval reclaim modes all work; a lost token costs about one second to recover in Open mode
-- [ ] Takeover moves control and drops the old device to the picker
-- [ ] Switch character, the 5-second undo and DM release all work and never change creature data
-- [ ] Simultaneous DM damage and player healing both apply
+- [x] Takeover moves control and drops the old device to the picker
+- [x] Switch character, the 5-second undo and DM release all work and never change creature data
+- [x] Simultaneous DM damage and player healing both apply
+
+Phase 2 status (2026-11-14): built. `smoke/players.spec.ts` covers initiative from the phone,
+damage and a condition landing in the tracker, Switch character and Undo, and a takeover in
+Approval mode with the DM's Accept; unit tests cover the intent checks, every reclaim mode, the
+PIN lockout and simultaneous damage and healing. Still to check by hand: PIN mode on real phones,
+and the 250 ms figure on a home network.
 
 **Phase 3: movement and multiple tokens**
 

@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { Duplex } from 'node:stream';
 import { extname, resolve, sep } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { ulid } from 'ulid';
 import { z } from 'zod';
 import {
   hostAllowed,
@@ -12,11 +13,21 @@ import {
   tableUrl,
   viewFor,
   visibleTokenIds,
+  afterWrongPin,
+  decideClaim,
+  intentProblem,
+  pinLocked,
+  UNDO_MS,
   type Claim,
+  type PinTries,
 } from '@trifold/rules';
 import type {
   ClientMessage,
+  CreatureKind,
+  ReclaimMode,
   ServerMessage,
+  TableIntent,
+  TableIntentEvent,
   TableReleaseTarget,
   TableSnapshot,
   TableStatus,
@@ -29,18 +40,46 @@ import { errorMessage, type Logger } from '../log';
 import { resolveMediaPath } from '../media';
 import { lanAddresses, listenOnFirstFreePort, type BoundListener, type LanAddress } from './listen';
 import { MdnsResponder } from './mdns';
-import { PlayersStore } from './players';
+import { pinMatches, PlayersStore } from './players';
 
 /** Client messages, checked before anything reads them (CLAUDE.md: validate every intent). */
+const Int = z.number().int().min(-100_000).max(100_000);
+const IntentSchema: z.ZodType<TableIntent> = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('hp'), delta: Int }),
+  z.object({ kind: z.literal('temp'), delta: Int }),
+  z.object({ kind: z.literal('maxHp'), value: Int }),
+  z.object({ kind: z.literal('ac'), value: Int }),
+  z.object({
+    kind: z.literal('addCondition'),
+    name: z.string().min(1).max(40),
+    level: Int.optional(),
+  }),
+  z.object({ kind: z.literal('removeCondition'), id: z.string().min(1).max(64) }),
+  z.object({ kind: z.literal('initiative'), value: Int }),
+]);
+const CreatureKindSchema = z.enum(['pc', 'npc']);
 const ClientMessageSchema: z.ZodType<ClientMessage> = z.discriminatedUnion('type', [
   z.object({ type: z.literal('hello'), token: z.string().min(1).max(64).optional() }),
   z.object({
     type: z.literal('claim'),
-    creatureKind: z.enum(['pc', 'npc']),
+    creatureKind: CreatureKindSchema,
     creatureId: z.string().min(1).max(64),
     label: z.string().max(40).optional(),
+    pin: z.string().max(8).optional(),
   }),
+  z.object({
+    type: z.literal('intent'),
+    creatureKind: CreatureKindSchema,
+    creatureId: z.string().min(1).max(64),
+    intent: IntentSchema,
+  }),
+  z.object({ type: z.literal('switch') }),
+  z.object({ type: z.literal('undo') }),
+  z.object({ type: z.literal('cancel') }),
 ]);
+
+/** More than this many messages in a second from one browser are dropped. */
+const MESSAGES_PER_SECOND = 20;
 
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -69,6 +108,19 @@ interface Client {
   alive: boolean;
   /** The last state sent, so an unchanged view is not sent again. */
   last: string;
+  /** Messages in the current second, for the rate limit. */
+  window: { start: number; count: number };
+}
+
+/** A device waiting for the DM in Approval mode (held in memory only). */
+interface ApprovalRequest {
+  requestId: string;
+  client: Client;
+  kind: CreatureKind;
+  id: string;
+  label: string;
+  creatureName: string;
+  takeover: boolean;
 }
 
 export interface TableHubOptions {
@@ -79,6 +131,8 @@ export interface TableHubOptions {
   /** The built player client (`out/web`). */
   webDir: string;
   onStatus(status: TableStatus): void;
+  /** A checked player change for the console to apply (Phase 2). */
+  onIntent(intent: TableIntentEvent): void;
   /** Tests replace the network lookups. */
   addresses?: () => LanAddress[];
   mdns?: { start(): Promise<string>; announce(): void; stop(): Promise<void> } | null;
@@ -110,6 +164,10 @@ export class TableHub {
   private error: string | null = null;
   private timers: NodeJS.Timeout[] = [];
   private broadcastTimer: NodeJS.Timeout | null = null;
+  private approvals: ApprovalRequest[] = [];
+  private pinTries = new Map<string, PinTries>();
+  /** Switch character's undo: what each device released, until when. */
+  private grace = new Map<string, { keys: Set<string>; until: number }>();
 
   constructor(private readonly opts: TableHubOptions) {
     this.mdns = opts.mdns;
@@ -151,6 +209,13 @@ export class TableHub {
       anyConnected: this.anyConnected,
       startedAt: this.startedAt,
       error: this.error,
+      reclaimMode: this.players?.reclaimMode ?? 'open',
+      approvals: this.approvals.map((a) => ({
+        requestId: a.requestId,
+        label: a.label,
+        creatureName: a.creatureName,
+        takeover: a.takeover,
+      })),
     };
   }
 
@@ -252,6 +317,9 @@ export class TableHub {
     }
     const wasOn = this.state !== 'off';
     this.players = null;
+    this.approvals = [];
+    this.pinTries.clear();
+    this.grace.clear();
     this.snapshot = null;
     this.mapImage = null;
     this.state = 'off';
@@ -270,6 +338,35 @@ export class TableHub {
       const what = target === 'all' ? 'every claim' : `${target.kind} ${target.id}`;
       this.opts.logger.info(`table server: DM released ${what}`);
       this.scheduleBroadcast();
+    }
+    this.emit();
+    return this.status();
+  }
+
+  async setReclaimMode(mode: ReclaimMode): Promise<TableStatus> {
+    if (this.players) {
+      await this.players.setReclaimMode(mode);
+      this.opts.logger.info(`table server: reclaim mode ${mode}`);
+      this.scheduleBroadcast(0);
+    }
+    this.emit();
+    return this.status();
+  }
+
+  /** Accept or Deny a device waiting in Approval mode. */
+  async answer(requestId: string, accept: boolean): Promise<TableStatus> {
+    const request = this.approvals.find((a) => a.requestId === requestId);
+    this.approvals = this.approvals.filter((a) => a.requestId !== requestId);
+    if (request && request.client.socket.readyState === request.client.socket.OPEN) {
+      if (accept) {
+        await this.grant(request.client, request.kind, request.id, request.label);
+      } else {
+        this.send(request.client, {
+          type: 'error',
+          message: `The DM kept ${request.creatureName} where it is.`,
+        });
+        this.opts.logger.info(`table server: DM denied ${request.kind} ${request.id}`);
+      }
     }
     this.emit();
     return this.status();
@@ -383,7 +480,13 @@ export class TableHub {
   }
 
   private connect(socket: WebSocket): void {
-    const client: Client = { socket, deviceId: null, alive: true, last: '' };
+    const client: Client = {
+      socket,
+      deviceId: null,
+      alive: true,
+      last: '',
+      window: { start: Date.now(), count: 0 },
+    };
     this.clients.add(client);
     this.anyConnected = true;
     socket.on('pong', () => (client.alive = true));
@@ -393,6 +496,7 @@ export class TableHub {
     });
     socket.on('close', () => {
       this.clients.delete(client);
+      this.approvals = this.approvals.filter((a) => a.client !== client);
       if (client.deviceId) this.players?.touch(client.deviceId);
       this.emit();
     });
@@ -419,6 +523,10 @@ export class TableHub {
   }
 
   private async receive(client: Client, text: string): Promise<void> {
+    const now = Date.now();
+    if (now - client.window.start >= 1000) client.window = { start: now, count: 0 };
+    client.window.count += 1;
+    if (client.window.count > MESSAGES_PER_SECOND) return;
     let raw: unknown;
     try {
       raw = JSON.parse(text);
@@ -439,36 +547,199 @@ export class TableHub {
       this.emit();
       return;
     }
-    // claim
-    const creature = this.snapshot?.creatures.find(
-      (c) => c.kind === msg.creatureKind && c.id === msg.creatureId,
-    );
-    if (!creature || !creature.claimable) {
-      return this.reject(client, 'That character can’t be picked right now.');
+    switch (msg.type) {
+      case 'claim':
+        return this.claim(client, msg.creatureKind, msg.creatureId, msg.label ?? '', msg.pin);
+      case 'intent':
+        return this.intent(client, msg.creatureKind, msg.creatureId, msg.intent);
+      case 'switch':
+        return this.switchCharacter(client);
+      case 'undo':
+        return this.undo(client);
+      case 'cancel':
+        this.approvals = this.approvals.filter((r) => r.client !== client);
+        this.emit();
+        return;
     }
-    if (players.claimOf(msg.creatureKind, msg.creatureId)) {
-      return this.reject(client, `${creature.name} is in use on another device.`);
-    }
-    const existing: PlayerDevice | null = client.deviceId
-      ? (players.devices.find((d) => d.deviceId === client.deviceId) ?? null)
+  }
+
+  private device(client: Client): PlayerDevice | null {
+    return client.deviceId
+      ? (this.players?.devices.find((d) => d.deviceId === client.deviceId) ?? null)
       : null;
+  }
+
+  private online(): Set<string> {
+    return new Set([...this.clients].map((c) => c.deviceId).filter((d): d is string => !!d));
+  }
+
+  private nameOf(kind: CreatureKind, id: string): string {
+    return this.snapshot?.creatures.find((c) => c.kind === kind && c.id === id)?.name ?? id;
+  }
+
+  /**
+   * A tap in the picker (Phase 2): a first claim, a reclaim or a takeover, decided by
+   * `decideClaim` through the campaign's reclaim mode.
+   */
+  private async claim(
+    client: Client,
+    kind: CreatureKind,
+    id: string,
+    label: string,
+    pin: string | undefined,
+  ): Promise<void> {
+    const players = this.players!;
+    const creature = this.snapshot?.creatures.find((c) => c.kind === kind && c.id === id);
+    if (!creature) return this.reject(client, 'That character can’t be picked right now.');
+    const key = `${kind}:${id}`;
+    const held = players.claimOf(kind, id);
+    const now = Date.now();
+    const grace = this.grace.get(client.deviceId ?? '');
+    const outcome = decideClaim({
+      mode: players.reclaimMode,
+      offered: creature.claimable,
+      held: !!held,
+      heldByAsker: !!held && held.deviceId === client.deviceId,
+      grace: !!grace && grace.until > now && grace.keys.has(key),
+      pin,
+      hasPin: !!held?.pinHash,
+      pinMatches: (p) => !!held?.pinHash && pinMatches(p, held.pinHash),
+      locked: pinLocked(this.pinTries.get(key), now),
+    });
+    switch (outcome) {
+      case 'own':
+        return this.sendState(client);
+      case 'notOffered':
+        return this.reject(client, 'That character can’t be picked right now.');
+      case 'pinNeeded':
+        return this.reject(client, held ? 'Enter the 4-digit PIN.' : 'Choose a 4-digit PIN.');
+      case 'pinWrong': {
+        const tries = afterWrongPin(this.pinTries.get(key), now);
+        this.pinTries.set(key, tries);
+        return this.reject(
+          client,
+          pinLocked(tries, now) ? 'Too many wrong PINs. Wait a minute.' : 'That PIN is not right.',
+        );
+      }
+      case 'locked':
+        return this.reject(client, 'Too many wrong PINs. Wait a minute.');
+      case 'approval':
+        this.approvals = [
+          ...this.approvals.filter((r) => r.client !== client),
+          {
+            requestId: ulid(),
+            client,
+            kind,
+            id,
+            label: label.trim() || this.device(client)?.label || 'A device',
+            creatureName: creature.name,
+            takeover: !!held && this.online().has(held.deviceId),
+          },
+        ];
+        this.send(client, { type: 'waiting', creatureName: creature.name });
+        this.opts.logger.info(`table server: asked the DM for ${kind} ${id}`);
+        this.emit();
+        return;
+      case 'grant':
+        this.pinTries.delete(key);
+        return this.grant(
+          client,
+          kind,
+          id,
+          label,
+          !held && players.reclaimMode === 'pin' ? pin : undefined,
+        );
+    }
+  }
+
+  /** Gives a creature to a client's device, moving it from any device that held it. */
+  private async grant(
+    client: Client,
+    kind: CreatureKind,
+    id: string,
+    label: string,
+    pin?: string,
+  ): Promise<void> {
+    const players = this.players;
+    if (!players) return;
+    const name = this.nameOf(kind, id);
     try {
-      const { device, token } = await players.claim(
-        msg.creatureKind,
-        msg.creatureId,
-        existing,
-        msg.label ?? '',
+      const { device, token, from } = await players.claim(
+        kind,
+        id,
+        this.device(client),
+        label,
+        new Date(),
+        { ...(pin ? { pin } : {}), takeOver: true },
       );
       client.deviceId = device.deviceId;
       if (token && this.campaignId) {
         this.send(client, { type: 'token', token, campaignId: this.campaignId });
       }
+      if (from && from !== device.deviceId) {
+        for (const c of this.clients) {
+          if (c.deviceId === from) {
+            this.send(c, { type: 'error', message: `${name} was picked up on another device.` });
+          }
+        }
+      }
+      this.grace.delete(device.deviceId);
       this.opts.logger.info(
-        `table server: ${device.label || device.deviceId} claimed ${creature.kind} ${creature.id}`,
+        `table server: ${device.label || device.deviceId} ${from ? 'took' : 'claimed'} ${kind} ${id}`,
       );
     } catch (err) {
       this.opts.logger.warn(`table server: claim failed: ${errorMessage(err)}`);
       return this.reject(client, 'Could not save that. Try again.');
+    }
+    this.scheduleBroadcast(0);
+    this.emit();
+  }
+
+  /** A player's change: checked here, applied by the console (Phase 2 plan). */
+  private intent(client: Client, kind: CreatureKind, id: string, intent: TableIntent): void {
+    const held = this.players?.claimOf(kind, id);
+    if (!held || held.deviceId !== client.deviceId) {
+      return this.reject(client, 'That character isn’t yours on this device.');
+    }
+    const creature = this.snapshot?.creatures.find((c) => c.kind === kind && c.id === id);
+    if (!creature) return this.reject(client, 'That character isn’t on the table right now.');
+    const problem = intentProblem(intent, creature);
+    if (problem) return this.reject(client, problem);
+    this.opts.onIntent({
+      deviceLabel: this.device(client)?.label || 'A player',
+      creatureKind: kind,
+      creatureId: id,
+      intent,
+    });
+  }
+
+  /** Switch character: release everything this device holds, with a few seconds to undo. */
+  private async switchCharacter(client: Client): Promise<void> {
+    const deviceId = client.deviceId;
+    if (!deviceId || !this.players) return;
+    const released = await this.players.releaseDevice(deviceId);
+    if (!released.length) return this.sendState(client);
+    this.grace.set(deviceId, {
+      keys: new Set(released.map((c) => `${c.creatureKind}:${c.creatureId}`)),
+      until: Date.now() + UNDO_MS,
+    });
+    const names = released.map((c) => this.nameOf(c.creatureKind, c.creatureId));
+    this.send(client, { type: 'released', names, undoMs: UNDO_MS });
+    this.opts.logger.info(`table server: ${deviceId} switched character`);
+    this.scheduleBroadcast(0);
+    this.emit();
+  }
+
+  /** Undo: take back what Switch character released, if nobody claimed it meanwhile. */
+  private async undo(client: Client): Promise<void> {
+    const deviceId = client.deviceId;
+    const grace = deviceId ? this.grace.get(deviceId) : undefined;
+    if (deviceId) this.grace.delete(deviceId);
+    if (!grace || grace.until < Date.now() || !this.players) return;
+    for (const key of grace.keys) {
+      const [kind, id] = key.split(':') as [CreatureKind, string];
+      if (this.players.claimOf(kind, id)) continue;
+      await this.players.claim(kind, id, this.device(client), '', new Date(), { takeOver: true });
     }
     this.scheduleBroadcast(0);
     this.emit();
@@ -504,7 +775,14 @@ export class TableHub {
   private sendState(client: Client): void {
     const snapshot = this.snapshot;
     if (!snapshot) return;
-    const view = viewFor(snapshot, this.claimList(), client.deviceId, this.hasImageFor(snapshot));
+    const view = viewFor(
+      snapshot,
+      this.claimList(),
+      client.deviceId,
+      this.hasImageFor(snapshot),
+      this.players?.reclaimMode ?? 'open',
+      this.online(),
+    );
     const text = JSON.stringify({ type: 'state', ...view } satisfies ServerMessage);
     if (text === client.last) return;
     client.last = text;

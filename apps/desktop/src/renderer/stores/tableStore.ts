@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import {
   mediaUrl,
+  type ReclaimMode,
   type TableReleaseTarget,
   type TableSnapshot,
   type TableStatus,
 } from '@trifold/api';
 import { errorMessage } from '@trifold/schema';
+import { applyTableIntent } from '../features/players/applyIntent';
 import { fogMapJpeg } from '../features/players/fogImage';
 import { tableSnapshotFrom } from '../features/players/snapshot';
 import { tokenArtUrl } from '../features/presenter/tokenArt';
@@ -29,6 +31,8 @@ interface TableState {
   start(): Promise<void>;
   stop(): Promise<void>;
   release(target: TableReleaseTarget): Promise<void>;
+  setReclaimMode(mode: ReclaimMode): Promise<void>;
+  answer(requestId: string, accept: boolean): Promise<void>;
   setJoinOnTv(on: boolean): void;
   receive(status: TableStatus): void;
 }
@@ -52,6 +56,8 @@ export const useTableStore = create<TableState>((set) => {
     },
     stop: () => run(() => window.trifold.table.stop()),
     release: (target) => run(() => window.trifold.table.release(target)),
+    setReclaimMode: (mode) => run(() => window.trifold.table.setReclaimMode(mode)),
+    answer: (requestId, accept) => run(() => window.trifold.table.answer(requestId, accept)),
     setJoinOnTv: (joinOnTv) => set({ joinOnTv }),
     receive: (status) => set({ status }),
   };
@@ -158,6 +164,8 @@ export function installTableSync(): () => void {
 
   const offs = [
     window.trifold.on('tableStatus', (status) => useTableStore.getState().receive(status)),
+    // A player's change main has checked (Phase 2): applied like a DM's own.
+    window.trifold.on('tableIntent', (event) => applyTableIntent(event)),
     useTableStore.subscribe(onTable),
     useCampaignStore.subscribe((s, prev) => {
       const id = s.current?.campaign.id;

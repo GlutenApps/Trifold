@@ -56,17 +56,33 @@ export interface TableScene {
   tokens: TableToken[];
 }
 
-/** A PC card or NPC flagged player-controllable, with what its owner may see. */
-export interface TableCreature {
+/** A condition on a creature in the loaded fight; `id` is what removing it names. */
+export interface CreatureCondition {
+  id: string;
+  name: string;
+  level?: number;
+}
+
+/** A creature's numbers and what its owner may change (Phase 2 plan, "How a player's edit travels"). */
+export interface CreatureStats {
+  hp: { current: number; max: number; temp: number } | null;
+  ac: number | null;
+  conditions: CreatureCondition[];
+  /** It has a combatant in the loaded fight. */
+  inFight: boolean;
+  /** The loaded fight is waiting for its initiative (decision 8). */
+  needsInitiative: boolean;
+  editable: { hp: boolean; maxHp: boolean; ac: boolean; conditions: boolean };
+}
+
+/** A PC card or NPC offered to players, with what its owner may see. */
+export interface TableCreature extends CreatureStats {
   kind: CreatureKind;
   id: string;
   name: string;
   portraitSrc?: string;
   /** Offered in the picker now (decision 13); a claimed creature keeps its claim either way. */
   claimable: boolean;
-  hp: { current: number; max: number; temp: number } | null;
-  ac: number | null;
-  conditions: string[];
 }
 
 export interface TableSnapshot {
@@ -116,14 +132,11 @@ export interface ClientMap {
   tokens: ClientToken[];
 }
 
-export interface CreatureView {
+export interface CreatureView extends CreatureStats {
   kind: CreatureKind;
   id: string;
   name: string;
   portraitUrl?: string;
-  hp: { current: number; max: number; temp: number } | null;
-  ac: number | null;
-  conditions: string[];
   /** Its token on the live map, when the device can see it there. */
   tokenId?: string;
 }
@@ -135,7 +148,12 @@ export interface PickerEntry {
   portraitUrl?: string;
   /** Claimed by another device. */
   inUse: boolean;
+  /** The device holding it is connected now: tapping it is a takeover, not a reclaim. */
+  holderOnline: boolean;
 }
+
+/** How a claimed character is got back (Claiming, reclaiming and releasing). */
+export type ReclaimMode = 'open' | 'pin' | 'approval';
 
 export interface ClientView {
   campaignName: string;
@@ -143,7 +161,19 @@ export interface ClientView {
   /** Empty while the device holds creatures; the picker is for devices with none. */
   picker: PickerEntry[];
   map: ClientMap | null;
+  /** The campaign's reclaim mode, so the picker knows to ask for a PIN or to wait. */
+  reclaimMode: ReclaimMode;
 }
+
+/** A player's change to one of their creatures (Phase 2 plan). HP and temp HP are changes. */
+export type TableIntent =
+  | { kind: 'hp'; delta: number }
+  | { kind: 'temp'; delta: number }
+  | { kind: 'maxHp'; value: number }
+  | { kind: 'ac'; value: number }
+  | { kind: 'addCondition'; name: string; level?: number }
+  | { kind: 'removeCondition'; id: string }
+  | { kind: 'initiative'; value: number };
 
 export type ServerMessage =
   /** Sent on connect, so the browser answers with the token it stored for this campaign. */
@@ -152,9 +182,26 @@ export type ServerMessage =
   /** A new device token, sent once right after a first claim. */
   | { type: 'token'; token: string; campaignId: string }
   | { type: 'error'; message: string }
+  /** Approval mode: the DM has been asked. */
+  | { type: 'waiting'; creatureName: string }
+  /** Switch character released these; Undo takes them back for a few seconds. */
+  | { type: 'released'; names: string[]; undoMs: number }
   /** The DM pressed Stop or closed the campaign. */
   | { type: 'closed' };
 
 export type ClientMessage =
   | { type: 'hello'; token?: string }
-  | { type: 'claim'; creatureKind: CreatureKind; creatureId: string; label?: string };
+  /** A first claim, a reclaim or a takeover: the server decides which. */
+  | {
+      type: 'claim';
+      creatureKind: CreatureKind;
+      creatureId: string;
+      label?: string;
+      pin?: string;
+    }
+  | { type: 'intent'; creatureKind: CreatureKind; creatureId: string; intent: TableIntent }
+  /** Switch character: release everything this device holds. */
+  | { type: 'switch' }
+  | { type: 'undo' }
+  /** Stop waiting for the DM's approval. */
+  | { type: 'cancel' };

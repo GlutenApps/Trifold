@@ -621,6 +621,8 @@ export const PlayerClaim = z.object({
   creatureId: z.string().min(1),
   deviceId: z.string().min(1),
   claimedAt: IsoDateTime,
+  /** PIN reclaim mode: `scrypt` salt and hash, hex, `salt:hash`. Never the PIN itself. */
+  pinHash: z.string().optional(),
 });
 export type PlayerClaim = z.infer<typeof PlayerClaim>;
 
@@ -632,5 +634,7 @@ export const PlayersFile = z.object({
   schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
   devices: z.array(PlayerDevice).default([]),
   claims: z.array(PlayerClaim).default([]),
+  /** How a claimed character is got back (Phase 2): Open, PIN or the DM's approval. */
+  reclaimMode: z.enum(['open', 'pin', 'approval']).default('open'),
 });
 export type PlayersFile = z.infer<typeof PlayersFile>;

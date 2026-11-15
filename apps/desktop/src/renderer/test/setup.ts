@@ -35,6 +35,8 @@ export const TABLE_OFF: TableStatus = {
   anyConnected: false,
   startedAt: null,
   error: null,
+  reclaimMode: 'open',
+  approvals: [],
 };
 
 /** A fully mocked `window.trifold` so renderer tests never touch Electron. */
@@ -112,6 +114,8 @@ export function installBridgeMock(): TrifoldBridge {
       release: vi.fn(async () => TABLE_OFF),
       push: vi.fn(async () => undefined),
       setMapImage: vi.fn(async () => undefined),
+      setReclaimMode: vi.fn(async () => TABLE_OFF),
+      answer: vi.fn(async () => TABLE_OFF),
     },
     backups: {
       list: vi.fn(async () => []),

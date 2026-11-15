@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { ulid } from 'ulid';
 import {
   CAMPAIGN_SCHEMA_VERSION,
@@ -6,7 +6,7 @@ import {
   type PlayerClaim,
   type PlayerDevice,
 } from '@trifold/schema';
-import type { CreatureKind } from '@trifold/api';
+import type { CreatureKind, ReclaimMode } from '@trifold/api';
 import type { LibraryStore } from '../library/LibraryStore';
 
 /** A new device token: 128 random bits, base64url (docs/PLAYER-CONNECTOR.md, First claim). */
@@ -26,10 +26,25 @@ export function tokenMatches(token: string, storedHash: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** A PIN's stored form: a random salt and its scrypt hash, hex, `salt:hash`. */
+export function hashPin(pin: string): string {
+  const salt = randomBytes(16);
+  return `${salt.toString('hex')}:${scryptSync(pin, salt, 32).toString('hex')}`;
+}
+
+export function pinMatches(pin: string, stored: string): boolean {
+  const [salt, hash] = stored.split(':');
+  if (!salt || !hash) return false;
+  const want = Buffer.from(hash, 'hex');
+  const got = scryptSync(pin, Buffer.from(salt, 'hex'), want.length);
+  return got.length === want.length && timingSafeEqual(got, want);
+}
+
 const empty = (): PlayersFile => ({
   schemaVersion: CAMPAIGN_SCHEMA_VERSION,
   devices: [],
   claims: [],
+  reclaimMode: 'open',
 });
 
 /**
@@ -63,6 +78,16 @@ export class PlayersStore {
     return this.data.claims;
   }
 
+  get reclaimMode(): ReclaimMode {
+    return this.data.reclaimMode;
+  }
+
+  async setReclaimMode(mode: ReclaimMode): Promise<void> {
+    if (mode === this.data.reclaimMode) return;
+    this.data = { ...this.data, reclaimMode: mode };
+    await this.save();
+  }
+
   /** The device a token belongs to, compared in constant time against every stored hash. */
   deviceForToken(token: string): PlayerDevice | null {
     let found: PlayerDevice | null = null;
@@ -86,8 +111,10 @@ export class PlayersStore {
     device: PlayerDevice | null,
     label: string,
     now: Date = new Date(),
-  ): Promise<{ device: PlayerDevice; token: string | null }> {
-    if (this.claimOf(kind, id)) throw new Error('already claimed');
+    options: { pin?: string; takeOver?: boolean } = {},
+  ): Promise<{ device: PlayerDevice; token: string | null; from: string | null }> {
+    const held = this.claimOf(kind, id);
+    if (held && !options.takeOver) throw new Error('already claimed');
     let token: string | null = null;
     let owner = device;
     if (!owner) {
@@ -100,15 +127,21 @@ export class PlayersStore {
       };
       this.data = { ...this.data, devices: [...this.data.devices, owner] };
     }
+    // A reclaim keeps the PIN the first claim set, unless a new one comes with it.
+    const pinHash = options.pin ? hashPin(options.pin) : held?.pinHash;
     const claim: PlayerClaim = {
       creatureKind: kind,
       creatureId: id,
       deviceId: owner.deviceId,
       claimedAt: now.toISOString(),
+      ...(pinHash ? { pinHash } : {}),
     };
-    this.data = { ...this.data, claims: [...this.data.claims, claim] };
+    const others = this.data.claims.filter(
+      (c) => !(c.creatureKind === kind && c.creatureId === id),
+    );
+    this.data = { ...this.data, claims: [...others, claim] };
     await this.save();
-    return { device: owner, token };
+    return { device: owner, token, from: held?.deviceId ?? null };
   }
 
   /** Releases one creature, or every claim. Creature files are never touched. */
@@ -124,6 +157,15 @@ export class PlayersStore {
     this.data = { ...this.data, claims };
     await this.save();
     return true;
+  }
+
+  /** Releases everything one device holds (Switch character); returns what it held. */
+  async releaseDevice(deviceId: string): Promise<PlayerClaim[]> {
+    const held = this.data.claims.filter((c) => c.deviceId === deviceId);
+    if (!held.length) return [];
+    this.data = { ...this.data, claims: this.data.claims.filter((c) => c.deviceId !== deviceId) };
+    await this.save();
+    return held;
   }
 
   /** Records when a device was last connected. Saved with the next change or on stop. */

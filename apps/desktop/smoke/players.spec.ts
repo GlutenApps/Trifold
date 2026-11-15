@@ -145,6 +145,20 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     };
   });
 
+  // The party joins a fight through its encounter: Brannoc, tied to his token.
+  const ambush = await fileNamed(dir, 'encounters', 'Trouble at the Wayside Lamp');
+  await editJson(ambush.file, (encounter) => {
+    const combatants = encounter['combatants'] as unknown[];
+    combatants.push({
+      id: 'tpl-brannoc',
+      ref: { kind: 'pc', pcId: brannoc.id, name: 'Brannoc Hale' },
+      quantity: 1,
+      role: 'ally',
+      hidden: false,
+      tokenId: 'tok-brannoc',
+    });
+  });
+
   app = await launch(userData, library);
   try {
     const page = await app.firstWindow();
@@ -168,7 +182,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
 
     // Let players join, from the VTT tab's Player devices pop-up.
     await page.getByRole('tab', { name: 'VTT', exact: true }).click();
-    await page.getByRole('button', { name: 'Player devices' }).click();
+    await page.getByRole('button', { name: 'Player devices', exact: true }).click();
     const pop = page.getByRole('dialog', { name: 'Player devices' });
     await pop.getByRole('button', { name: 'Let players join' }).click();
     const ipText = pop.locator('.join-ip').first();
@@ -219,21 +233,85 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await expect(stats).toBeVisible({ timeout: 15_000 });
     await expect(phone.getByTestId('pc-token')).toHaveCount(1);
 
-    // The DM releases him: back to the picker, nothing else changes.
-    await pop.getByRole('button', { name: 'Release Brannoc Hale' }).click();
-    await expect(phone.getByRole('heading', { name: 'Pick your character' })).toBeVisible();
-
-    // Stop: the page says so.
-    await pop.getByRole('button', { name: 'Stop' }).click();
-    await expect(phone.getByText('The DM stopped the table')).toBeVisible();
-
+    // Nothing hidden or fogged has reached the phone. (Checked before the fight, which may
+    // reveal its own creatures.)
     const wire = frames.join('\n');
     expect(wire).toContain('Brannoc Hale');
     expect(wire).not.toContain('Gorm');
     expect(wire).not.toContain('Lurker');
     expect(wire).not.toContain('tok-lurker');
     expect(wire).not.toContain('tok-gorm');
-    // The phone window is the test's own; the app quits when its last window closes.
+
+    // Phase 2: the fight asks for Brannoc's initiative and the phone answers it once.
+    await page.getByRole('tab', { name: 'VTT', exact: true }).click();
+    await page.getByRole('button', { name: 'Start linked encounter' }).click();
+    const initiative = phone.getByLabel('Initiative');
+    await expect(initiative).toBeVisible({ timeout: 15_000 });
+    await initiative.fill('15');
+    await phone.getByRole('button', { name: 'Submit' }).click();
+    await expect(initiative).toBeHidden();
+
+    // Damage and a condition from the phone land in the tracker.
+    await phone.getByLabel('Amount').fill('5');
+    await phone.getByRole('button', { name: 'Damage' }).click();
+    await expect(stats).toContainText('26');
+    await phone.getByLabel('Add a condition').selectOption('Prone');
+    await phone.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(phone.getByRole('button', { name: 'Remove Prone' })).toBeVisible();
+
+    // Switch character, then Undo within the few seconds.
+    await phone.getByRole('button', { name: 'Switch character' }).click();
+    await expect(phone.getByText(/Released Brannoc Hale/)).toBeVisible();
+    await phone.getByRole('button', { name: 'Undo' }).click();
+    await expect(stats).toBeVisible();
+
+    // Approval mode: a second device asks to take Brannoc over and the DM accepts.
+    const openPop = async () => {
+      await page.getByRole('tab', { name: 'VTT', exact: true }).click();
+      if (!(await pop.isVisible()))
+        await page.getByRole('button', { name: 'Player devices', exact: true }).click();
+      await expect(pop).toBeVisible();
+    };
+    await openPop();
+    await pop.getByRole('combobox', { name: 'Getting a character back' }).selectOption('approval');
+    const tabletPromise = app.waitForEvent('window');
+    await app.evaluate(({ BrowserWindow }, target) => {
+      const win = new BrowserWindow({
+        width: 400,
+        height: 800,
+        title: 'tablet',
+        webPreferences: { partition: 'smoke-tablet' },
+      });
+      void win.loadURL(target);
+    }, url);
+    const tablet = await tabletPromise;
+    await expect(tablet.getByRole('heading', { name: 'Pick your character' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await tablet.getByLabel('This device’s name (optional)').fill('Smoke tablet');
+    await tablet.getByRole('button', { name: /Brannoc Hale/ }).click();
+    await tablet.getByRole('button', { name: 'Take over' }).click();
+    await expect(tablet.getByText('Asked the DM for Brannoc Hale…')).toBeVisible();
+    await expect(page.getByTestId('players-waiting')).toBeVisible();
+    await openPop();
+    await expect(pop.getByText('Smoke tablet wants to take over Brannoc Hale')).toBeVisible();
+    await pop.getByRole('button', { name: 'Accept' }).click();
+    await expect(tablet.getByRole('region', { name: 'Brannoc Hale’s numbers' })).toBeVisible();
+    await expect(phone.getByRole('heading', { name: 'Pick your character' })).toBeVisible();
+    await expect(phone.getByText('Brannoc Hale was picked up on another device.')).toBeVisible();
+
+    // The DM releases him: back to the picker, nothing else changes.
+    await openPop();
+    await pop.getByRole('button', { name: 'Release Brannoc Hale' }).click();
+    await expect(tablet.getByRole('heading', { name: 'Pick your character' })).toBeVisible();
+
+    // Stop: the pages say so.
+    await pop.getByRole('button', { name: 'Stop' }).click();
+    await expect(phone.getByText('The DM stopped the table')).toBeVisible();
+    await expect(tablet.getByText('The DM stopped the table')).toBeVisible();
+
+    // The phone windows are the test's own; the app quits when its last window closes.
+    await tablet.close();
     await phone.close();
   } finally {
     await app.close();

@@ -1,6 +1,7 @@
 import { isRevealed, tokenCentre } from '../fog';
 import type {
   Claim,
+  ReclaimMode,
   ClientMap,
   ClientToken,
   ClientView,
@@ -90,13 +91,17 @@ export function viewFor(
   claims: readonly Claim[],
   deviceId: string | null,
   hasImage: boolean,
+  reclaimMode: ReclaimMode = 'open',
+  online: ReadonlySet<string> = new Set(),
 ): ClientView {
   const mineKeys = claimedBy(claims, deviceId);
   const known = new Set(snapshot.creatures.map((c) => creatureKey(c.kind, c.id)));
   const holding = [...mineKeys].filter((k) => known.has(k));
 
   if (!holding.length) {
-    const taken = new Set(claims.map((c) => creatureKey(c.creatureKind, c.creatureId)));
+    const holder = new Map(
+      claims.map((c) => [creatureKey(c.creatureKind, c.creatureId), c.deviceId]),
+    );
     const picker: PickerEntry[] = snapshot.creatures
       .filter((c) => c.claimable)
       .map((c) => ({
@@ -104,9 +109,10 @@ export function viewFor(
         id: c.id,
         name: c.name,
         ...(c.portraitSrc ? { portraitUrl: tablePaths.portrait(c.kind, c.id, c.portraitSrc) } : {}),
-        inUse: taken.has(creatureKey(c.kind, c.id)),
+        inUse: holder.has(creatureKey(c.kind, c.id)),
+        holderOnline: online.has(holder.get(creatureKey(c.kind, c.id)) ?? ''),
       }));
-    return { campaignName: snapshot.campaignName, mine: [], picker, map: null };
+    return { campaignName: snapshot.campaignName, mine: [], picker, map: null, reclaimMode };
   }
 
   const scene = snapshot.scene;
@@ -163,9 +169,12 @@ export function viewFor(
         hp: c.hp,
         ac: c.ac,
         conditions: c.conditions,
+        inFight: c.inFight,
+        needsInitiative: c.needsInitiative,
+        editable: c.editable,
         ...(tokenId ? { tokenId } : {}),
       };
     });
 
-  return { campaignName: snapshot.campaignName, mine, picker: [], map };
+  return { campaignName: snapshot.campaignName, mine, picker: [], map, reclaimMode };
 }

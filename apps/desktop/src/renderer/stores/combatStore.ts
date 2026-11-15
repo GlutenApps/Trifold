@@ -153,6 +153,16 @@ interface CombatStoreState {
   damage(id: string, amount: number, type?: string): void;
   heal(id: string, amount: number): void;
   tempHp(id: string, amount: number): void;
+  /** Max HP as a player set it (Phase 2): current HP is kept within it. */
+  setMaxHp(id: string, max: number): void;
+  /** Temp HP as a number, not the take-the-higher rule `tempHp` follows. */
+  setTempHp(id: string, temp: number): void;
+  setAc(id: string, ac: number): void;
+  /**
+   * Runs store actions on behalf of a player's device (ADR 0043): their log lines start with the
+   * device's name, so the DM can tell a player's change from their own.
+   */
+  fromDevice(label: string, run: () => void): void;
   addCondition(id: string, name: string, duration?: ConditionDuration, level?: number): void;
   removeCondition(id: string, conditionId: string): void;
   setConcentration(id: string, on: string | null): void;
@@ -398,12 +408,14 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
   const find = (id: string): Combatant | undefined =>
     get().state?.combatants.find((c) => c.id === id);
 
+  let logPrefix = '';
   const log = (
     kind: LogEntry['kind'],
-    text: string,
+    rawText: string,
     actorId?: string,
     detail?: Record<string, unknown>,
   ) => {
+    const text = logPrefix + rawText;
     update((s) => ({
       ...s,
       log: [
@@ -724,6 +736,40 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       if (!c || amount <= 0) return;
       patchCombatant(id, (x) => ({ ...x, hp: grantTempHp(x.hp, amount) }));
       log('heal', `${c.name} gains ${amount} temporary HP`, id);
+    },
+
+    setMaxHp(id, max) {
+      const c = find(id);
+      if (!c || max < 1 || max === c.hp.max) return;
+      patchCombatant(id, (x) => ({
+        ...x,
+        hp: { ...x.hp, max, current: Math.min(x.hp.current, max) },
+      }));
+      log('note', `${c.name}'s max HP is now ${max}`, id);
+    },
+
+    setTempHp(id, temp) {
+      const c = find(id);
+      if (!c || temp < 0 || temp === c.hp.temp) return;
+      patchCombatant(id, (x) => ({ ...x, hp: { ...x.hp, temp } }));
+      log('heal', `${c.name} has ${temp} temporary HP`, id);
+    },
+
+    setAc(id, ac) {
+      const c = find(id);
+      if (!c || ac === c.ac) return;
+      patchCombatant(id, (x) => ({ ...x, ac }));
+      log('note', `${c.name}'s AC is now ${ac}`, id);
+    },
+
+    fromDevice(label, run) {
+      const before = logPrefix;
+      logPrefix = `${label}: `;
+      try {
+        run();
+      } finally {
+        logPrefix = before;
+      }
     },
 
     addCondition(id, name, duration, level) {

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { LibraryStore } from '../library/LibraryStore';
 import { lanAddresses, listenOnFirstFreePort, type LanAddress } from './listen';
 import { answerFor, candidateName, isConflict, sameSubnet } from './mdns';
-import { hashToken, PlayersStore, tokenMatches } from './players';
+import { hashPin, hashToken, pinMatches, PlayersStore, tokenMatches } from './players';
 
 const wifi: LanAddress = {
   host: '192.168.1.23',
@@ -91,6 +91,48 @@ describe('PlayersStore', () => {
     await store.writeText('campaigns/g/players.json', '{ nope');
     const players = await PlayersStore.open(store, 'campaigns/g/players.json');
     expect(players.devices).toEqual([]);
+  });
+
+  it('keeps a PIN only as a salted hash, and checks it', async () => {
+    const stored = hashPin('0042');
+    expect(stored).not.toContain('0042');
+    expect(hashPin('0042')).not.toBe(stored);
+    expect(pinMatches('0042', stored)).toBe(true);
+    expect(pinMatches('0043', stored)).toBe(false);
+    const players = await PlayersStore.open(store, 'campaigns/g/players.json');
+    await players.claim('pc', 'brannoc', null, '', new Date(), { pin: '0042' });
+    const disk = await readFile(join(root, 'campaigns/g/players.json'), 'utf8');
+    expect(disk).not.toContain('"0042"');
+    expect(pinMatches('0042', players.claimOf('pc', 'brannoc')!.pinHash!)).toBe(true);
+  });
+
+  it('moves a claim on a takeover, keeping its PIN, and says where it came from', async () => {
+    const players = await PlayersStore.open(store, 'campaigns/g/players.json');
+    const first = await players.claim('pc', 'brannoc', null, 'Old', new Date(), { pin: '1234' });
+    const taken = await players.claim('pc', 'brannoc', null, 'New', new Date(), { takeOver: true });
+    expect(taken.from).toBe(first.device.deviceId);
+    expect(taken.token).toBeTruthy();
+    expect(players.claims).toHaveLength(1);
+    expect(players.claimOf('pc', 'brannoc')!.deviceId).toBe(taken.device.deviceId);
+    expect(pinMatches('1234', players.claimOf('pc', 'brannoc')!.pinHash!)).toBe(true);
+  });
+
+  it('releases a whole device for Switch character, keeping the device', async () => {
+    const players = await PlayersStore.open(store, 'campaigns/g/players.json');
+    const { device } = await players.claim('pc', 'brannoc', null, '');
+    await players.claim('npc', 'tobin', device, '');
+    const released = await players.releaseDevice(device.deviceId);
+    expect(released.map((c) => c.creatureId)).toEqual(['brannoc', 'tobin']);
+    expect(players.claims).toEqual([]);
+    expect(players.devices).toHaveLength(1);
+  });
+
+  it('saves the reclaim mode with the campaign', async () => {
+    const players = await PlayersStore.open(store, 'campaigns/g/players.json');
+    expect(players.reclaimMode).toBe('open');
+    await players.setReclaimMode('approval');
+    const again = await PlayersStore.open(store, 'campaigns/g/players.json');
+    expect(again.reclaimMode).toBe('approval');
   });
 });
 

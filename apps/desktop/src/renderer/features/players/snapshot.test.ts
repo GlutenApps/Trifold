@@ -149,7 +149,13 @@ describe('tableSnapshotFrom', () => {
     expect(snap.creatures[0]).toMatchObject({
       hp: { current: 5 },
       ac: 18,
-      conditions: ['Prone', 'Exhaustion 2'],
+      conditions: [
+        { id: 'x', name: 'Prone' },
+        { id: 'y', name: 'Exhaustion', level: 2 },
+      ],
+      inFight: true,
+      needsInitiative: true,
+      editable: { hp: true, maxHp: true, ac: true, conditions: true },
     });
   });
 

@@ -780,3 +780,14 @@
 .tv-join-text .join-ip {
   font-size: 3vh;
 }
+
+.approval-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.player-devices .reclaim-mode {
+  width: 100%;
+}

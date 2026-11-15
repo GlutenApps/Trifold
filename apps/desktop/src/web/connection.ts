@@ -41,6 +41,11 @@ export interface Connection {
   view: ClientView | null;
   error: string | null;
   clearError(): void;
+  /** Approval mode: the character the DM has been asked for. */
+  waiting: string | null;
+  /** Switch character: what was released and until when Undo works. */
+  released: { names: string[]; until: number } | null;
+  clearReleased(): void;
   send(msg: ClientMessage): void;
 }
 
@@ -48,6 +53,8 @@ export function useConnection(): Connection {
   const [link, setLink] = useState<Link>('connecting');
   const [view, setView] = useState<ClientView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [waiting, setWaiting] = useState<string | null>(null);
+  const [released, setReleased] = useState<Connection['released']>(null);
   const socket = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -83,10 +90,18 @@ export function useConnection(): Connection {
           case 'state': {
             const { type: _type, ...next } = msg;
             setView(next);
+            if (next.mine.length) setWaiting(null);
             break;
           }
           case 'error':
             setError(msg.message);
+            setWaiting(null);
+            break;
+          case 'waiting':
+            setWaiting(msg.creatureName);
+            break;
+          case 'released':
+            setReleased({ names: msg.names, until: Date.now() + msg.undoMs });
             break;
           case 'closed':
             stopped = true;
@@ -116,6 +131,9 @@ export function useConnection(): Connection {
     view,
     error,
     clearError: () => setError(null),
+    waiting,
+    released,
+    clearReleased: () => setReleased(null),
     send: (msg) => {
       const ws = socket.current;
       if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));

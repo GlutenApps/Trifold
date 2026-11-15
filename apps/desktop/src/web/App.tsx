@@ -1,22 +1,37 @@
 import { useEffect, useState } from 'react';
-import type { ClientView, CreatureView, PickerEntry } from '@trifold/api';
-import { readLabel, saveLabel, useConnection, type Connection } from './connection';
+import type { ClientView, CreatureView } from '@trifold/api';
+import { useConnection, type Connection } from './connection';
 import { MapView } from './MapView';
+import { Picker } from './Picker';
+import { Portrait } from './Portrait';
+import { Stats } from './Stats';
 
 /**
- * The player connector's page (docs/PLAYER-CONNECTOR.md, Phase 1): join, pick a character, then
- * the live map and the character's numbers, read-only. Mobile first, from 360 px wide, with
- * 44 px touch targets and nothing that needs hover.
+ * The player connector's page (docs/PLAYER-CONNECTOR.md): join, pick a character, then the live
+ * map and the character's numbers, which the player can change (Phase 2). Mobile first, from
+ * 360 px wide, with 44 px touch targets and nothing that needs hover.
  */
 export function App() {
   const conn = useConnection();
   const { view } = conn;
+  const playing = !!view?.mine.length;
 
   return (
     <div className="pc-app">
       <header className="pc-top">
         <span className="pc-brand">{view?.campaignName || 'Trifold'}</span>
         <LinkDot link={conn.link} />
+        {playing && (
+          <button
+            type="button"
+            className="pc-btn ghost pc-switch"
+            aria-label="Switch character"
+            title="Switch character"
+            onClick={() => conn.send({ type: 'switch' })}
+          >
+            Switch
+          </button>
+        )}
       </header>
       {conn.error && (
         <div className="pc-banner" role="alert">
@@ -26,12 +41,13 @@ export function App() {
           </button>
         </div>
       )}
+      <ReleasedBanner conn={conn} />
       {!view ? (
         <Joining link={conn.link} />
-      ) : view.mine.length ? (
-        <Playing view={view} />
+      ) : playing ? (
+        <Playing view={view} conn={conn} />
       ) : (
-        <Picker entries={view.picker} conn={conn} />
+        <Picker view={view} conn={conn} />
       )}
     </div>
   );
@@ -54,6 +70,32 @@ function LinkDot({ link }: { link: Connection['link'] }) {
   );
 }
 
+/** "Released Brannoc · Undo" for a few seconds after Switch character. */
+function ReleasedBanner({ conn }: { conn: Connection }) {
+  const { released, clearReleased } = conn;
+  useEffect(() => {
+    if (!released) return;
+    const t = window.setTimeout(clearReleased, Math.max(0, released.until - Date.now()));
+    return () => window.clearTimeout(t);
+  }, [released, clearReleased]);
+  if (!released) return null;
+  return (
+    <div className="pc-banner" role="status">
+      <span>Released {released.names.join(', ')}</span>
+      <button
+        type="button"
+        className="pc-btn"
+        onClick={() => {
+          conn.send({ type: 'undo' });
+          clearReleased();
+        }}
+      >
+        Undo
+      </button>
+    </div>
+  );
+}
+
 function Joining({ link }: { link: Connection['link'] }) {
   return (
     <main className="pc-center">
@@ -68,75 +110,7 @@ function Joining({ link }: { link: Connection['link'] }) {
   );
 }
 
-function Portrait({ url, name, size }: { url?: string | undefined; name: string; size: number }) {
-  const initials = name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0] ?? '')
-    .join('')
-    .toUpperCase();
-  return (
-    <span className="pc-portrait" style={{ width: size, height: size }} aria-hidden="true">
-      {url ? <img src={url} alt="" /> : <span>{initials}</span>}
-    </span>
-  );
-}
-
-function Picker({ entries, conn }: { entries: PickerEntry[]; conn: Connection }) {
-  const [label, setLabel] = useState(readLabel);
-  const [busy, setBusy] = useState<string | null>(null);
-  useEffect(() => {
-    if (conn.error) setBusy(null);
-  }, [conn.error]);
-
-  const claim = (e: PickerEntry) => {
-    saveLabel(label);
-    setBusy(`${e.kind}:${e.id}`);
-    conn.send({
-      type: 'claim',
-      creatureKind: e.kind,
-      creatureId: e.id,
-      ...(label.trim() ? { label: label.trim() } : {}),
-    });
-  };
-
-  return (
-    <main className="pc-scroll">
-      <h1 className="pc-title">Pick your character</h1>
-      {entries.length === 0 ? (
-        <p className="pc-hint">The DM hasn’t opened any characters to players yet.</p>
-      ) : (
-        <ul className="pc-pick-list">
-          {entries.map((e) => (
-            <li key={`${e.kind}:${e.id}`}>
-              <button
-                type="button"
-                className="pc-pick"
-                disabled={e.inUse || busy !== null || conn.link !== 'open'}
-                onClick={() => claim(e)}
-              >
-                <Portrait url={e.portraitUrl} name={e.name} size={44} />
-                <span className="pc-pick-name">{e.name}</span>
-                {e.inUse && <span className="pc-tag">In use</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <label className="pc-field">
-        <span>This device’s name (optional)</span>
-        <input
-          value={label}
-          maxLength={40}
-          placeholder="Sam’s phone"
-          onChange={(ev) => setLabel(ev.target.value)}
-        />
-      </label>
-    </main>
-  );
-}
-
-function Playing({ view }: { view: ClientView }) {
+function Playing({ view, conn }: { view: ClientView; conn: Connection }) {
   const [selected, setSelected] = useState<string>(() => key(view.mine[0]!));
   const current = view.mine.find((c) => key(c) === selected) ?? view.mine[0]!;
   return (
@@ -171,63 +145,9 @@ function Playing({ view }: { view: ClientView }) {
           <p className="pc-hint">No map right now.</p>
         </div>
       )}
-      <Stats creature={current} />
+      <Stats key={key(current)} creature={current} conn={conn} />
     </main>
   );
 }
 
 const key = (c: Pick<CreatureView, 'kind' | 'id'>) => `${c.kind}:${c.id}`;
-
-function Stats({ creature }: { creature: CreatureView }) {
-  const hp = creature.hp;
-  const ratio = hp && hp.max > 0 ? Math.max(0, Math.min(1, hp.current / hp.max)) : null;
-  const band =
-    ratio === null ? '' : hp!.current <= 0 ? 'down' : ratio <= 0.5 ? 'bloodied' : 'healthy';
-  return (
-    <section className="pc-stats" aria-label={`${creature.name}’s numbers`}>
-      <div className="pc-stats-head">
-        <Portrait url={creature.portraitUrl} name={creature.name} size={40} />
-        <h2>{creature.name}</h2>
-      </div>
-      <dl className="pc-stat-row">
-        <div className={`pc-stat hp ${band}`}>
-          <dt>HP</dt>
-          <dd>
-            {hp ? (
-              <>
-                <span className="pc-num">{hp.current}</span>
-                <span className="pc-of">/ {hp.max}</span>
-              </>
-            ) : (
-              '—'
-            )}
-          </dd>
-          {ratio !== null && (
-            <span className="pc-bar" aria-hidden="true">
-              <span style={{ width: `${ratio * 100}%` }} />
-            </span>
-          )}
-        </div>
-        <div className="pc-stat">
-          <dt>Temp</dt>
-          <dd className="pc-num">{hp ? hp.temp : '—'}</dd>
-        </div>
-        <div className="pc-stat">
-          <dt>AC</dt>
-          <dd className="pc-num">{creature.ac ?? '—'}</dd>
-        </div>
-      </dl>
-      <div className="pc-conditions">
-        {creature.conditions.length ? (
-          creature.conditions.map((c) => (
-            <span key={c} className="pc-tag">
-              {c}
-            </span>
-          ))
-        ) : (
-          <span className="pc-hint">No conditions</span>
-        )}
-      </div>
-    </section>
-  );
-}

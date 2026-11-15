@@ -5,6 +5,12 @@ import { hostAllowed, isPrivateAddress, portsToTry, TABLE_PORTS, tableUrl } from
 import type { Claim, TableSnapshot, TableToken } from './types';
 import { visibleTokenIds, viewFor } from './view';
 
+const stats = {
+  inFight: false,
+  needsInitiative: false,
+  editable: { hp: true, maxHp: true, ac: true, conditions: false },
+};
+
 const grid = { cellPx: 10, offsetX: 0, offsetY: 0, color: '#000', opacity: 0.3, visible: true };
 
 const token = (id: string, x: number, extra: Partial<TableToken> = {}): TableToken => ({
@@ -51,15 +57,17 @@ function snapshot(tokens: TableToken[], fogOn = true): TableSnapshot {
         name: 'Brannoc Hale',
         portraitSrc: 'trifold-media://library/campaigns/g/portraits/b.png',
         claimable: true,
+        ...stats,
         hp: { current: 20, max: 24, temp: 0 },
         ac: 16,
-        conditions: ['Prone'],
+        conditions: [{ id: 'c1', name: 'Prone' }],
       },
       {
         kind: 'pc',
         id: 'wren',
         name: 'Wren Ashby',
         claimable: true,
+        ...stats,
         hp: { current: 9, max: 9, temp: 0 },
         ac: 13,
         conditions: [],
@@ -69,6 +77,7 @@ function snapshot(tokens: TableToken[], fogOn = true): TableSnapshot {
         id: 'gorm',
         name: 'Gorm Tallow',
         claimable: false,
+        ...stats,
         hp: null,
         ac: null,
         conditions: [],

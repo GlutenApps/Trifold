@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { TableStatus } from '@trifold/api';
+import type { ReclaimMode, TableStatus } from '@trifold/api';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { tableOn, useTableStore } from '../../stores/tableStore';
 import { Icon } from '../shell/icons';
@@ -41,14 +41,24 @@ export function PlayerDevicesPop({
           aria-haspopup="dialog"
           aria-expanded={open}
           title={
-            on
-              ? `Player devices: players can join (${online} connected)`
-              : 'Player devices: let players join from their phones'
+            on && status?.approvals.length
+              ? 'Player devices: a player is waiting for you'
+              : on
+                ? `Player devices: players can join (${online} connected)`
+                : 'Player devices: let players join from their phones'
           }
           onClick={onToggle}
         >
           <Icon name="phone" />
-          {on && <span className="pip tally chrome-pip" aria-hidden="true" />}
+          {on && (status?.approvals.length ?? 0) > 0 ? (
+            <span
+              className="pip alert chrome-pip"
+              data-testid="devices-waiting"
+              aria-hidden="true"
+            />
+          ) : (
+            on && <span className="pip tally chrome-pip" aria-hidden="true" />
+          )}
         </button>
       }
     >
@@ -58,7 +68,8 @@ export function PlayerDevicesPop({
 }
 
 function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boolean }) {
-  const { start, stop, release, joinOnTv, setJoinOnTv, error } = useTableStore();
+  const { start, stop, release, joinOnTv, setJoinOnTv, error, setReclaimMode, answer } =
+    useTableStore();
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -147,7 +158,45 @@ function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boo
             />
             Show join code on TV
           </label>
+          {status!.approvals.length > 0 && (
+            <ul className="device-list approvals" aria-label="Waiting for you">
+              {status!.approvals.map((a) => (
+                <li key={a.requestId} className="approval-row">
+                  <span className="grow">
+                    {a.takeover
+                      ? `${a.label} wants to take over ${a.creatureName}`
+                      : `${a.label} asks for ${a.creatureName}`}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    onClick={() => void answer(a.requestId, true)}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => void answer(a.requestId, false)}
+                  >
+                    Deny
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           <DeviceList status={status!} onRelease={(kind, id) => void release({ kind, id })} />
+          <label className="field inline reclaim-mode">
+            Getting a character back
+            <select
+              value={status!.reclaimMode}
+              onChange={(e) => void setReclaimMode(e.target.value as ReclaimMode)}
+            >
+              <option value="open">Open: just tap it</option>
+              <option value="pin">PIN: set at the first pick</option>
+              <option value="approval">Ask me first</option>
+            </select>
+          </label>
           <div className="row player-devices-actions">
             <button
               type="button"

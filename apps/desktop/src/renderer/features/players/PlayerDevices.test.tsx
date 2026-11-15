@@ -118,6 +118,47 @@ describe('Player devices pop-up', () => {
   });
 });
 
+describe('Player devices pop-up, Phase 2', () => {
+  beforeEach(() => {
+    openCampaign();
+  });
+
+  const waiting: TableStatus = {
+    ...ON,
+    reclaimMode: 'approval',
+    approvals: [
+      { requestId: 'r1', label: 'Wren’s tablet', creatureName: 'Brannoc Hale', takeover: true },
+    ],
+  };
+
+  it('lists who is waiting, with Accept and Deny', async () => {
+    useTableStore.setState({ status: waiting });
+    render(<Pop />);
+    expect(screen.getByText('Wren’s tablet wants to take over Brannoc Hale')).toBeInTheDocument();
+    expect(screen.getByTestId('devices-waiting')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+    });
+    expect(window.trifold.table.answer).toHaveBeenCalledWith('r1', true);
+    act(() => useTableStore.setState({ status: waiting }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Deny' }));
+    });
+    expect(window.trifold.table.answer).toHaveBeenCalledWith('r1', false);
+  });
+
+  it('sets the reclaim mode', async () => {
+    useTableStore.setState({ status: ON });
+    render(<Pop />);
+    const select = screen.getByRole('combobox', { name: 'Getting a character back' });
+    expect(select).toHaveValue('open');
+    await act(async () => {
+      fireEvent.change(select, { target: { value: 'pin' } });
+    });
+    expect(window.trifold.table.setReclaimMode).toHaveBeenCalledWith('pin');
+  });
+});
+
 describe('PlayerAccess on the forms', () => {
   it('shows who holds the character and releases it', async () => {
     useTableStore.setState({ status: ON });

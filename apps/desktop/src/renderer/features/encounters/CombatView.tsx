@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ulid } from 'ulid';
 import type { Combatant, ConditionDuration, Scene, Token } from '@trifold/schema';
-import { normalizeKey } from '@trifold/rules';
+import { CONDITION_NAMES, normalizeKey, TRACKER_ONLY_CONDITIONS } from '@trifold/rules';
 import { registerHotkey } from '../../hotkeys';
 import { navigate } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
@@ -40,28 +40,9 @@ function useMapInPlay(): Scene | null {
   return sceneInPlay(scenes, liveSceneId, encounter);
 }
 
-const CONDITIONS = [
-  'Blinded',
-  'Charmed',
-  'Deafened',
-  'Exhaustion',
-  'Frightened',
-  'Grappled',
-  'Incapacitated',
-  'Invisible',
-  'Paralyzed',
-  'Petrified',
-  'Poisoned',
-  'Prone',
-  'Restrained',
-  'Stunned',
-  'Unconscious',
-  'Concentrating',
-  'Surprised',
-  'Hidden',
-];
+const CONDITIONS = CONDITION_NAMES;
 /** Markers the tracker keeps that have no rules text in the compendium (DESIGN.md §7.3). */
-const TRACKER_ONLY = new Set(['Concentrating', 'Surprised', 'Hidden']);
+const TRACKER_ONLY = TRACKER_ONLY_CONDITIONS;
 
 /**
  * Opens a condition's rules in the Compendium tab through the deep link (ADR 0017), preferring

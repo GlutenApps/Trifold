@@ -24,7 +24,7 @@ import type {
   Source,
   Track,
 } from '@trifold/schema';
-import type { CreatureKind, TableSnapshot } from '@trifold/rules';
+import type { CreatureKind, ReclaimMode, TableIntent, TableSnapshot } from '@trifold/rules';
 
 export type {
   ClientMap,
@@ -34,7 +34,9 @@ export type {
   CreatureKind,
   CreatureView,
   PickerEntry,
+  ReclaimMode,
   ServerMessage,
+  TableIntent,
   TableCreature,
   TableScene,
   TableSnapshot,
@@ -727,6 +729,17 @@ export interface TableStatus {
   anyConnected: boolean;
   startedAt: string | null;
   error: string | null;
+  reclaimMode: ReclaimMode;
+  /** Approval mode: devices waiting for the DM, oldest first. */
+  approvals: Array<{ requestId: string; label: string; creatureName: string; takeover: boolean }>;
+}
+
+/** A player's change, checked by main and handed to the console to apply (Phase 2). */
+export interface TableIntentEvent {
+  deviceLabel: string;
+  creatureKind: CreatureKind;
+  creatureId: string;
+  intent: TableIntent;
 }
 
 export type TableReleaseTarget = { kind: CreatureKind; id: string } | 'all';
@@ -800,6 +813,10 @@ export interface TrifoldApi {
     push(snapshot: TableSnapshot): Promise<void>;
     /** The live map image with fog filled black, as a JPEG (decision 11). */
     setMapImage(sceneId: string, fogKey: string, jpeg: Uint8Array): Promise<void>;
+    /** Open, PIN or Approval, saved in the campaign's players.json. */
+    setReclaimMode(mode: ReclaimMode): Promise<TableStatus>;
+    /** Accept or Deny a device waiting in Approval mode. */
+    answer(requestId: string, accept: boolean): Promise<TableStatus>;
   };
   presenter: {
     /**
@@ -1159,7 +1176,7 @@ export const API_METHODS = {
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],
   presenter: ['push', 'get'],
-  table: ['status', 'start', 'stop', 'release', 'push', 'setMapImage'],
+  table: ['status', 'start', 'stop', 'release', 'push', 'setMapImage', 'setReclaimMode', 'answer'],
   sources: [
     'list',
     'chooseFile',
@@ -1277,6 +1294,8 @@ export interface TrifoldEvents {
   updateStatus: UpdateStatus;
   /** The table server started, stopped, or a device came, went, claimed or was released. */
   tableStatus: TableStatus;
+  /** A player's change for the console to apply. */
+  tableIntent: TableIntentEvent;
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -1290,6 +1309,7 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   backupCopy: 'trifold:event:backup-copy',
   updateStatus: 'trifold:event:update-status',
   tableStatus: 'trifold:event:table-status',
+  tableIntent: 'trifold:event:table-intent',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */

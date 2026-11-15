@@ -214,6 +214,12 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         ctx.table.setMapImage(sceneId, fogKey, jpeg);
         return Promise.resolve();
       },
+      setReclaimMode(mode) {
+        return ctx.table.setReclaimMode(mode);
+      },
+      answer(requestId, accept) {
+        return ctx.table.answer(requestId, accept);
+      },
     },
     presenter: {
       async push(state) {
