@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { CreatureView, TableIntent } from '@trifold/api';
+import { capitalise } from './AddCompanion';
 import { Portrait } from './Portrait';
 
 /**
@@ -425,8 +426,8 @@ export function CompanionsTool({
               <span className="pc-comp-text">
                 <span className="pc-comp-name">{c.name}</span>
                 <span className="pc-comp-meta">
-                  {c.kind === 'npc' ? 'Companion' : 'Summon'}, AC {c.ac ?? '—'}, HP{' '}
-                  {c.hp ? `${c.hp.current} / ${c.hp.max}` : '—'}
+                  {c.summon ? capitalise(c.summon.type) || 'Summon' : 'Companion'}, AC {c.ac ?? '—'}
+                  , HP {c.hp ? `${c.hp.current} / ${c.hp.max}` : '—'}
                 </span>
               </span>
               {!asking && (

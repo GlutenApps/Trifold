@@ -342,6 +342,63 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await expect(lockAll).not.toBeChecked();
     await expect(phone.getByText('Movement locked by the DM')).toBeHidden();
 
+    // Phase 4: the DM puts the Owl on the summon list from its compendium page.
+    await page.getByRole('tab', { name: 'Compendium', exact: true }).click();
+    await page.getByLabel('Search', { exact: true }).fill('owl');
+    await page
+      .getByRole('option', { name: /^Owl(?!bear)/ })
+      .first()
+      .click();
+    const summonable = page.getByRole('button', { name: 'Summonable by players' });
+    await summonable.click();
+    await expect(summonable).toHaveAttribute('aria-pressed', 'true');
+
+    // The phone summons one beside Brannoc, then three more with Options, and dismisses one.
+    const tokensBefore = await phone.getByTestId('pc-token').count();
+    await tools.getByRole('button', { name: 'Companions' }).click();
+    await phone.getByRole('button', { name: 'Add a companion' }).click();
+    await phone.getByRole('button', { name: 'Add Owl', exact: true }).click();
+    await expect(phone.getByTestId('pc-token')).toHaveCount(tokensBefore + 1);
+    await expect(phone.getByRole('button', { name: 'Remove Owl from play' })).toBeVisible();
+    await phone.getByRole('button', { name: 'Add a companion' }).click();
+    await phone.getByRole('button', { name: 'Options for Owl' }).click();
+    await phone.getByRole('button', { name: 'More', exact: true }).click();
+    await phone.getByRole('button', { name: 'More', exact: true }).click();
+    await phone.getByRole('button', { name: 'Summon 3 × Owl' }).click();
+    for (const n of [2, 3, 4]) {
+      await expect(phone.getByRole('button', { name: `Remove Owl ${n} from play` })).toBeVisible();
+    }
+    await expect(phone.getByTestId('pc-token')).toHaveCount(tokensBefore + 4);
+    await phone.getByRole('button', { name: 'Remove Owl 4 from play' }).click();
+    await phone.getByRole('button', { name: 'Remove', exact: true }).click();
+    await expect(phone.getByRole('button', { name: 'Remove Owl 4 from play' })).toHaveCount(0);
+    await expect(phone.getByTestId('pc-token')).toHaveCount(tokensBefore + 3);
+    // The console's map shows who summoned it.
+    await page.getByRole('tab', { name: 'VTT', exact: true }).click();
+    await page
+      .getByTestId('console-token')
+      .filter({ has: page.locator('[title="Owl 2"]') })
+      .click();
+    await expect(page.getByTestId('summon-source')).toHaveText(
+      'Summoned for Brannoc Hale by Smoke phone',
+    );
+
+    // Ask me first: a summon waits for the DM's Accept.
+    await page.getByRole('button', { name: 'Player devices', exact: true }).click();
+    await pop.getByRole('combobox', { name: 'Player summoning' }).selectOption('approval');
+    await expect(pop.getByRole('combobox', { name: 'Player summoning' })).toHaveValue('approval');
+    await phone.getByRole('button', { name: 'Add a companion' }).click();
+    await phone.getByRole('button', { name: 'Options for Owl' }).click();
+    await phone.getByRole('button', { name: 'Fewer', exact: true }).click();
+    await phone.getByRole('button', { name: 'Fewer', exact: true }).click();
+    await phone.getByRole('button', { name: 'Summon Owl' }).click();
+    await expect(phone.getByText(/Asked the DM to summon Owl/)).toBeVisible();
+    await phone.getByRole('button', { name: 'OK', exact: true }).click();
+    await expect(pop.getByText('Smoke phone wants to summon Owl for Brannoc Hale')).toBeVisible();
+    await pop.getByRole('button', { name: 'Accept' }).click();
+    await expect(phone.getByRole('button', { name: 'Remove Owl 4 from play' })).toBeVisible();
+    await tools.getByRole('button', { name: 'Companions' }).click();
+
     // Approval mode: a second device asks to take Brannoc over and the DM accepts.
     const openPop = async () => {
       await page.getByRole('tab', { name: 'VTT', exact: true }).click();

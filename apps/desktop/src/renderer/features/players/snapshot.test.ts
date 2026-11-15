@@ -250,3 +250,68 @@ describe('tableSnapshotFrom: what a device holds', () => {
     ]);
   });
 });
+
+describe('tableSnapshotFrom: summons (Phase 4)', () => {
+  it('lists the summon list and the summons on the live map, with their owner', () => {
+    const owl = token('to', {
+      ref: {
+        kind: 'record',
+        ref: { recordId: 'owl', sourceId: 's', key: 'owl', edition: '2024' },
+        name: 'Owl',
+      },
+      label: 'Owl',
+      role: 'ally',
+      summon: {
+        ownerKind: 'pc',
+        ownerId: 'brannoc',
+        spawnedBy: 'Sam’s phone',
+        type: 'Beast',
+        hp: { current: 1, max: 1, temp: 0 },
+        ac: 11,
+        initiative: 'shared',
+        concentration: true,
+        concentrationLost: true,
+        persistent: false,
+      },
+    });
+    const scene = map([owl]);
+    const snap = tableSnapshotFrom(
+      input({
+        campaign: {
+          id: 'c1',
+          name: 'G',
+          tokenStyle: 'engraved',
+          summonable: [
+            {
+              ref: { recordId: 'owl', sourceId: 's', key: 'owl', edition: '2024' },
+              name: 'Owl',
+              type: 'Beast',
+              size: 'T',
+              ac: 11,
+              hp: 1,
+            },
+          ],
+        },
+        liveScene: scene,
+        presenter: live(scene),
+      }),
+    );
+    expect(snap.summonOptions).toEqual([{ key: 'owl', name: 'Owl', type: 'Beast', ac: 11, hp: 1 }]);
+    expect(snap.creatures).toEqual([
+      expect.objectContaining({
+        kind: 'summon',
+        id: 'to',
+        hp: { current: 1, max: 1, temp: 0 },
+        ac: 11,
+        companionOf: 'brannoc',
+        summon: {
+          owner: { kind: 'pc', id: 'brannoc' },
+          type: 'Beast',
+          persistent: false,
+          concentrationLost: true,
+        },
+      }),
+    ]);
+    expect(snap.scene!.tokens[0]!.creature).toEqual({ kind: 'summon', id: 'to' });
+  });
+});

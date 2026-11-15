@@ -12,6 +12,7 @@ import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
 import { ReplaceInCampaign } from './ReplaceInCampaign';
 import { UsedBy } from './UsedBy';
+import { SummonableToggle } from '../players/SummonableToggle';
 
 /**
  * One open compendium record (DESIGN.md §6.1): a bar with Back, the edition dropdown, the source
@@ -473,6 +474,7 @@ export function RecordDetail({
             </span>
           )}
         <span className="spacer" />
+        <SummonableToggle record={record} />
         {/* SRD rules are read, not copied: house rules belong in notes (ADR 0041). */}
         {homebrew && !isOwnRecord(record) && record.kind !== 'rule' && (
           <button

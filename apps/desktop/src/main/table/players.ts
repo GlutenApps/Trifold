@@ -46,6 +46,7 @@ const empty = (): PlayersFile => ({
   claims: [],
   reclaimMode: 'open',
   movement: { all: false, creatures: [] },
+  summoning: { mode: 'on', cap: 8 },
 });
 
 /**
@@ -85,6 +86,15 @@ export class PlayersStore {
 
   get movement(): { all: boolean; creatures: string[] } {
     return this.data.movement;
+  }
+
+  get summoning(): { mode: 'on' | 'approval' | 'off'; cap: number } {
+    return this.data.summoning;
+  }
+
+  async setSummoning(summoning: { mode: 'on' | 'approval' | 'off'; cap: number }): Promise<void> {
+    this.data = { ...this.data, summoning };
+    await this.save();
   }
 
   /** Lock movement (Phase 3): for everyone, or one creature (`kind:id`). */

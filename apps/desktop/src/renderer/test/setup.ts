@@ -38,6 +38,7 @@ export const TABLE_OFF: TableStatus = {
   reclaimMode: 'open',
   approvals: [],
   movement: { all: false, creatures: [] },
+  summoning: { mode: 'on', cap: 8 },
 };
 
 /** A fully mocked `window.trifold` so renderer tests never touch Electron. */
@@ -120,6 +121,7 @@ export function installBridgeMock(): TrifoldBridge {
       dmGrab: vi.fn(async () => undefined),
       give: vi.fn(async () => TABLE_OFF),
       setMovementLock: vi.fn(async () => TABLE_OFF),
+      setSummoning: vi.fn(async () => TABLE_OFF),
     },
     backups: {
       list: vi.fn(async () => []),

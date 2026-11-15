@@ -163,6 +163,14 @@ interface CombatStoreState {
    * device's name, so the DM can tell a player's change from their own.
    */
   fromDevice(label: string, run: () => void): void;
+  /**
+   * A player's summon joins the fight (ADR 0043, Phase 4): built from its token like any newcomer,
+   * at the initiative given (its owner's, or none so the phone asks), and never added to the
+   * encounter's list.
+   */
+  addSummon(token: Token, initiative: number | null, deviceLabel: string): Promise<void>;
+  /** Takes the combatant tied to a token out of the fight, as a summon leaving play does. */
+  removeByToken(tokenId: string, reason: string): void;
   addCondition(id: string, name: string, duration?: ConditionDuration, level?: number): void;
   removeCondition(id: string, conditionId: string): void;
   setConcentration(id: string, on: string | null): void;
@@ -908,6 +916,38 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       }
       const encounter = currentEncounter();
       if (encounter && built.length) saveTemplates([...encounter.combatants, template]);
+    },
+
+    async addSummon(token, initiative, deviceLabel) {
+      if (!get().state) return;
+      const template: CombatantTemplate = {
+        id: ulid(),
+        ref: token.ref,
+        label: token.label,
+        quantity: 1,
+        role: token.role,
+        hidden: false,
+        tokenId: token.id,
+      };
+      const built = await buildFor(template);
+      for (const c of built) {
+        const summon = token.summon;
+        const joined: Combatant = {
+          ...c,
+          initiative,
+          ...(summon ? { hp: { ...summon.hp }, ac: summon.ac } : {}),
+          tokenId: token.id,
+        };
+        insertCombatant(joined);
+        log('note', `${deviceLabel}: ${joined.name} is summoned`, joined.id);
+      }
+    },
+
+    removeByToken(tokenId, reason) {
+      const c = get().state?.combatants.find((x) => x.tokenId === tokenId);
+      if (!c) return;
+      log('note', `${c.name} ${reason}`, c.id);
+      get().remove(c.id);
     },
 
     async addToFight(template) {

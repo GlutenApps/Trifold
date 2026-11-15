@@ -2205,6 +2205,16 @@ export function MapEditor({
         ) : selectedToken ? (
           <div className="map-inspector" data-testid="token-inspector">
             <h3>{TOKEN_KIND_LABEL[selectedToken.kind]}</h3>
+            {selectedToken.summon && (
+              <p className="muted small" data-testid="summon-source">
+                {`Summoned for ${
+                  (selectedToken.summon.ownerKind === 'pc'
+                    ? pcs.find((p) => p.id === selectedToken.summon!.ownerId)?.name
+                    : npcs.find((n) => n.id === selectedToken.summon!.ownerId)?.name) ??
+                  'a character'
+                }${selectedToken.summon.spawnedBy ? ` by ${selectedToken.summon.spawnedBy}` : ''}`}
+              </p>
+            )}
             <label className="field inline">
               Label
               <input

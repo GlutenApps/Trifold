@@ -6,7 +6,15 @@ import {
   type TokenStyle,
 } from '@trifold/api';
 import { activeFog, fogKey, isClaimable, type Role } from '@trifold/rules';
-import type { CombatState, Combatant, NPC, PCCard, Scene, Token } from '@trifold/schema';
+import type {
+  CampaignSettings,
+  CombatState,
+  Combatant,
+  NPC,
+  PCCard,
+  Scene,
+  Token,
+} from '@trifold/schema';
 import { DEFAULT_GRID, mapSize } from '../presenter/mapMath';
 import { npcOffered, pcOffered } from './claimFlag';
 
@@ -22,7 +30,13 @@ import { npcOffered, pcOffered } from './claimFlag';
  *   and the fight are known.
  */
 export interface SnapshotInput {
-  campaign: { id: string; name: string; tokenStyle: TokenStyle };
+  campaign: {
+    id: string;
+    name: string;
+    tokenStyle: TokenStyle;
+    /** The DM's summon list (Phase 4). */
+    summonable?: CampaignSettings['summonable'];
+  };
   pcs: readonly PCCard[];
   npcs: readonly NPC[];
   presenter: Pick<PresenterState, 'blackout' | 'scene'>;
@@ -88,7 +102,10 @@ export function tableScene(input: SnapshotInput): TableSnapshot['scene'] {
     tokenStyle: input.campaign.tokenStyle,
     tokens: liveScene.tokens.map((t) => {
       const art = input.artFor(t);
-      const creature = creatureOf(t.ref);
+      // A summon's token stands for the summon itself, whose id is the token's (Phase 4).
+      const creature: TableToken['creature'] = t.summon
+        ? { kind: 'summon', id: t.id }
+        : creatureOf(t.ref);
       const drag = input.moving?.[t.id];
       return {
         id: t.id,
@@ -170,5 +187,44 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       editable: { hp: !!f || !!npc.hp, maxHp: !!f, ac: !!f, conditions: !!f },
     });
   }
-  return { campaignId: input.campaign.id, campaignName: input.campaign.name, scene, creatures };
+  // Summons on the live map (Phase 4), there whether or not the TV is blacked out.
+  for (const t of input.liveScene?.tokens ?? []) {
+    const s = t.summon;
+    if (!s) continue;
+    const f = combatants.find((c) => c.tokenId === t.id);
+    const art = input.artFor(t);
+    creatures.push({
+      kind: 'summon',
+      id: t.id,
+      name: t.label,
+      ...(art ? { portraitSrc: art } : {}),
+      claimable: false,
+      hp: f ? { current: f.hp.current, max: f.hp.max, temp: f.hp.temp } : s.hp,
+      ac: f?.ac ?? s.ac,
+      conditions: conditionsOf(f),
+      inFight: !!f,
+      needsInitiative: !!f && f.initiative === null,
+      editable: { hp: true, maxHp: true, ac: true, conditions: !!f },
+      companionOf: s.ownerId,
+      summon: {
+        owner: { kind: s.ownerKind, id: s.ownerId },
+        type: s.type,
+        persistent: s.persistent,
+        concentrationLost: s.concentrationLost,
+      },
+    });
+  }
+  return {
+    campaignId: input.campaign.id,
+    campaignName: input.campaign.name,
+    scene,
+    creatures,
+    summonOptions: (input.campaign.summonable ?? []).map((e) => ({
+      key: e.ref.recordId,
+      name: e.name,
+      type: e.type,
+      ac: e.ac,
+      hp: e.hp,
+    })),
+  };
 }

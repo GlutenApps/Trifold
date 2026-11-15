@@ -1213,3 +1213,94 @@ main.pc-center {
   background: var(--bg-panel);
   color: var(--warn);
 }
+
+/* Phase 4: adding companions, summon options, the concentration prompt. */
+.pc-round.bare {
+  border: 0;
+  background: transparent;
+  margin-left: -10px;
+}
+
+.pc-tool-title .pc-round.bare + span {
+  flex: 1;
+}
+
+.pc-addlist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pc-addrow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.pc-btn.small {
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.pc-summon-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 6px 6px 0;
+}
+
+.pc-optrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.pc-stepper.small .pc-step {
+  width: var(--touch);
+  height: var(--touch);
+  font-size: 20px;
+}
+
+.pc-stepper.small .pc-step-value {
+  flex: none;
+  min-width: 48px;
+  height: var(--touch);
+  font-size: 16px;
+}
+
+.pc-stepper.small .pc-step-value.wide {
+  min-width: 132px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pc-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--touch);
+  font-size: 14px;
+}
+
+.pc-check input {
+  width: 22px;
+  height: 22px;
+}
+
+.pc-concentration {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--cond-edge);
+  border-radius: 16px;
+  background: var(--bg-panel);
+  font-size: 14px;
+}

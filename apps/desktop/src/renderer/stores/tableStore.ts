@@ -9,6 +9,7 @@ import {
 import { errorMessage } from '@trifold/schema';
 import { applyTableIntent } from '../features/players/applyIntent';
 import { fogMapJpeg } from '../features/players/fogImage';
+import { handleSummonEvent, installSummonUpkeep } from '../features/players/summons';
 import { tableSnapshotFrom } from '../features/players/snapshot';
 import { tokenArtUrl } from '../features/presenter/tokenArt';
 import { useArtStore } from './artStore';
@@ -39,6 +40,7 @@ interface TableState {
     target: 'all' | { kind: 'pc' | 'npc'; id: string },
     locked: boolean,
   ): Promise<void>;
+  setSummoning(summoning: { mode: 'on' | 'approval' | 'off'; cap: number }): Promise<void>;
   setJoinOnTv(on: boolean): void;
   receive(status: TableStatus): void;
 }
@@ -67,6 +69,7 @@ export const useTableStore = create<TableState>((set) => {
     give: (target, deviceId) => run(() => window.trifold.table.give(target, deviceId)),
     setMovementLock: (target, locked) =>
       run(() => window.trifold.table.setMovementLock(target, locked)),
+    setSummoning: (summoning) => run(() => window.trifold.table.setSummoning(summoning)),
     setJoinOnTv: (joinOnTv) => set({ joinOnTv }),
     receive: (status) => set({ status }),
   };
@@ -101,6 +104,7 @@ export function installTableSync(): () => void {
         id: current.campaign.id,
         name: current.campaign.name,
         tokenStyle: current.campaign.settings.tokenStyle,
+        summonable: current.campaign.settings.summonable,
       },
       pcs: current.pcs,
       npcs: current.npcs,
@@ -178,6 +182,9 @@ export function installTableSync(): () => void {
     window.trifold.on('tableStatus', (status) => useTableStore.getState().receive(status)),
     // A player's change main has checked (Phase 2): applied like a DM's own.
     window.trifold.on('tableIntent', (event) => applyTableIntent(event)),
+    // Summons (Phase 4): placed, dismissed or kept as the player asks; upkeep runs here too.
+    window.trifold.on('tableSummon', (event) => handleSummonEvent(event)),
+    installSummonUpkeep(),
     // A player dragging a token (Phase 3): previews show without saving; a drop moves it.
     window.trifold.on('tableToken', (event) => {
       const presenter = usePresenterStore.getState();

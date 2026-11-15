@@ -172,9 +172,11 @@ function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boo
               {status!.approvals.map((a) => (
                 <li key={a.requestId} className="approval-row">
                   <span className="grow">
-                    {a.takeover
-                      ? `${a.label} wants to take over ${a.creatureName}`
-                      : `${a.label} asks for ${a.creatureName}`}
+                    {a.summon
+                      ? `${a.label} wants to summon ${a.summon.count > 1 ? `${a.summon.count} × ` : ''}${a.summon.name} for ${a.creatureName}`
+                      : a.takeover
+                        ? `${a.label} wants to take over ${a.creatureName}`
+                        : `${a.label} asks for ${a.creatureName}`}
                   </span>
                   <button
                     type="button"
@@ -218,6 +220,7 @@ function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boo
               <option value="approval">Ask me first</option>
             </select>
           </label>
+          <SummoningSettings status={status!} />
           <div className="row player-devices-actions">
             <button
               type="button"
@@ -306,5 +309,82 @@ function DeviceList({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Player summoning (ADR 0043, Phase 4): on, ask me first, or off; how many summons a character
+ * may have in play; and the creatures on the summon list, each removable here. Creatures join the
+ * list from their compendium page (Summonable by players).
+ */
+function SummoningSettings({ status }: { status: TableStatus }) {
+  const setSummoning = useTableStore((s) => s.setSummoning);
+  const campaign = useCampaignStore((s) => s.current?.campaign);
+  const update = useCampaignStore((s) => s.update);
+  const list = campaign?.settings.summonable ?? [];
+  const { mode, cap } = status.summoning;
+  return (
+    <div className="summoning-settings">
+      <div className="row">
+        <label className="field inline">
+          Player summoning
+          <select
+            value={mode}
+            onChange={(e) =>
+              void setSummoning({ mode: e.target.value as 'on' | 'approval' | 'off', cap })
+            }
+          >
+            <option value="on">On</option>
+            <option value="approval">Ask me first</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
+        <label className="field inline">
+          Most per character
+          <input
+            type="number"
+            className="narrow"
+            min={1}
+            max={20}
+            value={cap}
+            onChange={(e) => {
+              const n = Math.max(1, Math.min(20, Number(e.target.value) || 1));
+              void setSummoning({ mode, cap: n });
+            }}
+          />
+        </label>
+      </div>
+      {list.length ? (
+        <ul className="device-list" aria-label="Summon list">
+          {list.map((e) => (
+            <li key={e.ref.recordId} className="device-claim">
+              <span className="grow">{e.name}</span>
+              <button
+                type="button"
+                className="chrome-btn xs"
+                aria-label={`Take ${e.name} off the summon list`}
+                title={`Take ${e.name} off the summon list`}
+                onClick={() =>
+                  campaign &&
+                  void update({
+                    settings: {
+                      ...campaign.settings,
+                      summonable: list.filter((x) => x.ref.recordId !== e.ref.recordId),
+                    },
+                  })
+                }
+              >
+                <Icon name="close" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">
+          No summons yet. Open a creature in the compendium and press the paw to let players summon
+          it.
+        </p>
+      )}
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ClientView, CreatureView, TableIntent } from '@trifold/api';
 import type { Connection } from './connection';
+import { AddCompanion } from './AddCompanion';
 import { MapView, type DragHandlers } from './MapView';
 import {
   CompanionsTool,
@@ -49,6 +50,10 @@ export function Playing({
   const [tool, setTool] = useState<Tool | null>(persistent ? 'health' : null);
   const [target, setTarget] = useState(creatureKey(me));
   const [fullScreen, setFullScreen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  useEffect(() => {
+    if (tool !== 'companions') setAdding(false);
+  }, [tool]);
   useEffect(() => {
     if (persistent && !tool) setTool('health');
   }, [persistent, tool]);
@@ -91,10 +96,58 @@ export function Playing({
         {chips}
         <ConditionsTool creature={current} send={send} />
       </>
+    ) : tool === 'companions' && adding ? (
+      <AddCompanion
+        options={view.summoning?.options ?? []}
+        onBack={() => setAdding(false)}
+        onAdd={(option, chosen) => {
+          // A summon belongs to the character it is summoned for: the main character here.
+          const owner = me.kind === 'summon' ? null : { kind: me.kind, id: me.id };
+          if (!owner) return;
+          conn.send({
+            type: 'summon',
+            ownerKind: owner.kind,
+            ownerId: owner.id,
+            optionKey: option.key,
+            count: chosen.count,
+            initiative: chosen.initiative,
+            ...(chosen.rounds ? { rounds: chosen.rounds } : {}),
+            concentration: chosen.concentration,
+            persistent: chosen.persistent,
+          });
+          setAdding(false);
+        }}
+      />
     ) : tool === 'companions' ? (
       <CompanionsTool
         companions={companions}
-        onRemove={(c) => conn.send({ type: 'releaseOne', creatureKind: c.kind, creatureId: c.id })}
+        footer={
+          view.summoning?.mode === 'off' ? (
+            <p className="pc-hint small">Your DM has turned summoning off.</p>
+          ) : view.summoning ? (
+            <button type="button" className="pc-add-comp" onClick={() => setAdding(true)}>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Add a companion
+            </button>
+          ) : null
+        }
+        onRemove={(c) =>
+          // A summon leaves play; an NPC companion goes back to the DM (Phase 3's release).
+          c.kind === 'summon'
+            ? conn.send({ type: 'dismiss', tokenId: c.id })
+            : conn.send({ type: 'releaseOne', creatureKind: c.kind, creatureId: c.id })
+        }
       />
     ) : tool === 'move' ? (
       <>
@@ -111,6 +164,31 @@ export function Playing({
     <>
       <div className="pc-overlay-top" onPointerDown={stop} onPointerUp={stop}>
         {layout === 'phoneLandscape' && <div className="pc-pills">{header}</div>}
+        {ordered
+          .filter((c) => c.summon?.concentrationLost)
+          .map((c) => (
+            <div key={creatureKey(c)} className="pc-concentration" role="alert">
+              <span>
+                {me.name}’s concentration broke. {c.name} was tied to it: take it out of play?
+              </span>
+              <div className="pc-row">
+                <button
+                  type="button"
+                  className="pc-btn"
+                  onClick={() => conn.send({ type: 'keepSummon', tokenId: c.id })}
+                >
+                  Keep
+                </button>
+                <button
+                  type="button"
+                  className="pc-btn damage"
+                  onClick={() => conn.send({ type: 'dismiss', tokenId: c.id })}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
         {me.movementLocked && me.tokenId && tool !== 'move' && (
           <div className="pc-movebanner locked" role="status">
             Movement locked by the DM

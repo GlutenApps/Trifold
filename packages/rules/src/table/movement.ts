@@ -1,5 +1,5 @@
 import { isRevealed, tokenCentre } from '../fog';
-import type { CreatureKind, TableCreature, TableScene, TableToken } from './types';
+import type { AnyCreatureKind, CreatureKind, TableCreature, TableScene, TableToken } from './types';
 
 /** A drag lock lapses after this long without a preview or a hold (Concurrency). */
 export const LOCK_TTL_MS = 3_000;
@@ -82,7 +82,7 @@ export interface MovementLocks {
   creatures: readonly string[];
 }
 
-export const creatureKey = (kind: CreatureKind, id: string) => `${kind}:${id}`;
+export const creatureKey = (kind: AnyCreatureKind, id: string) => `${kind}:${id}`;
 
 export function movementLocked(locks: MovementLocks, kind: CreatureKind, id: string): boolean {
   return locks.all || locks.creatures.includes(creatureKey(kind, id));
@@ -117,6 +117,11 @@ export const snapToCell = (p: { x: number; y: number }) => ({
 });
 
 /** The companions of a PC among the creatures the table knows (Phase 3 plan, "Companions"). */
-export function companionsOf(creatures: readonly TableCreature[], pcId: string): TableCreature[] {
-  return creatures.filter((c) => c.kind === 'npc' && c.companionOf === pcId);
+export function companionsOf(
+  creatures: readonly TableCreature[],
+  pcId: string,
+): Array<TableCreature & { kind: 'npc' }> {
+  return creatures.filter(
+    (c): c is TableCreature & { kind: 'npc' } => c.kind === 'npc' && c.companionOf === pcId,
+  );
 }

@@ -230,6 +230,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       setMovementLock(target, locked) {
         return ctx.table.setMovementLock(target, locked);
       },
+      setSummoning(summoning) {
+        return ctx.table.setSummoning(summoning);
+      },
     },
     presenter: {
       async push(state) {

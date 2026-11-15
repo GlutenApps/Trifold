@@ -5,9 +5,11 @@ import type {
   ClientMap,
   ClientToken,
   ClientView,
-  CreatureKind,
+  AnyCreatureKind,
   CreatureView,
   PickerEntry,
+  SummonMode,
+  TableCreature,
   TableSnapshot,
   TableToken,
 } from './types';
@@ -23,7 +25,7 @@ export const tablePaths = {
     `/t/${encodeURIComponent(tokenId)}/art?v=${shortHash(src)}`,
   tokenGlyph: (tokenId: string, src: string) =>
     `/t/${encodeURIComponent(tokenId)}/glyph?v=${shortHash(src)}`,
-  portrait: (kind: CreatureKind, id: string, src: string) =>
+  portrait: (kind: AnyCreatureKind, id: string, src: string) =>
     `/c/${kind}/${encodeURIComponent(id)}/portrait?v=${shortHash(src)}`,
 };
 
@@ -49,6 +51,29 @@ export function claimedBy(claims: readonly Claim[], deviceId: string | null): Se
   return out;
 }
 
+/** What a device holds: its claims, and the summons of the creatures it holds (Phase 4). */
+export function heldBy(
+  snapshot: TableSnapshot,
+  claims: readonly Claim[],
+  deviceId: string | null,
+): Set<string> {
+  const out = claimedBy(claims, deviceId);
+  for (const c of snapshot.creatures) {
+    const owner = c.summon?.owner;
+    if (owner && out.has(creatureKey(owner.kind, owner.id))) out.add(creatureKey('summon', c.id));
+  }
+  return out;
+}
+
+/** The owner whose movement lock and claim a creature follows: a summon's owner, else itself. */
+export function controller(c: Pick<TableCreature, 'kind' | 'id' | 'summon'>): {
+  kind: 'pc' | 'npc';
+  id: string;
+} {
+  if (c.summon) return c.summon.owner;
+  return { kind: c.kind as 'pc' | 'npc', id: c.id };
+}
+
 /**
  * Whether a device may see a token on the live map (ADR 0043, decision 12): never a hidden one;
  * a token whose centre is under fog only for the device that owns it.
@@ -71,7 +96,7 @@ export function visibleTokenIds(
   claims: readonly Claim[],
   deviceId: string | null,
 ): Set<string> {
-  const mine = claimedBy(claims, deviceId);
+  const mine = heldBy(snapshot, claims, deviceId);
   const out = new Set<string>();
   if (!mine.size) return out;
   for (const t of snapshot.scene?.tokens ?? []) {
@@ -98,13 +123,15 @@ export function viewFor(
     movement?: MovementLocks;
     /** Tokens being dragged: token id → the dragging device's id and name. */
     dragging?: ReadonlyMap<string, { deviceId: string; label: string }>;
+    /** Summoning's mode and cap (Phase 4); the options come from the snapshot. */
+    summoning?: { mode: SummonMode; cap: number };
   } = {},
 ): ClientView {
   const reclaimMode = options.reclaimMode ?? 'open';
   const online = options.online ?? new Set<string>();
   const movement = options.movement ?? { all: false, creatures: [] };
   const dragging = options.dragging ?? new Map();
-  const mineKeys = claimedBy(claims, deviceId);
+  const mineKeys = heldBy(snapshot, claims, deviceId);
   const known = new Set(snapshot.creatures.map((c) => creatureKey(c.kind, c.id)));
   const holding = [...mineKeys].filter((k) => known.has(k));
 
@@ -113,7 +140,9 @@ export function viewFor(
       claims.map((c) => [creatureKey(c.creatureKind, c.creatureId), c.deviceId]),
     );
     const picker: PickerEntry[] = snapshot.creatures
-      .filter((c) => c.claimable)
+      .filter(
+        (c): c is TableCreature & { kind: 'pc' | 'npc' } => c.claimable && c.kind !== 'summon',
+      )
       .map((c) => ({
         kind: c.kind,
         id: c.id,
@@ -185,11 +214,21 @@ export function viewFor(
         inFight: c.inFight,
         needsInitiative: c.needsInitiative,
         editable: c.editable,
-        movementLocked: movementLocked(movement, c.kind, c.id),
+        movementLocked: movementLocked(movement, controller(c).kind, controller(c).id),
         ...(c.companionOf ? { companionOf: c.companionOf } : {}),
+        ...(c.summon ? { summon: c.summon } : {}),
         ...(tokenId ? { tokenId } : {}),
       };
     });
 
-  return { campaignName: snapshot.campaignName, mine, picker: [], map, reclaimMode };
+  return {
+    campaignName: snapshot.campaignName,
+    mine,
+    picker: [],
+    map,
+    reclaimMode,
+    ...(options.summoning
+      ? { summoning: { ...options.summoning, options: snapshot.summonOptions ?? [] } }
+      : {}),
+  };
 }

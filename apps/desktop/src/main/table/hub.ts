@@ -21,6 +21,11 @@ import {
   movementLocked,
   snapToCell,
   PREVIEWS_PER_SECOND,
+  controller,
+  summonProblem,
+  type AnyCreatureKind,
+  type SummonRequest,
+  type TableSummonEvent,
   type TableToken,
   decideClaim,
   intentProblem,
@@ -79,7 +84,7 @@ const ClientMessageSchema: z.ZodType<ClientMessage> = z.discriminatedUnion('type
   }),
   z.object({
     type: z.literal('intent'),
-    creatureKind: CreatureKindSchema,
+    creatureKind: z.enum(['pc', 'npc', 'summon']),
     creatureId: z.string().min(1).max(64),
     intent: IntentSchema,
   }),
@@ -107,6 +112,19 @@ const ClientMessageSchema: z.ZodType<ClientMessage> = z.discriminatedUnion('type
     creatureKind: CreatureKindSchema,
     creatureId: z.string().min(1).max(64),
   }),
+  z.object({
+    type: z.literal('summon'),
+    ownerKind: CreatureKindSchema,
+    ownerId: z.string().min(1).max(64),
+    optionKey: z.string().min(1).max(64),
+    count: z.number().int().min(1).max(8),
+    initiative: z.enum(['shared', 'own']),
+    rounds: z.number().int().min(1).max(100).optional(),
+    concentration: z.boolean(),
+    persistent: z.boolean(),
+  }),
+  z.object({ type: z.literal('dismiss'), tokenId: z.string().min(1).max(64) }),
+  z.object({ type: z.literal('keepSummon'), tokenId: z.string().min(1).max(64) }),
 ]);
 
 /** More than this many messages in a second from one browser are dropped (previews included). */
@@ -154,6 +172,8 @@ interface ApprovalRequest {
   label: string;
   creatureName: string;
   takeover: boolean;
+  /** A summon waiting for the DM (Phase 4). */
+  summon?: SummonRequest;
 }
 
 export interface TableHubOptions {
@@ -168,6 +188,8 @@ export interface TableHubOptions {
   onIntent(intent: TableIntentEvent): void;
   /** A player dragging or dropping a token (Phase 3). */
   onToken(event: TableTokenEvent): void;
+  /** A player summoning, dismissing or keeping a summon (Phase 4). */
+  onSummon(event: TableSummonEvent): void;
   /** Tests replace the network lookups. */
   addresses?: () => LanAddress[];
   mdns?: { start(): Promise<string>; announce(): void; stop(): Promise<void> } | null;
@@ -253,7 +275,18 @@ export class TableHub {
         label: a.label,
         creatureName: a.creatureName,
         takeover: a.takeover,
+        ...(a.summon
+          ? {
+              summon: {
+                count: a.summon.count,
+                name:
+                  this.snapshot?.summonOptions?.find((o) => o.key === a.summon!.optionKey)?.name ??
+                  'a creature',
+              },
+            }
+          : {}),
       })),
+      summoning: this.players?.summoning ?? { mode: 'on', cap: 8 },
     };
   }
 
@@ -405,7 +438,12 @@ export class TableHub {
   async answer(requestId: string, accept: boolean): Promise<TableStatus> {
     const request = this.approvals.find((a) => a.requestId === requestId);
     this.approvals = this.approvals.filter((a) => a.requestId !== requestId);
-    if (request && request.client.socket.readyState === request.client.socket.OPEN) {
+    if (request?.summon) {
+      if (accept) this.spawn(request.client, request.summon, true);
+      else if (request.client.socket.readyState === request.client.socket.OPEN) {
+        this.send(request.client, { type: 'error', message: 'The DM said no to that summon.' });
+      }
+    } else if (request && request.client.socket.readyState === request.client.socket.OPEN) {
       if (accept) {
         await this.grant(request.client, request.kind, request.id, request.label);
       } else {
@@ -627,6 +665,13 @@ export class TableHub {
         return this.letGo(client, msg.tokenId);
       case 'releaseOne':
         return this.releaseOne(client, msg.creatureKind, msg.creatureId);
+      case 'summon': {
+        const { type: _type, ...request } = msg;
+        return this.spawn(client, request, false);
+      }
+      case 'dismiss':
+      case 'keepSummon':
+        return this.summonAction(client, msg.type === 'dismiss' ? 'dismiss' : 'keep', msg.tokenId);
     }
   }
 
@@ -765,13 +810,15 @@ export class TableHub {
   }
 
   /** A player's change: checked here, applied by the console (Phase 2 plan). */
-  private intent(client: Client, kind: CreatureKind, id: string, intent: TableIntent): void {
-    const held = this.players?.claimOf(kind, id);
+  private intent(client: Client, kind: AnyCreatureKind, id: string, intent: TableIntent): void {
+    const creature = this.snapshot?.creatures.find((c) => c.kind === kind && c.id === id);
+    if (!creature) return this.reject(client, 'That character isn’t on the table right now.');
+    // A summon answers to whoever holds its owner (Phase 4).
+    const owner = controller(creature);
+    const held = this.players?.claimOf(owner.kind, owner.id);
     if (!held || held.deviceId !== client.deviceId) {
       return this.reject(client, 'That character isn’t yours on this device.');
     }
-    const creature = this.snapshot?.creatures.find((c) => c.kind === kind && c.id === id);
-    if (!creature) return this.reject(client, 'That character isn’t on the table right now.');
     const problem = intentProblem(intent, creature);
     if (problem) return this.reject(client, problem);
     this.opts.onIntent({
@@ -810,12 +857,16 @@ export class TableHub {
   private movable(client: Client, tokenId: string): { token: TableToken } | { problem: string } {
     const scene = this.snapshot?.scene;
     const token = scene?.tokens.find((t) => t.id === tokenId);
-    const creature = token?.creature;
+    const ref = token?.creature;
+    const creature = ref
+      ? this.snapshot?.creatures.find((c) => c.kind === ref.kind && c.id === ref.id)
+      : undefined;
     if (!scene || !token || !creature) return { problem: 'That token isn’t on the map.' };
-    const held = this.players?.claimOf(creature.kind, creature.id);
+    const owner = controller(creature);
+    const held = this.players?.claimOf(owner.kind, owner.id);
     if (!held || held.deviceId !== client.deviceId) return { problem: 'That token isn’t yours.' };
     if (token.hidden) return { problem: 'That token is hidden.' };
-    if (movementLocked(this.players!.movement, creature.kind, creature.id)) {
+    if (movementLocked(this.players!.movement, owner.kind, owner.id)) {
       return { problem: 'Movement locked by the DM.' };
     }
     return { token };
@@ -921,7 +972,11 @@ export class TableHub {
       if (locked) {
         // Drags already going on stop with the lock.
         for (const [tokenId, deviceId] of this.locks.active(Date.now())) {
-          const c = this.snapshot?.scene?.tokens.find((t) => t.id === tokenId)?.creature;
+          const ref = this.snapshot?.scene?.tokens.find((t) => t.id === tokenId)?.creature;
+          const found = ref
+            ? this.snapshot?.creatures.find((x) => x.kind === ref.kind && x.id === ref.id)
+            : undefined;
+          const c = found ? controller(found) : null;
           if (c && movementLocked(this.players.movement, c.kind, c.id)) {
             this.locks.release(tokenId);
             this.endDrag(tokenId, deviceId, 'Movement locked by the DM.');
@@ -996,6 +1051,97 @@ export class TableHub {
     return this.status();
   }
 
+  // ---------- summoning (Phase 4) ----------
+
+  async setSummoning(summoning: {
+    mode: 'on' | 'approval' | 'off';
+    cap: number;
+  }): Promise<TableStatus> {
+    if (this.players) {
+      await this.players.setSummoning(summoning);
+      this.opts.logger.info(`table server: summoning ${summoning.mode}, cap ${summoning.cap}`);
+      this.scheduleBroadcast(0);
+    }
+    this.emit();
+    return this.status();
+  }
+
+  /**
+   * A summon from a phone: checked here (summoning on, the owner held by this device, the
+   * creature on the DM's list, a map with the owner on it, the cap), then asked of the DM in
+   * Approval mode, else handed to the console to place.
+   */
+  private spawn(client: Client, request: SummonRequest, approved: boolean): void {
+    const players = this.players;
+    const snapshot = this.snapshot;
+    if (!players || !snapshot) return;
+    const held = players.claimOf(request.ownerKind, request.ownerId);
+    const ownerOnMap = !!snapshot.scene?.tokens.some(
+      (t) =>
+        t.creature?.kind === request.ownerKind && t.creature.id === request.ownerId && !t.hidden,
+    );
+    const inPlay = snapshot.creatures.filter(
+      (c) => c.summon?.owner.kind === request.ownerKind && c.summon.owner.id === request.ownerId,
+    ).length;
+    const option = snapshot.summonOptions?.find((o) => o.key === request.optionKey);
+    const problem =
+      summonProblem({
+        mode: players.summoning.mode,
+        request,
+        ownerHeld: !!held && held.deviceId === client.deviceId,
+        optionExists: !!option,
+        hasMap: !!snapshot.scene,
+        inPlay,
+        cap: players.summoning.cap,
+      }) ??
+      (ownerOnMap
+        ? null
+        : `Put ${this.nameOf(request.ownerKind, request.ownerId)} on the map first.`);
+    if (problem) return this.reject(client, problem);
+    const label = this.device(client)?.label || 'A player';
+    if (players.summoning.mode === 'approval' && !approved) {
+      this.approvals = [
+        ...this.approvals,
+        {
+          requestId: ulid(),
+          client,
+          kind: request.ownerKind,
+          id: request.ownerId,
+          label,
+          creatureName: this.nameOf(request.ownerKind, request.ownerId),
+          takeover: false,
+          summon: request,
+        },
+      ];
+      this.send(client, {
+        type: 'error',
+        message: `Asked the DM to summon ${option!.name}. It appears when they say yes.`,
+      });
+      this.emit();
+      return;
+    }
+    this.opts.logger.info(
+      `table server: ${label} summons ${request.count} ${option!.name} for ${request.ownerKind} ${request.ownerId}`,
+    );
+    this.opts.onSummon({ kind: 'spawn', deviceLabel: label, ...request });
+  }
+
+  /** Dismiss a summon, or keep one whose owner's concentration broke. */
+  private summonAction(client: Client, action: 'dismiss' | 'keep', tokenId: string): void {
+    const creature = this.snapshot?.creatures.find((c) => c.kind === 'summon' && c.id === tokenId);
+    if (!creature?.summon) return this.reject(client, 'That summon is gone.');
+    const owner = creature.summon.owner;
+    const held = this.players?.claimOf(owner.kind, owner.id);
+    if (!held || held.deviceId !== client.deviceId) {
+      return this.reject(client, 'That summon isn’t yours on this device.');
+    }
+    this.opts.onSummon(
+      action === 'dismiss'
+        ? { kind: 'dismiss', tokenId, deviceLabel: this.device(client)?.label || 'A player' }
+        : { kind: 'keep', tokenId },
+    );
+  }
+
   /** Switch character: release everything this device holds, with a few seconds to undo. */
   private async switchCharacter(client: Client): Promise<void> {
     const deviceId = client.deviceId;
@@ -1066,6 +1212,7 @@ export class TableHub {
       online: this.online(),
       movement: this.players?.movement ?? { all: false, creatures: [] },
       dragging: this.draggingNow(),
+      summoning: this.players?.summoning ?? { mode: 'on', cap: 8 },
     });
     const text = JSON.stringify({ type: 'state', ...view } satisfies ServerMessage);
     if (text === client.last) return;
@@ -1115,7 +1262,7 @@ export class TableHub {
       const tokenArt = /^\/t\/([^/]+)\/(art|glyph)$/.exec(path);
       if (tokenArt)
         return await this.serveTokenArt(res, tokenArt[1]!, tokenArt[2] as 'art' | 'glyph', common);
-      const portrait = /^\/c\/(pc|npc)\/([^/]+)\/portrait$/.exec(path);
+      const portrait = /^\/c\/(pc|npc|summon)\/([^/]+)\/portrait$/.exec(path);
       if (portrait) {
         const c = this.snapshot?.creatures.find(
           (x) => x.kind === portrait[1] && x.id === portrait[2],

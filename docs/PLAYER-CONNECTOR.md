@@ -1,6 +1,6 @@
 # Player connector
 
-**Status:** Phase 1 built and checked on real hardware (2026-11-14, ADR 0043); Phase 2 built (2026-11-14); Phase 3 built (2026-11-15); Phase 4 next. Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
+**Status:** Phase 1 built and checked on real hardware (2026-11-14, ADR 0043); Phase 2 built (2026-11-14); Phase 3 built (2026-11-15); Phase 4 and the page redesign built (2026-11-15). Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
 The [decisions](#decisions) below settle where the original spec and the repo disagreed; where
 they differ from a later section, the decisions win. Before Phase 1 starts, a Phase 1 plan is
 confirmed and an ADR amends `DESIGN.md` §1.2 and `CLAUDE.md` ground rule 1.
@@ -681,9 +681,19 @@ iPhone and an Android phone (the smoke test drives a mouse).
 
 **Phase 4: player spawning**
 
-- [ ] Players create presets and spawn ×N numbered summons next to the parent
-- [ ] Initiative modes, round durations, concentration prompts and end-of-encounter cleanup work
-- [ ] Spawning modes and the summon cap are enforced; the console shows each summon's source
+- [x] Players create presets and spawn ×N numbered summons next to the parent
+- [x] Initiative modes, round durations, concentration prompts and end-of-encounter cleanup work
+- [x] Spawning modes and the summon cap are enforced; the console shows each summon's source
+
+Phase 4 status (2026-11-15): built, with the redesigned player page. `smoke/players.spec.ts`
+runs the whole flow on the new page, then marks the Owl summonable from its compendium page,
+summons one beside Brannoc and three more numbered Owl 2 to 4 through Options, removes one, sees
+the summon's source on the console's map, and has an "Ask me first" summon wait for the DM's
+Accept. Unit tests cover the cells beside the owner, numbering, the cap and the modes, shared
+initiative, round expiry, the concentration mark, end-of-fight cleanup and the layouts. Presets
+are the remembered options (confirmed). Summons need a map on the TV. Still to check by hand:
+the four layouts and touch on real phones and tablets, a summon that rolls its own initiative
+in a real fight, and a concentration break at the table.
 
 Every phase passes these on macOS as well as Windows (decision 10).
 

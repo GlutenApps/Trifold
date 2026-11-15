@@ -8,6 +8,9 @@ import type { FogShapeLike } from '../fog';
 
 export type Role = 'ally' | 'enemy' | 'neutral';
 export type CreatureKind = 'pc' | 'npc';
+/** A creature a phone can work on: a claimed PC or NPC, or a summon (Phase 4), which belongs to
+ *  whoever holds its owner and is never claimed itself. A summon's id is its token's id. */
+export type AnyCreatureKind = CreatureKind | 'summon';
 
 export interface TableGrid {
   cellPx: number;
@@ -35,7 +38,7 @@ export interface TableToken {
   artSrc?: string;
   glyphSrc?: string;
   /** The PC card or NPC this token stands for, when it is one. */
-  creature?: { kind: CreatureKind; id: string };
+  creature?: { kind: AnyCreatureKind; id: string };
   /**
    * While a player drags it, `x` and `y` are where the drag is and this is where the token
    * stands: what a drop's stale check compares against (Phase 3).
@@ -82,7 +85,7 @@ export interface CreatureStats {
 
 /** A PC card or NPC offered to players, with what its owner may see. */
 export interface TableCreature extends CreatureStats {
-  kind: CreatureKind;
+  kind: AnyCreatureKind;
   id: string;
   name: string;
   portraitSrc?: string;
@@ -90,6 +93,41 @@ export interface TableCreature extends CreatureStats {
   claimable: boolean;
   /** An NPC kept as a PC's companion (Phase 3): claimed and released with that PC. */
   companionOf?: string;
+  /** A summon's owner and state (Phase 4). */
+  summon?: TableSummon;
+}
+
+export interface TableSummon {
+  owner: { kind: CreatureKind; id: string };
+  /** What it is, for the Companions tool's row ("Beast"). */
+  type: string;
+  persistent: boolean;
+  /** Its owner's concentration broke and it was tied to it: the phone asks whether to remove it. */
+  concentrationLost: boolean;
+}
+
+/** A creature the DM made summonable for this campaign (Phase 4). */
+export interface SummonOption {
+  key: string;
+  name: string;
+  type: string;
+  ac: number | null;
+  hp: number | null;
+}
+
+export type SummonMode = 'on' | 'approval' | 'off';
+
+/** What the phone asks for when it summons (Phase 4 plan, "Add options"). */
+export interface SummonRequest {
+  ownerKind: CreatureKind;
+  ownerId: string;
+  optionKey: string;
+  count: number;
+  initiative: 'shared' | 'own';
+  /** Rounds it lasts in a fight; absent, until dismissed. */
+  rounds?: number;
+  concentration: boolean;
+  persistent: boolean;
 }
 
 export interface TableSnapshot {
@@ -97,6 +135,8 @@ export interface TableSnapshot {
   campaignName: string;
   scene: TableScene | null;
   creatures: TableCreature[];
+  /** The DM's summon list (Phase 4). */
+  summonOptions?: SummonOption[];
 }
 
 export interface Claim {
@@ -142,7 +182,7 @@ export interface ClientMap {
 }
 
 export interface CreatureView extends CreatureStats {
-  kind: CreatureKind;
+  kind: AnyCreatureKind;
   id: string;
   name: string;
   portraitUrl?: string;
@@ -152,6 +192,7 @@ export interface CreatureView extends CreatureStats {
   movementLocked: boolean;
   /** The PC it is a companion of, when it is one. */
   companionOf?: string;
+  summon?: TableSummon;
 }
 
 export interface PickerEntry {
@@ -176,6 +217,8 @@ export interface ClientView {
   map: ClientMap | null;
   /** The campaign's reclaim mode, so the picker knows to ask for a PIN or to wait. */
   reclaimMode: ReclaimMode;
+  /** Summoning (Phase 4): what can be added, whether it may, and how many per character. */
+  summoning?: { mode: SummonMode; cap: number; options: SummonOption[] };
 }
 
 /** A player's change to one of their creatures (Phase 2 plan). HP and temp HP are changes. */
@@ -218,7 +261,7 @@ export type ClientMessage =
       label?: string;
       pin?: string;
     }
-  | { type: 'intent'; creatureKind: CreatureKind; creatureId: string; intent: TableIntent }
+  | { type: 'intent'; creatureKind: AnyCreatureKind; creatureId: string; intent: TableIntent }
   /** Switch character: release everything this device holds. */
   | { type: 'switch' }
   | { type: 'undo' }
@@ -231,7 +274,17 @@ export type ClientMessage =
   | { type: 'drop'; tokenId: string; x: number; y: number; from: { x: number; y: number } }
   | { type: 'letGo'; tokenId: string }
   /** Release one companion on its own. */
-  | { type: 'releaseOne'; creatureKind: CreatureKind; creatureId: string };
+  | { type: 'releaseOne'; creatureKind: CreatureKind; creatureId: string }
+  /** Summoning (Phase 4): bring creatures into play, take one out, keep one after concentration. */
+  | ({ type: 'summon' } & SummonRequest)
+  | { type: 'dismiss'; tokenId: string }
+  | { type: 'keepSummon'; tokenId: string };
+
+/** What main hands the console to do about summons (Phase 4). */
+export type TableSummonEvent =
+  | ({ kind: 'spawn'; deviceLabel: string } & SummonRequest)
+  | { kind: 'dismiss'; tokenId: string; deviceLabel: string }
+  | { kind: 'keep'; tokenId: string };
 
 /** What main hands the console about a token being moved by a player (Phase 3). */
 export type TableTokenEvent =

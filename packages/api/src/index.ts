@@ -30,6 +30,8 @@ import type {
   TableIntent,
   TableSnapshot,
   TableTokenEvent,
+  TableSummonEvent,
+  SummonMode,
 } from '@trifold/rules';
 
 export type {
@@ -48,6 +50,10 @@ export type {
   TableSnapshot,
   TableToken,
   TableTokenEvent,
+  TableSummonEvent,
+  SummonMode,
+  SummonOption,
+  SummonRequest,
 } from '@trifold/rules';
 
 /**
@@ -738,7 +744,16 @@ export interface TableStatus {
   error: string | null;
   reclaimMode: ReclaimMode;
   /** Approval mode: devices waiting for the DM, oldest first. */
-  approvals: Array<{ requestId: string; label: string; creatureName: string; takeover: boolean }>;
+  approvals: Array<{
+    requestId: string;
+    label: string;
+    creatureName: string;
+    takeover: boolean;
+    /** A summon waiting for the DM (Phase 4): how many of what. */
+    summon?: { count: number; name: string };
+  }>;
+  /** Player summoning: on, on with approval, or off, and the cap per character (Phase 4). */
+  summoning: { mode: SummonMode; cap: number };
   /** Lock movement: everyone's, and `kind:id` of single creatures (Phase 3). */
   movement: { all: boolean; creatures: string[] };
 }
@@ -746,7 +761,8 @@ export interface TableStatus {
 /** A player's change, checked by main and handed to the console to apply (Phase 2). */
 export interface TableIntentEvent {
   deviceLabel: string;
-  creatureKind: CreatureKind;
+  /** A summon's id is its token's id (Phase 4). */
+  creatureKind: CreatureKind | 'summon';
   creatureId: string;
   intent: TableIntent;
 }
@@ -835,6 +851,8 @@ export interface TrifoldApi {
       target: 'all' | { kind: CreatureKind; id: string },
       locked: boolean,
     ): Promise<TableStatus>;
+    /** Player summoning's mode and cap per character (Phase 4). */
+    setSummoning(summoning: { mode: SummonMode; cap: number }): Promise<TableStatus>;
   };
   presenter: {
     /**
@@ -1206,6 +1224,7 @@ export const API_METHODS = {
     'dmGrab',
     'give',
     'setMovementLock',
+    'setSummoning',
   ],
   sources: [
     'list',
@@ -1328,6 +1347,8 @@ export interface TrifoldEvents {
   tableIntent: TableIntentEvent;
   /** A player dragging or dropping a token (Phase 3). */
   tableToken: TableTokenEvent;
+  /** A player summoning, dismissing or keeping a summon (Phase 4). */
+  tableSummon: TableSummonEvent;
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -1343,6 +1364,7 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   tableStatus: 'trifold:event:table-status',
   tableIntent: 'trifold:event:table-intent',
   tableToken: 'trifold:event:table-token',
+  tableSummon: 'trifold:event:table-summon',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */

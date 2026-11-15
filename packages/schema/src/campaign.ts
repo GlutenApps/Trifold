@@ -22,7 +22,25 @@ export const CampaignSettings = z.object({
   hpDisplayMode: z.enum(['hidden', 'bloodied', 'exact']).default('bloodied'),
   /** Roll one initiative per identical group or one per creature (DESIGN.md §6.4). */
   initiativeMode: z.enum(['perGroup', 'perCreature']).default('perGroup'),
+  /**
+   * The DM's summon list (ADR 0043, Phase 4): creatures players may bring into play from their
+   * phones. Name, type, size, AC and HP are cached so the table never looks the record up.
+   */
+  summonable: z
+    .array(
+      z.object({
+        ref: RecordRef,
+        name: z.string().min(1),
+        type: z.string().default(''),
+        size: z.string().nullable().default(null),
+        ac: int.nullable().default(null),
+        hp: int.nullable().default(null),
+      }),
+    )
+    .default([]),
 });
+export type CampaignSettings = z.infer<typeof CampaignSettings>;
+export type SummonableEntry = CampaignSettings['summonable'][number];
 
 export const Campaign = z.object({
   schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
@@ -380,6 +398,28 @@ export const Token = z.object({
   glyph: z.string().optional(),
   color: z.string().optional(),
   dead: z.boolean().default(false),
+  /**
+   * A creature a player summoned (ADR 0043, Phase 4): it belongs to whoever holds its owner.
+   * HP and AC are kept here outside a fight; in one, its combatant has them.
+   */
+  summon: z
+    .object({
+      ownerKind: z.enum(['pc', 'npc']),
+      ownerId: z.string().min(1),
+      /** The device that summoned it, by name. */
+      spawnedBy: z.string().default(''),
+      type: z.string().default(''),
+      hp: z.object({ current: int.min(0), max: int.min(0), temp: int.min(0).default(0) }),
+      ac: int.default(10),
+      initiative: z.enum(['shared', 'own']).default('shared'),
+      /** In a fight: the round it goes at. */
+      expiresAtRound: int.optional(),
+      concentration: z.boolean().default(false),
+      concentrationLost: z.boolean().default(false),
+      /** Stays after the fight ends (a familiar). */
+      persistent: z.boolean().default(false),
+    })
+    .optional(),
 });
 export type Token = z.infer<typeof Token>;
 
@@ -643,6 +683,13 @@ export const PlayersFile = z.object({
     .object({
       all: z.boolean().default(false),
       creatures: z.array(z.string()).default([]),
+    })
+    .prefault({}),
+  /** Player summoning (Phase 4): on, on with the DM's approval, or off; and a cap per character. */
+  summoning: z
+    .object({
+      mode: z.enum(['on', 'approval', 'off']).default('on'),
+      cap: z.number().int().min(1).max(20).default(8),
     })
     .prefault({}),
 });

@@ -810,3 +810,10 @@
   white-space: nowrap;
   pointer-events: none;
 }
+
+.summoning-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}

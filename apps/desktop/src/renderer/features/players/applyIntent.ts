@@ -2,6 +2,7 @@ import type { TableIntentEvent } from '@trifold/api';
 import type { Combatant } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
+import { useSceneStore } from '../../stores/sceneStore';
 
 /**
  * Applies a player's change that main has checked (Phase 2 plan, "How a player's edit travels").
@@ -13,15 +14,19 @@ import { useCombatStore } from '../../stores/combatStore';
 export function applyTableIntent(event: TableIntentEvent): void {
   const { creatureKind: kind, creatureId: id, intent } = event;
   const combat = useCombatStore.getState();
+  // A summon's id is its token's (Phase 4): its combatant is the one tied to that token.
   const fighter: Combatant | undefined = combat.state?.combatants.find((c) =>
-    kind === 'pc'
-      ? c.ref.kind === 'pc' && c.ref.pcId === id
-      : c.ref.kind === 'npc' && c.ref.npcId === id,
+    kind === 'summon'
+      ? c.tokenId === id
+      : kind === 'pc'
+        ? c.ref.kind === 'pc' && c.ref.pcId === id
+        : c.ref.kind === 'npc' && c.ref.npcId === id,
   );
+  if (kind === 'summon' && !fighter) return applyToSummonToken(id, intent);
   const campaign = useCampaignStore.getState();
   const pc = kind === 'pc' ? campaign.current?.pcs.find((p) => p.id === id) : undefined;
   const npc = kind === 'npc' ? campaign.current?.npcs.find((n) => n.id === id) : undefined;
-  if (!pc && !npc) return;
+  if (!pc && !npc && !fighter) return;
 
   if (fighter) {
     const f = fighter.id;
@@ -118,4 +123,52 @@ export function applyTableIntent(event: TableIntentEvent): void {
       void campaign.saveNpc({ ...npc, hp: { ...hp, temp: Math.max(0, hp.temp + intent.delta) } });
     }
   }
+}
+
+/** A summon outside a fight keeps its HP and AC on its token (Phase 4). */
+function applyToSummonToken(tokenId: string, intent: TableIntentEvent['intent']): void {
+  const scenes = useSceneStore.getState();
+  const draft = scenes.draft;
+  const token =
+    draft?.tokens.find((t) => t.id === tokenId) ??
+    useCampaignStore
+      .getState()
+      .current?.scenes.flatMap((s) => s.tokens)
+      .find((t) => t.id === tokenId);
+  const summon = token?.summon;
+  if (!summon) return;
+  const hp = summon.hp;
+  let next = summon;
+  switch (intent.kind) {
+    case 'hp': {
+      const absorbed = intent.delta < 0 ? Math.min(hp.temp, -intent.delta) : 0;
+      next = {
+        ...summon,
+        hp: {
+          ...hp,
+          current: Math.min(hp.max, Math.max(0, hp.current + intent.delta + absorbed)),
+          temp: hp.temp - absorbed,
+        },
+      };
+      break;
+    }
+    case 'temp':
+      next = { ...summon, hp: { ...hp, temp: Math.max(0, hp.temp + intent.delta) } };
+      break;
+    case 'setTemp':
+      next = { ...summon, hp: { ...hp, temp: intent.value } };
+      break;
+    case 'maxHp':
+      next = {
+        ...summon,
+        hp: { ...hp, max: intent.value, current: Math.min(hp.current, intent.value) },
+      };
+      break;
+    case 'ac':
+      next = { ...summon, ac: intent.value };
+      break;
+    default:
+      return;
+  }
+  scenes.patchTokenAnywhere(tokenId, { summon: next });
 }
