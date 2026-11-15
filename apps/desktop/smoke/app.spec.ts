@@ -1,3 +1,4 @@
+import { deflateSync } from 'node:zlib';
 import { existsSync } from 'node:fs';
 import { mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -230,6 +231,31 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(console_.getByRole('heading', { name: 'Cover' })).toBeVisible();
     await expect(console_.getByTestId('markdown-view')).toContainText(/three-quarters cover/i);
     await console_.getByLabel('Search', { exact: true }).fill('');
+
+    // Creature art (ADR 0033): Add from folder matches a file to the creature it is named after,
+    // fits it to 512 px as PNG in art/, and it shows in Images and on the compendium page.
+    const artDir = await mkdtemp(join(tmpdir(), 'trifold-art-'));
+    await writeFile(join(artDir, 'Goblin_Warrior.png'), solidPng(1024, 768));
+    await writeFile(join(artDir, 'not-a-creature.png'), solidPng(8, 8));
+    await libNav('Images').click();
+    await expect(console_.getByTestId('images-row').first()).toBeVisible();
+    await pickNext(artDir);
+    await console_.getByRole('button', { name: 'Add from folder…' }).click();
+    const preview = console_.getByRole('group', { name: 'Add from folder' });
+    await expect(preview).toContainText('1 match · 1 not matched');
+    await preview.getByRole('button', { name: 'Add 1' }).click();
+    await expect(preview).toHaveCount(0);
+    const fitted = await readFile(join(library, 'art', 'monster', 'goblin warrior.png'));
+    expect([fitted.readUInt32BE(16), fitted.readUInt32BE(20)]).toEqual([512, 384]);
+    await console_.getByLabel('Find by name').fill('goblin warrior');
+    await expect(
+      console_
+        .getByTestId('images-row')
+        .filter({ hasText: 'Goblin Warrior' })
+        .first()
+        .getByTestId('art-thumb'),
+    ).toBeVisible();
+    await libNav('Compendium').click();
     await console_.getByRole('tab', { name: 'Monsters', exact: true }).click();
     await console_
       .getByLabel('Source', { exact: true })
@@ -762,4 +788,42 @@ function silentWav(seconds: number): Buffer {
   header.write('data', 36);
   header.writeUInt32LE(data.length, 40);
   return Buffer.concat([header, data]);
+}
+
+/** A valid solid-colour RGB PNG of `width` × `height`, for the creature art step. */
+function solidPng(width: number, height: number): Buffer {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (buf: Buffer) => {
+    let c = 0xffffffff;
+    for (const b of buf) c = crcTable[(c ^ b) & 0xff]! ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const sum = Buffer.alloc(4);
+    sum.writeUInt32BE(crc(body));
+    return Buffer.concat([len, body, sum]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr.writeUInt8(8, 8); // bit depth
+  ihdr.writeUInt8(2, 9); // RGB
+  const rowBytes = 1 + width * 3;
+  const raw = Buffer.alloc(rowBytes * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) raw.set([170, 60, 40], y * rowBytes + 1 + x * 3);
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
 }

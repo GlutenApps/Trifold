@@ -7,6 +7,7 @@ import type { Combatant, Encounter, NPC, PCCard, Scene, Token } from '@trifold/s
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
+import { useArtStore } from '../../stores/artStore';
 import { MapEditor } from './MapEditor';
 
 const now = '2026-09-28T00:00:00.000Z';
@@ -687,5 +688,83 @@ describe('MapEditor: movement ruler (Beta 9)', () => {
     expect(screen.getByTestId('ruler-label')).toHaveTextContent('3 squares · 15 ft');
     fireEvent.pointerUp(wolfToken);
     expect(screen.queryByTestId('ruler-label')).toBeNull();
+  });
+});
+
+describe('MapEditor: token art (ADR 0033)', () => {
+  const goblin: Token = {
+    ...wolf,
+    id: 'gob',
+    ref: {
+      kind: 'record',
+      ref: { recordId: 'r1', sourceId: 'srd', key: 'goblin', edition: '2024' },
+      name: 'Goblin',
+    },
+    label: 'Goblin',
+  };
+  beforeEach(() => {
+    latest = blank;
+    useCampaignStore.setState({
+      current: {
+        campaign: { id: 'c1', slug: 'keep', settings: { initiativeMode: 'perGroup' } },
+        pcs: [],
+        npcs: [],
+        encounters: [],
+        scenes: [blank],
+      } as unknown as CampaignBundle,
+    });
+    useCombatStore.setState({ encounterId: null, state: null });
+    useArtStore.setState({ byKey: {}, error: null });
+  });
+
+  it('asks this token or every one first, then opens the picture, and removes the same way', async () => {
+    vi.mocked(window.trifold.art.chooseImage).mockClear();
+    render(<Harness initial={{ ...blank, tokens: [goblin] }} />);
+    fireEvent.pointerDown(screen.getByTestId('console-token'), { button: 0 });
+    fireEvent.pointerUp(screen.getByTestId('console-token'));
+    const inspector = screen.getByTestId('token-inspector');
+    // No art yet: no Remove.
+    expect(within(inspector).queryByRole('button', { name: 'Remove art' })).toBeNull();
+
+    // The question comes before the picture dialog, beside the button.
+    await userEvent.click(within(inspector).getByRole('button', { name: 'Set art' }));
+    const ask = within(inspector).getByRole('menu', { name: 'Set art for' });
+    expect(window.trifold.art.chooseImage).not.toHaveBeenCalled();
+    await userEvent.click(within(ask).getByRole('menuitem', { name: 'This token…' }));
+    expect(window.trifold.art.chooseImage).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(window.trifold.art.setToken).toHaveBeenCalledWith('/pictures/goblin.png'),
+    );
+    await waitFor(() => expect(latest.tokens[0]!.art).toBe('tokens/art.png'));
+    expect(screen.queryByRole('menu', { name: 'Set art for' })).toBeNull();
+
+    // Every Goblin, from the right-click menu: the question takes the menu's place.
+    fireEvent.contextMenu(screen.getByTestId('console-token'));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Set art…' }));
+    expect(screen.queryByRole('menuitem', { name: 'Mark dead' })).toBeNull();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Every Goblin…' }));
+    await waitFor(() =>
+      expect(window.trifold.art.setCreature).toHaveBeenCalledWith(
+        'monster',
+        'goblin',
+        '/pictures/goblin.png',
+      ),
+    );
+    await waitFor(() => expect(latest.tokens[0]!.art).toBeUndefined());
+
+    // Cancel closes the question without opening the picture.
+    vi.mocked(window.trifold.art.chooseImage).mockClear();
+    await userEvent.click(screen.getByRole('button', { name: 'Set art' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Cancel' }));
+    expect(screen.queryByRole('menu', { name: 'Set art for' })).toBeNull();
+    expect(window.trifold.art.chooseImage).not.toHaveBeenCalled();
+
+    // Remove from this token only: the Goblin keeps its art, this one shows none.
+    await userEvent.click(screen.getByRole('button', { name: 'Remove art' }));
+    const removing = screen.getByRole('menu', { name: 'Remove art from' });
+    await userEvent.click(within(removing).getByRole('menuitem', { name: 'This token' }));
+    await waitFor(() => expect(latest.tokens[0]!.art).toBe(''));
+    expect(screen.queryByRole('button', { name: 'Remove art' })).toBeNull();
+    expect(window.trifold.art.removeCreature).not.toHaveBeenCalled();
   });
 });

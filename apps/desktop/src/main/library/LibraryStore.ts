@@ -1,4 +1,4 @@
-import { mkdir, readFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import type { ZodType } from 'zod';
 import {
@@ -110,6 +110,18 @@ export class LibraryStore {
 
   async writeText(relative: string, text: string): Promise<void> {
     await writeFileAtomic(this.resolvePath(relative), text);
+    this.lastWriteAt = Date.now();
+  }
+
+  /** Writes binary data (an image) with the same atomic write as JSON. */
+  async writeBytes(relative: string, data: Uint8Array): Promise<void> {
+    await writeFileAtomic(this.resolvePath(relative), data);
+    this.lastWriteAt = Date.now();
+  }
+
+  /** Removes one Library file; a file already gone is not an error. */
+  async removeFile(relative: string): Promise<void> {
+    await rm(this.resolvePath(relative), { force: true });
     this.lastWriteAt = Date.now();
   }
 

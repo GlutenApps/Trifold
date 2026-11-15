@@ -96,6 +96,7 @@ export type IconName =
   | 'square'
   | 'polygon'
   | 'ruler'
+  | 'imageOff'
   | 'tally'
   | 'stopwatch'
   | 'sliders'
@@ -233,6 +234,7 @@ const PATHS: Record<IconName, string> = {
   square: 'M5 5h14v14H5z',
   polygon: 'M5 8l6-4 9 3-3 6 2 6-8 1-7-5z',
   ruler: 'M3 16L16 3l5 5L8 21zM7 12l2 2M10 9l2 2M13 6l2 2',
+  imageOff: 'M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4M3 3l18 18',
 };
 
 export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {

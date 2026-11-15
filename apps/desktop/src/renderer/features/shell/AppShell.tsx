@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { tvCounters, tvTimer } from '@trifold/rules';
 import { handleKeydown, installHotkeys, registerHotkey } from '../../hotkeys';
 import { installSessionLog } from '../campaign/sessionLog';
+import { useArtStore } from '../../stores/artStore';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
@@ -91,6 +92,8 @@ export function AppShell() {
   // Layouts and each campaign's console belong to the Library; a Library switch loads its own.
   useEffect(() => {
     if (library?.ok) hydrate(library.path, library.settings?.workspace);
+    // Creature art is the Library's (ADR 0033); a new Library brings its own.
+    if (library?.ok) void useArtStore.getState().load();
   }, [library, hydrate]);
 
   // The console exists only while a campaign is open (ADR 0004, one campaign at a time).

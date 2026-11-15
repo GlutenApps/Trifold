@@ -24,11 +24,13 @@ import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useIconStore } from '../../stores/iconStore';
+import { useArtStore } from '../../stores/artStore';
 import { useShellStore } from '../../stores/shellStore';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
 import { FogLayer, GridLines, RulerLayer } from './MapLayer';
 import { cellAt, cellCentre, rulerLabel, squaresBetween } from './ruler';
+import { tokenArtUrl } from './tokenArt';
 import {
   activeFog,
   addShape,
@@ -160,6 +162,8 @@ export function MapEditor({
   const liveSceneId = usePresenterStore((s) => s.state.scene?.id ?? null);
   const openMajor = useShellStore((s) => s.openMajor);
   const glyphFor = useIconStore((s) => s.glyphForCreature);
+  // Creature art set anywhere (the Images page, another map) redraws the tokens here (ADR 0033).
+  useArtStore((s) => s.byKey);
   const loadIcons = useIconStore((s) => s.load);
   const aspect = usePresenterStore((s) => s.liveOptions.aspect);
   const tokenStyle = usePresenterStore((s) => s.liveOptions.tokenStyle);
@@ -183,6 +187,19 @@ export function MapEditor({
   /** The background whose delete waits on the inline confirm. */
   const [confirmBg, setConfirmBg] = useState<string | null>(null);
   const [pop, setPop] = useState<Pop | null>(null);
+  /**
+   * Set art… or Remove art… asking This token or Every <name> (ADR 0033), right where it was
+   * clicked: inside the right-click menu, or above the inspector's button.
+   */
+  const [artAsk, setArtAsk] = useState<{
+    mode: 'set' | 'remove';
+    tokenId: string;
+    where: 'menu' | 'inspector';
+  } | null>(null);
+  /** A picture that could not be set, shown above the map until dismissed. */
+  const [artError, setArtError] = useState<string | null>(null);
+  const artStoreError = useArtStore((s) => s.error);
+  const clearArtStoreError = useArtStore((s) => s.clearError);
   const [fogTool, setFogTool] = useState<FogTool>({ mode: 'reveal', shape: 'rect' });
   /** A rectangle being dragged, in map pixels; `free` when Alt turned off the grid snap. */
   const [fogDrag, setFogDrag] = useState<{ a: Point; b: Point; free: boolean } | null>(null);
@@ -274,6 +291,20 @@ export function MapEditor({
   const selectedTokenId = selection?.kind === 'token' ? selection.id : null;
   const selectedToken = scene.tokens.find((t) => t.id === selectedTokenId) ?? null;
   const selectToken = (id: string) => setSelection({ kind: 'token', id });
+  // The art question goes with whatever held it: the menu closing, another token, a click away.
+  const artAskStale =
+    !!artAsk && (artAsk.where === 'menu' ? !menu : selectedTokenId !== artAsk.tokenId);
+  useEffect(() => {
+    if (artAskStale) setArtAsk(null);
+  }, [artAskStale]);
+  useEffect(() => {
+    if (artAsk?.where !== 'inspector') return;
+    const away = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest('.art-anchor')) setArtAsk(null);
+    };
+    window.addEventListener('pointerdown', away);
+    return () => window.removeEventListener('pointerdown', away);
+  }, [artAsk?.where]);
   const togglePop = (p: Pop) => setPop(pop === p ? null : p);
   const closePop = () => setPop(null);
 
@@ -699,10 +730,144 @@ export function MapEditor({
     });
   };
 
-  const setArt = async (tokenId: string) => {
-    const image = await importSceneImage();
-    if (image) patchToken(tokenId, { art: image.displayPath });
+  // ---------- art (ADR 0033) ----------
+  /** What "every" means for a token: its creature, PC or NPC; markers have none. */
+  const everyName = (t: Token) => (t.ref.kind === 'custom' ? null : t.ref.name);
+  /** The picture every token of it shares: the creature's art, or the PC's or NPC's portrait. */
+  const sharedArt = (t: Token): boolean => {
+    const ref = t.ref;
+    if (ref.kind === 'record') return !!useArtStore.getState().byKey[`monster:${ref.ref.key}`];
+    if (ref.kind === 'pc') return !!pcs.find((p) => p.id === ref.pcId)?.portrait;
+    if (ref.kind === 'npc') return !!npcs.find((n) => n.id === ref.npcId)?.portrait;
+    return false;
+  };
+  const replaceToken = (t: Token, art: string | null) => {
+    const { art: _own, ...rest } = t;
+    patch({
+      tokens: scene.tokens.map((x) =>
+        x.id === t.id ? (art === null ? rest : { ...rest, art }) : x,
+      ),
+    });
+  };
+  const failed = (err: unknown) => setArtError(err instanceof Error ? err.message : String(err));
+
+  /**
+   * Set art…: where it goes first (This token or Every <name>, asked where it was clicked), then
+   * the picture. A marker has only itself, so it goes straight to the picture.
+   */
+  const startSetArt = (t: Token, where: 'menu' | 'inspector') => {
+    selectToken(t.id);
+    if (everyName(t)) {
+      setArtAsk({ mode: 'set', tokenId: t.id, where });
+      if (where === 'inspector') setMenu(null);
+    } else void applySetArt(t, 'one');
+  };
+  const applySetArt = async (t: Token, scope: 'one' | 'every') => {
+    setArtAsk(null);
     setMenu(null);
+    try {
+      const file = await window.trifold.art.chooseImage();
+      if (!file) return;
+      if (scope === 'one') {
+        const path = await window.trifold.art.setToken(file);
+        if (path) replaceToken(t, path);
+        return;
+      }
+      const campaign = useCampaignStore.getState().current;
+      let done = false;
+      if (t.ref.kind === 'record') {
+        done = await useArtStore.getState().setCreature('monster', t.ref.ref.key, file);
+      } else if ((t.ref.kind === 'pc' || t.ref.kind === 'npc') && campaign) {
+        const id = t.ref.kind === 'pc' ? t.ref.pcId : t.ref.npcId;
+        done = !!(await window.trifold.art.setCharacter(
+          campaign.campaign.id,
+          t.ref.kind,
+          id,
+          file,
+        ));
+        if (done) await useCampaignStore.getState().refreshCharacters();
+      }
+      // This token shows the shared picture now, so its own art goes.
+      if (done && t.art !== undefined) replaceToken(t, null);
+      usePresenterStore.getState().setLiveOptions({});
+    } catch (err) {
+      failed(err);
+    }
+  };
+
+  /**
+   * Remove art…: asks This token or Every <name> when there is a shared picture to remove too;
+   * otherwise only this token's own art goes.
+   */
+  const startRemoveArt = (t: Token, where: 'menu' | 'inspector') => {
+    selectToken(t.id);
+    if (everyName(t) && sharedArt(t)) {
+      setArtAsk({ mode: 'remove', tokenId: t.id, where });
+      if (where === 'inspector') setMenu(null);
+    } else void applyRemoveArt(t, 'one');
+  };
+  const applyRemoveArt = async (t: Token, scope: 'one' | 'every') => {
+    setArtAsk(null);
+    setMenu(null);
+    try {
+      if (scope === 'one') {
+        // With a shared picture still there, this token keeps none rather than showing it.
+        replaceToken(t, sharedArt(t) ? '' : null);
+        return;
+      }
+      const campaign = useCampaignStore.getState().current;
+      if (t.ref.kind === 'record') {
+        await useArtStore.getState().removeCreature('monster', t.ref.ref.key);
+      } else if ((t.ref.kind === 'pc' || t.ref.kind === 'npc') && campaign) {
+        const id = t.ref.kind === 'pc' ? t.ref.pcId : t.ref.npcId;
+        await window.trifold.art.removeCharacter(campaign.campaign.id, t.ref.kind, id);
+        await useCampaignStore.getState().refreshCharacters();
+      }
+      if (t.art !== undefined) replaceToken(t, null);
+      usePresenterStore.getState().setLiveOptions({});
+    } catch (err) {
+      failed(err);
+    }
+  };
+
+  /** The question's choices, as menu items; Set art… opens the picture dialog after the choice. */
+  const artChoices = (t: Token, mode: 'set' | 'remove') => {
+    const apply = (scope: 'one' | 'every') =>
+      void (mode === 'set' ? applySetArt(t, scope) : applyRemoveArt(t, scope));
+    const dots = mode === 'set' ? '…' : '';
+    return (
+      <>
+        <span className="art-menu-head muted small">
+          {mode === 'set' ? 'Set art for' : 'Remove art from'}
+        </span>
+        <button type="button" role="menuitem" onClick={() => apply('one')}>
+          This token{dots}
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          title={
+            t.ref.kind === 'record'
+              ? 'Every token of it in every campaign, and its compendium page'
+              : 'Their portrait: their card and every token of them'
+          }
+          onClick={() => apply('every')}
+        >
+          Every {everyName(t)}
+          {dots}
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            setArtAsk(null);
+            setMenu(null);
+          }}
+        >
+          Cancel
+        </button>
+      </>
+    );
   };
 
   const useMyView = () => {
@@ -1656,7 +1821,7 @@ export function MapEditor({
                 <TokenDisc
                   token={{
                     ...token,
-                    artUrl: token.art ? mediaUrl(slug, token.art) : undefined,
+                    artUrl: tokenArtUrl(token, slug),
                     dead: token.dead || deadTokens.has(token.id),
                   }}
                   style={tokenStyle}
@@ -1710,6 +1875,10 @@ export function MapEditor({
             {(() => {
               const t = scene.tokens.find((x) => x.id === menu.tokenId);
               if (!t) return null;
+              // Set art… or Remove art… turns this menu into its question, in the same place.
+              if (artAsk?.where === 'menu' && artAsk.tokenId === t.id) {
+                return artChoices(t, artAsk.mode);
+              }
               const fighter = fighterByToken.get(t.id);
               const candidates =
                 inPlay && !fighter ? combatantCandidates(t, fighters, scene.tokens) : [];
@@ -1786,9 +1955,14 @@ export function MapEditor({
                   >
                     {t.dead ? 'Revive' : 'Mark dead'}
                   </button>
-                  <button type="button" role="menuitem" onClick={() => void setArt(t.id)}>
+                  <button type="button" role="menuitem" onClick={() => startSetArt(t, 'menu')}>
                     Set art…
                   </button>
+                  {tokenArtUrl(t, slug) && (
+                    <button type="button" role="menuitem" onClick={() => startRemoveArt(t, 'menu')}>
+                      Remove art…
+                    </button>
+                  )}
                   <button type="button" role="menuitem" onClick={() => removeToken(t.id)}>
                     Remove
                   </button>
@@ -1800,6 +1974,21 @@ export function MapEditor({
       </div>
 
       <div className="map-actions">
+        {(artError ?? artStoreError) && (
+          <div className="banner error" role="alert">
+            <span>{artError ?? artStoreError}</span>
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => {
+                setArtError(null);
+                clearArtStoreError();
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         <button
           type="button"
           className="btn primary"
@@ -2108,15 +2297,45 @@ export function MapEditor({
                     </button>
                   );
                 })()}
-              <button
-                type="button"
-                className="chrome-btn"
-                aria-label="Set token art"
-                title="Set art…"
-                onClick={() => void setArt(selectedToken.id)}
-              >
-                <Icon name="image" />
-              </button>
+              <span className="map-pop-anchor art-anchor">
+                <button
+                  type="button"
+                  className="chrome-btn"
+                  aria-label="Set art"
+                  aria-expanded={artAsk?.where === 'inspector' && artAsk.mode === 'set'}
+                  title="Set art…: this token or every one of it, then choose a picture"
+                  onClick={() => startSetArt(selectedToken, 'inspector')}
+                >
+                  <Icon name="image" />
+                </button>
+                {tokenArtUrl(selectedToken, slug) && (
+                  <button
+                    type="button"
+                    className="chrome-btn"
+                    aria-label="Remove art"
+                    aria-expanded={artAsk?.where === 'inspector' && artAsk.mode === 'remove'}
+                    title="Remove art…: from this token, or from every one of it"
+                    onClick={() => startRemoveArt(selectedToken, 'inspector')}
+                  >
+                    <Icon name="imageOff" />
+                  </button>
+                )}
+                {artAsk?.where === 'inspector' && artAsk.tokenId === selectedToken.id && (
+                  <div
+                    className="context-menu art-menu"
+                    role="menu"
+                    aria-label={artAsk.mode === 'set' ? 'Set art for' : 'Remove art from'}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.stopPropagation();
+                        setArtAsk(null);
+                      }
+                    }}
+                  >
+                    {artChoices(selectedToken, artAsk.mode)}
+                  </div>
+                )}
+              </span>
               <button
                 type="button"
                 className="chrome-btn"

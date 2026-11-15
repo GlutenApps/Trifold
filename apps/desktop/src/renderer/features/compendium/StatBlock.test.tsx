@@ -4,6 +4,7 @@ import { parseCompendiumXml } from '@trifold/importers';
 import type { MonsterRecord } from '@trifold/schema';
 import { describe, expect, it, vi } from 'vitest';
 import fixture from '../../../../../../fixtures/compendium-sample.xml?raw';
+import { useArtStore } from '../../stores/artStore';
 import { StatBlock } from './StatBlock';
 
 const { records } = parseCompendiumXml(fixture, { sourceId: 'src', defaultEdition: '2014' });
@@ -40,5 +41,27 @@ describe('StatBlock', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Fireball' }));
     expect(onOpenSpell).toHaveBeenCalledWith('fireball');
     expect(screen.getByText(/Slots:/)).toHaveTextContent('1: 4 · 2: 3 · 3: 3 · 4: 3 · 5: 1');
+  });
+
+  it('shows the creature’s art, shared by every source and edition (ADR 0033)', () => {
+    const aboleth = monster('Aboleth');
+    const { rerender } = render(<StatBlock record={aboleth} onOpenSpell={() => undefined} />);
+    expect(screen.queryByTestId('art-thumb')).toBeNull();
+    useArtStore.setState({
+      byKey: {
+        [`monster:${aboleth.key}`]: {
+          kind: 'monster',
+          key: aboleth.key,
+          path: `art/monster/${aboleth.key}.png`,
+          version: 7,
+        },
+      },
+    });
+    rerender(<StatBlock record={aboleth} onOpenSpell={() => undefined} />);
+    expect(screen.getByRole('img', { name: 'Aboleth' })).toHaveAttribute(
+      'src',
+      'trifold-media://library/art/monster/aboleth.png?v=7',
+    );
+    useArtStore.setState({ byKey: {} });
   });
 });

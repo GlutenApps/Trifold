@@ -459,6 +459,33 @@ export class CampaignRepository {
   }
 
   /**
+   * Sets or clears a PC's or NPC's portrait in any campaign, open or not (creature art, ADR
+   * 0033). The old picture file stays: a token placed from the NPC may still show it.
+   */
+  async setPortrait(
+    campaignId: string,
+    kind: 'pc' | 'npc',
+    id: string,
+    portrait: string | null,
+  ): Promise<void> {
+    const folder = kind === 'pc' ? 'pcs' : 'npcs';
+    const schema: ZodType<PCCard | NPC> = kind === 'pc' ? PCCard : NPC;
+    const slug = await this.slugFor(campaignId);
+    const value = await this.store.readJson(this.dir(slug, folder, `${id}.json`), schema, kind);
+    const { portrait: _old, ...rest } = value as PCCard & NPC;
+    await this.store.writeJson(this.dir(slug, folder, `${id}.json`), {
+      ...rest,
+      ...(portrait ? { portrait } : {}),
+      updatedAt: nowIso(),
+    });
+  }
+
+  /** The folder of a campaign by id, for writing a picture into it. */
+  async campaignDir(campaignId: string, ...rest: string[]): Promise<string> {
+    return this.dir(await this.slugFor(campaignId), ...rest);
+  }
+
+  /**
    * Copies a campaign-relative file (a portrait) from another campaign into the open one under
    * a new name in the same folder. Null when the file is missing, so a copy never points at a
    * picture its campaign does not have.

@@ -5,6 +5,10 @@ import { useCampaignStore } from '../../stores/campaignStore';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useShellStore } from '../../stores/shellStore';
 import { StatBlock } from '../compendium/StatBlock';
+import { mediaUrl } from '@trifold/api';
+import { ArtThumb } from '../shell/ArtThumb';
+import { tokenArtUrl } from '../presenter/tokenArt';
+import { useArtStore } from '../../stores/artStore';
 import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
 import { SessionsTab } from './SessionsTab';
@@ -155,6 +159,7 @@ function PartyTab() {
       {current.pcs.length === 0 && <p className="muted">No PC cards yet.</p>}
       {current.pcs.map((pc) => (
         <div key={pc.id} className="row pc-row" data-testid="pc-row" data-nav={navKey('pc', pc.id)}>
+          <ArtThumb url={pc.portrait ? mediaUrl(current.campaign.slug, pc.portrait) : undefined} />
           <strong>{pc.name}</strong>
           <span className="muted">
             {pc.playerName ? `${pc.playerName} · ` : ''}
@@ -270,6 +275,8 @@ function NpcsTab() {
   const saveNpc = useCampaignStore((s) => s.saveNpc);
   const copyNpc = useCampaignStore((s) => s.copyNpc);
   const npcFromRecord = useCampaignStore((s) => s.npcFromRecord);
+  // An NPC without a portrait shows its stat block's art; redraw when that changes (ADR 0033).
+  useArtStore((s) => s.byKey);
   const sources = useSourcesStore((s) => s.sources);
   const loadSources = useSourcesStore((s) => s.load);
   const [view, setView] = useState<TabView<NPC>>({ kind: 'list' });
@@ -398,6 +405,12 @@ function NpcsTab() {
       {current.npcs.map((n) => (
         <div key={n.id} className="entity-row" data-testid="npc-row" data-nav={navKey('npc', n.id)}>
           <div className="row">
+            <ArtThumb
+              url={tokenArtUrl(
+                { ref: { kind: 'npc', npcId: n.id, name: n.name } },
+                current.campaign.slug,
+              )}
+            />
             <strong>{n.name}</strong>
             {n.role && <span className="muted">{n.role}</span>}
             {n.location && <span className="muted">· {n.location}</span>}
