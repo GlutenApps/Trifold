@@ -338,3 +338,40 @@ export function buildCombatants(
   if (hasLair) combatants.push(lairCombatant());
   return { combatants, missing, hasLair };
 }
+
+/**
+ * Who from the party is in a fight (ADR 0044): whoever is here. Started from a map, the PCs with
+ * a token on it join, beside any the encounter names; PCs elsewhere stay out, so a split party
+ * fights apart (ADR 0022). Started without a map (`onMap` null), the PCs the encounter names.
+ * Either way, when that leaves nobody from the party, the whole party joins: an encounter that
+ * names no PCs and a map with no party on it almost always mean "the party". PCs already named
+ * keep their entry and find their token on the map.
+ */
+export function withParty(
+  encounter: Encounter,
+  pcs: readonly PCCard[],
+  onMap: ReadonlyMap<string, string> | null,
+): Encounter {
+  const named = new Set(
+    encounter.combatants.flatMap((t) => (t.ref.kind === 'pc' ? [t.ref.pcId] : [])),
+  );
+  const combatants = encounter.combatants.map((t) => {
+    if (t.ref.kind !== 'pc' || t.tokenId) return t;
+    const tokenId = onMap?.get(t.ref.pcId);
+    return tokenId ? { ...t, tokenId } : t;
+  });
+  const present = onMap ? pcs.filter((p) => onMap.has(p.id) && !named.has(p.id)) : [];
+  const joining = present.length || named.size ? present : pcs;
+  for (const pc of joining) {
+    const tokenId = onMap?.get(pc.id);
+    combatants.push({
+      id: ulid(),
+      ref: { kind: 'pc', pcId: pc.id, name: pc.name },
+      quantity: 1,
+      role: 'ally',
+      hidden: false,
+      ...(tokenId ? { tokenId } : {}),
+    });
+  }
+  return { ...encounter, combatants };
+}
