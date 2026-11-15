@@ -314,14 +314,13 @@ function DeviceList({
 
 /**
  * Player summoning (ADR 0043, Phase 4): on, ask me first, or off; how many summons a character
- * may have in play; and the creatures on the summon list, each removable here. Creatures join the
- * list from their compendium page (Summonable by players).
+ * may have in play; and how many creatures are on the summon list, which lives in
+ * Campaign › Summons (and the paw on a compendium page).
  */
+const NO_SUMMONS: never[] = [];
 function SummoningSettings({ status }: { status: TableStatus }) {
   const setSummoning = useTableStore((s) => s.setSummoning);
-  const campaign = useCampaignStore((s) => s.current?.campaign);
-  const update = useCampaignStore((s) => s.update);
-  const list = campaign?.settings.summonable ?? [];
+  const list = useCampaignStore((s) => s.current?.campaign.settings.summonable ?? NO_SUMMONS);
   const { mode, cap } = status.summoning;
   return (
     <div className="summoning-settings">
@@ -354,37 +353,11 @@ function SummoningSettings({ status }: { status: TableStatus }) {
           />
         </label>
       </div>
-      {list.length ? (
-        <ul className="device-list" aria-label="Summon list">
-          {list.map((e) => (
-            <li key={e.ref.recordId} className="device-claim">
-              <span className="grow">{e.name}</span>
-              <button
-                type="button"
-                className="chrome-btn xs"
-                aria-label={`Take ${e.name} off the summon list`}
-                title={`Take ${e.name} off the summon list`}
-                onClick={() =>
-                  campaign &&
-                  void update({
-                    settings: {
-                      ...campaign.settings,
-                      summonable: list.filter((x) => x.ref.recordId !== e.ref.recordId),
-                    },
-                  })
-                }
-              >
-                <Icon name="close" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="muted">
-          No summons yet. Open a creature in the compendium and press the paw to let players summon
-          it.
-        </p>
-      )}
+      <p className="muted">
+        {list.length
+          ? `${list.length} ${list.length === 1 ? 'creature' : 'creatures'} on the summon list. Change it in Campaign › Summons.`
+          : 'No summons yet: add them in Campaign › Summons, or press the paw on a creature’s compendium page.'}
+      </p>
     </div>
   );
 }

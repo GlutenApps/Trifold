@@ -109,13 +109,19 @@ export async function spawnSummons(
       ? c.ref.kind === 'pc' && c.ref.pcId === event.ownerId
       : c.ref.kind === 'npc' && c.ref.npcId === event.ownerId,
   );
+  // The creature as it is now, in case it was edited since it went on the list.
+  const fresh = await window.trifold.compendium.get(option.ref.recordId).catch(() => null);
+  const stats =
+    fresh?.kind === 'monster'
+      ? { hp: fresh.data.hp?.average ?? option.hp, ac: fresh.data.ac?.value ?? option.ac }
+      : { hp: option.hp, ac: option.ac };
   const glyph = useIconStore
     .getState()
     .glyphForCreature(
       { name: option.name, ...(option.type ? { type: option.type } : {}) },
       'creature',
     );
-  const hp = option.hp ?? 1;
+  const hp = stats.hp ?? 1;
   const tokens: Token[] = cells.map((cell, i) => ({
     id: ulid(),
     kind: 'creature',
@@ -135,7 +141,7 @@ export async function spawnSummons(
       spawnedBy: event.deviceLabel,
       type: option.type,
       hp: { current: hp, max: hp, temp: 0 },
-      ac: option.ac ?? 10,
+      ac: stats.ac ?? 10,
       initiative: event.initiative,
       // Rounds count in a fight; outside one a summon lasts until dismissed.
       ...(event.rounds && fight ? { expiresAtRound: fight.round + event.rounds } : {}),

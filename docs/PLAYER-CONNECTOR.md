@@ -691,7 +691,9 @@ summons one beside Brannoc and three more numbered Owl 2 to 4 through Options, r
 the summon's source on the console's map, and has an "Ask me first" summon wait for the DM's
 Accept. Unit tests cover the cells beside the owner, numbering, the cap and the modes, shared
 initiative, round expiry, the concentration mark, end-of-fight cleanup and the layouts. Presets
-are the remembered options (confirmed). Summons need a map on the TV. Still to check by hand:
+are the remembered options (confirmed). The DM's summon list has its own page, Campaign ›
+Summons (added 2026-11-15): add from the compendium, make new summons, customise a stock creature
+as a campaign creature. Summons need a map on the TV. Still to check by hand:
 the four layouts and touch on real phones and tablets, a summon that rolls its own initiative
 in a real fight, and a concentration break at the table.
 

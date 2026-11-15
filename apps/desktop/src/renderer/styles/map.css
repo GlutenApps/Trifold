@@ -817,3 +817,51 @@
   gap: 6px;
   width: 100%;
 }
+
+/* Campaign › Summons (ADR 0043, Phase 4). */
+.summons-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 720px;
+}
+
+.summon-list,
+.summon-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summon-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.summon-row:hover {
+  background: var(--bg-hover);
+}
+
+.summon-list .summon-row .chrome-btn {
+  opacity: var(--quiet);
+}
+
+.summon-list .summon-row:hover .chrome-btn,
+.summon-list .summon-row:focus-within .chrome-btn {
+  opacity: 1;
+}
+
+.summon-heading {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
