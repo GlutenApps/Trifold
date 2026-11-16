@@ -51,6 +51,7 @@ export type IconName =
   | 'camera'
   | 'party'
   | 'paw'
+  | 'companion'
   | 'map'
   | 'phone'
   | 'laptop'
@@ -172,6 +173,10 @@ const PATHS: Record<IconName, string> = {
   party:
     'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20a6 6 0 0 1 12 0M16 5.2a3 3 0 0 1 0 5.6M18 14.5a6 6 0 0 1 3 5.5',
   paw: 'M3.2 11a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 1 0-3.6 0zM7.2 6.5a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 1 0-3.6 0zM13.2 6.5a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 1 0-3.6 0zM17.2 11a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 1 0-3.6 0zM12 12c-3 0-6 4-6 6.5 0 1.5 1.2 2.5 2.7 2.5 1.2 0 2-.6 3.3-.6s2.1.6 3.3.6c1.5 0 2.7-1 2.7-2.5 0-2.5-3-6.5-6-6.5z',
+  // A figure with a spark beside it: a companion or summon a player brings to the table, never
+  // the paw, which adds any creature to a map.
+  companion:
+    'M10 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3.5 20.5a6.5 6.5 0 0 1 13 0M18.5 2.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z',
   map: 'M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5zM9 4v13.5M15 6.5V20',
   // Formatting (the note editor's toolbar) and search.
   bold: 'M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z',

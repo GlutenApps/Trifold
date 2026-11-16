@@ -33,12 +33,12 @@ export function SummonableToggle({ record }: { record: CompendiumRecord }) {
     <button
       type="button"
       className={`chrome-btn${on ? ' on' : ''}`}
-      aria-label="Summonable by players"
+      aria-label="Available as a companion"
       aria-pressed={on}
       title={
         on
-          ? `Players can summon ${record.displayName} from their phones in ${campaign.name}. Click to stop`
-          : `Let players summon ${record.displayName} from their phones in ${campaign.name}`
+          ? `Players can add ${record.displayName} as a companion from their phones in ${campaign.name}. Click to stop`
+          : `Let players add ${record.displayName} as a companion from their phones in ${campaign.name}`
       }
       onClick={() =>
         void update({
@@ -51,7 +51,7 @@ export function SummonableToggle({ record }: { record: CompendiumRecord }) {
         })
       }
     >
-      <Icon name="paw" />
+      <Icon name="companion" />
     </button>
   );
 }

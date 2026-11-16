@@ -174,21 +174,22 @@ export function SummonsTab() {
         </p>
       )}
       <p className="muted">
-        Creatures players can summon from their phones in this campaign. Editing a compendium
-        creature makes this campaign’s own copy; the original stays as it is.
+        Companions players can bring into play from their phones in this campaign: summoned
+        creatures, familiars, steeds and beasts. Editing a compendium creature makes this campaign’s
+        own copy; the original stays as it is.
       </p>
       <div className="row">
         <input
           type="search"
           className="grow"
-          aria-label="Add a summon from the compendium"
-          placeholder="Search the compendium to add a summon"
+          aria-label="Add a companion from the compendium"
+          placeholder="Search the compendium to add a companion"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <button type="button" className="btn" onClick={startNew}>
           <Icon name="plus" />
-          New summon
+          New companion
         </button>
       </div>
       {results.length > 0 && (
@@ -219,13 +220,13 @@ export function SummonsTab() {
       )}
       {list.length === 0 ? (
         <p className="muted">
-          No summons yet. Search above, make a new one, or press the paw on a creature’s compendium
-          page.
+          No companions yet. Search above, make a new one, or press Available as a companion on a
+          creature’s compendium page.
         </p>
       ) : (
         <>
-          <h3 className="summon-heading">On the summon list</h3>
-          <ul className="summon-list" aria-label="Summons">
+          <h3 className="summon-heading">On the companion list</h3>
+          <ul className="summon-list" aria-label="Companions">
             {list.map((e) => (
               <li key={e.ref.recordId} className="summon-row">
                 <span className="grow">
@@ -252,8 +253,8 @@ export function SummonsTab() {
                 <button
                   type="button"
                   className="chrome-btn xs"
-                  aria-label={`Take ${e.name} off the summon list`}
-                  title={`Take ${e.name} off the summon list; the creature stays in the compendium`}
+                  aria-label={`Take ${e.name} off the companion list`}
+                  title={`Take ${e.name} off the companion list; the creature stays in the compendium`}
                   onClick={() =>
                     void setList(list.filter((x) => x.ref.recordId !== e.ref.recordId))
                   }

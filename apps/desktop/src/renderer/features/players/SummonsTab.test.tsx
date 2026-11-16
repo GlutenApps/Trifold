@@ -37,7 +37,7 @@ function setCampaign() {
 
 const flush = () => act(async () => new Promise((r) => setTimeout(r, 0)));
 
-describe('Campaign › Summons', () => {
+describe('Campaign › Companions', () => {
   beforeEach(() => {
     summonable = [];
     update.mockClear();
@@ -58,7 +58,7 @@ describe('Campaign › Summons', () => {
       } as never,
     ]);
     render(<SummonsTab />);
-    fireEvent.change(screen.getByLabelText('Add a summon from the compendium'), {
+    fireEvent.change(screen.getByLabelText('Add a companion from the compendium'), {
       target: { value: 'wol' },
     });
     await act(async () => new Promise((r) => setTimeout(r, 200)));
@@ -122,7 +122,7 @@ describe('Campaign › Summons', () => {
       name: 'Spiritual weapon',
     }));
     render(<SummonsTab />);
-    fireEvent.click(screen.getByRole('button', { name: 'New summon' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New companion' }));
     fireEvent.change(screen.getByLabelText('Name', { exact: true }), {
       target: { value: 'Spiritual weapon' },
     });
@@ -151,7 +151,7 @@ describe('Campaign › Summons', () => {
     render(<SummonsTab />);
     await flush();
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Take Wolf off the summon list' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Take Wolf off the companion list' }));
     });
     expect(summonable).toEqual([]);
     expect(window.trifold.homebrew.remove).not.toHaveBeenCalled();

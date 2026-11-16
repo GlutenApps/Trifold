@@ -58,8 +58,9 @@ export function ToolIcon({ tool }: { tool: Tool }) {
   const d = {
     health: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
     conditions: 'M13 2 3 14h9l-1 8 10-12h-9l1-8z',
+    // The console's companion mark (icons.tsx), so both ends of the table use one sign.
     companions:
-      'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+      'M10 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3.5 20.5a6.5 6.5 0 0 1 13 0M18.5 2.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z',
     move: 'M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20',
   }[tool];
   return (

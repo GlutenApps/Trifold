@@ -535,7 +535,7 @@ export function CampaignPage() {
     ? [
         ['party', `Party (${current.pcs.length})`],
         ['npcs', `NPCs (${current.npcs.length})`],
-        ['summons', `Summons (${(current.campaign.settings.summonable ?? []).length})`],
+        ['summons', `Companions (${(current.campaign.settings.summonable ?? []).length})`],
         ['notes', `Notes (${current.notes.filter((n) => n.kind !== 'folder').length})`],
         ['sessions', `Sessions (${current.sessions.length})`],
       ]
