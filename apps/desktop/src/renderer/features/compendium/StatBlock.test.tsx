@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { parseCompendiumXml } from '@trifold/importers';
 import type { MonsterRecord } from '@trifold/schema';
@@ -63,5 +63,46 @@ describe('StatBlock', () => {
       'trifold-media://library/art/monster/aboleth.png?v=7',
     );
     useArtStore.setState({ byKey: {} });
+  });
+
+  it('rolls the creature’s saves, checks, skills, initiative and hit dice when it can', async () => {
+    const aboleth = monster('Aboleth');
+    const actions = {
+      onAttack: vi.fn(),
+      onRoll: vi.fn(),
+      onMultiattack: vi.fn(),
+      onTest: vi.fn(),
+      onDice: vi.fn(),
+    };
+    render(<StatBlock record={aboleth} onOpenSpell={() => undefined} actions={actions} />);
+    const wis = aboleth.data.saves.wis!;
+    await userEvent.click(screen.getByRole('button', { name: `Roll Wis save +${wis}` }));
+    expect(actions.onTest).toHaveBeenLastCalledWith(
+      { kind: 'save', label: 'Wis save', modifier: wis },
+      'normal',
+    );
+    // Shift-click rolls with advantage, as the attack badges do.
+    fireEvent.click(screen.getByRole('button', { name: 'Roll Str check +5' }), { shiftKey: true });
+    expect(actions.onTest).toHaveBeenLastCalledWith(
+      { kind: 'check', label: 'Str check', modifier: 5 },
+      'advantage',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /^Roll Perception \+\d+$/ }));
+    expect(actions.onTest).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 'check', label: 'Perception' }),
+      'normal',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Roll Initiative -1' }));
+    expect(actions.onTest).toHaveBeenLastCalledWith(
+      { kind: 'check', label: 'Initiative', modifier: -1 },
+      'normal',
+    );
+    await userEvent.click(screen.getByTitle(/Roll hit points/));
+    expect(actions.onDice).toHaveBeenCalledWith('Hit points', aboleth.data.hp!.formula);
+  });
+
+  it('leaves saves and checks as plain text without roll handlers', () => {
+    render(<StatBlock record={monster('Aboleth')} onOpenSpell={() => undefined} />);
+    expect(screen.queryByRole('button', { name: /^Roll / })).toBeNull();
   });
 });

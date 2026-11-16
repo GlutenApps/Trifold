@@ -3,7 +3,7 @@ import type { MonsterRecord } from '@trifold/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
 import fixture from '../../../../../../fixtures/compendium-sample.xml?raw';
 import { useRollLogStore } from '../../stores/rollLogStore';
-import { compendiumActions, logDiceRoll, logMultiattack } from './compendiumRolls';
+import { compendiumActions, logDiceRoll, logMultiattack, logTestRoll } from './compendiumRolls';
 
 const { records } = parseCompendiumXml(fixture, { sourceId: 'src', defaultEdition: '2014' });
 
@@ -57,5 +57,44 @@ describe('compendium rolls', () => {
     expect(entry.total).toBeLessThanOrEqual(48);
     expect(entry).toMatchObject({ kind: 'dice', expression: '8d6', source: 'compendium' });
     expect(entry.label).toBe('Fire damage (level 3) (Fireball)');
+  });
+
+  it('logs the creature’s own d20 tests and hit dice from the stat block', () => {
+    const goblin = monster('Goblin Warrior [5.5e]');
+    const actions = compendiumActions(goblin);
+    actions.onTest!({ kind: 'save', label: 'Dex save', modifier: 2 }, 'disadvantage');
+    const [save] = useRollLogStore.getState().entries;
+    expect(save).toMatchObject({
+      kind: 'save',
+      source: 'compendium',
+      actor: 'Goblin Warrior',
+      label: 'Dex save (disadvantage) (Goblin Warrior)',
+      expression: '1d20+2',
+    });
+    expect(save!.faces).toMatch(/^d20 \d+\/\d+ \+2$/);
+    expect(save!.total).toBeGreaterThanOrEqual(3);
+    expect(save!.total).toBeLessThanOrEqual(22);
+    actions.onDice!('Hit points', '3d6');
+    expect(
+      useRollLogStore.getState().entries.some((e) => e.label === 'Hit points (Goblin Warrior)'),
+    ).toBe(true);
+  });
+
+  it('logs a tracker test under the fight', () => {
+    const entry = logTestRoll(
+      'Ogre',
+      { kind: 'check', label: 'Initiative', modifier: -1 },
+      'normal',
+      {
+        source: 'tracker',
+        encounterId: 'E1',
+      },
+    );
+    expect(entry).toMatchObject({
+      kind: 'check',
+      source: 'tracker',
+      encounterId: 'E1',
+      expression: '1d20-1',
+    });
   });
 });

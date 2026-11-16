@@ -13,6 +13,7 @@ import { usePresenterStore } from '../../stores/presenterStore';
 import { useSceneStore } from '../../stores/sceneStore';
 import { AddToFight } from './AddToFight';
 import { StatBlock } from '../compendium/StatBlock';
+import { logTestRoll } from '../compendium/compendiumRolls';
 import { DEFAULT_GRID, footprintForSize, mapSize, pixelToGrid } from '../presenter/mapMath';
 import { sceneInPlay, tokenCandidates } from '../presenter/tokenLinks';
 import { Icon } from '../shell/icons';
@@ -1280,6 +1281,13 @@ export function CombatView() {
                 onRoll: (feature, button) => store.rollFeature(selected.id, feature, button),
                 onSave: (feature, save) => store.callSave(selected.id, feature, save),
                 onMultiattack: (feature, mode) => store.rollMultiattack(selected.id, feature, mode),
+                // Its own saves and checks go to the roll log as the fight's; the DM applies
+                // the outcome.
+                onTest: (test, mode) =>
+                  void logTestRoll(selected.name, test, mode, {
+                    source: 'tracker',
+                    ...(store.encounterId ? { encounterId: store.encounterId } : {}),
+                  }),
               }}
             />
           )}

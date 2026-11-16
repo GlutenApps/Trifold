@@ -1,16 +1,55 @@
-import { multiattackReferences, rollAttack, roll as rollDice, type RollMode } from '@trifold/rules';
+import {
+  multiattackReferences,
+  rollAttack,
+  rollD20,
+  roll as rollDice,
+  type RollMode,
+} from '@trifold/rules';
 import type { Attack, Feature, MonsterRecord } from '@trifold/schema';
 import { facesText, useRollLogStore, type RollLogEntry } from '../../stores/rollLogStore';
-import type { StatBlockActions } from './StatBlock';
+import type { D20Test, StatBlockActions } from './StatBlock';
 
 /**
  * Rolls made from a stat block read outside a fight (DESIGN.md §6.1): they land in the shared
- * roll log with the record as the actor, and nothing is dealt or tracked. Saves stay inert here
- * because there is nobody to call them against; the tracker owns those.
+ * roll log with the record as the actor, and nothing is dealt or tracked. A feature's save call
+ * (DC 13 CON) stays inert here because there is nobody to call it against; the tracker owns
+ * those. The creature's own saves, checks and skills roll anywhere.
  */
 
-const log = (entry: Omit<RollLogEntry, 'id' | 'at' | 'source'>): RollLogEntry =>
-  useRollLogStore.getState().add({ ...entry, source: 'compendium' });
+type Where = Pick<RollLogEntry, 'source' | 'encounterId'>;
+
+const log = (
+  entry: Omit<RollLogEntry, 'id' | 'at' | 'source'>,
+  where: Where = { source: 'compendium' },
+): RollLogEntry => useRollLogStore.getState().add({ ...entry, ...where });
+
+/** The creature's own d20 test (a save, a check, a skill, initiative), logged with its faces. */
+export function logTestRoll(
+  actor: string,
+  test: D20Test,
+  mode: RollMode = 'normal',
+  where?: Where,
+): RollLogEntry {
+  const r = rollD20(test.modifier, mode);
+  const modifier = r.modifier ? ` ${r.modifier >= 0 ? '+' : ''}${r.modifier}` : '';
+  const modeNote = mode !== 'normal' ? ` (${mode})` : '';
+  return log(
+    {
+      kind: test.kind,
+      label: `${test.label}${modeNote} (${actor})`,
+      expression: `1d20${modifier.replace(' ', '')}`,
+      total: r.total,
+      faces: `d20 ${r.faces.join('/')}${modifier}`,
+      actor,
+      ...(r.natural === 20
+        ? { outcome: 'crit' as const }
+        : r.natural === 1
+          ? { outcome: 'fumble' as const }
+          : {}),
+    },
+    where,
+  );
+}
 
 export function logAttackRoll(
   actor: string,
@@ -51,16 +90,24 @@ export function logAttackRoll(
 }
 
 /** A plain dice roll such as a spell's damage or a trait's `Heal||1d10` button. */
-export function logDiceRoll(actor: string, label: string, dice: string): RollLogEntry {
+export function logDiceRoll(
+  actor: string,
+  label: string,
+  dice: string,
+  where?: Where,
+): RollLogEntry {
   const result = rollDice(dice);
-  return log({
-    kind: 'dice',
-    label: `${label} (${actor})`,
-    expression: dice,
-    total: result.total,
-    faces: facesText(result),
-    actor,
-  });
+  return log(
+    {
+      kind: 'dice',
+      label: `${label} (${actor})`,
+      expression: dice,
+      total: result.total,
+      faces: facesText(result),
+      actor,
+    },
+    where,
+  );
 }
 
 /** Every attack the Multiattack text names, rolled in order; logs a note when none is found. */
@@ -103,5 +150,7 @@ export function compendiumActions(record: MonsterRecord): StatBlockActions {
     onRoll: (feature, button) =>
       void logDiceRoll(actor, `${feature.displayName} [${button.label}]`, button.dice),
     onMultiattack: (feature, mode) => void logMultiattack(record, feature, mode),
+    onTest: (test, mode) => void logTestRoll(actor, test, mode),
+    onDice: (label, dice) => void logDiceRoll(actor, label, dice),
   };
 }
