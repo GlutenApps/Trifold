@@ -59,5 +59,8 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
+          # Named explicitly so the draft is always attached to the pushed tag: the update check
+          # reads a release's version from its tag.
+          tag_name: ${{ github.ref_name }}
           draft: true
           files: artifacts/*
