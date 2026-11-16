@@ -238,8 +238,11 @@ export type TableIntent =
   | { kind: 'initiative'; value: number };
 
 export type ServerMessage =
-  /** Sent on connect, so the browser answers with the token it stored for this campaign. */
-  | { type: 'campaign'; campaignId: string; campaignName: string }
+  /**
+   * Sent on connect, so the browser answers with the token it stored for this campaign. `now` is
+   * the DM's clock, so a phone can count down to the DM's times (the break timer) on its own.
+   */
+  | { type: 'campaign'; campaignId: string; campaignName: string; now: number }
   | ({ type: 'state' } & ClientView)
   /** A new device token, sent once right after a first claim. */
   | { type: 'token'; token: string; campaignId: string }

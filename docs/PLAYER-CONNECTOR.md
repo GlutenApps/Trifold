@@ -342,10 +342,12 @@ edits.
    times a second. Main forwards previews to the console, which shows them on the console map and
    the TV without saving anything. A preview whose token centre is under fog shows nothing on the
    TV (the TV's existing centre rule), and no phone but the owner's sees it. Previews count as the
-   lock's heartbeat; with no preview or `hold` for 3 seconds the lock expires and the token snaps
-   back on the phone.
+   lock's heartbeat; with no preview or `hold` for 3 seconds the lock expires and the console and
+   TV drop the preview. The phone keeps its planned move (a phone that slept or reconnected stops
+   sending `hold` without meaning to), and its next `hold` or its `drop` takes the lock back while
+   the token is still free and still theirs.
 3. **Drop.** `drop {tokenId, x, y, from}` carries where the token was at the grab. Main refuses it,
-   and the phone snaps the token back with a one-line reason, when the lock is gone, the token
+   and the phone snaps the token back with a one-line reason, when another device holds the lock, the token
    has moved since `from` (the stale check: someone else moved it), the drop is off the map, or
    the token's centre lands under fog (decision 12). Otherwise main forwards it and the console
    moves the token with `patchTokenAnywhere`, the same path the tracker uses: the scene saves, the

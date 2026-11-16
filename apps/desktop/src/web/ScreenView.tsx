@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ClientScreen } from '@trifold/api';
+import { dmNow } from './clock';
 
 /**
  * The TV's other screens on a phone (all screen types): a title card on its backdrop, an image
@@ -31,10 +32,11 @@ export function ScreenView({ screen }: { screen: ClientScreen }) {
   );
 }
 
+/** Counts down on the DM's clock (`dmNow`), so it reads the same as the TV. */
 function Countdown({ endsAt }: { endsAt: number }) {
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => dmNow());
   useEffect(() => {
-    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    const t = window.setInterval(() => setNow(dmNow()), 500);
     return () => window.clearInterval(t);
   }, []);
   const left = Math.max(0, Math.round((endsAt - now) / 1000));

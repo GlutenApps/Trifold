@@ -105,6 +105,8 @@ export function Playing({
         conn.send({ type: 'letGo', tokenId: plan.tokenId });
         setPlan(null);
       }
+      // A new move starts clean: an old refusal no longer applies.
+      conn.clearError();
       if (holding !== tokenId) conn.send({ type: 'grab', tokenId });
       setHolding(tokenId);
       setTool('move');
@@ -304,32 +306,35 @@ export function Playing({
     </>
   );
 
-  const map = view.map ? (
-    <MapView
-      map={view.map}
-      selectedTokenId={current.tokenId ?? null}
-      onSelectToken={(tokenId) => {
-        const hit = ordered.find((c) => c.tokenId === tokenId);
-        if (hit) setTarget(creatureKey(hit));
-      }}
-      drag={drag}
-      tapMove={tool === 'move' ? (current.tokenId ?? null) : null}
-      centerOn={me.tokenId ?? null}
-      fullScreen={fullScreen}
-      onFullScreen={() => setFullScreen((f) => !f)}
-      overlay={overlay}
-    />
-  ) : view.screen ? (
-    <div className="pc-map pc-screen-wrap">
-      <ScreenView screen={view.screen} />
-      {overlay}
-    </div>
-  ) : (
-    <div className="pc-map pc-center">
-      {overlay}
-      <p className="pc-hint">Nothing on the TV right now.</p>
-    </div>
-  );
+  // The break screen covers everything on the TV, a live map included, so it does here too.
+  const onBreak = view.screen?.kind === 'break';
+  const map =
+    view.map && !onBreak ? (
+      <MapView
+        map={view.map}
+        selectedTokenId={current.tokenId ?? null}
+        onSelectToken={(tokenId) => {
+          const hit = ordered.find((c) => c.tokenId === tokenId);
+          if (hit) setTarget(creatureKey(hit));
+        }}
+        drag={drag}
+        tapMove={tool === 'move' ? (current.tokenId ?? null) : null}
+        centerOn={me.tokenId ?? null}
+        fullScreen={fullScreen}
+        onFullScreen={() => setFullScreen((f) => !f)}
+        overlay={overlay}
+      />
+    ) : view.screen ? (
+      <div className="pc-map pc-screen-wrap">
+        <ScreenView screen={view.screen} />
+        {overlay}
+      </div>
+    ) : (
+      <div className="pc-map pc-center">
+        {overlay}
+        <p className="pc-hint">Nothing on the TV right now.</p>
+      </div>
+    );
 
   const { pct, band } = hpBand(me);
   return (

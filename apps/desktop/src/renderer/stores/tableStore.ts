@@ -192,7 +192,12 @@ export function installTableSync(): () => void {
     window.trifold.on('tableToken', (event) => {
       const presenter = usePresenterStore.getState();
       if (event.kind === 'preview') {
-        presenter.setMoving(event.tokenId, { x: event.x, y: event.y, label: event.deviceLabel });
+        presenter.setMoving(event.tokenId, {
+          x: event.x,
+          y: event.y,
+          label: event.deviceLabel,
+          ...(event.from ? { from: event.from } : {}),
+        });
         showPlayerRuler(event.tokenId, event.from, { x: event.x, y: event.y });
       } else if (event.kind === 'previewEnd') {
         presenter.setMoving(event.tokenId, null);

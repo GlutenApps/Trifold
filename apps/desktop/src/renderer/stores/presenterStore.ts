@@ -30,6 +30,14 @@ import { useArtStore } from './artStore';
 const HISTORY_LIMIT = 20;
 const RECENT_LIMIT = 8;
 
+/** A player's drag in progress: where it is, who is dragging, and where the move began. */
+export interface PlayerDrag {
+  x: number;
+  y: number;
+  label: string;
+  from?: { x: number; y: number };
+}
+
 export interface LiveOptions {
   /** Width / height of the player display; used to frame the player camera. */
   aspect: number;
@@ -163,8 +171,8 @@ interface PresenterStore {
    * who is dragging. Shown on the TV and the console map, never saved; the drop moves the token
    * for real.
    */
-  moving: Record<string, { x: number; y: number; label: string }>;
-  setMoving(tokenId: string, at: { x: number; y: number; label: string } | null): void;
+  moving: Record<string, PlayerDrag>;
+  setMoving(tokenId: string, at: PlayerDrag | null): void;
 
   showScene(scene: Scene, campaignSlug: string): boolean;
   /**
