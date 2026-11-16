@@ -1,6 +1,7 @@
 import { ulid } from 'ulid';
 import {
   abilityModifier,
+  groupNames,
   maskedNameFor,
   numberedNames,
   rollInitiative,
@@ -292,6 +293,7 @@ export function buildCombatants(
   const missing: string[] = [];
   let hasLair = false;
 
+  const creatureNames = creatureGroupNames(encounter.combatants);
   for (const template of encounter.combatants) {
     const ref = template.ref;
     if (ref.kind === 'pc') {
@@ -318,8 +320,9 @@ export function buildCombatants(
       );
       continue;
     }
-    const base = template.label || ref.name;
-    const names = numberedNames(base, template.quantity);
+    const names =
+      creatureNames.get(template.id) ??
+      numberedNames(template.label || ref.name, template.quantity);
     const record = ref.kind === 'record' ? records.get(ref.ref.recordId) : undefined;
     if (record && record.kind === 'monster') {
       if (record.data.lair.length > 0) hasLair = true;
@@ -374,4 +377,17 @@ export function withParty(
     });
   }
   return { ...encounter, combatants };
+}
+
+/**
+ * The names an encounter's creatures (not PCs or NPCs) take, by template id: numbered across the
+ * encounter, so two Goblin entries make Goblin 1 and Goblin 2. The map's tokens and the
+ * tracker's fighters both come from here, so they match.
+ */
+export function creatureGroupNames(templates: readonly CombatantTemplate[]): Map<string, string[]> {
+  const creatures = templates.filter((t) => t.ref.kind !== 'pc' && t.ref.kind !== 'npc');
+  const names = groupNames(
+    creatures.map((t) => ({ base: t.label || t.ref.name, quantity: t.quantity })),
+  );
+  return new Map(creatures.map((t, i) => [t.id, names[i]!]));
 }

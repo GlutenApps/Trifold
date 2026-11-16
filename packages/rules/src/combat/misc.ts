@@ -80,3 +80,79 @@ export function numberedNames(base: string, quantity: number): string[] {
   if (quantity <= 1) return [base];
   return Array.from({ length: quantity }, (_, i) => `${base} ${i + 1}`);
 }
+
+const trailingNumber = /^(.*\S)\s+(\d+)$/;
+
+/**
+ * The name for one more creature called `base` beside `existing`: the first keeps the plain name,
+ * later ones take the next number (Goblin, Goblin 2, Goblin 3), as a fight numbers its joiners.
+ */
+export function nextNumberedName(base: string, existing: readonly string[]): string {
+  let found = false;
+  let highest = 1;
+  for (const name of existing) {
+    if (name === base) found = true;
+    const m = trailingNumber.exec(name);
+    if (m && m[1] === base) {
+      found = true;
+      highest = Math.max(highest, Number(m[2]));
+    }
+  }
+  return found ? `${base} ${highest + 1}` : base;
+}
+
+/**
+ * What players read for each creature (the TV's strip and tokens, the phones): `shown` is the
+ * name or its mask, and a masked name takes the number of the real one, so Goblin 3 shows as
+ * Humanoid 3 and its chip matches its token. Names that would still read the same (two kinds of
+ * creature behind one mask) are numbered in order, skipping numbers already shown.
+ */
+export function playerLabels(
+  items: ReadonlyArray<{ id: string; name: string; shown: string }>,
+): Map<string, string> {
+  const first = items.map((it) => {
+    if (it.shown === it.name || trailingNumber.test(it.shown)) return it.shown;
+    const m = trailingNumber.exec(it.name);
+    return m ? `${it.shown} ${m[2]}` : it.shown;
+  });
+  const count = new Map<string, number>();
+  for (const label of first) count.set(label, (count.get(label) ?? 0) + 1);
+  const used = new Set(first);
+  const out = new Map<string, string>();
+  const next = new Map<string, number>();
+  items.forEach((it, i) => {
+    const label = first[i]!;
+    if ((count.get(label) ?? 0) < 2) return out.set(it.id, label);
+    // Duplicates: the first keeps its label, the rest get the next free number on the base.
+    if (!next.has(label)) {
+      next.set(label, 1);
+      return out.set(it.id, label);
+    }
+    const base = trailingNumber.exec(label)?.[1] ?? label;
+    let n = next.get(label)! + 1;
+    while (used.has(`${base} ${n}`)) n += 1;
+    next.set(label, n);
+    used.add(`${base} ${n}`);
+    out.set(it.id, `${base} ${n}`);
+  });
+  return out;
+}
+
+/**
+ * Names for an encounter's groups of creatures, numbered across the whole encounter: two
+ * separate Goblin entries make Goblin 1 and Goblin 2, not two Goblins, so every token and
+ * initiative chip can be told apart. A name used once stays plain.
+ */
+export function groupNames(groups: ReadonlyArray<{ base: string; quantity: number }>): string[][] {
+  const total = new Map<string, number>();
+  for (const g of groups) total.set(g.base, (total.get(g.base) ?? 0) + Math.max(0, g.quantity));
+  const next = new Map<string, number>();
+  return groups.map((g) => {
+    if ((total.get(g.base) ?? 0) <= 1) return numberedNames(g.base, g.quantity);
+    return Array.from({ length: g.quantity }, () => {
+      const n = (next.get(g.base) ?? 0) + 1;
+      next.set(g.base, n);
+      return `${g.base} ${n}`;
+    });
+  });
+}

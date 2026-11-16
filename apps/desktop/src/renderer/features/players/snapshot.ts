@@ -17,6 +17,7 @@ import type {
 } from '@trifold/schema';
 import { DEFAULT_GRID, mapSize } from '../presenter/mapMath';
 import { npcOffered, pcOffered } from './claimFlag';
+import { tokenPlayerLabels } from '../presenter/tokenLabels';
 
 /**
  * What the table may see, built from the console's stores and pushed to main (ADR 0043). Main
@@ -83,6 +84,7 @@ export function tableScene(input: SnapshotInput): TableSnapshot['scene'] {
   const deadTokens = new Set(
     (combat?.combatants ?? []).filter((c) => c.dead && c.tokenId).map((c) => c.tokenId!),
   );
+  const labels = tokenPlayerLabels(liveScene.tokens);
   return {
     id: liveScene.id,
     title: liveScene.title,
@@ -103,6 +105,7 @@ export function tableScene(input: SnapshotInput): TableSnapshot['scene'] {
     tokenStyle: input.campaign.tokenStyle,
     tokens: liveScene.tokens.map((t) => {
       const art = input.artFor(t);
+      const label = labels.get(t.id) ?? t.label;
       // A summon's token stands for the summon itself, whose id is the token's (Phase 4).
       const creature: TableToken['creature'] = t.summon
         ? { kind: 'summon', id: t.id }
@@ -115,7 +118,7 @@ export function tableScene(input: SnapshotInput): TableSnapshot['scene'] {
         y: drag?.y ?? t.y,
         ...(drag ? { restsAt: { x: t.x, y: t.y } } : {}),
         footprint: t.footprint,
-        label: t.kind === 'creature' && t.nameMasked ? (t.maskedLabel ?? 'Creature') : t.label,
+        label,
         role: t.role,
         hidden: t.hidden,
         dead: t.dead || deadTokens.has(t.id),

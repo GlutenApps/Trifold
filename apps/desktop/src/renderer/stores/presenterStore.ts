@@ -17,6 +17,7 @@ import type { Scene, Token } from '@trifold/schema';
 import { DEFAULT_GRID, cameraRect, mapSize } from '../features/presenter/mapMath';
 import { activeFog, tokensInView } from '../features/presenter/fog';
 import { tokenArtUrl } from '../features/presenter/tokenArt';
+import { tokenPlayerLabels } from '../features/presenter/tokenLabels';
 import { useArtStore } from './artStore';
 
 /**
@@ -92,6 +93,7 @@ export function liveSceneFrom(
       const activeTokenId = seen.some((t) => t.id === options.activeTokenId)
         ? options.activeTokenId
         : null;
+      const labels = tokenPlayerLabels(scene.tokens);
       return {
         kind: scene.kind,
         id: scene.id,
@@ -114,7 +116,7 @@ export function liveSceneFrom(
           x: t.x,
           y: t.y,
           footprint: t.footprint,
-          label: t.kind === 'creature' && t.nameMasked ? (t.maskedLabel ?? 'Creature') : t.label,
+          label: labels.get(t.id) ?? t.label,
           role: t.role,
           ...artOf(t),
           ...(t.glyph ? { glyphUrl: iconUrl(t.glyph) } : {}),

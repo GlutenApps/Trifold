@@ -4,6 +4,7 @@ import { MapLayer } from './MapLayer';
 import { TvCorner } from './TvCorner';
 import { JoinQr } from '../players/JoinQr';
 import { formatCountdown, useCountdown } from './countdown';
+import { InitiativeStrip } from './InitiativeStrip';
 
 /**
  * The `/player` route (ADR 0002): the second screen. It subscribes to the presenter state main
@@ -82,8 +83,7 @@ export function PlayerScreen() {
       )}
       {!scene && <div className="scene-layer backdrop-dark" data-testid="player-empty" />}
 
-      {/* One top row: the map's name keeps its corner and the strip takes the rest, wrapping
-          rather than covering the name in a big fight. */}
+      {/* One top row: the map's name keeps its corner and the strip takes the rest. */}
       <div className="tv-top">
         {scene && scene.kind !== 'title' && state.showSceneTitle && (
           <div className="overlay-title" data-testid="overlay-title">
@@ -92,24 +92,7 @@ export function PlayerScreen() {
         )}
 
         {combat && overlays.initiativeStrip && (
-          <ol className="initiative-strip" aria-label="Initiative">
-            {combat.entries.map((e) => (
-              <li
-                key={e.id}
-                className={`chip role-${e.role}${e.id === combat.activeId ? ' active' : ''}${e.dead ? ' dead' : ''}${e.bloodied ? ' bloodied' : ''}`}
-              >
-                <span className="chip-name">{e.name}</span>
-                {e.hpFraction !== undefined && overlays.pcHealthBars && (
-                  <span className="hp-bar" aria-label={`${Math.round(e.hpFraction * 100)}% health`}>
-                    <span
-                      className="hp-fill"
-                      style={{ width: `${Math.round(e.hpFraction * 100)}%` }}
-                    />
-                  </span>
-                )}
-              </li>
-            ))}
-          </ol>
+          <InitiativeStrip combat={combat} healthBars={overlays.pcHealthBars} />
         )}
       </div>
 

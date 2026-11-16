@@ -60,8 +60,20 @@ describe('summarizeCombat', () => {
       ['thora', false, false, 0.25],
       ['Beast', true, false, undefined],
       ['Guz', false, false, undefined],
-      ['Beast', false, true, undefined],
+      // Two creatures behind one mask are numbered, so players can tell their chips apart.
+      ['Beast 2', false, true, undefined],
     ]);
+  });
+
+  it('gives a masked name the number of the DM’s name, so chip and token match', () => {
+    const goblins: CombatState = {
+      ...state,
+      combatants: ['Goblin 1', 'Goblin 2', 'Goblin 3'].map((name) =>
+        c(name, { name, maskedName: 'Humanoid' }),
+      ),
+    };
+    const s = summarizeCombat(goblins, { pcHealthBars: false, hpDisplayMode: 'hidden' })!;
+    expect(s.entries.map((e) => e.name)).toEqual(['Humanoid 1', 'Humanoid 2', 'Humanoid 3']);
   });
 
   it('hides PC bars and bloodied markers when the options say so', () => {
