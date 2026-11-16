@@ -355,8 +355,8 @@ function SummoningSettings({ status }: { status: TableStatus }) {
       </div>
       <p className="muted">
         {list.length
-          ? `${list.length} ${list.length === 1 ? 'creature' : 'creatures'} on the summon list. Change it in Campaign › Summons.`
-          : 'No summons yet: add them in Campaign › Summons, or press the paw on a creature’s compendium page.'}
+          ? `${list.length} ${list.length === 1 ? 'creature' : 'creatures'} on the companion list. Change it in Campaign › Companions.`
+          : 'No companions yet: add them in Campaign › Companions, or press Available as a companion on a creature’s compendium page.'}
       </p>
     </div>
   );

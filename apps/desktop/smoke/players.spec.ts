@@ -391,22 +391,22 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
       .getByRole('option', { name: /^Owl(?!bear)/ })
       .first()
       .click();
-    const summonable = page.getByRole('button', { name: 'Summonable by players' });
+    const summonable = page.getByRole('button', { name: 'Available as a companion' });
     await summonable.click();
     await expect(summonable).toHaveAttribute('aria-pressed', 'true');
     // Campaign › Summons lists it, and adds a Wolf from a compendium search.
     await page.getByRole('tab', { name: 'Campaign', exact: true }).click();
-    await page.getByRole('tab', { name: /^Summons/ }).click();
-    await expect(page.getByRole('list', { name: 'Summons' })).toContainText('Owl');
-    await page.getByLabel('Add a summon from the compendium').fill('wolf');
+    await page.getByRole('tab', { name: /^Companions/ }).click();
+    await expect(page.getByRole('list', { name: 'Companions' })).toContainText('Owl');
+    await page.getByLabel('Add a companion from the compendium').fill('wolf');
     await page
       .getByRole('list', { name: 'Compendium creatures' })
       .getByRole('listitem')
       .filter({ hasText: /^Wolf ·/ })
       .getByRole('button', { name: 'Add' })
       .click();
-    await expect(page.getByRole('list', { name: 'Summons' })).toContainText('Wolf');
-    await expect(page.getByRole('tab', { name: /^Summons/ })).toHaveText('Summons (2)');
+    await expect(page.getByRole('list', { name: 'Companions' })).toContainText('Wolf');
+    await expect(page.getByRole('tab', { name: /^Companions/ })).toHaveText('Companions (2)');
 
     // The phone summons one beside Brannoc, then three more with Options, and dismisses one.
     const tokensBefore = await phone.getByTestId('pc-token').count();

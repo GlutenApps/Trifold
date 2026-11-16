@@ -170,7 +170,7 @@ export function AddCompanion({
           <p className="pc-hint center">
             {options.length
               ? 'No creatures match that search.'
-              : 'Your DM hasn’t added any creatures to summon yet.'}
+              : 'Your DM hasn’t added any companions yet.'}
           </p>
         )}
       </div>
