@@ -1,8 +1,11 @@
 # Deep links
 
-How one feature opens another feature's item (ADR 0017). Global search uses this and nothing
-else; note-to-note links, backlinks and "open on the map" buttons should too. The code is one
-module, `apps/desktop/src/renderer/navigate.ts`.
+How one feature opens another feature's item (ADR 0017). The code is one module,
+`apps/desktop/src/renderer/navigate.ts`. Global search opens every result through it, and so do
+Quick notes (open a note in Notes), a compendium page's Used by list (open an NPC, switching
+campaign first when it is in another one) and the tracker's rules button beside a condition
+(open the condition's rules). Any new feature that opens an item somewhere else should use it
+too.
 
 ## The contract
 
@@ -37,10 +40,13 @@ Only the console has these homes. In the Library, `navigate` does nothing.
 | `folder`    | Campaign › Notes           | the tree row and the folder pane              |                                     |
 | `npc`       | Campaign › NPCs            | the NPC row                                   |                                     |
 | `pc`        | Campaign › Party           | the PC row                                    |                                     |
-| `encounter` | Encounters                 | the builder, or the list row of a paused fight; the running fight comes back | `{ field: 'notes', phrase, occurrence }` |
+| `encounter` | Encounters                 | the builder, or the list row of a fight in progress; the loaded fight when it is the target | `{ field: 'notes', phrase, occurrence }` |
 | `scene`     | Scenes (dock)              | the scene row; a map also opens the VTT       |                                     |
 | `record`    | Compendium                 | the record pane, after switching to its kind  |                                     |
 | `webTab`    | the web tab itself         | nothing further                               |                                     |
+
+Opening a different encounter while a fight is loaded puts that fight down: it stays in
+progress and can be picked up again from its row.
 
 ## Consuming a target in a panel
 
