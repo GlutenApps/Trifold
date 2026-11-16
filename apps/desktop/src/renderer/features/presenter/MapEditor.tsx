@@ -1870,6 +1870,24 @@ export function MapEditor({
               </div>
             );
           })}
+          {/* A player's move from their phone: the DM sees its ruler whatever the fog. */}
+          {scene.tokens.map((token) => {
+            const drag = moving[token.id];
+            if (!drag?.from) return null;
+            const squares = squaresBetween(drag.from, drag);
+            if (!squares) return null;
+            return (
+              <RulerLayer
+                key={`player-ruler-${token.id}`}
+                width={size.width}
+                height={size.height}
+                from={cellCentre(drag.from, grid, token.footprint)}
+                to={cellCentre(drag, grid, token.footprint)}
+                squares={squares}
+                zoom={cam.zoom}
+              />
+            );
+          })}
           {measure && (
             <RulerLayer
               width={size.width}

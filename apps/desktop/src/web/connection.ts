@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ClientMessage, ClientView, ServerMessage } from '@trifold/api';
+import { syncClock } from './clock';
 
 /**
  * The browser's one WebSocket to the DM's Trifold (docs/PLAYER-CONNECTOR.md, "Transport"). The
@@ -83,6 +84,7 @@ export function useConnection(): Connection {
         }
         switch (msg.type) {
           case 'campaign': {
+            syncClock(msg.now);
             const token = readStorage(tokenKey(msg.campaignId));
             ws.send(JSON.stringify({ type: 'hello', ...(token ? { token } : {}) }));
             break;

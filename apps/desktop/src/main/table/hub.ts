@@ -599,6 +599,7 @@ export class TableHub {
         type: 'campaign',
         campaignId: this.campaignId,
         campaignName: this.snapshot?.campaignName ?? '',
+        now: Date.now(),
       });
     }
     this.emit();
@@ -658,8 +659,7 @@ export class TableHub {
       case 'preview':
         return this.preview(client, msg.tokenId, msg.x, msg.y, msg.from);
       case 'hold':
-        if (client.deviceId) this.locks.refresh(msg.tokenId, client.deviceId, Date.now());
-        return;
+        return this.hold(client, msg.tokenId);
       case 'drop':
         return this.drop(client, msg.tokenId, { x: msg.x, y: msg.y }, msg.from);
       case 'letGo':
@@ -918,11 +918,14 @@ export class TableHub {
     from: { x: number; y: number },
   ): void {
     const deviceId = client.deviceId;
-    if (!deviceId || this.locks.holder(tokenId, Date.now()) !== deviceId) {
+    if (!deviceId) return;
+    // A lock that lapsed while the phone slept or reconnected is taken back here, so a planned
+    // move still lands; only another device's drag refuses it.
+    if (!this.locks.grant(tokenId, deviceId, Date.now())) {
       return this.send(client, {
         type: 'dragEnded',
         tokenId,
-        reason: 'The drag ran out. Try again.',
+        reason: 'Someone else is moving it.',
       });
     }
     this.locks.release(tokenId);
@@ -946,6 +949,20 @@ export class TableHub {
     this.scheduleBroadcast();
   }
 
+  /**
+   * The phone's heartbeat while a move waits for Done. A lock that lapsed (the phone slept, or
+   * its page reconnected) is granted again when the token is still free and still theirs.
+   */
+  private hold(client: Client, tokenId: string): void {
+    const deviceId = client.deviceId;
+    if (!deviceId) return;
+    const now = Date.now();
+    if (this.locks.refresh(tokenId, deviceId, now)) return;
+    if (this.locks.holder(tokenId, now)) return;
+    if ('problem' in this.movable(client, tokenId)) return;
+    if (this.locks.grant(tokenId, deviceId, now)) this.scheduleBroadcast();
+  }
+
   private letGo(client: Client, tokenId: string): void {
     if (!client.deviceId || this.locks.holder(tokenId, Date.now()) !== client.deviceId) return;
     this.locks.release(tokenId);
@@ -955,8 +972,11 @@ export class TableHub {
   }
 
   private sweepLocks(): void {
-    for (const { tokenId, deviceId } of this.locks.sweep(Date.now())) {
-      this.endDrag(tokenId, deviceId, 'The drag ran out. Try again.');
+    // The phone is not told: its plan stays, and its next hold or Done takes the lock back.
+    for (const { tokenId } of this.locks.sweep(Date.now())) {
+      this.lastPreview.delete(tokenId);
+      this.opts.onToken({ kind: 'previewEnd', tokenId });
+      this.scheduleBroadcast();
     }
   }
 
