@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { ulid } from 'ulid';
 import { mediaUrl, type CompendiumRow, type LiveRuler } from '@trifold/api';
-import { numberedNames } from '@trifold/rules';
+import { nextNumberedName, numberedNames } from '@trifold/rules';
 import {
   nowIso,
   type Combatant,
@@ -49,7 +49,7 @@ import {
 import { registerHotkey } from '../../hotkeys';
 import { hk } from '../../platform';
 import { MapPop } from './MapPop';
-import { withParty } from '../encounters/build';
+import { creatureGroupNames, withParty } from '../encounters/build';
 import { TokenDisc } from './TokenDisc';
 import {
   combatantCandidates,
@@ -532,7 +532,11 @@ export function MapEditor({
               },
               name: pending.row.displayName,
             },
-            label: pending.row.displayName,
+            // A second goblin on the map is Goblin 2, so its token and chip can be told apart.
+            label: nextNumberedName(
+              pending.row.displayName,
+              scene.tokens.map((t) => t.label),
+            ),
             maskedLabel: pending.row.type ? capitalize(pending.row.type) : 'Creature',
             x: cell.x,
             y: cell.y,
@@ -1000,6 +1004,7 @@ export function MapEditor({
     const onMap = new Set(scene.tokens.map((t) => t.id));
     const added: Token[] = [];
     const combatants: CombatantTemplate[] = [];
+    const creatureNames = creatureGroupNames(encounter.combatants);
     for (const template of encounter.combatants) {
       if (template.ref.kind === 'pc') {
         combatants.push(template);
@@ -1016,7 +1021,9 @@ export function MapEditor({
       }
       const glyph = glyphFor({ name: template.ref.name, ...(type ? { type } : {}) }, 'creature');
       const had = template.tokenIds ?? (template.tokenId ? [template.tokenId] : []);
-      const names = numberedNames(template.label || template.ref.name, template.quantity);
+      const names =
+        creatureNames.get(template.id) ??
+        numberedNames(template.label || template.ref.name, template.quantity);
       const tokenIds = names.map((label, i) => {
         const kept = had[i];
         if (kept && onMap.has(kept)) return kept;
