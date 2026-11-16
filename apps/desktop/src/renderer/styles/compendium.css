@@ -1419,10 +1419,24 @@ textarea.encounter-notes {
   display: block;
 }
 
-.overlay-title {
+.tv-top {
   position: absolute;
-  top: 3vh;
+  top: 2vh;
   left: 3vw;
+  right: 3vw;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5vw;
+  pointer-events: none;
+}
+
+.overlay-title {
+  flex: none;
+  max-width: 30vw;
+  margin-top: 1vh;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 2.2vw;
   padding: 0.4vw 1vw;
   background: var(--tv-scrim);
@@ -1432,19 +1446,18 @@ textarea.encounter-notes {
 }
 
 .initiative-strip {
-  position: absolute;
-  top: 2vh;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Centred in the room the title leaves; a long fight wraps to a second row. */
+  min-width: 0;
+  margin: 0 auto;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.6vw;
   list-style: none;
   margin: 0;
   padding: 0.5vw 1vw;
   background: var(--tv-scrim);
   border-radius: 12px;
-  max-width: 94vw;
-  overflow: hidden;
 }
 
 .chip {

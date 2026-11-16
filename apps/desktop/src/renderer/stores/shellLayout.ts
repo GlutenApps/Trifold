@@ -463,7 +463,10 @@ export function applyPreset(preset: ShellLayout, webTabs: readonly WebTab[] = []
   return pruneTabs(normalize(cloneLayout(preset)), webTabs);
 }
 
-/** Whether the screen still matches a layout's intent: tabs, actives, maximize, dock state and flags. */
+/**
+ * Whether the screen still matches a layout's intent: tabs, actives, maximize, the divider, the
+ * dock's state and width, and flags.
+ */
 export function matchesPreset(current: ShellLayout, preset: ShellLayout): boolean {
   const a = normalize(current);
   const b = normalize(preset);
@@ -475,9 +478,12 @@ export function matchesPreset(current: ShellLayout, preset: ShellLayout): boolea
     if (ga.tabs.length !== gb.tabs.length || ga.tabs.some((t, j) => gb.tabs[j] !== t)) return false;
   }
   if (a.stage.maximized !== b.stage.maximized) return false;
+  // A dragged divider is a change the DM can save (feedback 2026-11-15); a hair's difference is not.
+  if (a.stage.groups.length > 1 && Math.abs(a.stage.split - b.stage.split) > 0.01) return false;
   // A narrow window trims the dock as drawn (fitLayout), never the saved state, so this compares
   // what the DM chose: a dock collapsed to icons by hand is a different layout.
   if (a.dock.state !== b.dock.state) return false;
+  if (a.dock.state !== 'icons' && Math.abs(a.dock.width - b.dock.width) > 8) return false;
   const open = (l: ShellLayout) => l.dock.sections.filter((s) => s.open).map((s) => s.tool);
   const oa = open(a);
   const ob = open(b);

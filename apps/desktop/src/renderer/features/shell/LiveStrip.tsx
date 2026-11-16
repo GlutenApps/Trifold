@@ -12,6 +12,7 @@ import { DicePool } from '../dice/DicePool';
 import { Icon } from './icons';
 import { CounterTraySection, TimerTraySection, useTraySync } from './TrayItems';
 import { hk } from '../../platform';
+import { formatCountdown, useCountdown } from '../presenter/countdown';
 
 /**
  * The live strip, or tray (ADR 0004, live strip): table-time state and the one-tap actions,
@@ -99,9 +100,20 @@ function ChooseSection() {
   );
 }
 
+/** A break on the TV covers whatever is live, so the strip says so, with its timer. */
+function BreakStatus({ endsAt }: { endsAt: number | undefined }) {
+  const left = useCountdown(endsAt);
+  return (
+    <span className="break-text" data-testid="live-status">
+      {left === null ? 'Break' : left > 0 ? `Break · ${formatCountdown(left)}` : 'Break · time up'}
+    </span>
+  );
+}
+
 function TvSection() {
   const scene = usePresenterStore((s) => s.state.scene);
   const blackout = usePresenterStore((s) => s.state.blackout);
+  const breakScreen = usePresenterStore((s) => s.state.breakScreen);
   const history = usePresenterStore((s) => s.history.length);
   const toggleBlackout = usePresenterStore((s) => s.toggleBlackout);
   const clearScene = usePresenterStore((s) => s.clearScene);
@@ -123,7 +135,9 @@ function TvSection() {
         }}
         title={`VTT: the scene on the TV (${hk('Ctrl+T')})${playersWaiting ? '. A player is waiting for you' : ''}`}
       >
-        {!scene ? (
+        {breakScreen ? (
+          <BreakStatus endsAt={breakScreen.endsAt} />
+        ) : !scene ? (
           <span className="muted">Nothing live</span>
         ) : blackout ? (
           <span className="warn-text">Blackout</span>

@@ -177,6 +177,12 @@
   color: var(--warn);
   font-weight: 600;
 }
+/* A break on the TV: red like End break, so it is hard to miss from the DM's seat. */
+.break-text {
+  color: var(--tally);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 /* Console: stage and dock */
 .console {

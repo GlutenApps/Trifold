@@ -134,7 +134,7 @@ export function UpdatePrompt() {
   const setEnabled = useUpdateStore((s) => s.setEnabled);
   if (!status || status.asked) return null;
   return (
-    <div className="banner update-prompt" role="region" aria-label="Check for updates">
+    <div className="banner warn wraps update-prompt" role="region" aria-label="Check for updates">
       <span>
         <strong>Check for new versions of Trifold?</strong> Once a day it can ask its public release
         list whether a newer version is out. It sends only its own version number, never your games,
