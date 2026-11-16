@@ -1,5 +1,5 @@
 /**
- * Ports and addresses for the table server (docs/PLAYER-CONNECTOR.md, decision 7, ADR 0043).
+ * Ports and addresses for the table server (docs/PLAYER-CONNECTOR.md, "Ports"; ADR 0043).
  */
 
 /** 80 first, so addresses need no port; then 8130–8139. */

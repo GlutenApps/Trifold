@@ -11,7 +11,7 @@ import { Icon } from '../shell/icons';
 import { summonableEntry } from './SummonableToggle';
 
 /**
- * Campaign › Summons (ADR 0043, Phase 4): the creatures players may summon from their phones in
+ * Campaign › Summons (ADR 0043): the creatures players may summon from their phones in
  * this campaign. Add one from the compendium, make a new one (a spiritual weapon, a homebrew
  * familiar), or customise one: editing a stock creature makes this campaign's own copy and the
  * list points at it, so the compendium's original never changes. The paw on a compendium page

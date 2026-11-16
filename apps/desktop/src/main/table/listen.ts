@@ -64,7 +64,8 @@ export type BindFn = (host: string, port: number) => Promise<BoundListener>;
 const MOVE_ON = new Set(['EADDRINUSE', 'EACCES', 'EADDRNOTAVAIL']);
 
 /**
- * Finds the first port every IPv4 address binds on (decision 7): a port in use or refused on
+ * Finds the first port every IPv4 address binds on (PLAYER-CONNECTOR.md, "Ports"): a port in use or
+ * refused on
  * any IPv4 address moves on to the next. IPv6 addresses then bind on that port where they can;
  * one that fails is skipped. Throws when no port works or there is no private IPv4 address.
  */

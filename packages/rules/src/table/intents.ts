@@ -45,7 +45,7 @@ const within = (n: number, r: { min: number; max: number }) => whole(n) && n >= 
 
 /**
  * Why a player's change to one of their creatures is refused, or null when it may go to the
- * console (Phase 2 plan): the field must be editable for this creature now, and the value in range.
+ * console: the field must be editable for this creature now, and the value in range.
  */
 export function intentProblem(intent: TableIntent, creature: TableCreature): string | null {
   switch (intent.kind) {
@@ -111,7 +111,7 @@ export type ClaimOutcome =
   | 'own';
 
 /**
- * What a tap in the picker does (Claiming, reclaiming and releasing; Phase 2 plan). A free
+ * What a tap in the picker does (PLAYER-CONNECTOR.md, "Claiming, reclaiming and releasing"). A free
  * creature is claimed, with a PIN set first in PIN mode. A held one is reclaimed or taken over
  * through the campaign's reclaim mode; within Switch character's undo grace it comes straight
  * back.

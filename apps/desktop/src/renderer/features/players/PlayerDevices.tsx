@@ -10,7 +10,8 @@ import { JoinQr } from './JoinQr';
 const QUIET_MS = 60_000;
 
 /**
- * The Player devices pop-up in the VTT tab's TV tools (ADR 0043, decision 5): Let players join
+ * The Player devices pop-up in the VTT tab's TV tools (ADR 0043; PLAYER-CONNECTOR.md, "What the DM
+ * controls"): Let players join
  * and Stop, the join QR and addresses with Copy link, Show join code on TV (its one home), and
  * the devices with what each holds and Release. Not modal; usable mid-fight.
  */
@@ -313,7 +314,7 @@ function DeviceList({
 }
 
 /**
- * Player summoning (ADR 0043, Phase 4): on, ask me first, or off; how many summons a character
+ * Player summoning (ADR 0043): on, ask me first, or off; how many summons a character
  * may have in play; and how many creatures are on the summon list, which lives in
  * Campaign › Summons (and the paw on a compendium page).
  */

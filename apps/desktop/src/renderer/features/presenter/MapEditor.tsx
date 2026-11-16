@@ -1818,7 +1818,7 @@ export function MapEditor({
           />
           {scene.tokens.map((token) => {
             const px = token.footprint * grid.cellPx;
-            // A player's drag in progress shows where their finger is (Phase 3).
+            // A player's drag in progress shows where their finger is.
             const playerDrag = moving[token.id];
             return (
               <div
@@ -2311,7 +2311,7 @@ export function MapEditor({
                 );
               })()}
               {(() => {
-                // Give to… (Phase 3): any PC or NPC, enemy or not; the DM's call.
+                // Give to…: any PC or NPC, enemy or not; the DM's call.
                 const ref = selectedToken.ref;
                 if (ref.kind !== 'pc' && ref.kind !== 'npc') return null;
                 const id = ref.kind === 'pc' ? ref.pcId : ref.npcId;

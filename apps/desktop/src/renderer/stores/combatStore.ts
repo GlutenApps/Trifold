@@ -153,7 +153,7 @@ interface CombatStoreState {
   damage(id: string, amount: number, type?: string): void;
   heal(id: string, amount: number): void;
   tempHp(id: string, amount: number): void;
-  /** Max HP as a player set it (Phase 2): current HP is kept within it. */
+  /** Max HP as a player set it: current HP is kept within it. */
   setMaxHp(id: string, max: number): void;
   /** Temp HP as a number, not the take-the-higher rule `tempHp` follows. */
   setTempHp(id: string, temp: number): void;
@@ -164,7 +164,7 @@ interface CombatStoreState {
    */
   fromDevice(label: string, run: () => void): void;
   /**
-   * A player's summon joins the fight (ADR 0043, Phase 4): built from its token like any newcomer,
+   * A player's summon joins the fight (ADR 0043): built from its token like any newcomer,
    * at the initiative given (its owner's, or none so the phone asks), and never added to the
    * encounter's list.
    */

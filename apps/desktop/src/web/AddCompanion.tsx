@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { SummonOption } from '@trifold/api';
 
 /**
- * Add a companion (player UI handoff; ADR 0043, Phase 4): the DM's summon list, searchable by name
+ * Add a companion (player UI handoff; ADR 0043): the DM's summon list, searchable by name
  * or type. **Add** summons at once with the options last used for that creature on this device
  * (the spec's presets); **Options** opens them: how many, initiative, how long, concentration and
  * whether it stays after the fight.

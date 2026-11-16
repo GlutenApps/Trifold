@@ -8,7 +8,7 @@ import type { FogShapeLike } from '../fog';
 
 export type Role = 'ally' | 'enemy' | 'neutral';
 export type CreatureKind = 'pc' | 'npc';
-/** A creature a phone can work on: a claimed PC or NPC, or a summon (Phase 4), which belongs to
+/** A creature a phone can work on: a claimed PC or NPC, or a summon, which belongs to
  *  whoever holds its owner and is never claimed itself. A summon's id is its token's id. */
 export type AnyCreatureKind = CreatureKind | 'summon';
 
@@ -41,7 +41,7 @@ export interface TableToken {
   creature?: { kind: AnyCreatureKind; id: string };
   /**
    * While a player drags it, `x` and `y` are where the drag is and this is where the token
-   * stands: what a drop's stale check compares against (Phase 3).
+   * stands: what a drop's stale check compares against.
    */
   restsAt?: { x: number; y: number };
 }
@@ -71,14 +71,17 @@ export interface CreatureCondition {
   level?: number;
 }
 
-/** A creature's numbers and what its owner may change (Phase 2 plan, "How a player's edit travels"). */
+/**
+ * A creature's numbers and what its owner may change (PLAYER-CONNECTOR.md, "How a player's edit
+ * travels").
+ */
 export interface CreatureStats {
   hp: { current: number; max: number; temp: number } | null;
   ac: number | null;
   conditions: CreatureCondition[];
   /** It has a combatant in the loaded fight. */
   inFight: boolean;
-  /** The loaded fight is waiting for its initiative (decision 8). */
+  /** The loaded fight is waiting for its initiative (PLAYER-CONNECTOR.md, "Initiative"). */
   needsInitiative: boolean;
   editable: { hp: boolean; maxHp: boolean; ac: boolean; conditions: boolean };
 }
@@ -89,11 +92,14 @@ export interface TableCreature extends CreatureStats {
   id: string;
   name: string;
   portraitSrc?: string;
-  /** Offered in the picker now (decision 13); a claimed creature keeps its claim either way. */
+  /**
+   * Offered in the picker now (PLAYER-CONNECTOR.md, "What can be claimed"); a claimed creature
+   * keeps its claim either way.
+   */
   claimable: boolean;
-  /** An NPC kept as a PC's companion (Phase 3): claimed and released with that PC. */
+  /** An NPC kept as a PC's companion: claimed and released with that PC. */
   companionOf?: string;
-  /** A summon's owner and state (Phase 4). */
+  /** A summon's owner and state. */
   summon?: TableSummon;
 }
 
@@ -106,7 +112,7 @@ export interface TableSummon {
   concentrationLost: boolean;
 }
 
-/** A creature the DM made summonable for this campaign (Phase 4). */
+/** A creature the DM made summonable for this campaign. */
 export interface SummonOption {
   key: string;
   name: string;
@@ -117,7 +123,7 @@ export interface SummonOption {
 
 export type SummonMode = 'on' | 'approval' | 'off';
 
-/** What the phone asks for when it summons (Phase 4 plan, "Add options"). */
+/** What the phone asks for when it summons (PLAYER-CONNECTOR.md, "Add options"). */
 export interface SummonRequest {
   ownerKind: CreatureKind;
   ownerId: string;
@@ -137,7 +143,7 @@ export interface TableSnapshot {
   /** What the TV shows when it is not a map: a title card, an image or the break screen. */
   screen?: TableScreen | null;
   creatures: TableCreature[];
-  /** The DM's summon list (Phase 4). */
+  /** The DM's summon list. */
   summonOptions?: SummonOption[];
 }
 
@@ -163,9 +169,9 @@ export interface ClientToken {
   glyphUrl?: string;
   /** One of this device's creatures. */
   mine: boolean;
-  /** Under fog: only ever sent to its owner (decision 12). */
+  /** Under fog: only ever sent to its owner (PLAYER-CONNECTOR.md, "Server-side filtering"). */
   fogged?: boolean;
-  /** Another device is dragging it: its name (Phase 3). */
+  /** Another device is dragging it: its name. */
   movingBy?: string;
 }
 
@@ -175,7 +181,10 @@ export interface ClientMap {
   width: number;
   height: number;
   backdrop: 'parchment' | 'stone' | 'dark';
-  /** The fogged map image (decision 11), absent until the console has drawn it. */
+  /**
+   * The fogged map image (PLAYER-CONNECTOR.md, "The fogged map image"), absent until the console
+   * has drawn it.
+   */
   imageUrl?: string;
   grid: TableGrid;
   fog: FogShapeLike[] | null;
@@ -221,11 +230,11 @@ export interface ClientView {
   screen?: ClientScreen | null;
   /** The campaign's reclaim mode, so the picker knows to ask for a PIN or to wait. */
   reclaimMode: ReclaimMode;
-  /** Summoning (Phase 4): what can be added, whether it may, and how many per character. */
+  /** Summoning: what can be added, whether it may, and how many per character. */
   summoning?: { mode: SummonMode; cap: number; options: SummonOption[] };
 }
 
-/** A player's change to one of their creatures (Phase 2 plan). HP and temp HP are changes. */
+/** A player's change to one of their creatures. HP and temp HP are changes. */
 export type TableIntent =
   | { kind: 'hp'; delta: number }
   | { kind: 'temp'; delta: number }
@@ -274,7 +283,7 @@ export type ClientMessage =
   | { type: 'undo' }
   /** Stop waiting for the DM's approval. */
   | { type: 'cancel' }
-  /** Movement (Phase 3): ask to drag, show where it is, keep the lock, put it down or let go. */
+  /** Movement: ask to drag, show where it is, keep the lock, put it down or let go. */
   | { type: 'grab'; tokenId: string }
   /** Where the token is planned to go; `from` is where the move began, for the TV's ruler. */
   | { type: 'preview'; tokenId: string; x: number; y: number; from?: { x: number; y: number } }
@@ -283,18 +292,18 @@ export type ClientMessage =
   | { type: 'letGo'; tokenId: string }
   /** Release one companion on its own. */
   | { type: 'releaseOne'; creatureKind: CreatureKind; creatureId: string }
-  /** Summoning (Phase 4): bring creatures into play, take one out, keep one after concentration. */
+  /** Summoning: bring creatures into play, take one out, keep one after concentration. */
   | ({ type: 'summon' } & SummonRequest)
   | { type: 'dismiss'; tokenId: string }
   | { type: 'keepSummon'; tokenId: string };
 
-/** What main hands the console to do about summons (Phase 4). */
+/** What main hands the console to do about summons. */
 export type TableSummonEvent =
   | ({ kind: 'spawn'; deviceLabel: string } & SummonRequest)
   | { kind: 'dismiss'; tokenId: string; deviceLabel: string }
   | { kind: 'keep'; tokenId: string };
 
-/** What main hands the console about a token being moved by a player (Phase 3). */
+/** What main hands the console about a token being moved by a player. */
 export type TableTokenEvent =
   | {
       kind: 'preview';

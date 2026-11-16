@@ -8,7 +8,8 @@ export const LOCK_TTL_MS = 3_000;
 export const PREVIEWS_PER_SECOND = 10;
 
 /**
- * Who is dragging which token (Phase 3 plan, "A drag, start to finish"). In memory only: a lock
+ * Who is dragging which token (PLAYER-CONNECTOR.md, "A drag, start to finish"). In memory only: a
+ * lock
  * lives for a drag. One device per token; a lock lapses without a heartbeat; the DM can always
  * take it away.
  */
@@ -75,7 +76,7 @@ export class DragLocks {
   }
 }
 
-/** Movement locks the DM set (Phase 3 plan, "Locking movement"). */
+/** Movement locks the DM set (PLAYER-CONNECTOR.md, "Locking movement"). */
 export interface MovementLocks {
   all: boolean;
   /** `kind:id` of creatures whose movement is locked. */
@@ -89,9 +90,9 @@ export function movementLocked(locks: MovementLocks, kind: CreatureKind, id: str
 }
 
 /**
- * Why a player's drop is refused, or null when the console may move the token (Phase 3 plan,
- * step 3): it must still stand where the drag began (else someone moved it meanwhile), stay on
- * the map, and its centre must land in a revealed area (decision 12).
+ * Why a player's drop is refused, or null when the console may move the token (PLAYER-CONNECTOR.md,
+ * "A drag, start to finish", step 3): it must still stand where the drag began (else someone moved
+ * it meanwhile), stay on the map, and its centre must land in a revealed area.
  */
 export function dropProblem(
   scene: TableScene,
@@ -116,7 +117,7 @@ export const snapToCell = (p: { x: number; y: number }) => ({
   y: Math.round(p.y),
 });
 
-/** The companions of a PC among the creatures the table knows (Phase 3 plan, "Companions"). */
+/** The companions of a PC among the creatures the table knows (PLAYER-CONNECTOR.md, "Companions"). */
 export function companionsOf(
   creatures: readonly TableCreature[],
   pcId: string,

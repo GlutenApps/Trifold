@@ -10,7 +10,7 @@ import { useSceneStore } from '../../stores/sceneStore';
 import { DEFAULT_GRID, footprintForSize, mapSize } from '../presenter/mapMath';
 
 /**
- * Player summoning on the console (ADR 0043, Phase 4). Main has checked the request; here a summon
+ * Player summoning on the console (ADR 0043). Main has checked the request; here a summon
  * becomes tokens beside its owner on the live map and, in a fight, combatants; and summons go
  * when they are dismissed, when their rounds run out, or when the fight ends (unless they stay).
  */

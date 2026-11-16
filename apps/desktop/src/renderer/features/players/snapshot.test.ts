@@ -251,7 +251,7 @@ describe('tableSnapshotFrom: what a device holds', () => {
   });
 });
 
-describe('tableSnapshotFrom: summons (Phase 4)', () => {
+describe('tableSnapshotFrom: summons', () => {
   it('lists the summon list and the summons on the live map, with their owner', () => {
     const owl = token('to', {
       ref: {

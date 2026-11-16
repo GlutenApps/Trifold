@@ -750,19 +750,19 @@ export interface TableStatus {
     label: string;
     creatureName: string;
     takeover: boolean;
-    /** A summon waiting for the DM (Phase 4): how many of what. */
+    /** A summon waiting for the DM: how many of what. */
     summon?: { count: number; name: string };
   }>;
-  /** Player summoning: on, on with approval, or off, and the cap per character (Phase 4). */
+  /** Player summoning: on, on with approval, or off, and the cap per character. */
   summoning: { mode: SummonMode; cap: number };
-  /** Lock movement: everyone's, and `kind:id` of single creatures (Phase 3). */
+  /** Lock movement: everyone's, and `kind:id` of single creatures. */
   movement: { all: boolean; creatures: string[] };
 }
 
-/** A player's change, checked by main and handed to the console to apply (Phase 2). */
+/** A player's change, checked by main and handed to the console to apply. */
 export interface TableIntentEvent {
   deviceLabel: string;
-  /** A summon's id is its token's id (Phase 4). */
+  /** A summon's id is its token's id. */
   creatureKind: CreatureKind | 'summon';
   creatureId: string;
   intent: TableIntent;
@@ -837,7 +837,10 @@ export interface TrifoldApi {
     release(target: TableReleaseTarget): Promise<TableStatus>;
     /** The console's latest table state; ignored while the server is off. */
     push(snapshot: TableSnapshot): Promise<void>;
-    /** The live map image with fog filled black, as a JPEG (decision 11). */
+    /**
+     * The live map image with fog filled black, as a JPEG (PLAYER-CONNECTOR.md, "The fogged map
+     * image").
+     */
     setMapImage(sceneId: string, fogKey: string, jpeg: Uint8Array): Promise<void>;
     /** Open, PIN or Approval, saved in the campaign's players.json. */
     setReclaimMode(mode: ReclaimMode): Promise<TableStatus>;
@@ -852,7 +855,7 @@ export interface TrifoldApi {
       target: 'all' | { kind: CreatureKind; id: string },
       locked: boolean,
     ): Promise<TableStatus>;
-    /** Player summoning's mode and cap per character (Phase 4). */
+    /** Player summoning's mode and cap per character. */
     setSummoning(summoning: { mode: SummonMode; cap: number }): Promise<TableStatus>;
   };
   presenter: {
@@ -1346,9 +1349,9 @@ export interface TrifoldEvents {
   tableStatus: TableStatus;
   /** A player's change for the console to apply. */
   tableIntent: TableIntentEvent;
-  /** A player dragging or dropping a token (Phase 3). */
+  /** A player dragging or dropping a token. */
   tableToken: TableTokenEvent;
-  /** A player summoning, dismissing or keeping a summon (Phase 4). */
+  /** A player summoning, dismissing or keeping a summon. */
   tableSummon: TableSummonEvent;
 }
 

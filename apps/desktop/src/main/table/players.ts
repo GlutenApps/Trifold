@@ -97,7 +97,7 @@ export class PlayersStore {
     await this.save();
   }
 
-  /** Lock movement (Phase 3): for everyone, or one creature (`kind:id`). */
+  /** Lock movement: for everyone, or one creature (`kind:id`). */
   async setMovementLock(target: 'all' | string, locked: boolean): Promise<void> {
     const m = this.data.movement;
     const movement =

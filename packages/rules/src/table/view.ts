@@ -53,7 +53,7 @@ export function claimedBy(claims: readonly Claim[], deviceId: string | null): Se
   return out;
 }
 
-/** What a device holds: its claims, and the summons of the creatures it holds (Phase 4). */
+/** What a device holds: its claims, and the summons of the creatures it holds. */
 export function heldBy(
   snapshot: TableSnapshot,
   claims: readonly Claim[],
@@ -77,7 +77,8 @@ export function controller(c: Pick<TableCreature, 'kind' | 'id' | 'summon'>): {
 }
 
 /**
- * Whether a device may see a token on the live map (ADR 0043, decision 12): never a hidden one;
+ * Whether a device may see a token on the live map (ADR 0043; PLAYER-CONNECTOR.md, "Server-side
+ * filtering"): never a hidden one;
  * a token whose centre is under fog only for the device that owns it.
  */
 export function tokenVisibleTo(
@@ -125,7 +126,7 @@ export function viewFor(
     movement?: MovementLocks;
     /** Tokens being dragged: token id → the dragging device's id and name. */
     dragging?: ReadonlyMap<string, { deviceId: string; label: string }>;
-    /** Summoning's mode and cap (Phase 4); the options come from the snapshot. */
+    /** Summoning's mode and cap; the options come from the snapshot. */
     summoning?: { mode: SummonMode; cap: number };
   } = {},
 ): ClientView {
