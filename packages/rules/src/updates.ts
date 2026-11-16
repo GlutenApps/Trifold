@@ -69,8 +69,8 @@ export interface AvailableUpdate {
 }
 
 /**
- * The newest release newer than `current`, or null. Drafts and tags that are not versions are
- * skipped. Pre-releases count only when the running build is itself a pre-release, so a stable
+ * The newest release newer than `current`, or null. Drafts are skipped, and so is a release
+ * whose tag and title are both not versions. Pre-releases count only when the running build is itself a pre-release, so a stable
  * build is never pointed at a test one.
  */
 export function newestRelease(
@@ -80,18 +80,21 @@ export function newestRelease(
   const running = parseVersion(current);
   if (!running) return null;
   const allowPre = running.pre.length > 0;
-  let best: { release: ReleaseInfo; version: Version } | null = null;
+  let best: { release: ReleaseInfo; version: Version; text: string } | null = null;
   for (const release of releases) {
     if (release.draft) continue;
-    const version = parseVersion(release.tag);
+    // A release published without its tag gets a placeholder (`untagged-…`); its title, when
+    // that is a version, still says which build it is.
+    const text = parseVersion(release.tag) ? release.tag : release.name;
+    const version = parseVersion(text);
     if (!version) continue;
     if ((release.prerelease || version.pre.length > 0) && !allowPre) continue;
     if (compareVersions(version, running) <= 0) continue;
-    if (!best || compareVersions(version, best.version) > 0) best = { release, version };
+    if (!best || compareVersions(version, best.version) > 0) best = { release, version, text };
   }
   if (!best) return null;
   return {
-    version: best.release.tag.replace(/^v/, ''),
+    version: best.text.trim().replace(/^v/, ''),
     name: best.release.name || best.release.tag,
     url: best.release.url,
     publishedAt: best.release.publishedAt,

@@ -95,6 +95,17 @@ describe('newestRelease', () => {
     expect(newestRelease([release('v0.5.0-rc.1')], '0.3.0')).toBeNull();
   });
 
+  it('reads the version from the title when a release was published without its tag', () => {
+    const untagged = release('untagged-c0ed3fb4e77312296de7', { name: 'v0.4.1' });
+    const found = newestRelease([untagged, release('v0.4.0')], '0.4.0');
+    expect(found?.version).toBe('0.4.1');
+    expect(found?.url).toBe(untagged.url);
+    // A title that is not a version leaves the release skipped, as before.
+    expect(newestRelease([release('untagged-1', { name: 'Big update' })], '0.4.0')).toBeNull();
+    // The tag wins when both are versions.
+    expect(newestRelease([release('v0.4.2', { name: 'v9.9.9' })], '0.4.0')?.version).toBe('0.4.2');
+  });
+
   it('falls back to the tag when a release has no name', () => {
     expect(newestRelease([release('v0.4.0', { name: '' })], '0.3.0')?.name).toBe('v0.4.0');
   });
