@@ -8,6 +8,8 @@ import { discardPendingSaves } from '../../stores/pendingSaves';
 import { useShellStore } from '../../stores/shellStore';
 import { defaultLayout } from '../../stores/shellLayout';
 import { useTimersStore } from '../../stores/timersStore';
+import { usePresenterStore } from '../../stores/presenterStore';
+import { initialPresenterState } from '@trifold/api';
 import { LiveStrip } from './LiveStrip';
 import { Pop } from './Pop';
 
@@ -199,5 +201,39 @@ describe('tray', () => {
     render(<LiveStrip />);
     fireEvent.click(within(strip()).getByTitle(/^VTT/));
     expect(useShellStore.getState().space).toBe('console');
+  });
+});
+
+describe('tray: a break on the TV', () => {
+  afterEach(() => usePresenterStore.setState({ state: initialPresenterState }));
+
+  it('says a break is on, with its timer, whatever else is live', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000);
+    usePresenterStore.setState({
+      state: {
+        ...initialPresenterState,
+        breakScreen: { title: 'Back soon', endsAt: 1_000_000 + 10 * 60_000 },
+      },
+    });
+    render(<LiveStrip />);
+    const status = within(screen.getByTestId('live-strip')).getByTestId('live-status');
+    expect(status).toHaveTextContent('Break · 10:00');
+    expect(status).toHaveClass('break-text');
+    act(() => {
+      vi.advanceTimersByTime(65_000);
+    });
+    expect(status).toHaveTextContent('Break · 8:55');
+    vi.useRealTimers();
+  });
+
+  it('says Break without a timer when the break has none', () => {
+    usePresenterStore.setState({
+      state: { ...initialPresenterState, breakScreen: { title: 'Back soon' } },
+    });
+    render(<LiveStrip />);
+    expect(within(screen.getByTestId('live-strip')).getByTestId('live-status')).toHaveTextContent(
+      /^Break$/,
+    );
   });
 });

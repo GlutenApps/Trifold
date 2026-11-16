@@ -197,6 +197,17 @@ describe('presets', () => {
     expect(matchesPreset(toggleSection(table, 'music'), table)).toBe(false);
     expect(matchesPreset(openMajor(table, 'compendium'), table)).toBe(false);
   });
+
+  it('counts a dragged divider or dock edge as a change to the layout', () => {
+    expect(matchesPreset(setSplit(table, table.stage.split + 0.1), table)).toBe(false);
+    expect(matchesPreset(setSplit(table, table.stage.split + 0.005), table)).toBe(true);
+    const wider = setDockWidth(table, table.dock.width + 20);
+    expect(wider.dock.state).toBe(table.dock.state);
+    expect(matchesPreset(wider, table)).toBe(false);
+    // A dock collapsed to icons shows no width, so its remembered width does not count.
+    const icons = { ...table, dock: { ...table.dock, state: 'icons' as const } };
+    expect(matchesPreset({ ...icons, dock: { ...icons.dock, width: 500 } }, icons)).toBe(true);
+  });
 });
 
 describe('web tabs (ADR 0011)', () => {

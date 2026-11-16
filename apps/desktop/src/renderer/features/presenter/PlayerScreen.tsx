@@ -3,6 +3,7 @@ import { initialPresenterState, type PresenterState } from '@trifold/api';
 import { MapLayer } from './MapLayer';
 import { TvCorner } from './TvCorner';
 import { JoinQr } from '../players/JoinQr';
+import { formatCountdown, useCountdown } from './countdown';
 
 /**
  * The `/player` route (ADR 0002): the second screen. It subscribes to the presenter state main
@@ -11,17 +12,10 @@ import { JoinQr } from '../players/JoinQr';
  */
 
 function Countdown({ endsAt }: { endsAt: number }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(id);
-  }, []);
-  const remaining = Math.max(0, Math.round((endsAt - now) / 1000));
-  const m = Math.floor(remaining / 60);
-  const s = remaining % 60;
+  const remaining = useCountdown(endsAt) ?? 0;
   return (
     <p className="countdown" data-testid="countdown">
-      {remaining === 0 ? 'Time to play' : `${m}:${s.toString().padStart(2, '0')}`}
+      {remaining === 0 ? 'Time to play' : formatCountdown(remaining)}
     </p>
   );
 }
@@ -88,32 +82,36 @@ export function PlayerScreen() {
       )}
       {!scene && <div className="scene-layer backdrop-dark" data-testid="player-empty" />}
 
-      {scene && scene.kind !== 'title' && state.showSceneTitle && (
-        <div className="overlay-title" data-testid="overlay-title">
-          {scene.title}
-        </div>
-      )}
+      {/* One top row: the map's name keeps its corner and the strip takes the rest, wrapping
+          rather than covering the name in a big fight. */}
+      <div className="tv-top">
+        {scene && scene.kind !== 'title' && state.showSceneTitle && (
+          <div className="overlay-title" data-testid="overlay-title">
+            {scene.title}
+          </div>
+        )}
 
-      {combat && overlays.initiativeStrip && (
-        <ol className="initiative-strip" aria-label="Initiative">
-          {combat.entries.map((e) => (
-            <li
-              key={e.id}
-              className={`chip role-${e.role}${e.id === combat.activeId ? ' active' : ''}${e.dead ? ' dead' : ''}${e.bloodied ? ' bloodied' : ''}`}
-            >
-              <span className="chip-name">{e.name}</span>
-              {e.hpFraction !== undefined && overlays.pcHealthBars && (
-                <span className="hp-bar" aria-label={`${Math.round(e.hpFraction * 100)}% health`}>
-                  <span
-                    className="hp-fill"
-                    style={{ width: `${Math.round(e.hpFraction * 100)}%` }}
-                  />
-                </span>
-              )}
-            </li>
-          ))}
-        </ol>
-      )}
+        {combat && overlays.initiativeStrip && (
+          <ol className="initiative-strip" aria-label="Initiative">
+            {combat.entries.map((e) => (
+              <li
+                key={e.id}
+                className={`chip role-${e.role}${e.id === combat.activeId ? ' active' : ''}${e.dead ? ' dead' : ''}${e.bloodied ? ' bloodied' : ''}`}
+              >
+                <span className="chip-name">{e.name}</span>
+                {e.hpFraction !== undefined && overlays.pcHealthBars && (
+                  <span className="hp-bar" aria-label={`${Math.round(e.hpFraction * 100)}% health`}>
+                    <span
+                      className="hp-fill"
+                      style={{ width: `${Math.round(e.hpFraction * 100)}%` }}
+                    />
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
 
       {combat && overlays.roundCounter && combat.round > 0 && (
         <div className="round-counter" data-testid="round-counter">

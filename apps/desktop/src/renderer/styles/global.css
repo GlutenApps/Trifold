@@ -261,6 +261,23 @@ h2 {
   border: 1px solid var(--warn);
 }
 
+/* A banner's buttons stay side by side: the text gives way, not the buttons. */
+.banner > .row {
+  flex: none;
+  flex-wrap: nowrap;
+  margin: 0;
+}
+
+/* A banner that may sit in a narrow window: the buttons drop under the text, still in a row. */
+.banner.wraps {
+  flex-wrap: wrap;
+}
+
+.banner.wraps > :first-child {
+  flex: 1 1 24em;
+  min-width: 0;
+}
+
 button.btn {
   display: inline-flex;
   align-items: center;

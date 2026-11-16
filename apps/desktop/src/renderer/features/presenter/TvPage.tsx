@@ -287,7 +287,7 @@ function TvControls({ shown }: { shown: Scene | null }) {
         {live.breakScreen ? (
           <button
             type="button"
-            className="btn primary"
+            className="btn tally"
             title="Take the break screen down"
             onClick={presenter.clearBreak}
           >
