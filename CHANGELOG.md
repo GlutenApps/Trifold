@@ -4,6 +4,32 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-15
+
+Fixes and polish from table testing.
+
+### Added
+
+- **Roll a creature's own rolls from its stat block**: the ability table's Mod and Save columns, each skill, initiative and the hit dice are roll buttons, in the compendium and in the tracker (where they go to the fight's log). Shift-click rolls with advantage, Ctrl-click with disadvantage.
+- **Numbered creatures everywhere**: creatures of the same name are numbered across an encounter (Goblin 1, Goblin 2), on their tokens and in the tracker, and a second goblin added on the map is Goblin 2. Players see the same number behind a mask (Humanoid 2) on the TV's initiative strip, its tokens and their phones.
+- **Break in the tray**: while a break is up, the tray's VTT section says **Break** with its countdown, in red, and **End break** is red.
+- **Companion icon**: a figure with a spark marks companions on the compendium page and the phone; the paw now only means adding a creature to the map.
+
+### Changed
+
+- **Companions**: the DM side uses the phone's word. **Campaign › Summons** is now **Campaign › Companions**, with **New companion** and **Available as a companion** on a creature's compendium page. "Summon" stays the word for bringing one into play.
+- **The TV's initiative strip stays on one row**: it starts at whoever's turn it is, shrinks its chips a little in a big fight and folds the rest into a **+N** chip. The map's name keeps its own corner beside it.
+- The update-check question on the Campaigns page is a gold banner, with its buttons side by side.
+
+### Fixed
+
+- A phone move no longer fails with "The drag ran out" after the phone slept or briefly lost Wi-Fi.
+- Phones show the break screen while a map is live.
+- The break countdown on phones matches the TV, whatever the phone's clock says.
+- A player's move from their phone shows its ruler on the DM's map.
+- Dragging a panel divider or the dock's edge counts as a change to a layout, so **Overwrite** saves the new width.
+- Bonus actions and reactions in a stat block can be clicked to roll, like actions.
+
 ## [0.4.0] - 2026-11-15
 
 Everything since 0.3.0: the player connector, creature art, the rules compendium, fog of war, the movement ruler, the session log and the CR scaler, among others.
