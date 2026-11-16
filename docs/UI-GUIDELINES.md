@@ -1,8 +1,8 @@
 # UI guidelines
 
-How Trifold's console looks and why. Read this before building or changing any UI. The rules exist so a row of controls lines up without local fixes, and so a difference in size always means a difference in importance. ADR 0013 records how we got here.
+How Trifold's console looks and why. Read this before building or changing any UI. The rules exist so a row of controls lines up without local fixes, and so a difference in size always means a difference in importance (see ADR 0013).
 
-Colours, fonts and the palette are in `docs/TOKENS.md`; the CSS tokens live in `apps/desktop/src/renderer/styles/global.css`. Never use a literal colour, size or radius where a token exists. (The player window's scene backdrops are the one place literal colours are allowed.)
+Colours, fonts and the palette are in [TOKENS.md](TOKENS.md); the CSS tokens live in `apps/desktop/src/renderer/styles/global.css`. Never use a literal colour, size or radius where a token exists. The TV's backdrops, scrims and token faces have their own fixed tokens (`--tv-*`, `--token-*`), so the player window follows the same rule.
 
 ## 1. The control scale
 
@@ -25,7 +25,7 @@ The chrome bars (`.tabs`, `.dock-tabs`, `.dh`, `.fly-head`, `.strip`, `.web-bar`
 | `icon-toolbar` | A bordered group of `chrome-btn`s, exactly one control tall |
 | `seg` | Joined text buttons (segmented choice); all the same class |
 
-`btn tiny` is retired. Do not add it back.
+There is no smaller text button: no `btn tiny`.
 
 **No local overrides.** Never set `height`, `min-height`, `padding`, `font-size` or `border-radius` on `.btn`, `.chrome-btn` or a field in a feature stylesheet. If something does not fit, the fix is a layout change or a change to this document and the scale, not a one-off. Width is fine (`input.narrow`, a fixed-width number field).
 
@@ -90,7 +90,7 @@ Nothing clickable is smaller than 20 × 20 px, and anything used during combat i
 ## 8. Rows and lists
 
 - **Row actions are always on screen, quiet until the row is in use** (ADR 0020). Wrap them in `.row-actions`: they rest at the `--quiet` opacity and come up to full when the row is hovered, holds focus or is selected; the rule is in `responsive.css` and covers every list, so never hide or reveal actions per feature. A toggle that is on (`aria-pressed`) stays full, so its state reads at rest; use that instead of a separate status badge.
-- **No exceptions:** every list uses the same quiet actions, the Encounters list included (it used to pin its actions at full strength). Each action keeps its place on every row: when one does not apply (Delete for the fight in progress), it stays in its slot, disabled, with a `title` that says why, rather than disappearing and shifting the others. A disabled icon button is grey, at the fainter `--disabled` opacity, with a not-allowed pointer, so it never passes for a quiet one.
+- **No exceptions:** every list uses the same quiet actions, the Encounters list included. Each action keeps its place on every row: when one does not apply (Delete for the fight in progress), it stays in its slot, disabled, with a `title` that says why, rather than disappearing and shifting the others. A disabled icon button is grey, at the fainter `--disabled` opacity, with a not-allowed pointer, so it never passes for a quiet one.
 - Row actions are `chrome-btn xs`, icon-only. A row that needs words for its action (Restore, Show) is a sign the action belongs in the selected item's inspector, or it gets a `title` and an icon.
 - Rows of the same kind look the same everywhere: if PC rows have row actions, NPC rows do too.
 
@@ -113,7 +113,7 @@ One pattern each. Reuse these; do not invent a variant.
 
 ## 10. Panel widths and layouts
 
-ADR 0014 records how these came about.
+See ADR 0014 for the reasoning behind these.
 
 - **The floor.** A stage panel is never narrower than 480 px, and a dock tool is never narrower than 360 px. The shell guarantees both (`PANEL_MIN`, `DOCK_MIN` in `stores/shellLayout.ts`). Build every panel to work from its floor up, with no sideways scrolling at any width.
 - **The shell decides what fits.** When the window narrows, the dock folds to icons first, then two stage groups fold into one stack. Features never need to know about this.

@@ -70,7 +70,7 @@ A pre-commit hook (simple-git-hooks + lint-staged, installed by the root `prepar
 - **Presenter:** state lives in the console's Zustand store; IPC to main; broadcast to player. The player window never mutates state or reads the Library.
 - **Tests:** a convention from `DATA-FORMATS.md` is not done until a fixture exercises it (hp/ac/speed/save formats, recharge codes, bonus-action suffix, legendary header + lair, attack triples incl. blank to-hit and compound dice, both attack regexes, both save regexes, Source line parsing, `[5.5e]` tagging, edition collapse, slots parsing, Proficiency Bonus trait extraction).
 - **Commits:** conventional commits (`feat(presenter): …`). One feature per PR; PR description lists which `DESIGN.md` section it implements.
-- **ADRs:** any deviation from `DESIGN.md` gets a short ADR in `docs/adr/` and a note in the decision log table.
+- **ADRs:** any deviation from `DESIGN.md` gets a short ADR in `docs/adr/` and a row in the decision log in `docs/adr/README.md`.
 
 ## Definition of done for M1
 
