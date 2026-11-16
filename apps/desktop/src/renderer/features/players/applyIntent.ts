@@ -5,7 +5,8 @@ import { useCombatStore } from '../../stores/combatStore';
 import { useSceneStore } from '../../stores/sceneStore';
 
 /**
- * Applies a player's change that main has checked (Phase 2 plan, "How a player's edit travels").
+ * Applies a player's change that main has checked (PLAYER-CONNECTOR.md, "How a player's edit
+ * travels").
  * It goes through the same store actions a DM click uses, in the console's one thread, so player
  * and DM edits apply in order: in the loaded fight to the combatant (damage still asks for
  * concentration and death saves), outside it to the PC card or the NPC's carried HP. HP and temp
@@ -14,7 +15,7 @@ import { useSceneStore } from '../../stores/sceneStore';
 export function applyTableIntent(event: TableIntentEvent): void {
   const { creatureKind: kind, creatureId: id, intent } = event;
   const combat = useCombatStore.getState();
-  // A summon's id is its token's (Phase 4): its combatant is the one tied to that token.
+  // A summon's id is its token's: its combatant is the one tied to that token.
   const fighter: Combatant | undefined = combat.state?.combatants.find((c) =>
     kind === 'summon'
       ? c.tokenId === id
@@ -55,7 +56,8 @@ export function applyTableIntent(event: TableIntentEvent): void {
           combat.removeCondition(f, intent.id);
           return;
         case 'initiative':
-          // Only while it is still empty: if the DM typed it first, theirs stands (decision 8).
+          // Only while it is still empty: if the DM typed it first, theirs stands
+          // (PLAYER-CONNECTOR.md, "Initiative").
           if (fighter.initiative === null) combat.setInitiative(f, intent.value);
           return;
       }
@@ -125,7 +127,7 @@ export function applyTableIntent(event: TableIntentEvent): void {
   }
 }
 
-/** A summon outside a fight keeps its HP and AC on its token (Phase 4). */
+/** A summon outside a fight keeps its HP and AC on its token. */
 function applyToSummonToken(tokenId: string, intent: TableIntentEvent['intent']): void {
   const scenes = useSceneStore.getState();
   const draft = scenes.draft;

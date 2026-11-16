@@ -118,7 +118,7 @@ describe('Player devices pop-up', () => {
   });
 });
 
-describe('Player devices pop-up, Phase 2', () => {
+describe('Player devices pop-up', () => {
   beforeEach(() => {
     openCampaign();
   });

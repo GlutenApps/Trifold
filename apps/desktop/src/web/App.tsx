@@ -6,7 +6,7 @@ import { useLayout } from './useLayout';
 
 /**
  * The player connector's page (docs/PLAYER-CONNECTOR.md): join, pick a character, then the live
- * map and the character's numbers, which the player can change (Phase 2). Mobile first, from
+ * map and the character's numbers, which the player can change. Mobile first, from
  * 360 px wide, with 44 px touch targets and nothing that needs hover.
  */
 export function App() {

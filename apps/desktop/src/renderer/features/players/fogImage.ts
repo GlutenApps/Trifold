@@ -1,7 +1,8 @@
 import type { FogShapeLike } from '@trifold/rules';
 
 /**
- * The map image phones receive (decision 11, ADR 0043): the scene's display image with every
+ * The map image phones receive (ADR 0043; PLAYER-CONNECTOR.md, "The fogged map image"): the scene's
+ * display image with every
  * fogged area filled solid black, so a phone never holds the original map. A canvas, no new
  * packages; the console draws it once per fog change and main caches it in memory.
  */

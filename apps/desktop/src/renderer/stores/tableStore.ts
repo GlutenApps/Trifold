@@ -28,7 +28,10 @@ import { cellCentre, squaresBetween } from '../features/presenter/ruler';
  */
 interface TableState {
   status: TableStatus | null;
-  /** Show join code on TV (decision 6): off by default, not kept across restarts. */
+  /**
+   * Show join code on TV (PLAYER-CONNECTOR.md, "Joining"): off by default, not kept across
+   * restarts.
+   */
   joinOnTv: boolean;
   /** A failed request from the Player devices pop-up, shown there as a banner. */
   error: string | null;
@@ -116,7 +119,7 @@ export function installTableSync(): () => void {
       combat: useCombatStore.getState().state,
       artFor: (t) => tokenArtUrl(t, slug),
       portraitUrl: (path) => mediaUrl(slug, path),
-      // Players' drags in progress show to the other phones too (Phase 3).
+      // Players' drags in progress show to the other phones too.
       moving: presenter.moving,
       held: new Set(status!.devices.flatMap((d) => d.claims.map((c) => `${c.kind}:${c.id}`))),
     });
@@ -183,12 +186,12 @@ export function installTableSync(): () => void {
 
   const offs = [
     window.trifold.on('tableStatus', (status) => useTableStore.getState().receive(status)),
-    // A player's change main has checked (Phase 2): applied like a DM's own.
+    // A player's change main has checked: applied like a DM's own.
     window.trifold.on('tableIntent', (event) => applyTableIntent(event)),
-    // Summons (Phase 4): placed, dismissed or kept as the player asks; upkeep runs here too.
+    // Summons: placed, dismissed or kept as the player asks; upkeep runs here too.
     window.trifold.on('tableSummon', (event) => handleSummonEvent(event)),
     installSummonUpkeep(),
-    // A player dragging a token (Phase 3): previews show without saving; a drop moves it.
+    // A player dragging a token: previews show without saving; a drop moves it.
     window.trifold.on('tableToken', (event) => {
       const presenter = usePresenterStore.getState();
       if (event.kind === 'preview') {

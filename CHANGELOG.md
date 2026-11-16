@@ -70,7 +70,7 @@ Everything since 0.3.0: the player connector, creature art, the rules compendium
 
 ### Changed
 
-- Where something lives is now *This campaign* or *All campaigns* everywhere: the Save step, **Use in all campaigns** (was Add to my compendium), and campaign creatures' source pill. **Open in compendium** under an NPC's stat block is now **Open stat block**.
+- Where something lives is now *This campaign* or *All campaigns* everywhere: the Save step, **Use in all campaigns** (was Add to my compendium), and campaign creatures' source pill.
 
 ### Fixed
 

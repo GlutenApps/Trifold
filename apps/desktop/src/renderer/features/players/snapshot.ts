@@ -27,7 +27,8 @@ import { tokenPlayerLabels } from '../presenter/tokenLabels';
  *   title or image scene, nothing, or a blackout.
  * - Creatures are every PC card the DM has not unticked and the NPCs the DM has ticked. Their numbers come from
  *   their combatant in the loaded fight, else from the PC card or the NPC's carried HP.
- * - Whether a creature is offered (decision 13) is decided here, where the live scene's roles
+ * - Whether a creature is offered (PLAYER-CONNECTOR.md, "What can be claimed") is decided here,
+ * where the live scene's roles
  *   and the fight are known.
  */
 export interface SnapshotInput {
@@ -35,7 +36,7 @@ export interface SnapshotInput {
     id: string;
     name: string;
     tokenStyle: TokenStyle;
-    /** The DM's summon list (Phase 4). */
+    /** The DM's summon list. */
     summonable?: CampaignSettings['summonable'];
   };
   pcs: readonly PCCard[];
@@ -48,11 +49,11 @@ export interface SnapshotInput {
   artFor(token: Token): string | undefined;
   /** A campaign-relative portrait path as a `trifold-media://` URL. */
   portraitUrl(path: string): string;
-  /** Players' drags in progress: token id → where the drag is (Phase 3). */
+  /** Players' drags in progress: token id → where the drag is. */
   moving?: Readonly<Record<string, { x: number; y: number }>>;
   /**
    * `kind:id` of the creatures a device holds now: on the table even when not offered, since
-   * the DM's Give to… skips the offer (Phase 3).
+   * the DM's Give to… skips the offer.
    */
   held?: ReadonlySet<string>;
 }
@@ -106,7 +107,7 @@ export function tableScene(input: SnapshotInput): TableSnapshot['scene'] {
     tokens: liveScene.tokens.map((t) => {
       const art = input.artFor(t);
       const label = labels.get(t.id) ?? t.label;
-      // A summon's token stands for the summon itself, whose id is the token's (Phase 4).
+      // A summon's token stands for the summon itself, whose id is the token's.
       const creature: TableToken['creature'] = t.summon
         ? { kind: 'summon', id: t.id }
         : creatureOf(t.ref);
@@ -191,7 +192,7 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       editable: { hp: !!f || !!npc.hp, maxHp: !!f, ac: !!f, conditions: !!f },
     });
   }
-  // Summons on the live map (Phase 4), there whether or not the TV is blacked out.
+  // Summons on the live map, there whether or not the TV is blacked out.
   for (const t of input.liveScene?.tokens ?? []) {
     const s = t.summon;
     if (!s) continue;

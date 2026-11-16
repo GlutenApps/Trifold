@@ -5,7 +5,7 @@ import { MapPop } from '../presenter/MapPop';
 import { Icon } from '../shell/icons';
 
 /**
- * Give to… (ADR 0043, Phase 3): the DM hands a PC card or NPC to a phone connected now. It moves
+ * Give to… (ADR 0043): the DM hands a PC card or NPC to a phone connected now. It moves
  * the claim from any device that held it, skips the reclaim mode and the player-controllable flag
  * (the DM's call), and takes a PC's companions along. Shown only while players are connected.
  * `variant` picks the control's tier: an icon in the map's token actions, a text button on a form.

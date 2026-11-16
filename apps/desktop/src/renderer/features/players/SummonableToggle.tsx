@@ -20,7 +20,7 @@ export function summonableEntry(record: MonsterRecord): SummonableEntry {
 }
 
 /**
- * Summonable by players (ADR 0043, Phase 4): puts a creature on the open campaign's summon list,
+ * Summonable by players (ADR 0043): puts a creature on the open campaign's summon list,
  * which the players' Companions tool offers. Shown on a monster's page while a campaign is open.
  */
 export function SummonableToggle({ record }: { record: CompendiumRecord }) {

@@ -169,7 +169,7 @@ interface PresenterStore {
   /** Player display aspect and token style; the shell keeps these current. */
   liveOptions: Pick<LiveOptions, 'aspect' | 'tokenStyle'>;
   /**
-   * Tokens a player is dragging on their phone (ADR 0043, Phase 3): where the drag is now and
+   * Tokens a player is dragging on their phone (ADR 0043): where the drag is now and
    * who is dragging. Shown on the TV and the console map, never saved; the drop moves the token
    * for real.
    */

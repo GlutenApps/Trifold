@@ -1,7 +1,7 @@
 import { isRevealed, tokenCentre, type FogLike, type GridLike } from '../fog';
 import type { SummonMode, SummonRequest } from './types';
 
-/** Summoning's limits (Phase 4 plan, "DM guardrails" and "Add options"). */
+/** Summoning's limits (PLAYER-CONNECTOR.md, "DM guardrails" and "Add options"). */
 export const SUMMON_LIMITS = { count: 8, rounds: 100, cap: 20, defaultCap: 8 } as const;
 
 interface Place {
@@ -12,7 +12,8 @@ interface Place {
 
 /**
  * Where `count` new tokens of `footprint` cells go: the nearest free cells around the owner, ring
- * by ring, on the map and in a revealed area (a summon never lands under fog, decision 12). Free
+ * by ring, on the map and in a revealed area (a summon never lands under fog; PLAYER-CONNECTOR.md,
+ * "Server-side filtering"). Free
  * means no token's cells overlap it. Fewer than `count` cells when the space runs out.
  */
 export function freeCellsNear(
@@ -76,7 +77,7 @@ export function summonLabels(name: string, count: number, inPlay: readonly strin
 }
 
 /**
- * Why a summon is refused, or null (Phase 4 plan): summoning must be on, the owner held by the
+ * Why a summon is refused, or null: summoning must be on, the owner held by the
  * asking device, the creature on the DM's list, a map on the TV to put it on, and the owner under
  * its cap with this many more.
  */

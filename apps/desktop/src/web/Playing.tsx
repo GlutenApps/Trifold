@@ -38,7 +38,7 @@ export function Playing({
   /** The campaign name, connection and Switch, drawn as pills on the map in phone landscape. */
   header: React.ReactNode;
 }) {
-  // PCs first, each followed by its companions (Phase 3).
+  // PCs first, each followed by its companions.
   const ordered = useMemo(() => {
     const out: CreatureView[] = [];
     for (const pc of view.mine.filter((c) => !c.companionOf)) {
@@ -223,7 +223,7 @@ export function Playing({
           ) : null
         }
         onRemove={(c) =>
-          // A summon leaves play; an NPC companion goes back to the DM (Phase 3's release).
+          // A summon leaves play; an NPC companion goes back to the DM.
           c.kind === 'summon'
             ? conn.send({ type: 'dismiss', tokenId: c.id })
             : conn.send({ type: 'releaseOne', creatureKind: c.kind, creatureId: c.id })
@@ -436,7 +436,10 @@ export function Playing({
   );
 }
 
-/** The initiative box (decision 8): one number, then it goes. Floats over the top of the map. */
+/**
+ * The initiative box (PLAYER-CONNECTOR.md, "Initiative"): one number, then it goes. Floats over
+ * the top of the map.
+ */
 function InitiativeCard({
   creature,
   onSubmit,

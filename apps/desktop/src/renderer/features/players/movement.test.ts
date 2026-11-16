@@ -40,7 +40,7 @@ const grid: Scene = {
 const liveToken = () =>
   (usePresenterStore.getState().state.scene as MapScene).tokens.find((t) => t.id === 'tb')!;
 
-describe('player drags on the console (Phase 3)', () => {
+describe('player drags on the console', () => {
   let off: () => void = () => undefined;
   let emit: (event: TableTokenEvent) => void;
 

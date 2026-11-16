@@ -43,7 +43,8 @@ export function PlayerScreen() {
   }, []);
 
   const join = state.joinCode ? <TvJoinCode code={state.joinCode} /> : null;
-  // The join code stays up until the DM unticks it (decision 6), over a blackout too: a session
+  // The join code stays up until the DM unticks it (PLAYER-CONNECTOR.md, "Joining"), over a
+  // blackout too: a session
   // usually starts blacked out, which is when players join.
   if (state.blackout) {
     return (
