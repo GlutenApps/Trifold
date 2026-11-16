@@ -23,14 +23,28 @@ import {
  */
 
 /**
- * Roll handlers: the combat tracker supplies all four, the compendium everything but saves
- * (there is nobody to call a save against outside a fight). Without a handler a badge is inert.
+ * Roll handlers: the combat tracker supplies them all, the compendium everything but `onSave`
+ * (there is nobody to call a feature's save against outside a fight). Without a handler a badge
+ * is inert.
  */
 export interface StatBlockActions {
   onAttack(feature: Feature, attack: Attack, mode: RollMode): void;
   onRoll(feature: Feature, roll: RollButton): void;
+  /** A save a feature calls for (DC 13 CON): the tracker asks its targets. */
   onSave?(feature: Feature, save: SaveCall): void;
   onMultiattack(feature: Feature, mode: RollMode): void;
+  /** The creature's own d20 test: an ability check, a saving throw, a skill or initiative. */
+  onTest?(test: D20Test, mode: RollMode): void;
+  /** A plain dice expression from the block, such as its hit dice. */
+  onDice?(label: string, dice: string): void;
+}
+
+/** A d20 test the creature makes, as the stat block lists it. */
+export interface D20Test {
+  kind: 'check' | 'save';
+  /** "Dex save", "Stealth", "Initiative". */
+  label: string;
+  modifier: number;
 }
 
 /** Shift-click rolls with advantage, Ctrl-click with disadvantage; a plain click rolls normally. */
@@ -88,6 +102,30 @@ function D20Roll({
         </button>
       </span>
     </span>
+  );
+}
+
+/** A modifier the creature rolls a d20 with; Shift and Ctrl pick advantage and disadvantage. */
+function TestBadge({
+  test,
+  onTest,
+  children,
+}: {
+  test: D20Test;
+  onTest?: StatBlockActions['onTest'];
+  children: React.ReactNode;
+}) {
+  if (!onTest) return <>{children}</>;
+  return (
+    <button
+      type="button"
+      className="badge roll clickable sb-test"
+      aria-label={`Roll ${test.label} ${signed(test.modifier)}`}
+      title={`Roll ${test.label} · ${MODE_HINT}`}
+      onClick={(e) => onTest(test, modeFromClick(e))}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -264,6 +302,8 @@ export function StatBlock({ record, onOpenSpell, actions }: Props) {
   const saves = Object.entries(d.saves);
   // Its art (ADR 0033), shared by every source and edition of the creature.
   const art = useArtStore((s) => s.byKey[`monster:${record.key}`]);
+  const onTest = actions?.onTest;
+  const onDice = actions?.onDice;
 
   return (
     <article className="statblock">
@@ -288,11 +328,29 @@ export function StatBlock({ record, onOpenSpell, actions }: Props) {
           {d.ac?.note ? ` (${d.ac.note})` : ''}
         </dd>
         <dt>Initiative</dt>
-        <dd>{signed(initiativeBonus(d))}</dd>
+        <dd>
+          <TestBadge
+            test={{ kind: 'check', label: 'Initiative', modifier: initiativeBonus(d) }}
+            onTest={onTest}
+          >
+            {signed(initiativeBonus(d))}
+          </TestBadge>
+        </dd>
         <dt>HP</dt>
         <dd>
           {d.hp ? d.hp.average : '—'}
-          {d.hp?.formula ? ` (${d.hp.formula})` : ''}
+          {d.hp?.formula && (
+            <>
+              {' '}
+              <Badge
+                className={onDice ? 'badge roll' : 'sb-plain'}
+                title={onDice ? `Roll hit points (${d.hp.formula})` : undefined}
+                onClick={onDice ? () => onDice('Hit points', d.hp!.formula!) : undefined}
+              >
+                ({d.hp.formula})
+              </Badge>
+            </>
+          )}
         </dd>
         <dt>Speed</dt>
         <dd>{speedText(d)}</dd>
@@ -316,8 +374,22 @@ export function StatBlock({ record, onOpenSpell, actions }: Props) {
               <tr key={key}>
                 <th>{label}</th>
                 <td>{score}</td>
-                <td>{signed(mod)}</td>
-                <td>{signed(save)}</td>
+                <td>
+                  <TestBadge
+                    test={{ kind: 'check', label: `${label} check`, modifier: mod }}
+                    onTest={onTest}
+                  >
+                    {signed(mod)}
+                  </TestBadge>
+                </td>
+                <td>
+                  <TestBadge
+                    test={{ kind: 'save', label: `${label} save`, modifier: save }}
+                    onTest={onTest}
+                  >
+                    {signed(save)}
+                  </TestBadge>
+                </td>
               </tr>
             );
           })}
@@ -328,12 +400,26 @@ export function StatBlock({ record, onOpenSpell, actions }: Props) {
         {skills.length > 0 && (
           <>
             <dt>Skills</dt>
-            <dd>{skills.map(([k, v]) => `${k} ${signed(v)}`).join(', ')}</dd>
+            <dd>
+              {onTest
+                ? skills.map(([k, v]) => (
+                    <span key={k}>
+                      <TestBadge
+                        test={{ kind: 'check', label: capitalize(k), modifier: v }}
+                        onTest={onTest}
+                      >
+                        {k} {signed(v)}
+                      </TestBadge>{' '}
+                    </span>
+                  ))
+                : skills.map(([k, v]) => `${k} ${signed(v)}`).join(', ')}
+            </dd>
           </>
         )}
         {saves.length > 0 && record.edition !== '2024' && (
           <>
             <dt>Saving throws</dt>
+            {/* Text only: the ability table above rolls them, so each save has one button. */}
             <dd>{saves.map(([k, v]) => `${capitalize(k)} ${signed(v)}`).join(', ')}</dd>
           </>
         )}
@@ -410,12 +496,14 @@ export function StatBlock({ record, onOpenSpell, actions }: Props) {
         features={d.bonusActions}
         spells={spells}
         onOpenSpell={onOpenSpell}
+        actions={actions}
       />
       <FeatureList
         title="Reactions"
         features={d.reactions}
         spells={spells}
         onOpenSpell={onOpenSpell}
+        actions={actions}
       />
       <FeatureList
         title="Legendary actions"
