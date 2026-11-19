@@ -32,7 +32,8 @@
   --border: #333d48;
   --text: #e6e1d6;
   --text-muted: #9aa3ad;
-  --accent: #e3d3b0;
+  /* Bone: the logo cream (#e6e1d6) at the same hue and tint, darker, so it sits a step below the text. */
+  --accent: #c5beaf;
   --accent-contrast: #14181d;
   --danger: #e0685e;
   --warn: #e0b252;

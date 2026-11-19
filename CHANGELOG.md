@@ -11,6 +11,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 ### Changed
 
 - **Final brand**: a rust hexagon inside a three-part frame replaces the sword mark everywhere: app and installer icons, the DMG background, the top bar, the About card and the README banner. Small Windows icons sit on a dark tile so the mark stays visible on a light taskbar.
+- **Softer accent**: the dark theme's bone accent (primary buttons, focus, the current turn) is now a darker version of the logo's cream instead of a yellow sand, so the app and the logo share one warm grey. Amber stays the warning colour.
 
 ## [0.4.1] - 2026-11-15
 

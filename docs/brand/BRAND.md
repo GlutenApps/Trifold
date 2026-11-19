@@ -53,7 +53,7 @@ App palette: Slate & bone.
 |---|---|---|
 | `slate` | `#14181D` | App background, icon tile; frame and wordmark on light |
 | `surface` | `#1C2229` | Panels, cards |
-| `bone` | `#E3D3B0` | UI accent |
+| `bone` | `#C5BEAF` | UI accent (in this repo: the kit's `#E3D3B0` darkened toward `text`, same hue and tint as the frame, so it no longer reads yellow beside the logo) |
 | `text` | `#E6E1D6` | Frame and wordmark on dark |
 | `paper` | `#F4F1EA` | Light background |
 | `rust` | `#C45C45` | Center hexagon and i-dot on dark |
