@@ -43,6 +43,7 @@ test('console, Library, import, search, stat block and player window all work en
     env: {
       ...env,
       TRIFOLD_USER_DATA: userData,
+      TRIFOLD_NO_SPLASH: '1',
       TRIFOLD_LIBRARY: library,
     },
   });

@@ -17,7 +17,7 @@ import {
  */
 // The dark theme's --bg from renderer/styles/global.css, so a window shows the right colour
 // before the renderer paints. The light theme repaints on load.
-const WINDOW_BG = '#14181d';
+export const WINDOW_BG = '#14181d';
 
 export type Theme = 'dark' | 'light';
 
@@ -147,11 +147,11 @@ export class WindowManager {
   }
 
   /**
-   * A packaged app takes its window icon from the executable (build/icon.ico, the size-tuned
-   * brand icon). Unpackaged runs (dev, smoke) would show Electron's own, so point Windows and
+   * A packaged app takes its window icon from the executable (build/icon.ico, the brand
+   * kit's icon). Unpackaged runs (dev, smoke) would show Electron's own, so point Windows and
    * Linux at the same file; macOS takes the Dock icon from the bundle either way.
    */
-  private static iconOptions(): Electron.BrowserWindowConstructorOptions {
+  static iconOptions(): Electron.BrowserWindowConstructorOptions {
     if (app.isPackaged || process.platform === 'darwin') return {};
     const file = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
     return { icon: join(__dirname, '../../build', file) };

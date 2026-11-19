@@ -16,11 +16,14 @@ const WORDMARKS = { dark: wordmarkOnDark, light: wordmarkOnLight } as const;
 
 /**
  * The horizontal lockup's proportions, measured from its artwork in units of the mark's height
- * (177.8): the wordmark file is 120.66 tall around 100.6 of lettering, centred on the mark, and
- * the lettering starts 34.8 after the mark, 10 of that inside the wordmark file's own margin.
+ * there (165.73 drawn, scaled to 85% = 140.87; BRAND.md §1 lockup rules). The wordmark file is
+ * 120.67 tall and its centre sits 1.4 above the mark's (under a pixel at bar sizes, so the bar
+ * simply centres both). The T starts 33.65 after the mark, 10.06 of that inside the wordmark
+ * file's own margin.
  */
-const WORDMARK_HEIGHT = 120.66 / 177.8;
-const WORDMARK_GAP = (34.8 - 10.04) / 177.8;
+const LOCKUP_MARK_HEIGHT = 165.73 * 0.85;
+const WORDMARK_HEIGHT = 120.67 / LOCKUP_MARK_HEIGHT;
+const WORDMARK_GAP = (33.65 - 10.06) / LOCKUP_MARK_HEIGHT;
 
 const LOCKUPS = {
   horizontal: { dark: horizontalOnDark, light: horizontalOnLight },

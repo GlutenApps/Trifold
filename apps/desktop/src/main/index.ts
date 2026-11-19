@@ -15,6 +15,7 @@ import phoneAudioHelper from './phoneAudio/helper.ps1?raw';
 import { PhoneAudioReceiver } from './phoneAudio/receiver';
 import { PresenterHub } from './presenter';
 import { SaveFlush } from './saveFlush';
+import { createSplashWindow, Splash } from './splash';
 import { TableHub } from './table/hub';
 import { UpdateService } from './updates';
 import { WindowManager } from './windows';
@@ -29,14 +30,22 @@ if (userDataOverride) app.setPath('userData', userDataOverride);
 app.setAppUserModelId(app.isPackaged ? 'app.trifold.desktop' : 'app.trifold.desktop.dev');
 registerMediaScheme();
 
+// The loading splash (splash.ts): opens only if the console is not up within 250 ms.
+const splash = new Splash(() => createSplashWindow(WindowManager.iconOptions()));
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  void main();
+  // A failed startup still closes the splash, so no frameless window is left without a way out.
+  main().catch((err: unknown) => {
+    splash.done();
+    throw err;
+  });
 }
 
 async function main(): Promise<void> {
   await app.whenReady();
+  if (process.env['TRIFOLD_NO_SPLASH'] !== '1') splash.start();
   installApplicationMenu();
 
   let session: LibrarySession | null = null;
@@ -97,6 +106,7 @@ async function main(): Promise<void> {
     process.env['TRIFOLD_LIBRARY'] ??
     config.get().libraryPath ??
     join(app.getPath('documents'), 'Trifold Library');
+  splash.setStatus('Opening your Library…');
   const info = await activeSession.open(libraryPath);
   if (info.ok && config.get().libraryPath !== info.path) {
     await config.update({ libraryPath: info.path });
@@ -156,7 +166,8 @@ async function main(): Promise<void> {
     }),
     logger,
   );
-  windows.openConsole(config.get().consoleWindow);
+  splash.setStatus('Loading the console…');
+  windows.openConsole(config.get().consoleWindow).once('ready-to-show', () => splash.done());
 
   app.on('second-instance', () => windows.focusConsole());
   // The console window is the app on every platform (ADR 0006): closing it quits, so the

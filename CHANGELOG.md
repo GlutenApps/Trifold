@@ -4,6 +4,14 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+
+- **Loading splash**: when Trifold takes more than a moment to open, a small window shows the turning mark and what it is doing ("Opening your Library…") until the console is ready. Quick launches never show it.
+
+### Changed
+
+- **Final brand**: a rust hexagon inside a three-part frame replaces the sword mark everywhere: app and installer icons, the DMG background, the top bar, the About card and the README banner. Small Windows icons sit on a dark tile so the mark stays visible on a light taskbar.
+
 ## [0.4.1] - 2026-11-15
 
 Fixes and polish from table testing.
