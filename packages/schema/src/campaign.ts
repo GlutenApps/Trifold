@@ -23,7 +23,7 @@ export const CampaignSettings = z.object({
   /** Roll one initiative per identical group or one per creature (DESIGN.md §6.4). */
   initiativeMode: z.enum(['perGroup', 'perCreature']).default('perGroup'),
   /**
-   * The DM's summon list (ADR 0043, Phase 4): creatures players may bring into play from their
+   * The DM's summon list (ADR 0043): creatures players may bring into play from their
    * phones. Name, type, size, AC and HP are cached so the table never looks the record up.
    */
   summonable: z
@@ -339,7 +339,7 @@ export const NPC = z.object({
    * scene or in the running fight.
    */
   playerControllable: z.boolean().optional(),
-  /** The PC this NPC is a companion of (Phase 3): claimed and released with that PC. */
+  /** The PC this NPC is a companion of: claimed and released with that PC. */
   companionOf: z.string().optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
@@ -399,7 +399,7 @@ export const Token = z.object({
   color: z.string().optional(),
   dead: z.boolean().default(false),
   /**
-   * A creature a player summoned (ADR 0043, Phase 4): it belongs to whoever holds its owner.
+   * A creature a player summoned (ADR 0043): it belongs to whoever holds its owner.
    * HP and AC are kept here outside a fight; in one, its combatant has them.
    */
   summon: z
@@ -676,16 +676,16 @@ export const PlayersFile = z.object({
   schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
   devices: z.array(PlayerDevice).default([]),
   claims: z.array(PlayerClaim).default([]),
-  /** How a claimed character is got back (Phase 2): Open, PIN or the DM's approval. */
+  /** How a claimed character is got back: Open, PIN or the DM's approval. */
   reclaimMode: z.enum(['open', 'pin', 'approval']).default('open'),
-  /** Lock movement (Phase 3): everyone's, and `kind:id` of single creatures. */
+  /** Lock movement: everyone's, and `kind:id` of single creatures. */
   movement: z
     .object({
       all: z.boolean().default(false),
       creatures: z.array(z.string()).default([]),
     })
     .prefault({}),
-  /** Player summoning (Phase 4): on, on with the DM's approval, or off; and a cap per character. */
+  /** Player summoning: on, on with the DM's approval, or off; and a cap per character. */
   summoning: z
     .object({
       mode: z.enum(['on', 'approval', 'off']).default('on'),

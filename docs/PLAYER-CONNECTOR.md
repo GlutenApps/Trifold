@@ -1,720 +1,465 @@
 # Player connector
 
-**Status:** Phase 1 built and checked on real hardware (2026-11-14, ADR 0043); Phase 2 built (2026-11-14); Phase 3 built (2026-11-15); Phase 4 and the page redesign built (2026-11-15). Beta item 14 (`DESIGN.md` §10, ADR 0032). Spec from the DM, 2026-11-12.
-The [decisions](#decisions) below settle where the original spec and the repo disagreed; where
-they differ from a later section, the decisions win. Before Phase 1 starts, a Phase 1 plan is
-confirmed and an ADR amends `DESIGN.md` §1.2 and `CLAUDE.md` ground rule 1.
-
-Players at the table open a browser page served by the DM's Trifold, claim a creature in the
-campaign, and control a few basics for it: HP, AC, conditions, initiative and its position on the
-map. Players build their real characters wherever they like (another app or paper); Trifold
-tracks only what the table needs. No accounts and no cloud: the server runs on the DM's machine,
-on the local network, only while the DM has it open.
-
-## Decisions
-
-Settled with the DM on 2026-11-13. The original spec's wording is kept below; these win where
-they differ.
-
-1. **What can be claimed.** Trifold has no single creature entity: PCs are PC cards (carried HP,
-   ADR 0012), named NPCs are NPCs, a fight has combatants and a map has tokens. A **PC card** can
-   always be claimed. An **NPC** can be claimed while its token or combatant is not marked enemy
-   (the existing ally / enemy / neutral role; NPCs get no new hostility field). The claim fields
-   (`playerControllable`, `claim`, `version`, presets) live on the PC card and the NPC; tokens
-   and combatants follow their ref.
-2. **What can be summoned:** anything that is not a PC or an NPC: a compendium creature or a
-   custom entry (the existing `EntityRef` kinds), placed as a token and, in a fight, a combatant,
-   with `parentId` and the spawn record on it.
-3. **Test campaign:** the bundled sample, The Lantern at Greyford (ADR 0016). See the test setup
-   at the end.
-4. **No toasts** (`CLAUDE.md`). Quiet events (reconnects, takeovers, spawns) only change the
-   device list: online or offline, who holds what. Approval requests put a dot on the Player
-   devices button, the VTT tab and the strip's VTT section, and Accept and Deny sit in the list.
-5. **Where it lives: inside the VTT tab**, not a dock tool. The tab's header toolbar gets a
-   **Player devices** button that opens a pop-up, like overlays, handout and break (ADR 0008,
-   0009). The switch is **Let players join** / **Stop**. Revisit if testers find it hard to reach.
-6. **Join code on the TV:** a **Show join code on TV** checkbox in the Player devices pop-up, its
-   one home (not repeated in Overlays). It shows a large QR and the address on the TV until
-   unticked. Off by default.
-7. **Ports:** 80 first; if taken, 8130, then 8131–8139, the first that is free. The working port
-   is saved and reused every session; 80 is not retried. (3000, 5000, 7000, 8000 and 8080 are
-   avoided: dev tools and macOS AirPlay Receiver commonly hold them.) Whether macOS lets an
-   unprivileged app bind port 80 is verified on a Mac.
-8. **Initiative:** when a fight needs a claimed creature's initiative, the player sees one entry
-   box, types the number they rolled (the app never rolls for them) and taps Submit; the box
-   disappears and the number goes straight into the tracker. If the DM types it first, the
-   player's box disappears too. Summons that roll their own initiative get the same box. Only
-   the DM changes initiative after that.
-9. **Packages:** an HTTP server, WebSocket, an mDNS responder and a QR generator are approved,
-   all pure JS (no new native modules). Exact packages and versions are named in the Phase 1 plan.
-10. **macOS:** every phase is built and passes its checks on macOS as well as Windows; only the
-    public Mac release waits for 1.0 (ADR 0029).
-
-11. **Fog on phones.** The connector stays Beta 14, after fog of war (Beta 7), and Phase 1
-    ships with fog. Phones never receive the original map: the console draws the scene's
-    display-size image with every fogged area filled solid black (a canvas, no new packages),
-    saves it as a JPEG, caches it per fog change, and serves that. Phones also draw the fog
-    shapes over it for clean edges. One pure "is this point under fog" function filters tokens
-    for the TV and phones and checks player drops. Phones see every revealed area, not only
-    what the TV's player camera is framing.
-12. **Only the DM changes fog.** Moving, placing or spawning a token never reveals anything.
-    A player's drop or spawn whose token centre lands under fog is rejected and the token snaps
-    back (the same centre rule the TV uses to hide tokens). Only the drop counts; drag previews
-    show the TV nothing while the token is under fog. If the DM fogs over a player's own token,
-    its owner still sees it and can only drag it out into a revealed area; other phones and the
-    TV do not see it.
-13. **Claiming after the 2026-11-13 roadmap changes** (campaign-only stat blocks, copying, the
-    NPC form, creature art, "Named"):
-    - **Which role counts.** An NPC can be claimed while it is flagged player-controllable and is
-      not marked enemy on the live scene or in the running fight. An NPC with no token and in no
-      fight is decided by the flag alone. An NPC placed on a map from its own list starts
-      **neutral**, so it is claimable; one that arrives in an encounter or by Track as NPC starts
-      as **enemy**, so it is claimable once the DM marks it ally or neutral.
-    - **Named stat blocks are not NPCs.** A compendium stat block marked Named and placed straight
-      on the map is a creature token, not a campaign NPC, so it cannot be claimed. To hand one to
-      a player, the DM makes a campaign NPC that points at it.
-    - **Copies start unclaimed.** From another campaign… copies the player-controllable flag and
-      summon presets but never a claim, a device or a version: devices belong to a campaign.
-    - **Portraits are creature art.** A portrait a player sets from a phone is the PC's or NPC's
-      creature art (campaign `tokens/`, shrunk to 512 px like every other art, ADR 0033), so it
-      shows on every token of that character. A token-only art the DM set still wins on that token.
-    - **Summon presets** offer only creatures from sources enabled in this campaign (Beta 5).
-
-## Phase 1 plan
-
-**Status:** confirmed by the DM, 2026-11-14 (ADR 0043).
-
-### Who owns what
-
-The repo's rule for the TV holds here too: the console's stores own the state, main relays and
-filters, clients only render (`PresenterHub`, `DESIGN.md` §4.1). The table server is a second
-relay beside the player window, not a new source of truth. In Phase 2 a player's intent goes
-main → console, the console applies it in its one thread (which serialises it), and the result
-comes back the way a DM edit does.
-
-- **Console (renderer)** pushes a *table snapshot* to main whenever the live scene, the fight or
-  a claimable creature changes, at most once per frame: the live map scene unfiltered (tokens
-  with refs, fog shapes, grid, size), each claimable creature's summary (name, portrait path, HP,
-  temp HP, AC, conditions, taken from its combatant in the running fight, else from the PC card
-  or NPC), and each token's role. It also renders the fogged map JPEG (below).
-- **Main** (`apps/desktop/src/main/table/`) runs the server, holds devices and claims, and
-  builds each client's view from the snapshot with pure functions.
-- **Pure logic** (`packages/rules/src/table/`): `viewFor(snapshot, deviceId, claims)` (fog and
-  hidden filtering, decision 12's owner exception, own creatures in full, others as position,
-  label, role and art only), the claimable test (decisions 1 and 13), token hashing and
-  constant-time compare, and port order. `fog.ts`'s pure functions move from the renderer to
-  `packages/rules/src/fog.ts` so main, the TV and the console use the same "is this point under
-  fog" code (decision 11).
-
-### What phones see
-
-- Phones follow the TV: they show the map scene that is live on the TV, the whole
-  revealed area rather than the player camera's frame. If the TV shows a title or image scene,
-  nothing, or a blackout, phones show "No map right now" above their creature's stats.
-- **The fogged map image:** the console draws the scene's display image on a canvas, fills every
-  fogged area with solid black, encodes it as a JPEG (quality 0.85) and sends the bytes to main
-  over IPC, keyed by scene id and a hash of the fog shapes. Main keeps the latest image in memory
-  only (a derived artefact, nothing written to the Library) and serves it at
-  `/map/<sceneId>/<fogHash>.jpg`. The `trifold-media` scheme is already `corsEnabled`, so the
-  canvas is not tainted. A scene with fog off is served the same way, without the black.
-- **Token art** is served by token id at `/art/<tokenId>` and only for tokens in that client's
-  view; main resolves the path from the snapshot. No campaign path or file name reaches a
-  client.
-
-### Claims and devices
-
-- **`playerControllable: boolean`** (default false) is added to the PC card and the NPC, with
-  a toggle on each form. Older files parse without it (Zod default), so the campaign schema
-  version does not change.
-- **Claims and devices live in one main-owned file**,
-  `campaigns/<slug>/players.json` (`{ schemaVersion, devices: [{ deviceId, tokenHash, label,
-  lastSeen }], claims: [{ creatureKind: 'pc' | 'npc', creatureId, deviceId, claimedAt }] }`),
-  written through `LibraryStore`, rather than as a `claim` field on each PC card and NPC as the
-  data-model table says. The console saves whole PC and NPC files; if main also wrote claims
-  into them, either side's save would erase the other's change. One writer per file avoids that.
-  Releasing never touches creature data, and From another campaign… copies no claim either way.
-  This deviates from the data-model table (ADR 0043).
-- **First claim:** the picker lists claimable creatures with portraits; claimed ones show "In
-  use" and cannot be tapped in Phase 1 (reclaim and takeover are Phase 2). Claiming creates a
-  128-bit random token (`crypto.randomBytes(16)`, base64url), stores its SHA-256 hash and returns
-  the token, which the client keeps in localStorage under `trifold:<campaignId>`.
-- **Reconnect:** on load the client sends its token; a matching device with claims goes
-  straight to its creatures. A device with no live claims goes to the picker.
-- Phase 1 also ships **DM release** (per creature and Release all) in the Player
-  devices pop-up, so a lost phone never leaves a creature stuck before Phase 2's reclaim lands.
-  The player's own Switch character, undo and the reclaim modes stay in Phase 2.
-- The `version` field and drag locks are not needed until edits and movement (Phases 2 and 3).
-
-### Server, ports and the local name
-
-- **HTTP:** Node's built-in `http` (no package). It serves only the client's built files, the
-  map image, token art and `/ws`. Every request's `Host` header must be one of the addresses
-  Trifold shows (blocks DNS-rebinding pages), and the WebSocket upgrade must come from the same
-  origin. Responses carry a strict CSP (`default-src 'self'; connect-src 'self' ws://<host>`).
-- **WebSocket:** `ws` **8.22.0** (pure JS; its optional native add-ons are not installed).
-- **Binding:** one listener per private IPv4 address (10/8, 172.16/12, 192.168/16) and its IPv6
-  link-local or ULA peer, never `0.0.0.0`; the interface list is re-read every 10 seconds and
-  listeners follow DHCP changes. Connections from any other remote address are dropped as well.
-- **Ports:** 80, then 8130–8139 (decision 7); `EADDRINUSE` and `EACCES` both move on. The
-  working port is saved in the app config (not the campaign: it is part of the origin players'
-  tokens are stored under) and reused; 80 is not retried. Settings › Player devices can change
-  it, with the warning from the spec. Whether macOS allows port 80 on a specific address is
-  checked on a Mac; the fallback covers a refusal either way.
-- **mDNS:** `multicast-dns` **7.2.5** (pure JS, on `dns-packet`), answering A and AAAA for
-  `trifold.local`, including legacy unicast queries (source port ≠ 5353, answered by unicast to
-  the sender with the query id echoed, RFC 6762 §6.7). Before announcing it probes the name; if
-  another host answers it tries `trifold-2.local` and so on, and shows the name it won.
-- **QR codes:** `qrcode-generator` **2.0.4** (no dependencies), rendered as SVG in the console
-  and on the TV. The QR always encodes the IP address with `http://` and the port when not 80.
-- **Firewall:** Let players join first shows a one-line hint ("Windows will ask about the
-  firewall: allow it on private networks"). If no client connects within a minute while a
-  listener is up, the pop-up says the firewall or the Wi-Fi may be blocking it, and suggests a
-  phone hotspot.
-- **Logging:** start, stop, port chosen, mDNS name, claims, releases and rejected requests go to
-  `log.ts`. Tokens never reach the log.
-
-### The player client
-
-- `apps/desktop/src/web/`: React 18 + TypeScript, built by its own Vite config into `out/web/`
-  (electron-builder already packages `out/`). `pnpm dev` runs it with `vite build --watch`, so
-  a phone reload picks up changes. It imports `styles/global.css` for the tokens and type, plus
-  a touch stylesheet (44 px targets, 360 px floor, no hover-only states).
-- **Screens in Phase 1:** join (with the guest-Wi-Fi hint), picker, and main view: the map as
-  an SVG (image, grid, fog shapes over the blacked image for clean edges, tokens via a shared
-  token disc), pan and pinch-zoom, creature chips, and a read-only panel with HP, temp HP, AC and
-  conditions. A connection dot and "Reconnecting…" handle drops with backoff.
-- Wire messages are Zod schemas in `packages/api/src/table.ts`, checked on both ends.
-
-### Console
-
-- **Player devices** button in the VTT tab's TV tools toolbar, opening a `MapPop` like Overlays
-  and Break: Let players join / Stop, the QR, the `http://trifold.local` name in large text with
-  the IP address below, Copy link, Show join code on TV, the firewall hint, and the device list
-  (label, online or offline, what it holds, Release; Release all).
-- **Show join code on TV** adds a `joinCode` field to `PresenterState` and a large QR panel to
-  `PlayerScreen`; off by default and not saved across restarts.
-- **PC and NPC forms:** the Player-controllable toggle and the current claim (device label,
-  Release).
-- **Hotkey:** none in Phase 1; starting the server is not a table-time action.
-
-### Tests
-
-- Unit (`packages/rules`): `viewFor` with fog, hidden tokens, masked names, the owner exception,
-  an enemy NPC never claimable, an NPC with no token decided by its flag, a Named stat block
-  token never claimable; token hash and compare; port order; fog functions (the existing tests
-  move with them).
-- Unit (main): port fallback with fake listeners (80 taken, 80 refused, all taken); `Host`
-  check; the mDNS responder's answers to multicast, legacy unicast, A and AAAA queries and its
-  probe conflict, using `dns-packet` buffers; `players.json` round trip through `LibraryStore`.
-- Component: the Player devices pop-up, the form toggle, the TV join code.
-- Smoke (`smoke/players.spec.ts`): open the sample, flag Brannoc, start the server on a test
-  port, connect a Playwright browser page to it, claim Brannoc, reload and land back on him,
-  and check the WebSocket frames never contain a fogged token's id or Gorm Tallow's name while
-  he is hidden. Runs on Windows and macOS in CI.
-
-### The ADR before code
-
-ADR 0043 amends `DESIGN.md` §1.2 (no web client) and `CLAUDE.md` ground rule 1: a third
-network use, started by the DM, local network only, off until started and off again on Stop or
-quit, serving one campaign to browsers on the LAN, with nothing sent beyond it. It names the
-three packages above and records the claims-file deviation if that is confirmed.
-
-### Amended after the first table test (2026-11-14)
-
-- Every PC card is claimable unless the DM unticks it (`playerControllable` absent means on for
-  a PC, off for an NPC). Ticking each party member was easy to miss.
-- The switch is also on the map: a **Players can claim …** button in the selected token's
-  actions, for a PC token and an NPC token not marked enemy. The forms keep their tick box.
-
-## Phase 2 plan
-
-**Status:** confirmed by the DM, 2026-11-14: conditions only during a fight, the reclaim mode in
-the Player devices pop-up, name and portrait after Phase 4.
-
-### How a player's edit travels
-
-Phase 1's rule holds: the console owns game state. A phone sends an intent; main checks it (the
-device holds that creature, the field is allowed, the value is in range, the server is on) and
-forwards it to the console as a `tableIntent` event; the console applies it through the same
-store actions a DM click uses, in its one thread, so player and DM edits are applied in order and
-nothing is written twice. The result reaches every screen the usual way: the console saves, the
-TV and the snapshot update, and main sends each phone its new view. No `version` field yet: HP
-and temp HP travel as changes, and max HP and AC are last-write-wins (Concurrency), so versions
-wait for movement in Phase 3.
-
-| Intent | In the loaded fight | Outside it |
-| --- | --- | --- |
-| `hp {delta}` | `damage` or `heal` on its combatant (so concentration checks and death saves still fire) | PC card `currentHp`, or the NPC's carried HP, clamped to 0…max |
-| `temp {delta}` | combatant temp HP, clamped at 0 | PC card `tempHp` (NPC: carried temp) |
-| `maxHp {value}`, `ac {value}` | the combatant and the PC card (NPC: the combatant only) | the PC card; an NPC's come from its stat block and are not player-editable outside a fight |
-| `addCondition {name, level?}`, `removeCondition {id}` | the combatant | see Conditions |
-| `initiative {value}` | sets it only while it is still empty (decision 8) | ignored |
-
-Ranges main enforces: deltas within ±999, max HP 1–999, AC 0–40, initiative −20–60, condition
-names from the shared list (which moves from the tracker to `packages/rules`), exhaustion 1–6.
-A rejected intent gets an inline message on the phone and a log line, never a change.
-
-### Initiative
-
-The snapshot marks a claimed creature `needsInitiative` while the loaded fight has its combatant
-with no initiative. The phone shows one number box and Submit above the stats; on Submit the box
-goes, and it also goes the moment the DM types a number. Only the loaded fight counts: a paused
-fight asks again when it is loaded.
-
-### Conditions outside a fight
-
-- Conditions are editable only during a fight, where the tracker keeps
-  them. Outside one the phone shows "Conditions are tracked during fights." A later option adds
-  a `conditions` list to PC cards and NPCs, carried into and out of fights like HP (ADR 0012);
-  that is a bigger change to the tracker and can come later if the table wants it.
-
-### Getting a character back, and taking over
-
-- **The reclaim mode** (Open, PIN or Approval, default Open) is enforced by main, so it lives in
-  `players.json` beside the claims, not in the campaign file. It is set in the
-  Player devices pop-up, under the device list.
-- The picker shows claimed creatures as **In use**, now tappable. Tapping one held by an offline
-  device is a reclaim; held by an online device, the phone first asks "Brannoc is in use on
-  another device. Take over?" Either way the reclaim mode then applies:
-  - **Open:** done at once.
-  - **PIN:** in PIN mode the first claim asks for a 4-digit PIN (stored salted and hashed on the
-    claim, never in plain text). A reclaim asks for it; five wrong tries lock that creature's
-    PIN for a minute.
-  - **Approval:** the phone waits ("Asked the DM…"); main holds the request in memory. A dot shows
-    on the Player devices button, the VTT tab and the strip's VTT section; Accept and Deny sit in
-    the device list. Stop or a closed page drops the request.
-- A successful reclaim moves the claim to the asking device (a new device gets a fresh token) and
-  the old device drops to the picker. Creature data never changes.
-
-### Switch character and undo
-
-**Switch character** sits in the phone's top bar. It releases every claim the device holds and
-shows "Released Brannoc · Undo" for 5 seconds; Undo takes them back without the reclaim mode as
-long as nobody else claimed them meanwhile. Main keeps that grace for 5 seconds in memory only.
-
-### Name and portrait
-
-- Name and portrait editing waits until after Phase 4. A portrait means
-  an image upload from a phone, shrunk to 512 px as creature art (decision 13), which deserves its
-  own small piece of work. The spec's acceptance list for Phase 2 does not include them.
-
-### Console
-
-- The Player devices pop-up gains the reclaim mode, pending approvals with Accept and Deny, and
-  the dot on its button; the VTT tab and the strip's VTT section get the same dot (no toasts,
-  decision 4).
-- Nothing else changes for the DM: player edits arrive in the tracker, the forms and the TV as if
-  the DM had made them, and the fight log names the device ("Sam's phone: Brannoc heals 5").
-
-### The phone
-
-- The stats panel becomes editable: HP with a number pad and Damage and Heal buttons, temp HP the
-  same, max HP and AC as numbers, conditions as tappable tags with an Add list, and the initiative
-  box when asked. 44 px targets, one-handed, no hover.
-- The UI updates at once and takes the next view from main as final (Concurrency).
-
-### Tests
-
-- Unit (`packages/rules`): intent validation and ranges; the reclaim decision for each mode, online
-  and offline holders; PIN lockout; the undo grace window.
-- Unit (renderer): applying each intent in and out of a fight, including clamps, and initiative
-  only while empty; the approval dot.
-- Unit (main): PIN hashing and lockout, the approval queue, takeover moving the claim.
-- Smoke: a phone heals Brannoc during a fight while the DM damages him and both apply; the phone
-  submits initiative; Switch character and Undo; a second window takes Brannoc over in Approval
-  mode after the DM accepts.
-
-## Phase 3 plan
-
-**Status:** confirmed by the DM, 2026-11-15: no turn rule, Lock movement in the pop-up and the
-device list, companions as an NPC's Companion of.
-
-### A drag, start to finish
-
-Main owns the drag locks, in memory only; the console still applies every move, as with Phase 2's
-edits.
-
-1. **Grab.** A finger down on one of the player's own tokens sends `grab {tokenId}`. Main grants
-   a lock when the device holds the token's creature, movement is not locked (below), and no
-   other device holds the token. Other phones see the token marked as moving; the DM sees it on
-   the console map with the device's name.
-2. **Drag.** The phone moves the token locally and sends `preview {tokenId, x, y}` at most ten
-   times a second. Main forwards previews to the console, which shows them on the console map and
-   the TV without saving anything. A preview whose token centre is under fog shows nothing on the
-   TV (the TV's existing centre rule), and no phone but the owner's sees it. Previews count as the
-   lock's heartbeat; with no preview or `hold` for 3 seconds the lock expires and the console and
-   TV drop the preview. The phone keeps its planned move (a phone that slept or reconnected stops
-   sending `hold` without meaning to), and its next `hold` or its `drop` takes the lock back while
-   the token is still free and still theirs.
-3. **Drop.** `drop {tokenId, x, y, from}` carries where the token was at the grab. Main refuses it,
-   and the phone snaps the token back with a one-line reason, when another device holds the lock, the token
-   has moved since `from` (the stale check: someone else moved it), the drop is off the map, or
-   the token's centre lands under fog (decision 12). Otherwise main forwards it and the console
-   moves the token with `patchTokenAnywhere`, the same path the tracker uses: the scene saves, the
-   TV and every phone follow. On a grid the drop snaps to whole cells, as a DM drag does.
-4. **DM priority.** The DM starting a drag on a locked token tells main, which cancels the player's
-   lock; the phone's token snaps back and says "The DM moved Brannoc." The DM never waits.
-
-No `version` field: the `from` position is the stale check, and positions are the only thing a
-player writes absolutely and concurrently.
-
-### Locking movement
-
-- **Lock movement** for everyone, and per creature, live in `players.json` (main enforces them).
-  The global switch sits in the Player devices pop-up; the per-creature lock is a
-  lock button beside each claim in its device list. A locked phone shows "Movement locked by the
-  DM" and its tokens do not pick up.
-- **Turns in a fight:** no turn rule: players move whenever movement is
-  not locked, as at a physical table where the DM keeps order. An "only on their turn" switch can come later
-  if the table wants it.
-
-### Companions
-
-- An NPC gets an optional **Companion of** (a PC), set on the NPC form: a ranger's
-  beast, a familiar kept as an NPC. Claiming the PC also claims its companions that no other
-  device holds; releasing the PC (Switch character, DM release, a takeover) releases them with it.
-  A companion can still be released on its own: its chip has a Release. Phase 4's summons reuse
-  the same link.
-- The phone's creature chips list the PC first, then its companions; tapping a token selects its
-  chip, as now.
-
-### Give to…
-
-The DM hands any PC card or NPC to a connected device: **Give to…** on the selected token's
-actions on the map and on the PC and NPC forms, listing the devices online now. It moves the claim
-(the old device, if any, drops it), bypasses the reclaim mode and the player-controllable flag
-(the DM's call), and takes companions along with a PC. Take back is Release.
-
-### The phone
-
-- One finger on one of the player's own tokens drags it; one finger anywhere else pans; a second
-  finger cancels a drag and pinch-zooms. Tokens the player cannot move never start a drag. The
-  dragged token shows a ghost where it started until the drop is accepted.
-- A refused drop snaps back with a one-line reason; the token never jumps on its own otherwise.
-
-### Tests
-
-- Unit (`packages/rules`): the lock table (grant, refuse another device, expiry, DM grab), the drop
-  checks (stale, off map, under fog, locked movement), the companion set for a claim.
-- Unit (renderer): previews show on the live scene without saving, a drop moves the token and
-  clears the preview, the DM's drag tells main.
-- Smoke: the phone drags Brannoc into a revealed area and the TV shows the move; a drop under fog
-  snaps back; Lock movement stops a drag; the DM grabbing a token mid-drag cancels the phone's;
-  Give to… hands Tobin to the phone.
-
-## Phase 4 plan
-
-**Status:** confirmed by the DM, 2026-11-15: the DM's summon list, remembered options in place of
-presets. It folds in the player-page redesign the DM made with Claude
-(the "player UI handoff", 2026-11-15): four tools in place of one long page.
-
-### Part A: the redesigned page (no behaviour change)
-
-Built first, on its own commit, so Phase 4 lands in its final home.
-
-- **Four tools:** Health, Conditions, Companions, Move, always one tap away; the map takes the rest
-  of the screen; one tool's controls show at a time.
-- **Four layouts, chosen by the viewport's size and shape** (CSS media queries plus a `matchMedia`
-  listener, live on rotation): phone portrait (width under 600 px: header, map, a one-row
-  character strip, a bottom tab bar; tools open as a bottom sheet above it), phone landscape
-  (height under 500 px: map left, an 84 px rail of tool buttons right, a 340 px panel between when
-  a tool is open, campaign name and Switch as pills on the map), tablet portrait (map above a
-  500 px panel: character card and a 2×2 tool grid beside the open tool), and laptop or tablet
-  landscape (a permanent 400 px or 360 px right panel; Health open by default; tabs only switch).
-- **Shared pieces:** the header (name, connection, Switch); the character summary (initials or
-  portrait, name, conditions as text, HP bar, temp chip, AC badge); tool tabs with a condition
-  count badge; target chips at the top of Health, Conditions and Move (the character first, then
-  each companion in play), which replace today's chips above the map; **Center on my token** and
-  **Full-screen map** buttons on the map (full screen hides the panels; the browser's own full
-  screen where it exists).
-- **Health:** current, max, bar and temp; a Current HP | Max HP switch; an amount with − and +
-  (default 5) and **Damage**, **Heal**, **Temp**; a max HP stepper with **Save max HP**.
-- **Conditions:** the 14 SRD conditions as toggles, an Exhaustion stepper (0–6), and the existing
-  "Conditions are tracked during fights."
-- **Move:** the target chips, "Drag a token, or tap where it should go", and on phone portrait a
-  floating card over the map with Cancel and Done. Tap-to-move is new: with Move open, a tap on
-  the map moves the chosen token there through the same grab and drop as a drag, with the same
-  checks. Dragging still works whichever tool is open.
-- **Kept as they are:** the initiative box (a card floating over the top of the map), the picker
-  and its PIN, takeover and waiting screens, Switch and Undo, the drag and lock behaviour, and the
-  "Movement locked by the DM" note.
-- **Colours come from `global.css` tokens** (`CLAUDE.md`). The handoff's values map onto the
-  existing slate-and-bone tokens; four tint pairs are added as tokens: damage, heal, temp HP and
-  an active condition. Outfit stays the font.
-- **Two behaviour changes the handoff asks for:** **Temp** sets temp HP to the amount (0 clears
-  it), which is how temp HP works in the rules, so it travels as a value, not a change (the only
-  exception to Concurrency's delta rule, and a harmless one: temp HP never stacks). Damage outside
-  a fight now takes temp HP first, as the tracker already does in one.
-
-### Part B: summoning
-
-**What a summon is.** A token on the live map with a summon record (`Token.summon`: owner PC or
-NPC, the device that spawned it, the creature it is (a compendium creature or a custom entry, the
-existing `EntityRef` kinds), its HP and AC outside a fight, and its duration, concentration and
-persistence). In the loaded fight it is also a combatant carrying the same owner link. It belongs
-to whoever holds its owner, like a Phase 3 companion, so there is no separate claim: give the PC
-to another phone and its summons go with it.
-
-**The Companions tool** lists every companion in play: the owner's Phase 3 companions (NPCs) and
-its summons. **Remove** asks in the row ("Take Owl out of play? Your DM keeps the creature.") and
-then releases an NPC companion (Phase 3's release) or dismisses a summon (its token and combatant
-go; nothing in the campaign is deleted). **Add a companion** opens a searchable list; adding
-places a token beside the owner (the nearest free, revealed cell; refused when there is none) and,
-in a fight, a combatant. Health, Conditions and Move then reach it through the target chips.
-
-- **What the list offers** (the handoff's open question 1): **the DM's summon list**, creatures the DM marks as summonable for this campaign from the compendium or
-  the campaign's own creatures (a **Summonable by players** switch on a creature's page, and the
-  list in Player devices). It keeps players away from the enemies and the ancient dragons without
-  asking the DM every time.
-- **Add options**, folded under the creature's Add, with defaults that make it one tap: **count**
-  (1; ×N makes numbered copies, Skeleton 1–4), **initiative** (shares the owner's turn, or rolls
-  its own, which puts an initiative box on the phone as decision 8 says), **lasts** (until
-  dismissed, or N rounds, counted down by the tracker and removed and logged when it runs out),
-  **tied to concentration** (when the owner's concentration breaks, the phone and the tracker's
-  log ask whether to remove it), and **stays after the fight** (a familiar; otherwise summons go
-  when the encounter ends). The add list remembers each player's last options per
-  creature, which is what the spec's presets were for.
-- **DM guardrails** in Player devices, saved in `players.json`: **Player summoning** On, On with
-  approval (a request in the device list with Accept and Deny, like Phase 2's), or Off; and a cap
-  per character (8 by default). The console shows each summon's owner and device on its token's
-  actions and in the tracker, and the DM can edit, move or delete any summon.
-
-### Tests
-
-- Unit (`packages/rules`): picking the cell beside the owner (revealed, free, on the map);
-  numbering ×N copies; the cap and the spawning modes; duration expiry by round; which summons go
-  at the end of an encounter.
-- Unit (renderer): spawning a summon in and out of a fight, its initiative by mode, dismissing it,
-  cleanup at the end of a fight, the concentration prompt; the layouts at each breakpoint and
-  each tool's controls sending the same messages as today's page.
-- Smoke: the existing player flow through the new page at phone portrait and laptop sizes; the
-  phone summons an owl beside Brannoc and the TV shows it; ×3 skeletons come numbered; Remove
-  dismisses one; an Approval-mode summon waits for the DM's Accept; a summon of 2 rounds goes when
-  the round passes.
-
-## Goals and non-goals
-
-Players get one-tap access to their own creatures on the map; the DM keeps full authority and loses no speed.
-
-**Goals**
-
-- Players join from any modern browser (phone, tablet or laptop) on the same local network, with no install and no account.
-- A player claims one or more existing campaign creatures and edits a small set of fields on them.
-- Returning players reconnect automatically; when that fails, reclaiming takes about one second.
-- Releasing a wrong claim is one tap and never loses data.
-- Players can spawn and dismiss their own summons from saved presets.
-- The DM can always see, override, take over or release anything, and simultaneous edits never glitch.
-
-**Non-goals**
-
-- No character builder, rules engine or full character sheet. Players keep their real sheet elsewhere.
-- No remote or over-the-internet play, relay server or hosted backend.
-- No native mobile or desktop player app.
-- No player-facing dice roller, chat or handouts (possible later).
-
-## Concepts and data model
-
-All data lives in the campaign on the DM's machine. Players' devices hold only a device token.
-"Creature" below means a claimable PC card or NPC, or a summon (decisions 1 and 2).
-
-| Concept | Stored where | Key fields | Notes |
-| --- | --- | --- | --- |
-| Player-controllable flag | On the creature | `playerControllable: bool` | Only flagged creatures appear in the player picker |
-| Claim | `players.json` (ADR 0043) | `{ creatureKind, creatureId, deviceId, claimedAt }` | One controlling device per creature at a time |
-| Device | `players.json` | `deviceId`, `tokenHash`, `label`, `lastSeen`, `pin?` | Store a hash of the token, never the raw token |
-| Link | On the creature | `parentId: creatureId \| null` | Familiars and summons point at their owner |
-| Summon preset | On the parent creature | `name`, `maxHp`, `ac`, `speed`, `image`, `initiativeMode`, `duration?`, `concentration`, `persistent`, `defaultCount` | Player-editable; spawning copies a preset into a new creature |
-| Spawn record | On the spawned creature | `spawnedBy: deviceId`, `presetId`, `expiresAtRound?`, `concentrationOf?` | Lets the console show who created it and clean up |
-| Version | On every creature | `version: int` | Incremented on every change; used for conflict checks |
-
-Player-editable fields: name, portrait, max HP, current HP, temp HP, AC, conditions and token position, plus submitting an initiative roll once when asked (decision 8). Everything else is DM-only.
-
-## Local server and connection
-
-Trifold hosts a small HTTP + WebSocket server on the local network that serves the player client and is the single source of truth for all state.
-
-- **Off by default.** The DM starts it per session with Let players join in the VTT tab's Player devices pop-up; Stop disconnects everyone.
-- **Port selection:** on the first start, try port 80 so addresses need no port. If 80 is taken (IIS, dev tools or Windows' HTTP service often hold it), fall back to 8130–8139 (decision 7). Save whichever port works and keep using it every session; do not retry 80 later. The address and port are part of the browser origin, so changing either loses players' stored device tokens. The port can be changed in settings, with a warning that players will need to reclaim. Test port 80 on macOS separately.
-- **Joining:** phones scan a QR code, which always encodes the IP address. Laptops type the local name shown in large text next to it (`http://trifold.local`), with the IP address below it as a fallback in the same format (for example `http://192.168.1.23`). Always display the exact address, including the port when it is not 80, and always with `http://` in front, since some browsers treat bare names as searches. The server serves the one open campaign, so the URL needs no campaign id. A Copy link button lets the DM paste the link into the group chat. The QR and URL show together in the Player devices pop-up, and on the TV while Show join code on TV is ticked.
-- **Local name (mDNS):** while the server runs, Trifold announces `trifold.local` on the LAN. If another Trifold already uses the name, add a suffix (`trifold-2.local`) and display that. The responder answers legacy unicast queries (RFC 6762) and both A and AAAA lookups, because Android's resolver depends on them. The name is a convenience only: if mDNS is blocked, the IP fallback, Copy link and reclaim still work.
-- **Network binding:** listen on the private LAN interface only. No UPnP, no port forwarding.
-- **Windows Firewall:** the first start triggers the firewall prompt. Show a one-line hint beforehand to allow it on private networks, and detect and explain a blocked connection where possible.
-- **Join screen help:** guest or school Wi-Fi often blocks device-to-device traffic; a phone hotspot works.
-- **Server-side filtering:** each client receives only what it may see: map state within revealed areas and not behind fog, its own claimed creatures in full, and other visible tokens' positions and names only. Never send hidden data and hide it in the client.
-- **Transport:** one WebSocket per client. The client sends intents (`move`, `setHp`, `spawn`…); the server validates, applies, increments versions and broadcasts filtered results.
-- **Client build:** one lightweight web client bundled with Trifold and served from it, so its version always matches the DM's. Mobile-first, scaling up to tablets and laptops.
+Players at the table open a page in their browser, served by the DM's Trifold, claim a character
+in the campaign and look after a few things for it: HP, temp HP, max HP, AC, conditions,
+initiative, its position on the map and its companions. Players keep their real character sheet
+wherever they like; Trifold tracks only what the table needs. There are no accounts and no
+cloud. The server runs on the DM's machine, on the local network, only while the DM has it on
+(see ADR 0043).
+
+The DM keeps authority throughout: the console owns every piece of game state, a player's change
+is a request the console applies, and the DM can see, change, release or take back anything.
+
+| Part                         | Where                                                                                  |
+| ---------------------------- | -------------------------------------------------------------------------------------- |
+| Server, devices and claims   | `apps/desktop/src/main/table/` (`hub.ts`, `listen.ts`, `mdns.ts`, `players.ts`)        |
+| Pure rules                   | `packages/rules/src/table/` (views, claims, intents, movement, summons, ports)          |
+| Wire types                   | `packages/rules/src/table/types.ts`, re-exported from `@trifold/api`                   |
+| The player page              | `apps/desktop/src/web/`, built by `vite.web.config.ts` into `out/web/`                 |
+| Console side                 | `apps/desktop/src/renderer/features/players/` (snapshot, fog image, intents, summons)  |
+| Stored data                  | `players.json` and fields in `packages/schema/src/campaign.ts`                          |
+| Smoke test                   | `apps/desktop/smoke/players.spec.ts`                                                    |
+
+## Boundaries
+
+- **Off until the DM starts it.** Let players join starts the server for the open campaign; Stop,
+  closing the campaign or quitting ends it and tells every page the table is closed.
+- **Private LAN only.** One listener per private address (IPv4 10/8, 172.16/12 and 192.168/16,
+  plus IPv6 link-local and unique-local), never `0.0.0.0`. Requests from any other remote address
+  are refused. No UPnP and no port forwarding.
+- **Only Trifold's own addresses.** Every request's `Host` header must name an address Trifold
+  shows, which stops a web page elsewhere from reaching the server through a rebound DNS name.
+  The WebSocket upgrade must also come from the same origin and ask for `/ws`.
+- **Strict headers.** The page is served with a CSP of `default-src 'self'` and
+  `connect-src 'self' ws://<host>`, plus `nosniff`, `no-referrer` and `same-origin` resource
+  policy. SVG art gets its own `default-src 'none'` policy.
+- **Each device sees only what it may.** Filtering happens on the server, never in the page (see
+  [Server-side filtering](#server-side-filtering)).
+- **Tokens are never stored or logged.** Only a SHA-256 hash of each device token is kept, and it
+  is compared in constant time.
+- **Every message is checked.** Client messages are parsed with Zod schemas in `hub.ts`; each
+  intent is checked for ownership, field, range, locks and settings before it reaches the console.
+  Messages are capped at 16 KiB and 30 a second per browser.
+- **Releasing, reclaiming or disconnecting never changes creature data.**
+
+## Server and addresses
+
+The server is Node's built-in `http` with `ws` for the WebSocket, `multicast-dns` for the local
+name and `qrcode-generator` for the join code, all pure JavaScript. It serves only the player
+page's built files, the fogged map image, pictures for things a device can see, and `/ws`. The
+interface list is re-read every 10 seconds, so listeners follow DHCP and Wi-Fi changes.
+
+### Ports
+
+Trifold tries port 80 first, so addresses need no port, then 8130 to 8139, taking the first that
+is free (`EADDRINUSE` and `EACCES` both move on). The working port is saved in the app config,
+not the campaign, and reused every session; once 80 has failed it is not tried again. The port is
+part of the browser origin that players' tokens are stored under, so a change means players pick
+their characters again; the Player devices pop-up says so when it happens. Ports 3000, 5000,
+7000, 8000 and 8080 are avoided because dev tools and macOS AirPlay Receiver often hold them.
+
+### Local name
+
+While the server runs, Trifold answers mDNS for `trifold.local` (A and AAAA). It probes the name
+first and, if another host answers, tries `trifold-2.local` and so on, showing the name it won. It
+answers legacy unicast queries (source port other than 5353, answered by unicast with the query
+id echoed, RFC 6762 §6.7), which Android's resolver depends on. The name is a convenience: if
+multicast is blocked, the IP address, Copy link and reclaim all still work.
+
+### Joining
+
+The Player devices pop-up shows a QR code, the local name in large text and the IP address
+below it, always with `http://` and with the port when it is not 80 (some browsers treat a bare
+name as a search). The QR always encodes the IP address. Copy link copies both addresses for the
+group chat. Show join code on TV puts a large QR and the address on the TV until it is unticked;
+it is off by default and not saved across restarts. The server serves the one open campaign, so
+the address needs no campaign id.
+
+### Firewall and Wi-Fi
+
+Before the first start the pop-up says the computer may ask whether Trifold can accept
+connections, and to allow it on private networks. If nobody connects within a minute of
+starting, it says the firewall or the Wi-Fi may be in the way and suggests a phone hotspot. The
+player page's joining screen says the same: guest and school Wi-Fi often keep devices apart.
+
+## Who owns what
+
+The console's stores own the state, main relays and filters, and browsers only render, the same
+rule the TV follows. The table server is a second relay beside the player window, not a new
+source of truth.
+
+- **The console** pushes a `TableSnapshot` to main whenever the live scene, the fight or a
+  claimable creature changes: the map scene live on the TV, unfiltered (tokens with their refs,
+  roles and hidden flags, fog shapes, grid, size); what the TV shows when it is not a map (title,
+  image or break); every offered PC and NPC with its HP, temp HP, AC and conditions (from its
+  combatant in the loaded fight, else from the PC card or the NPC's carried HP); summons on the
+  live map; and the DM's companion list. It also draws the fogged map image.
+- **Main** runs the server, holds devices and claims in `players.json`, keeps drag locks,
+  approval requests and PIN tries in memory, and builds each device's view from the snapshot.
+- **Pure functions** in `packages/rules/src/table/` decide what a device sees (`viewFor`),
+  whether a creature is offered (`isClaimable`), what a tap in the picker does (`decideClaim`),
+  whether an intent, drop or summon is allowed, and the port order. The fog test
+  (`packages/rules/src/fog.ts`) is shared by the console, the TV and main.
+
+### Server-side filtering
+
+Each device receives only:
+
+- its own creatures in full (stats, conditions, what it may edit, whether movement is locked);
+- other visible tokens' position, label, role and picture, with masked names already applied;
+- nothing hidden, and nothing whose centre is under fog, except the device's own tokens: if the
+  DM fogs over a player's token, its owner still sees it (and can only drag it out into a
+  revealed area); other phones and the TV do not.
+
+Phones see every revealed area of the live map, not only what the TV's camera frames. A device
+holding nothing gets the picker and no map. Pictures are served under the server's own paths
+(`/map/…`, `/t/<tokenId>/art`, `/c/<kind>/<id>/portrait`, `/screen/<id>/image`), so no
+campaign path or file name reaches a browser. Token pictures are served only for tokens some
+connected device can see.
+
+### The fogged map image
+
+Phones never receive the original map. The console draws the scene's display image on a canvas
+(longest side 2048 px), fills every fogged area solid black, encodes a JPEG at quality 0.8 and
+sends it to main keyed by scene id and a fog key. Main keeps the latest image in memory only and
+serves it at `/map/<sceneId>/<fogKey>.jpg`. Phones also draw the fog shapes over it for clean
+edges. A scene with fog off is served the same way, without the black.
+
+### Transport
+
+Each browser holds one WebSocket. On connect the server sends `campaign` (id, name and the DM's
+clock); the page answers `hello` with the token it stored for that campaign, if any. After that
+the server sends `state` (the device's `ClientView`) whenever it changes, and the page sends
+requests. A dropped connection retries with backoff while the page is open, and the page shows
+a connection dot.
+
+| Page sends | Meaning |
+| --- | --- |
+| `hello {token?}` | Identify this device |
+| `claim {creatureKind, creatureId, label?, pin?}` | A first claim, reclaim or takeover; the server decides which |
+| `intent {creatureKind, creatureId, intent}` | A change to one of its creatures (see below) |
+| `switch`, `undo` | Switch character, and take it back |
+| `cancel` | Stop waiting for the DM's approval |
+| `grab`, `preview`, `hold`, `drop`, `letGo` | Moving a token |
+| `releaseOne {creatureKind, creatureId}` | Release one companion |
+| `summon {…}`, `dismiss {tokenId}`, `keepSummon {tokenId}` | Summoning |
+
+| Server sends | Meaning |
+| --- | --- |
+| `campaign` | Which campaign this is, and the DM's clock (for the break timer) |
+| `state` | The device's view |
+| `token` | A new device token, once, after a first claim |
+| `error {message}` | A refusal or notice, shown inline |
+| `waiting {creatureName}` | Approval mode: the DM has been asked |
+| `released {names, undoMs}` | Switch character released these |
+| `grabbed`, `dragEnded {reason}` | A drag may go on, or ended without moving |
+| `closed` | The DM stopped the server or closed the campaign |
+
+Main hands the console three kinds of event: `tableIntent` (a checked edit), token events
+(preview, preview end, move) and summon events (spawn, dismiss, keep).
+
+## What can be claimed
+
+Players claim PC cards and NPCs. Every PC card is offered unless the DM unticks **Players can
+claim this character** on its form; an NPC is offered only once the DM ticks it. The same switch
+sits in a PC or NPC token's actions on the map (**Players can claim …**), for a PC token and an
+NPC token not marked enemy.
+
+An offered NPC appears in the picker while none of its tokens on the live scene, nor its
+combatant in the running fight, is marked enemy; with no token and no fight the flag alone
+decides. An NPC placed from its own list starts neutral, so it is claimable; one that arrives in
+an encounter or by Track as NPC starts as enemy, and becomes claimable once the DM marks it ally
+or neutral. A compendium stat block placed straight on the map is a creature token, not an NPC,
+and cannot be claimed: to hand one to a player, the DM makes a campaign NPC that points at it.
+Copying a PC or NPC from another campaign copies its flag but never a claim or a device.
 
 ## Claiming, reclaiming and releasing
 
-Identity is "this device holds the key for this creature"; there are no player accounts.
+Identity is "this device holds the key for this character". There are no player accounts.
 
-**First claim**
+### First claim
 
-1. The player opens the join URL and sees the picker of player-controllable creatures.
-2. They tap a creature and optionally type a device label ("Sam's phone").
-3. The server creates a random device token (at least 128 bits), stores its hash with the device, sets the claim and returns the token. The client saves it in localStorage, keyed by campaign id.
+The player opens the address, optionally types a device name ("Sam's phone", remembered on the
+device) and taps a character in the picker. The server creates a 128-bit random token
+(base64url), stores its SHA-256 hash with a new device, records the claim and sends the token
+once. The page keeps it in `localStorage` under `trifold:<campaignId>`. In PIN mode the player
+first chooses a 4-digit PIN.
 
-**Automatic reconnect:** on load, the client sends its stored token. If it matches a device that holds claims, the player lands directly on their creatures.
+On every later visit the page sends its token; a device that holds claims goes straight to its
+characters, and one with none goes to the picker. A dropped connection keeps the claim: the
+character stays on the map, the DM can drive it, and the device shows offline in the list.
 
-**Reclaim** (the token is lost: IP change, cleared data, iPhone Safari storage eviction after about a week, or a new device): the picker also shows claimed creatures. Tapping one follows the campaign's reclaim mode:
+### Reclaim and takeover
 
-| Mode | Player action | DM action | Default for |
-| --- | --- | --- | --- |
-| Open | Tap the creature | None; console shows a quiet notice | Home groups (default) |
-| PIN | Tap, then enter the 4-digit PIN set at first claim | None | Groups wanting light protection |
-| Approval | Tap, then wait | Accept or deny on the console | Public or convention tables |
+Tokens get lost (a new address, cleared site data, Safari's storage eviction, a new phone), so
+the picker also shows claimed characters, marked In use. Tapping one held by an offline device is
+a reclaim. Tapping one held by an online device first asks "Brannoc is in use on another device.
+Take over?" Either way the campaign's reclaim mode, set under **Getting a character back** in
+Player devices, then applies:
 
-A successful reclaim issues a fresh token and retires the old device's claim.
+| Mode | Shown as | What happens |
+| --- | --- | --- |
+| Open (default) | Open: just tap it | Granted at once |
+| PIN | PIN: set at the first pick | The PIN set at the first claim is asked for; five wrong tries lock that character's PIN for a minute. A claim with no PIN goes to the DM instead |
+| Approval | Ask me first | The page waits ("Asked the DM for …"); the request sits in Player devices with Accept and Deny |
 
-**Takeover:** tapping a creature controlled by another *connected* device shows "Brannoc is in use on another device. Take over?" Confirming moves control to the new device (still subject to the reclaim mode); the old device drops to the picker.
+PINs are stored on the claim as a salted scrypt hash. A successful reclaim moves the claim to
+the asking device (a new device gets a fresh token), and the old device drops to the picker with
+a short note.
 
-**Release**
+### Releasing
 
-- An always-visible "Switch character" button releases the device's whole group and returns to the picker.
-- After releasing, show "Released Brannoc — Undo" for 5 seconds.
-- Each companion chip can be released on its own.
-- The DM can release any creature, or Release all.
-- Releasing never changes creature data. A released creature returns to normal DM control.
+- **Switch character** in the page's header releases everything the device holds and shows
+  "Released Brannoc" with **Undo** for 5 seconds. Undo takes them back without the reclaim mode
+  as long as nobody else claimed them meanwhile.
+- A companion can be released on its own from the Companions tool.
+- The DM releases any character from the device list, its form, or **Release all**.
 
-**Multiple tokens:** a device can control any number of creatures. Claiming or releasing a parent also claims or releases its linked companions. The DM can hand control of any creature to a connected device ("Give to Sam's phone") and take it back.
+A released character goes back to normal DM control; nothing about it changes.
 
-**Disconnects:** a dropped connection keeps the claim. The creature stays on the map and the DM can drive it. The console marks the claim offline.
+### Give to…
 
-## Player spawning
+The DM can hand any PC card or NPC to a connected device with **Give to…**, on the selected
+token's actions on the map and on the PC and NPC forms. It moves the claim (the old device, if
+any, drops it), bypasses the reclaim mode and the player-controllable flag, and takes a PC's
+companions along. Taking it back is Release.
 
-A player-spawned creature is a new creature, linked to its parent and claimed by the spawning device.
+### Companions
 
-- **Presets:** players save summon presets on their character (an owl familiar, a spiritual weapon, skeletons). After that, spawning is one tap.
-- **Placement:** new tokens appear next to the parent and the player drags them into position. Placement in areas the player cannot see is rejected.
-- **Quantity:** "Spawn ×N" creates numbered copies (Skeleton 1–4), up to the preset's count and the character cap.
-- **Initiative:** each preset either *shares the parent's turn* or *rolls its own initiative*, and is inserted into the order accordingly.
-- **Duration:** an optional duration in rounds, counted down by initiative. On expiry the summon is removed and logged.
-- **Concentration:** a preset can be tied to the parent's concentration. When concentration breaks, prompt the controlling player and the DM to remove those summons.
-- **Cleanup:** non-persistent summons are removed when an encounter ends; persistent ones (a familiar) stay.
-- **Dismiss:** a dismiss button on each summon chip, plus "Dismiss all summons".
+An NPC can be a **Companion of** a PC, set on the NPC form: a ranger's beast, a familiar kept as
+an NPC. Claiming the PC also claims its companions that no other device holds; releasing the PC
+(Switch character, DM release, a takeover) releases the companions the same device holds. A
+companion is on the table with its PC whether or not it is offered in the picker.
 
-**DM guardrails**
+## What the phone shows
 
-- Campaign setting for player spawning: On, On with DM approval, or Off.
-- A per-character cap on active summons (default 8, configurable).
-- The DM can edit, take over or delete any spawned creature, and the console shows which device spawned it.
+The page is mobile first, from 360 px wide, with 44 px touch targets and nothing that needs
+hover. It uses the app's own tokens and fonts (see [TOKENS.md](TOKENS.md)), with tint pairs for
+damage, healing, temp HP and active conditions.
+
+**Layouts.** The page picks one of four layouts from the viewport's size and shape, live on
+rotation (`useLayout.ts`):
+
+| Layout | When | Shape |
+| --- | --- | --- |
+| Phone portrait | Narrow (under 600 px), or portrait under 700 px wide | Header, map, a one-row character strip and a bottom tab bar; tools open as a bottom sheet |
+| Phone landscape | Short and wide (under 500 px tall) | Map left, a tool rail right, a panel between when a tool is open; name and Switch float on the map |
+| Tablet portrait | Portrait, at least 700 px wide | Map above a split panel: character card and tool grid beside the open tool |
+| Wide | Everything else | A permanent right panel; Health is open by default |
+
+**Header and summary.** The campaign name, a connection dot and Switch; then the character
+summary: portrait or initials, name, conditions as text, an HP bar, temp HP and AC.
+
+**The map.** The live map as SVG: the fogged image, grid, fog shapes and tokens. One finger on
+one of the player's own tokens drags it; one finger anywhere else pans; two fingers pinch-zoom
+and cancel a drag. **Center on my token** and **Full-screen map** sit on the map. When the TV
+shows a title card, an image scene or the break screen (with its countdown), the phone shows the
+same; the break screen covers a live map, as it does on the TV. With nothing on the TV, the phone
+says so.
+
+**Tools.** Four tools, one open at a time. Health, Conditions and Move work on the character
+chosen in their target chips: the character first, then each companion in play.
+
+- **Health:** current, max and temp HP; an amount with − and + and **Damage**, **Heal** and
+  **Temp**; tabs for max HP and AC with **Save** buttons, where those are editable.
+- **Conditions:** the 14 SRD conditions as toggles and an Exhaustion stepper. Outside a fight it
+  says "Conditions are tracked during fights."
+- **Companions:** every companion in play, NPC companions and summons, each with Remove, which
+  asks in the row first; and **Add a companion** (see [Summoning](#summoning)).
+- **Move:** "Drag the token, or tap where it should go." With Move open, a tap on the map sends
+  the chosen token there through the same grab and drop as a drag. On a phone in portrait, Move
+  sits under the map with Cancel and Done. "Movement locked by the DM" shows when it is.
+
+**Initiative.** When the loaded fight is waiting for a claimed character's initiative, a card
+with one number box and Submit floats over the top of the map (see
+[Initiative](#initiative)).
+
+## How a player's edit travels
+
+A page sends an intent. Main checks it (the device holds that character or its owner, the field
+is editable now, the value is in range) and forwards it to the console as a `tableIntent` event.
+The console applies it through the same store actions a DM click uses, in its one thread, so
+player and DM edits are applied in order. The result reaches every screen the usual way: the
+console saves, the TV and the snapshot update, and main sends each device its new view. The fight
+log names the device ("Sam's phone: …"). A refused intent gets an inline message on the page and
+a log line, never a change.
+
+| Intent | In the loaded fight | Outside it |
+| --- | --- | --- |
+| `hp {delta}` | Damage or heal on the combatant, so concentration checks and death saves still fire | The PC card's HP or the NPC's carried HP, clamped to 0…max; damage takes temp HP first |
+| `temp {delta}` | The combatant's temp HP, at least 0 | The PC card's (or NPC's carried) temp HP |
+| `setTemp {value}` | Sets temp HP; 0 clears it | The same |
+| `maxHp {value}`, `ac {value}` | The combatant | The PC card; an NPC's come from its stat block and are not editable outside a fight |
+| `addCondition {name, level?}`, `removeCondition {id}` | The combatant | Refused |
+| `initiative {value}` | Sets it only while it is still empty | Refused |
+
+Main enforces: deltas within ±999, temp HP 0 to 999, max HP 1 to 999, AC 0 to 40, initiative −20
+to 60, condition names from the shared list in `packages/rules` (`CONDITION_NAMES`), and
+Exhaustion levels 1 to 6. Summons follow whoever holds their owner and take the same intents.
+
+### Initiative
+
+A creature is marked `needsInitiative` while the loaded fight has its combatant with no
+initiative. The player types the number they rolled (the app never rolls for them) and taps
+Submit; the box goes and the number lands in the tracker. If the DM types it first, the box goes
+too. Only the loaded fight counts: a paused fight asks again when it is loaded. Only the DM
+changes initiative after that.
+
+## Movement
+
+Main owns the drag locks, in memory only; the console applies every move.
+
+### A drag, start to finish
+
+1. **Grab.** A finger down on one of the player's own tokens sends `grab`. Main grants a lock when
+   the device holds the token's character (or the summon's owner), the token is not hidden,
+   movement is not locked, and no other device is dragging it. Other phones see the token marked
+   as moving, with the device's name.
+2. **Drag.** The page moves the token locally and sends `preview` at most ten times a second.
+   Main forwards previews to the console, which shows them on the console map and the TV, with a
+   ruler from where the move began, without saving anything. A preview whose centre is under fog
+   shows nothing on the TV. Previews and `hold` keep the lock alive; after 3 seconds without
+   either the lock lapses and the console drops the preview. The page keeps its planned move, and
+   its next `hold` or `drop` takes the lock back while the token is still free and still theirs.
+3. **Drop.** `drop` carries where the token was when the drag began. Main refuses it, and the page
+   snaps the token back with a one-line reason, when another device holds the lock, the token has
+   moved since (someone else moved it), the spot is off the map, or the token's centre would land
+   under fog. Otherwise the drop snaps to whole cells and the console moves the token through the
+   same path the tracker uses: the scene saves and the TV and every phone follow.
+4. **DM priority.** When the DM starts dragging a token a player is moving, main ends the
+   player's drag at once; the page snaps back and says "The DM moved Brannoc." The DM never waits.
+
+Moving, placing or summoning never reveals fog: only the DM changes fog.
+
+### Locking movement
+
+**Lock movement** in Player devices locks everyone; the lock button beside each claim in the
+device list locks one character (and its summons). Both are saved in `players.json`. Locking
+ends any drag already under way, and the page shows "Movement locked by the DM". Players can
+move whenever movement is not locked; there is no turn rule, as at a physical table where the DM
+keeps order.
+
+## Summoning
+
+A summon is a token on the live map with a `summon` record (owner PC or NPC, the device that
+summoned it, its type, HP and AC outside a fight, initiative mode, round it expires, whether it
+is tied to concentration, whether it stays after the fight). In the loaded fight it is also a
+combatant. It belongs to whoever holds its owner, so it has no claim of its own: give the PC to
+another phone and its summons go with it.
+
+**The companion list.** Players can add only creatures the DM put on this campaign's list
+(`settings.summonable`), which keeps enemies and dragons out of reach without asking the DM each
+time. The DM manages it in **Campaign › Companions**: add from the compendium, make a new
+creature, or customise a stock one, which makes the campaign's own copy so the compendium's
+original never changes. **Available as a companion** on a creature's compendium page adds to the
+same list.
+
+### Add options
+
+**Add a companion** on the phone opens a searchable list. One tap adds one; **Options** sets how
+many (numbered copies, "Skeleton 1" to "Skeleton 4"), initiative (**Shares my turn** or **Rolls
+its own**, which puts an initiative box on the phone), how long it **Lasts** (until dismissed,
+or a number of rounds), **Tied to my concentration**, and **Stays after the fight**. The page
+remembers each player's last options per creature.
+
+New tokens go in the nearest free, revealed cells around the owner. A summon needs a map on the
+TV with the owner on it.
+
+### DM guardrails
+
+In Player devices, saved in `players.json`:
+
+- **Player summoning:** On, Ask me first (a request in the device list with Accept and Deny), or
+  Off.
+- **Most per character:** 8 by default, 1 to 20.
+
+The console shows each summon's owner and the device that summoned it on its token's actions,
+the fight log names the device, and the DM can edit, move or delete any summon. Upkeep runs on the console: when a round passes,
+summons whose rounds are up go and are logged; when an owner's concentration breaks, summons tied
+to it are marked and the owner's phone asks whether to take each out of play or keep it; when a
+fight ends, summons that do not stay go. Removing a summon from the phone removes its token and
+combatant; nothing in the campaign is deleted.
+
+## What the DM controls
+
+Everything lives in the VTT tab's **Player devices** pop-up, beside Overlays and Break, except
+the per-character controls on forms and tokens. Starting the server is not a table-time action,
+so it has no hotkey.
+
+- Let players join and Stop; the QR, addresses and Copy link; Show join code on TV.
+- Requests waiting for approval, with Accept and Deny.
+- Lock movement, for everyone.
+- The device list: each device's name, online or offline, what it holds, and per character a
+  movement lock and Release; Release all.
+- Getting a character back (the reclaim mode).
+- Player summoning and Most per character, with a count of the companion list.
+
+On each PC card and NPC form: Players can claim this character, Give to…, and the current claim
+with Release. On the NPC form: Companion of.
+
+There are no toasts. Quiet events (reconnects, takeovers, summons) change only the device list.
+A waiting request puts a dot on the Player devices button, the VTT tab and the live strip's VTT
+section. The DM can edit any field of any creature at any time, and DM edits always win.
 
 ## Concurrency
 
-Trifold is the only writer, so data cannot be corrupted. These rules prevent jumping tokens, rubber-banding and lost edits.
+Trifold is the only writer, so data cannot be corrupted. These rules keep tokens from jumping and
+edits from being lost:
 
-- **Serial application:** all intents, from the console and every client, go through one queue and are applied in order.
-- **Drag locks:** starting a drag requests a lock on that token. While locked, other clients see a "moving" indicator and cannot grab it. The lock clears on drop and expires after 3 seconds without a heartbeat.
-- **DM priority:** the DM can always grab a locked token. The player's drag is cancelled and their ghost snaps back.
-- **Commit on drop:** clients render the drag locally and send the final position on drop. Throttled previews (about 10 per second) may be sent so the TV shows movement.
-- **Versions:** each write carries the version it was based on. A position or absolute-value write based on a stale version is rejected, and the client snaps to the current state.
-- **Delta edits for counters:** HP, temp HP and similar values are sent as changes ("−7", "+5"), never as totals, so simultaneous damage and healing both apply. Max HP and AC are absolute; last write wins.
-- **Optimistic UI with reconciliation:** clients may show a change immediately but accept the server's broadcast as final.
+- **Serial application.** Every intent, from the console and every device, is applied in the
+  console's one thread, in order.
+- **Changes, not totals, for counters.** HP and temp HP damage and healing travel as changes
+  ("−7", "+5"), so a DM's damage and a player's healing both apply. Max HP and AC are absolute and
+  the last write wins. Temp HP set with **Temp** is absolute too, which is safe because temp HP
+  never stacks.
+- **Drag locks, DM priority and a stale check on drop** cover positions (see
+  [Movement](#movement)). There is no version field: a drop's starting position is the stale
+  check, and positions are the only thing players write absolutely and at the same time.
+- **The server's view is final.** The page shows a change at once and takes the next `state` as
+  the truth.
 
-## Player client and DM console
+## Stored data
 
-The player client is mobile-first but reads as part of Trifold: the same tokens (Slate and bone, Outfit and IBM Plex Mono, `TOKENS.md`), type scale, icons and component styles, adapted for touch rather than restyled. Build from shared components where the stack allows.
+| What | Where | Notes |
+| --- | --- | --- |
+| Devices | `campaigns/<slug>/players.json` | `deviceId`, `tokenHash`, `label`, `lastSeen` |
+| Claims | `players.json` | `creatureKind`, `creatureId`, `deviceId`, `claimedAt`, `pinHash?` |
+| Reclaim mode, movement locks, summoning mode and cap | `players.json` | Main enforces them |
+| Players can claim | PC card and NPC, `playerControllable` | Absent means on for a PC, off for an NPC |
+| Companion of | NPC, `companionOf` | A PC id |
+| Summon | Token, `summon` | Owner, device, HP and AC, initiative, expiry, concentration, persistence |
+| Companion list | Campaign settings, `summonable` | Name, type, size, AC and HP cached |
+| Port | App config, `tableServerPort` | Not per campaign: it is part of the players' origin |
 
-**Player client screens**
+`players.json` is written only by main, through `LibraryStore`. The console saves whole PC and
+NPC files, so if main also wrote claims into them, one side's save would erase the other's
+change; one writer per file avoids that. Every change is saved before it is answered. The
+fogged map image, drag locks, approvals, PIN tries and the undo grace are never written.
 
-- **Picker:** player-controllable creatures with portraits; claimed ones marked, with the reclaim or takeover flow.
-- **Main view:** the map (filtered), plus a panel for the selected creature: HP with quick −/+ entry, temp HP, AC, conditions, and the initiative box while a fight is waiting for it.
-- **Creature chips** at the top (Brannoc, Owl, Skeleton 1…) switch which token the panel controls. Tapping a token on the map selects it too.
-- **Summons:** a spawn menu of the selected character's presets, plus preset create and edit.
-- **Persistent controls:** Switch character, connection status, and a clear "Movement locked by DM" state.
-- **Layout:** portrait phones from about 360 px wide, scaling to tablets and laptops. Touch targets at least 44 px, primary controls within thumb reach, no hover-only interactions.
+Start, stop, the port, the local name, claims, takeovers, releases and refused requests are
+logged through `log.ts`. Tokens never reach the log.
 
-**DM console additions**
+## Tests
 
-- **Player devices (a pop-up from the VTT tab's toolbar):** Let players join / Stop, join QR and address with Copy link, Show join code on TV, connected devices with labels and online state, per-device release, Release all.
-- **On each PC card and NPC:** the player-controllable toggle, current claim, Give to…, release; on summons, the device that spawned them.
-- **Campaign settings:** reclaim mode, player spawning mode, summon cap, lock movement (global and per creature).
-- **Notices:** no toasts (decision 4). Quiet events show in the device list; approval requests mark the Player devices button, the VTT tab and the strip, and are one click in the list.
-- **Override:** the DM can edit any field of any creature at any time, and DM edits always win.
+- `packages/rules/src/table/*.test.ts`: `viewFor` (fog, hidden tokens, masked names, the owner
+  exception), the claimable test, intent checks and ranges, every reclaim mode, PIN lockout, drag
+  locks and expiry, drop checks, cells beside the owner, summon numbering, the cap and modes.
+- `packages/rules/src/table/table.test.ts` also covers port order, private addresses and the
+  `Host` check.
+- `apps/desktop/src/main/table/table.test.ts`: `PlayersStore` (token hashes, PINs, takeovers,
+  Switch character, movement locks and the reclaim mode saved to `players.json`), LAN address
+  listing, port fallback and the mDNS responder's answers and conflicts.
+- Renderer tests in `features/players/`: the Player devices pop-up, applying intents in and out
+  of a fight, previews and moves, summon upkeep.
+- `smoke/players.spec.ts`, on Windows and macOS: the sample campaign; joining, claiming,
+  reconnecting; WebSocket frames never carrying a fogged token or a hidden NPC's name;
+  initiative, damage and conditions from the phone; Switch and Undo; a takeover in Approval mode;
+  dragging, a drop under fog, the DM's grab, movement locks, Give to…; summoning, numbering,
+  removal and an approval-mode summon.
 
-## Delivery and acceptance
+## Not built yet
 
-Four phases; each ships something usable and testable at a real table.
-
-**Phase 1: connect, claim and view**
-
-- [x] DM starts and stops the server from the console; the join QR and address appear on the console and can be shown on the TV
-- [x] A phone and a laptop on the same Wi-Fi open the client with no install
-- [x] Players claim a creature and see the filtered map and their creature's stats, read-only
-- [x] Reopening the page next session reconnects automatically
-- [x] Fogged areas and hidden creatures never reach a client (verified by inspecting WebSocket traffic)
-- [x] On a 360 px portrait phone the client fits with no horizontal scrolling, every control is reachable, and it is recognisably the same visual language as the console
-- [x] A Windows laptop and a Mac join by typing the `http://trifold.local` address shown on the console, and by the IP fallback
-- [x] An Android phone (Android 12 or later) opens the `.local` address typed in Chrome (secondary path; phones normally use the QR code)
-- [x] With port 80 occupied, Trifold falls back to the alternative port, keeps it across restarts, and shows it in every address
-
-Phase 1 status (2026-11-14): done. The smoke test (`smoke/players.spec.ts`) covers joining,
-claiming, reconnecting and the WebSocket filter; the DM checked the rest on real hardware (phones,
-a laptop, a Mac, `trifold.local` and the port fallback).
-
-**Phase 2: edits, reclaim and release**
-
-- [ ] Players edit HP (as deltas), temp HP, max HP, AC, conditions and initiative; changes appear on the console and TV within 250 ms on a normal home network
-- [ ] Open, PIN and Approval reclaim modes all work; a lost token costs about one second to recover in Open mode
-- [x] Takeover moves control and drops the old device to the picker
-- [x] Switch character, the 5-second undo and DM release all work and never change creature data
-- [x] Simultaneous DM damage and player healing both apply
-
-Phase 2 status (2026-11-14): built. `smoke/players.spec.ts` covers initiative from the phone,
-damage and a condition landing in the tracker, Switch character and Undo, and a takeover in
-Approval mode with the DM's Accept; unit tests cover the intent checks, every reclaim mode, the
-PIN lockout and simultaneous damage and healing. Still to check by hand: PIN mode on real phones,
-and the 250 ms figure on a home network.
-
-**Phase 3: movement and multiple tokens**
-
-- [x] Players drag their tokens; locks, DM priority and lock expiry behave as specified
-- [x] Placement into unseen areas is rejected
-- [x] Lock movement works globally and per creature
-- [x] Linked companions are claimed and released with their parent; Give to… hands any creature to a device
-- [ ] On phones, dragging a token, panning and pinch-zooming never conflict, and dragging works one-handed
-
-Phase 3 status (2026-11-15): built. `smoke/players.spec.ts` drags Brannoc on the phone and sees
-the console move him, has a drop under fog refused, has the DM grab Brannoc mid-drag, locks and
-unlocks movement, gives Tobin to the phone, and checks Brannoc's companion travels with him on a
-claim and a takeover; unit tests cover the lock table and expiry, the drop checks and the
-per-creature lock. Still to check by hand: dragging, panning and pinching with real touch on an
-iPhone and an Android phone (the smoke test drives a mouse).
-
-**Phase 4: player spawning**
-
-- [x] Players create presets and spawn ×N numbered summons next to the parent
-- [x] Initiative modes, round durations, concentration prompts and end-of-encounter cleanup work
-- [x] Spawning modes and the summon cap are enforced; the console shows each summon's source
-
-Phase 4 status (2026-11-15): built, with the redesigned player page. `smoke/players.spec.ts`
-runs the whole flow on the new page, then marks the Owl summonable from its compendium page,
-summons one beside Brannoc and three more numbered Owl 2 to 4 through Options, removes one, sees
-the summon's source on the console's map, and has an "Ask me first" summon wait for the DM's
-Accept. Unit tests cover the cells beside the owner, numbering, the cap and the modes, shared
-initiative, round expiry, the concentration mark, end-of-fight cleanup and the layouts. Presets
-are the remembered options (confirmed). The DM's summon list has its own page, Campaign ›
-Summons (added 2026-11-15): add from the compendium, make new summons, customise a stock creature
-as a campaign creature. Summons need a map on the TV. Still to check by hand:
-the four layouts and touch on real phones and tablets, a summon that rolls its own initiative
-in a real fight, and a concentration break at the table.
-
-Every phase passes these on macOS as well as Windows (decision 10).
-
-**Test setup:** the DM's Windows laptop, then a Mac running Trifold for the same run, plus an iPhone (Safari), an Android phone (Chrome) and a laptop joining by typed URL. Campaign: The Lantern at Greyford, with PCs Brannoc Hale and Wren Ashby flagged player-controllable, Tobin Marsh placed as an ally token (an NPC that can be claimed), and Gorm Tallow as an enemy token (must never be offered).
-
-## Hard rules
-
-- No accounts, cloud services, relays, telemetry or third-party hosting.
-- The server is off until the DM starts it, and listens only on the private LAN.
-- Never send a client data it is not allowed to see.
-- Store only token hashes on the DM side; compare them in constant time.
-- Validate every intent on the server: ownership of the creature, allowed field, value ranges, current locks and settings.
-- Releasing, reclaiming or disconnecting never changes creature data.
-
-## Approach
-
-- Keep networking behind an interface (for example a `TableServer` with `ClientSession`s) so claim, lock and spawn logic can be unit-tested without real sockets; the pure logic belongs in `packages/rules` or a new package, per the repo's rule that logic lives in `packages/*`.
-- Tests for the reclaim modes, takeover, lock expiry, stale-version rejection, delta merging and fog filtering.
-- Rate-limit PIN attempts per device.
-- Log server start and stop, claims, takeovers and rejected intents through Trifold's existing log (`apps/desktop/src/main/log.ts`, written to `Library/logs/`).
+- Editing a character's name or portrait from the phone. A portrait would be an upload saved as
+  the character's creature art, shrunk to 512 px like other art.
+- Changing the table server's port in Settings.
+- Conditions outside a fight, carried on PC cards and NPCs like HP.

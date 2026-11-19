@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
 
 /**
- * The player connector, Phase 1 (ADR 0043, docs/PLAYER-CONNECTOR.md) inside real Electron: the
+ * The player connector (ADR 0043, docs/PLAYER-CONNECTOR.md) inside real Electron: the
  * sample campaign with Brannoc flagged and a map carrying fog, a hidden Gorm Tallow and a lurker
  * under fog; Let players join on a test port; a browser window on the LAN address claims Brannoc,
  * sees the fogged map and his numbers, reconnects after a reload, is released by the DM and sees
@@ -88,7 +88,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
   const brannoc = await fileNamed(dir, 'pcs', 'Brannoc Hale');
   const gorm = await fileNamed(dir, 'npcs', 'Gorm Tallow');
   const tobin = await fileNamed(dir, 'npcs', 'Tobin Marsh');
-  // Hesper travels with Brannoc as his companion (Phase 3).
+  // Hesper travels with Brannoc as his companion.
   const hesper = await fileNamed(dir, 'npcs', 'Hesper Quill');
   await editJson(hesper.file, (npc) => {
     npc['companionOf'] = brannoc.id;
@@ -266,7 +266,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await innRow.press('Enter');
     await expect(phone.getByTestId('pc-token')).toHaveCount(2);
 
-    // Phase 2: the fight asks for Brannoc's initiative and the phone answers it once. He joins
+    // The fight asks for Brannoc's initiative and the phone answers it once. He joins
     // the linked encounter because his token stands on the map (ADR 0044).
     await page.getByRole('tab', { name: 'VTT', exact: true }).click();
     await page.getByRole('button', { name: 'Start linked encounter' }).click();
@@ -297,7 +297,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await phone.getByRole('button', { name: 'Undo' }).click();
     await expect(stats).toBeVisible();
 
-    // Phase 3: the phone drags Brannoc two cells right, into the revealed half.
+    // The phone drags Brannoc two cells right, into the revealed half.
     await page.getByRole('tab', { name: 'VTT', exact: true }).click();
     const consoleBrannoc = page
       .getByTestId('console-token')
@@ -385,7 +385,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await expect(lockAll).not.toBeChecked();
     await expect(phone.getByText('Movement locked by the DM')).toBeHidden();
 
-    // Phase 4: the DM puts the Owl on the summon list from its compendium page.
+    // The DM puts the Owl on the summon list from its compendium page.
     await page.getByRole('tab', { name: 'Compendium', exact: true }).click();
     await page.getByLabel('Search', { exact: true }).fill('owl');
     await page

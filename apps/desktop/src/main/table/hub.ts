@@ -173,7 +173,7 @@ interface ApprovalRequest {
   label: string;
   creatureName: string;
   takeover: boolean;
-  /** A summon waiting for the DM (Phase 4). */
+  /** A summon waiting for the DM. */
   summon?: SummonRequest;
 }
 
@@ -185,11 +185,11 @@ export interface TableHubOptions {
   /** The built player client (`out/web`). */
   webDir: string;
   onStatus(status: TableStatus): void;
-  /** A checked player change for the console to apply (Phase 2). */
+  /** A checked player change for the console to apply. */
   onIntent(intent: TableIntentEvent): void;
-  /** A player dragging or dropping a token (Phase 3). */
+  /** A player dragging or dropping a token. */
   onToken(event: TableTokenEvent): void;
-  /** A player summoning, dismissing or keeping a summon (Phase 4). */
+  /** A player summoning, dismissing or keeping a summon. */
   onSummon(event: TableSummonEvent): void;
   /** Tests replace the network lookups. */
   addresses?: () => LanAddress[];
@@ -199,7 +199,7 @@ export interface TableHubOptions {
 }
 
 /**
- * The table server (ADR 0043, docs/PLAYER-CONNECTOR.md Phase 1): off until the DM starts it,
+ * The table server (ADR 0043, docs/PLAYER-CONNECTOR.md): off until the DM starts it,
  * listening only on private LAN addresses. The console pushes a `TableSnapshot`; each browser
  * gets `viewFor` its device and nothing more. Devices and claims are kept in the campaign's
  * `players.json` through `PlayersStore`.
@@ -691,7 +691,7 @@ export class TableHub {
   }
 
   /**
-   * A tap in the picker (Phase 2): a first claim, a reclaim or a takeover, decided by
+   * A tap in the picker: a first claim, a reclaim or a takeover, decided by
    * `decideClaim` through the campaign's reclaim mode.
    */
   private async claim(
@@ -810,11 +810,11 @@ export class TableHub {
     this.emit();
   }
 
-  /** A player's change: checked here, applied by the console (Phase 2 plan). */
+  /** A player's change: checked here, applied by the console. */
   private intent(client: Client, kind: AnyCreatureKind, id: string, intent: TableIntent): void {
     const creature = this.snapshot?.creatures.find((c) => c.kind === kind && c.id === id);
     if (!creature) return this.reject(client, 'That character isn’t on the table right now.');
-    // A summon answers to whoever holds its owner (Phase 4).
+    // A summon answers to whoever holds its owner.
     const owner = controller(creature);
     const held = this.players?.claimOf(owner.kind, owner.id);
     if (!held || held.deviceId !== client.deviceId) {
@@ -830,7 +830,7 @@ export class TableHub {
     });
   }
 
-  // ---------- movement (Phase 3) ----------
+  // ---------- movement ----------
 
   /** Token id → who is dragging it, for the phones' "moving" mark. */
   private draggingNow(): Map<string, { deviceId: string; label: string }> {
@@ -1020,7 +1020,7 @@ export class TableHub {
     return this.status();
   }
 
-  // ---------- companions and Give to… (Phase 3) ----------
+  // ---------- companions and Give to… ----------
 
   /** A PC's companions follow it to a device, unless another device holds them. */
   private async companionsFollow(pcId: string, deviceId: string, from: string | null) {
@@ -1079,7 +1079,7 @@ export class TableHub {
     return this.status();
   }
 
-  // ---------- summoning (Phase 4) ----------
+  // ---------- summoning ----------
 
   async setSummoning(summoning: {
     mode: 'on' | 'approval' | 'off';
