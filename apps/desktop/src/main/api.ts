@@ -43,6 +43,8 @@ export interface ApiContext {
   phoneAudio: PhoneAudioReceiver;
   saves: SaveFlush;
   updates: UpdateService;
+  /** Restart to update (ADR 0045): the close flow, then the installer; false when none is ready. */
+  restartToUpdate: () => Promise<boolean>;
 }
 
 /** The main-process implementation of `TrifoldApi`. Registered by `registerIpc`. */
@@ -142,6 +144,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         if (!url) return false;
         await shell.openExternal(url);
         return true;
+      },
+      async restartToUpdate() {
+        return ctx.restartToUpdate();
       },
     },
 

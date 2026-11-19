@@ -69,6 +69,8 @@ export function installBridgeMock(): TrifoldBridge {
         available: null,
         dismissed: false,
         lastError: null,
+        mode: 'browser',
+        download: { state: 'idle', percent: 0, error: null },
       };
       return {
         status: vi.fn(async () => status),
@@ -76,6 +78,7 @@ export function installBridgeMock(): TrifoldBridge {
         checkNow: vi.fn(async () => status),
         dismiss: vi.fn(async () => status),
         openDownload: vi.fn(async () => false),
+        restartToUpdate: vi.fn(async () => false),
       };
     })(),
     library: {

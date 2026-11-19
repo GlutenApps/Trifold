@@ -7,11 +7,13 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 ### Added
 
 - **Loading splash**: when Trifold takes more than a moment to open, a small window shows the turning mark and what it is doing ("Opening your Library…") until the console is ready. Quick launches never show it.
+- **Updates install themselves on Windows** (ADR 0045): with the update check on, the installed Windows build downloads a new version in the background, shows its progress in Settings › Updates, and offers **Restart to update**. Nothing installs until you press **Restart now**, which saves, makes the on-close backup, installs and reopens Trifold. Every update's manifest must carry the project's signature or it is refused. The portable exe and macOS still open the release page.
 
 ### Changed
 
 - **Final brand**: a rust hexagon inside a three-part frame replaces the sword mark everywhere: app and installer icons, the DMG background, the top bar, the About card and the README banner. Small Windows icons sit on a dark tile so the mark stays visible on a light taskbar.
 - **Softer accent**: the dark theme's bone accent (primary buttons, focus, the current turn) is now a darker version of the logo's cream instead of a yellow sand, so the app and the logo share one warm grey. Amber stays the warning colour.
+- **The update check runs at every launch** (and daily while Trifold stays open) instead of at most once a day, and a check that fails while offline is tried again after a few minutes.
 
 ## [0.4.1] - 2026-11-15
 

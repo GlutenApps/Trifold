@@ -4,7 +4,7 @@ Trifold is a local desktop app for Windows and macOS (Electron + React + TypeScr
 
 ## Ground rules
 
-1. **Local only.** Trifold never phones home: no cloud services, no telemetry, no accounts, and no network calls the app makes on its own. Three network uses exist, all started by the DM: **web tabs** (ADR 0011), pages the DM typed the address of, hosted in a sandboxed webview; and the **update check** (ADR 0034), off until the DM turns it on, then at most once a day reading the project's public releases list and sending only the app's version; and the **table server** (ADR 0043), the player connector's page, off until the DM starts it in the VTT tab, listening only on the private LAN and serving the open campaign to browsers at the table. Nothing in the repo, the UI copy or the defaults names a site, except the update check's two release addresses in `apps/desktop/src/main/updates.ts` and `docs/RELEASING.md`. If a task seems to need a server, stop and ask. (Receiving a phone's audio over Bluetooth, ADR 0007, is an OS feature and not a network call.)
+1. **Local only.** Trifold never phones home: no cloud services, no telemetry, no accounts, and no network calls the app makes on its own. Three network uses exist, all started by the DM: **web tabs** (ADR 0011), pages the DM typed the address of, hosted in a sandboxed webview; and the **update check** (ADR 0034, ADR 0045), off until the DM turns it on, then at launch and daily reading the project's public releases list and sending only the app's version, and on the installed Windows build downloading the release's signed update in the background, installing it only when the DM chooses Restart now; and the **table server** (ADR 0043), the player connector's page, off until the DM starts it in the VTT tab, listening only on the private LAN and serving the open campaign to browsers at the table. Nothing in the repo, the UI copy or the defaults names a site, except the update check's two release addresses in `apps/desktop/src/main/updates.ts` and `docs/RELEASING.md` (installers come only from the releases' `download/` folders under them). If a task seems to need a server, stop and ask. (Receiving a phone's audio over Bluetooth, ADR 0007, is an OS feature and not a network call.)
 2. **Files-first.** All user data lives in the Library folder as JSON + media (`DESIGN.md` §4.2). SQLite is a derived index and must be rebuildable from files at any time. Never store anything only in SQLite. Never write to the Library except through `LibraryStore` in the main process; writes are atomic (temp file → fsync → rename).
 3. **Content licensing is a hard constraint.** The repo and the package contain only: SRD 5.1 / 5.2.1 content fetched at build time, open third-party documents the user opts into, game-icons SVGs, and our own text. No non-SRD game text, no WotC art or maps, no community compendium files, no token packs, no links to aggregator sites — not in code, tests, fixtures, screenshots, or comments. The full community XML used for local testing lives outside the repo and is git-ignored (`*.local.xml`, `fixtures/local/`).
 4. **No WotC trademarks** in the app name, window titles, UI chrome, README or package metadata. Say "5e-compatible". Book names appear only as imported data or SRD attribution.
@@ -14,7 +14,7 @@ Trifold is a local desktop app for Windows and macOS (Electron + React + TypeScr
 
 ## Stack (pin versions in package.json; do not add native deps beyond better-sqlite3 without asking)
 
-Electron (current LTS) · electron-vite · electron-builder (NSIS + portable on Windows, dmg + zip on macOS) · Vite · React 18 · TypeScript strict · Zustand · Zod · Tiptap (notes editor, ADR 0010) · better-sqlite3 (FTS5) · music-metadata · yauzl/yazl (backup and package zips) · ulid · Vitest + @testing-library/react · Playwright (Electron) for smoke tests · ESLint + Prettier.
+Electron (current LTS) · electron-vite · electron-builder (NSIS + portable on Windows, dmg + zip on macOS) · electron-updater (installed Windows build only, ADR 0045) · Vite · React 18 · TypeScript strict · Zustand · Zod · Tiptap (notes editor, ADR 0010) · better-sqlite3 (FTS5) · music-metadata · yauzl/yazl (backup and package zips) · ulid · Vitest + @testing-library/react · Playwright (Electron) for smoke tests · ESLint + Prettier.
 
 ## Repo layout
 
@@ -42,7 +42,8 @@ packages/importers/      xml/ (stream parser), compendium/ (Lion's Den XML), cam
 resources/               built at build time: srd-2024.jsonl, srd-2014.jsonl (git-ignored), srd-manifest.json,
                          sample/ (git-ignored), icons/ (svg/ and credits.json git-ignored; mapping.json and manifest.json committed)
 scripts/                 dev.mjs, fetch-content.ts (runs fetch-open5e.ts + fetch-game-icons.ts + verify-mapping.ts
-                         + build-sample.ts), rebuild-native.mjs, check-content.mjs (build guard)
+                         + build-sample.ts), rebuild-native.mjs, check-content.mjs (build guard),
+                         update-keygen.mjs + update-manifest.mjs (update signing key and signed latest.yml, ADR 0045)
 samples/greyford/        source of the bundled sample campaign (ADR 0016): campaign.json, notes/*.md, images/ + CREDITS.md;
                          built into resources/sample/ (git-ignored) by scripts/build-sample.ts
 fixtures/                small SRD-only XML/JSON samples used by tests (fixtures/local/ is git-ignored)

@@ -1060,6 +1060,12 @@ body.resizing {
   grid-column: 1 / -1;
 }
 
+/* The update's background download (ADR 0045): a full-width bar under the status line. */
+.update-progress {
+  display: block;
+  width: 100%;
+}
+
 /* A long copy-folder path wraps instead of widening the card (ADR 0014). */
 .backup-copy-target {
   overflow-wrap: anywhere;

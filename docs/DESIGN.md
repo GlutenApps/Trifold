@@ -450,7 +450,7 @@ This section is binding for the codebase.
 - **No modal dialogs during combat**, and no toasts: a failure shows as a banner in the panel that asked.
 - **Never lose work**: autosave on every change; a daily backup zip and one on close, optionally copied to a second folder; restore from any backup zip in Settings, also on first run. A campaign exports on its own as a `.trifold-campaign`, as it is or as a fresh start, with or without the party, its homebrew and its layout, never with imported sources or music (ADR 0015).
 - **Sample campaign** (ADR 0016): every Library gets *The Lantern at Greyford* once, built from `samples/greyford/` at build time. Deleting it is final; Settings adds it back or resets it.
-- **Update check** (ADR 0034): off until the DM turns it on. The Library asks once; Settings › Updates has the switch and Check now. With it on, Trifold reads the project's public releases list at most once a day, sending only its version, and shows a quiet **Update available** button in the top bar. Download opens the release page in the browser; Trifold never downloads or installs anything itself.
+- **Update check** (ADR 0034, ADR 0045): off until the DM turns it on. The Library asks once; Settings › Updates has the switch and Check now. With it on, Trifold reads the project's public releases list after every launch and daily while open, sending only its version, and shows a quiet **Update available** button in the top bar. The installed Windows build then downloads the update in the background, refuses it unless its manifest's signature verifies, and installs it only when the DM presses **Restart now**; it never restarts by itself. The portable exe and macOS open the release page in the browser instead.
 - **Performance budgets**: compendium search under 50 ms on 5,000 monsters; index rebuild under 10 s on a 30 MB XML file; scene switch to the TV under 150 ms; token drag at 60 fps on a 4096 px map, with player-window frame updates within 16 ms; app start to campaign open under 3 s warm. The smoke test checks the search budget; the rest are checked by hand.
 
 ---
@@ -487,7 +487,7 @@ The beta's list, in priority order, with each item's state:
 | #   | Item                                                                     | State                                        |
 | --- | ------------------------------------------------------------------------ | -------------------------------------------- |
 | 1   | Windows code signing, so SmartScreen stops warning (`RELEASING.md`)      | Next                                         |
-| 2   | Opt-in update check (ADR 0034)                                           | Built                                        |
+| 2   | Opt-in update check, in-app updates on Windows (ADR 0034, ADR 0045)      | Built                                        |
 | 3   | Edit a creature where it is and choose at Save (§6.2, ADR 0035)          | Built                                        |
 | 4   | Replace references (§6.2)                                                | Built                                        |
 | 5   | Per-campaign sources (§6.1, ADR 0036)                                    | Built                                        |

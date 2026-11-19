@@ -1,7 +1,8 @@
 # ADR 0034 · An opt-in check for app updates
 
 **Status:** accepted, 2026-11-14. Builds `DESIGN.md` §10 Beta 2; amends `CLAUDE.md` ground rule 1
-and settles the open point in ADR 0029's consequences.
+and settles the open point in ADR 0029's consequences. Amended by ADR 0045: the check now runs at
+every launch and daily, and the installed Windows build downloads and installs signed updates.
 
 ## Context
 
