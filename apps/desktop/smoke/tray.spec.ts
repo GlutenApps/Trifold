@@ -19,7 +19,7 @@ const exe = process.env['TRIFOLD_SMOKE_EXE'];
 function launch(userData: string, library: string) {
   return electron.launch({
     ...(exe ? { executablePath: exe, args: [] } : { args: [resolve(__dirname, '..')] }),
-    env: { ...env, TRIFOLD_USER_DATA: userData, TRIFOLD_LIBRARY: library },
+    env: { ...env, TRIFOLD_USER_DATA: userData, TRIFOLD_NO_SPLASH: '1', TRIFOLD_LIBRARY: library },
   });
 }
 

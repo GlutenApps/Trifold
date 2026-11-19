@@ -14,7 +14,7 @@ Palette "Slate and bone": near-monochrome slate surfaces, warm bone as the only 
 | border | #333D48 | every border |
 | text | #E6E1D6 | text |
 | text-muted | #9AA3AD | secondary text, icons at rest |
-| accent | #E3D3B0 | primary buttons, focus, live, count badges |
+| accent | #C5BEAF | primary buttons, focus, live, count badges |
 | accent-contrast | #14181D | text on accent |
 | danger | #E0685E | destructive, errors |
 | warn | #E0B252 | conditions, bloodied, prompts |

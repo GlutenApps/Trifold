@@ -21,6 +21,7 @@ function launch(userData: string, library: string) {
     env: {
       ...env,
       TRIFOLD_USER_DATA: userData,
+      TRIFOLD_NO_SPLASH: '1',
       TRIFOLD_LIBRARY: library,
       TRIFOLD_TABLE_PORT: String(PORT),
     },

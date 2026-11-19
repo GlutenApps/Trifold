@@ -3,3 +3,9 @@ declare module '*.ps1?raw' {
   const text: string;
   export default text;
 }
+
+/** The loading splash's self-contained page (splash.ts). */
+declare module '*.html?raw' {
+  const text: string;
+  export default text;
+}

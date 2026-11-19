@@ -36,7 +36,7 @@ test('a web tab hosts a page, follows its title and survives in the Library', as
   const exe = process.env['TRIFOLD_SMOKE_EXE'];
   const app = await electron.launch({
     ...(exe ? { executablePath: exe, args: [] } : { args: [resolve(__dirname, '..')] }),
-    env: { ...env, TRIFOLD_USER_DATA: userData, TRIFOLD_LIBRARY: library },
+    env: { ...env, TRIFOLD_USER_DATA: userData, TRIFOLD_NO_SPLASH: '1', TRIFOLD_LIBRARY: library },
   });
 
   try {
