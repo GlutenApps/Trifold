@@ -162,7 +162,14 @@ export function viewFor(
         inUse: holder.has(creatureKey(c.kind, c.id)),
         holderOnline: online.has(holder.get(creatureKey(c.kind, c.id)) ?? ''),
       }));
-    return { campaignName: snapshot.campaignName, mine: [], picker, map: null, reclaimMode };
+    return {
+      campaignName: snapshot.campaignName,
+      live: snapshot.live !== false,
+      mine: [],
+      picker,
+      map: null,
+      reclaimMode,
+    };
   }
 
   const scene = snapshot.scene;
@@ -238,6 +245,7 @@ export function viewFor(
   const screen = snapshot.screen ?? null;
   return {
     campaignName: snapshot.campaignName,
+    live: snapshot.live !== false,
     mine,
     picker: [],
     map,

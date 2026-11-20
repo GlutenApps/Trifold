@@ -35,7 +35,7 @@ There is no smaller text button: no `btn tiny`.
 
 Importance comes from colour and placement, not from mixing sizes.
 
-- **Primary:** `primary` (accent fill). At most one per group: the action the group exists for (Damage, Next turn, Send to TV, Create).
+- **Primary:** `primary` (accent fill). At most one per group: the action the group exists for (Damage, Next turn, Set active scene, Create).
 - **Danger:** `danger`. Destructive actions and End combat.
 - **Secondary:** plain `btn` or `chrome-btn`.
 - **Table-critical text buttons.** These stay as words, never icons, because the DM must read them at a glance during play: **Next turn**, **End combat**, **Panic mute**, **Blackout**, **Roll**. They take the tier of the bar they sit in.
@@ -107,7 +107,7 @@ One pattern each. Reuse these; do not invent a variant.
 | **Back** | `left` icon `chrome-btn` at the start of the header, `title="Back to …"` |
 | **Close** a pop-up, flyout or drawer | `close` icon `chrome-btn xs` at the end of its header |
 | **Edit** | `pencil` icon |
-| **Start / play / resume** | `play` icon in a row; `btn primary` with words in a header (Start combat, Send to TV), always the same tier for the same action |
+| **Start / play / resume** | `play` icon in a row; `btn primary` with words in a header (Start combat, Set active scene), always the same tier for the same action |
 | **Reorder** | `up` / `down` icons at row tier (22 px each), or drag; never squeezed. Where a row is full of other controls, a `grip` handle (`chrome-btn xs drag-handle`) at its start carries the drag, and the arrow keys on the focused handle move it one place |
 | **Dismiss** an error banner | `btn small` **Dismiss** |
 

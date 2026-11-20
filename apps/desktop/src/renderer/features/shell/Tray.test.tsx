@@ -213,6 +213,7 @@ describe('tray: a break on the TV', () => {
     usePresenterStore.setState({
       state: {
         ...initialPresenterState,
+        live: true,
         breakScreen: { title: 'Back soon', endsAt: 1_000_000 + 10 * 60_000 },
       },
     });
@@ -229,7 +230,7 @@ describe('tray: a break on the TV', () => {
 
   it('says Break without a timer when the break has none', () => {
     usePresenterStore.setState({
-      state: { ...initialPresenterState, breakScreen: { title: 'Back soon' } },
+      state: { ...initialPresenterState, live: true, breakScreen: { title: 'Back soon' } },
     });
     render(<LiveStrip />);
     expect(within(screen.getByTestId('live-strip')).getByTestId('live-status')).toHaveTextContent(

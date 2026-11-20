@@ -34,6 +34,7 @@ export function ScenesTool() {
   const removeScene = useCampaignStore((s) => s.removeScene);
   const liveId = usePresenterStore((s) => s.state.scene?.id ?? null);
   const blackout = usePresenterStore((s) => s.state.blackout);
+  const onAir = usePresenterStore((s) => s.state.live);
   const recent = usePresenterStore((s) => s.recent);
   const playlists = useMusicStore((s) => s.playlists);
   const tracks = useMusicStore((s) => s.library?.tracks);
@@ -217,7 +218,8 @@ export function ScenesTool() {
       >
         {rows.length === 0 && <p className="muted">No scenes yet. Add a title card or an image.</p>}
         {rows.map(({ scene, depth }) => {
-          const isLive = scene.id === liveId && !blackout;
+          const isLive = scene.id === liveId && onAir && !blackout;
+          const isActive = scene.id === liveId && !onAir;
           const isSelected = scene.id === selectedId;
           return (
             <div
@@ -242,14 +244,15 @@ export function ScenesTool() {
                 <span className="scene-name">{scene.title}</span>
               </span>
               {isLive && <span className="badge live">live</span>}
+              {isActive && <span className="badge">active</span>}
               <span className="scene-actions">
                 {scene.kind !== 'folder' &&
                   (scene.id === liveId ? (
                     <button
                       type="button"
                       className="chrome-btn xs"
-                      aria-label={`Take ${scene.title} off the TV`}
-                      title={`Take off the TV (${hk('Ctrl+Shift+X')})`}
+                      aria-label={`Clear ${scene.title} as the active scene`}
+                      title={`Clear the active scene (${hk('Ctrl+Shift+X')})`}
                       onClick={(e) => {
                         e.stopPropagation();
                         clearScene();
@@ -261,8 +264,8 @@ export function ScenesTool() {
                     <button
                       type="button"
                       className="chrome-btn xs"
-                      aria-label={`Send ${scene.title} to TV`}
-                      title="Send to TV (Enter)"
+                      aria-label={`Set ${scene.title} as the active scene`}
+                      title="Set active scene (Enter)"
                       onClick={(e) => {
                         e.stopPropagation();
                         send(scene);

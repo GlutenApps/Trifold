@@ -114,7 +114,7 @@ export function SettingsPage() {
 
       <div className="card">
         <h2>Displays</h2>
-        <p className="muted">The TV opens full screen on the chosen display.</p>
+        <p className="muted">When you go live, the TV opens full screen on the chosen display.</p>
         {displays.map((d) => (
           <label key={d.id} className="row">
             <input
@@ -136,7 +136,8 @@ export function SettingsPage() {
             checked={autoDisplay}
             onChange={() => void updateSettings({ playerDisplayId: null })}
           />
-          Automatic (first display that is not the primary)
+          Automatic (a display that is not the primary; with one display, only phones show the
+          table)
         </label>
         <button type="button" className="btn" onClick={() => void refreshDisplays()}>
           Refresh displays

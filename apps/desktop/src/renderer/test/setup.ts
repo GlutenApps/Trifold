@@ -105,6 +105,7 @@ export function installBridgeMock(): TrifoldBridge {
     },
     player: {
       open: vi.fn(async () => undefined),
+      openForLive: vi.fn(async () => true),
       close: vi.fn(async () => undefined),
       isOpen: vi.fn(async () => false),
     },

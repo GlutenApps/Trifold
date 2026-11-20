@@ -179,7 +179,9 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
       .click();
     await expect(page.getByRole('tab', { name: 'VTT', exact: true })).toBeVisible();
 
-    // Send the map to the TV: phones follow the TV.
+    // Go live (ADR 0046) and set the map active: phones show what the TV shows. On one display
+    // Automatic opens no TV window; phones see the table either way.
+    await page.getByTestId('live-strip').getByRole('button', { name: 'Go live (tray)' }).click();
     const row = page.getByTestId('scene-row').filter({ hasText: 'The Wayside Lamp' });
     await openTool(page, 'Scenes', row);
     await row.click();

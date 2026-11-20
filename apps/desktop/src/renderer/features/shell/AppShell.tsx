@@ -11,6 +11,7 @@ import { handleKeydown, installHotkeys, registerHotkey } from '../../hotkeys';
 import { installSessionLog } from '../campaign/sessionLog';
 import { useArtStore } from '../../stores/artStore';
 import { useAppStore } from '../../stores/appStore';
+import { toggleLive } from '../../stores/live';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { useMusicStore } from '../../stores/musicStore';
@@ -229,7 +230,7 @@ export function AppShell() {
       registerHotkey({
         id: 'presenter.clearScene',
         combo: 'Ctrl+Shift+X',
-        description: 'Take the scene off the TV',
+        description: 'Clear the active scene',
         run: () => usePresenterStore.getState().clearScene(),
       }),
       registerHotkey({
@@ -241,22 +242,19 @@ export function AppShell() {
       registerHotkey({
         id: 'player.toggle',
         combo: 'Ctrl+Shift+P',
-        description: 'Open or close the TV',
-        run: () => {
-          const app = useAppStore.getState();
-          void (app.playerOpen ? app.closePlayer() : app.openPlayer());
-        },
+        description: 'Go live, or end it',
+        run: () => void toggleLive(),
       }),
       registerHotkey({
         id: 'scene.selectPrevious',
         combo: 'Ctrl+Alt+ArrowUp',
-        description: 'Select the previous scene on the TV tab (does not send)',
+        description: 'Select the previous scene on the TV tab (does not set it active)',
         run: () => stepScene(-1),
       }),
       registerHotkey({
         id: 'scene.selectNext',
         combo: 'Ctrl+Alt+ArrowDown',
-        description: 'Select the next scene on the TV tab (does not send)',
+        description: 'Select the next scene on the TV tab (does not set it active)',
         run: () => stepScene(1),
       }),
       registerHotkey({

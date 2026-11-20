@@ -332,7 +332,9 @@ export function Playing({
     ) : (
       <div className="pc-map pc-center">
         {overlay}
-        <p className="pc-hint">Nothing on the TV right now.</p>
+        <p className="pc-hint" data-testid="pc-waiting">
+          {view.live ? 'Nothing on the TV right now.' : 'Waiting for the DM to go live.'}
+        </p>
       </div>
     );
 

@@ -1,4 +1,4 @@
-import { app, net } from 'electron';
+import { app, net, screen } from 'electron';
 import { join } from 'node:path';
 import { EVENT_CHANNELS } from '@trifold/api';
 import { createApi } from './api';
@@ -103,6 +103,12 @@ async function main(): Promise<void> {
     onPlayerReady: () => presenter.sync(),
   });
   const presenter = new PresenterHub(windows);
+  // A TV plugged in while the DM is live opens there (ADR 0046), as Go live would have done.
+  screen.on('display-added', () => {
+    if (!presenter.get().live || windows.isPlayerOpen()) return;
+    const display = WindowManager.liveDisplay(session?.store?.getSettings().playerDisplayId);
+    if (display) windows.openPlayer(display);
+  });
 
   const libraryPath =
     process.env['TRIFOLD_LIBRARY'] ??

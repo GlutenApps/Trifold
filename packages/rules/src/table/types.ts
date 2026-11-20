@@ -139,6 +139,11 @@ export interface SummonRequest {
 export interface TableSnapshot {
   campaignId: string;
   campaignName: string;
+  /**
+   * Whether the DM is live (ADR 0046). Not live, phones get no map and no screen and say they
+   * are waiting; absent counts as live.
+   */
+  live?: boolean;
   scene: TableScene | null;
   /** What the TV shows when it is not a map: a title card, an image or the break screen. */
   screen?: TableScreen | null;
@@ -224,6 +229,8 @@ export type ReclaimMode = 'open' | 'pin' | 'approval';
 
 export interface ClientView {
   campaignName: string;
+  /** Whether the DM is live (ADR 0046); not live, the phone waits instead of showing the table. */
+  live: boolean;
   mine: CreatureView[];
   /** Empty while the device holds creatures; the picker is for devices with none. */
   picker: PickerEntry[];

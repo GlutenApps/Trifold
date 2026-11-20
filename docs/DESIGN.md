@@ -292,7 +292,7 @@ The presenter is two pieces: **Scenes**, the scene list in the dock, and the **V
 
 **Windows.** Console plus player window. Settings picks the target display; the player window opens fullscreen there and remembers the choice. Blackout, take off TV and undo last scene are console hotkeys (`hotkeys.ts`), not OS-level shortcuts.
 
-**Scene tree.** One tree per campaign; folders; drag to reorder or reparent; duplicate with or without the subtree. Hovering a scene shows its thumbnail. **Clicking a scene selects it and previews it on the TV tab; Enter, double-click or ▶ sends it to the TV.** `Alt+↓/↑/←/→` send the next, previous, parent or first child scene straight to the TV; `Ctrl+Alt+↑/↓` select the previous or next scene on the TV tab without sending. A Recent list shows the scenes sent last.
+**Scene tree.** One tree per campaign; folders; drag to reorder or reparent; duplicate with or without the subtree. Hovering a scene shows its thumbnail. **Clicking a scene selects it and previews it on the TV tab; Enter, double-click or ▶ makes it the active scene.** `Alt+↓/↑/←/→` set the next, previous, parent or first child scene active; `Ctrl+Alt+↑/↓` select the previous or next scene on the TV tab without setting it. A Recent list shows the scenes set last. **Go live** (`Ctrl+Shift+P`) is the table's output switch: live, the active scene shows on the TV (opened on a second display, or the one chosen in Settings) and on phones; not live, the TV is closed, phones wait, and a scene set active waits for Go live (ADR 0046).
 
 **Scene kinds.**
 

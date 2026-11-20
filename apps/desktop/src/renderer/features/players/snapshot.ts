@@ -42,7 +42,7 @@ export interface SnapshotInput {
   pcs: readonly PCCard[];
   npcs: readonly NPC[];
   presenter: Pick<PresenterState, 'blackout' | 'scene'> &
-    Partial<Pick<PresenterState, 'breakScreen'>>;
+    Partial<Pick<PresenterState, 'breakScreen' | 'live'>>;
   liveScene: Scene | null;
   combat: CombatState | null;
   /** A token's picture (ADR 0033), as a `trifold-media://` URL. */
@@ -76,6 +76,8 @@ const conditionsOf = (f: Combatant | undefined) =>
 export function tableScene(input: SnapshotInput): TableSnapshot['scene'] {
   const { presenter, liveScene, combat } = input;
   const live = presenter.scene;
+  // Phones show only what the TV shows (ADR 0046): nothing until the DM goes live.
+  if (presenter.live === false) return null;
   if (presenter.blackout || !live || !liveScene || live.id !== liveScene.id) return null;
   if (liveScene.kind !== 'map' && liveScene.kind !== 'blankGrid') return null;
   if (liveScene.kind === 'map' && !liveScene.image) return null;
@@ -222,6 +224,7 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
   return {
     campaignId: input.campaign.id,
     campaignName: input.campaign.name,
+    live: input.presenter.live !== false,
     scene,
     screen: tableScreen(input.presenter),
     creatures,
@@ -240,7 +243,7 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
  * everything, else a title card or an image scene; nothing behind a blackout.
  */
 export function tableScreen(presenter: SnapshotInput['presenter']): TableSnapshot['screen'] {
-  if (presenter.blackout) return null;
+  if (presenter.live === false || presenter.blackout) return null;
   const brk = presenter.breakScreen;
   if (brk) {
     return {

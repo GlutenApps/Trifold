@@ -1,4 +1,5 @@
 import { useAppStore } from '../../stores/appStore';
+import { toggleLive } from '../../stores/live';
 import { useCounters } from '../../stores/countersStore';
 import { useTimers } from '../../stores/timersStore';
 import { useCombatStore } from '../../stores/combatStore';
@@ -114,13 +115,12 @@ function TvSection() {
   const scene = usePresenterStore((s) => s.state.scene);
   const blackout = usePresenterStore((s) => s.state.blackout);
   const breakScreen = usePresenterStore((s) => s.state.breakScreen);
+  const live = usePresenterStore((s) => s.state.live);
   const history = usePresenterStore((s) => s.history.length);
   const toggleBlackout = usePresenterStore((s) => s.toggleBlackout);
   const clearScene = usePresenterStore((s) => s.clearScene);
   const undo = usePresenterStore((s) => s.undo);
   const playerOpen = useAppStore((s) => s.playerOpen);
-  const openPlayer = useAppStore((s) => s.openPlayer);
-  const closePlayer = useAppStore((s) => s.closePlayer);
   const openMajor = useShellStore((s) => s.openMajor);
   const playersWaiting = useTableStore((s) => s.status?.approvals.length ?? 0);
   return (
@@ -135,10 +135,16 @@ function TvSection() {
         }}
         title={`VTT: the scene on the TV (${hk('Ctrl+T')})${playersWaiting ? '. A player is waiting for you' : ''}`}
       >
-        {breakScreen ? (
+        {!live ? (
+          <span className="muted" data-testid="live-status">
+            {scene ? `Not live · Next: ${scene.title}` : 'Not live'}
+          </span>
+        ) : breakScreen ? (
           <BreakStatus endsAt={breakScreen.endsAt} />
         ) : !scene ? (
-          <span className="muted">Nothing live</span>
+          <span className="muted" data-testid="live-status">
+            Live · no active scene
+          </span>
         ) : blackout ? (
           <span className="warn-text">Blackout</span>
         ) : (
@@ -163,24 +169,24 @@ function TvSection() {
       <button
         type="button"
         className="chrome-btn"
-        aria-label="Take the scene off the TV (tray)"
+        aria-label="Clear the active scene (tray)"
         disabled={!scene}
         onClick={clearScene}
         title={
           scene
-            ? `Take the scene off the TV; overlays stay up (${hk('Ctrl+Shift+X')})`
-            : 'No scene is on the TV'
+            ? `Clear the active scene; overlays stay up (${hk('Ctrl+Shift+X')})`
+            : 'No scene is active'
         }
       >
         <Icon name="stop" />
       </button>
       <button
         type="button"
-        className={`chrome-btn${playerOpen ? ' tally' : ''}`}
-        aria-label={playerOpen ? 'Close TV (tray)' : 'Open TV (tray)'}
-        aria-pressed={playerOpen}
-        title={`${playerOpen ? 'TV on: the players can see it. Click to close it' : 'Open the TV on the second display'} (${hk('Ctrl+Shift+P')})`}
-        onClick={() => void (playerOpen ? closePlayer() : openPlayer())}
+        className={`chrome-btn${live ? ' tally' : ''}`}
+        aria-label={live ? 'End live (tray)' : 'Go live (tray)'}
+        aria-pressed={live}
+        title={`${live ? `Live: the ${playerOpen ? 'TV and phones show' : 'phones show'} the table. Click to end` : 'Go live: the TV opens on a second display and phones see the table'} (${hk('Ctrl+Shift+P')})`}
+        onClick={() => void toggleLive()}
       >
         <Icon name="window" />
       </button>

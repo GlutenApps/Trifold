@@ -6,6 +6,7 @@ import { basename, join, resolve } from 'node:path';
 import { _electron as electron, expect, test } from '@playwright/test';
 import type { TrifoldBridge } from '@trifold/api';
 import { keepLogs } from './keepLogs';
+import { tvOnPrimary } from './tv';
 
 // Page-side callbacks in `evaluate` run in the renderer, where the preload exposes window.trifold.
 declare const window: { trifold: TrifoldBridge };
@@ -562,9 +563,11 @@ test('console, Library, import, search, stat block and player window all work en
     await console_.keyboard.press('Escape');
     await expect(console_.getByRole('dialog', { name: 'Dice' })).toHaveCount(0);
 
-    // Open the player window from the strip; the Scenes tool sends a title card through main.
+    // Go live from the strip (ADR 0046): the TV opens on the display chosen in Settings; the
+    // Scenes tool then sets a title card active through main.
+    await tvOnPrimary(console_);
     const playerPromise = app.waitForEvent('window');
-    await strip.getByRole('button', { name: 'Open TV (tray)' }).click();
+    await strip.getByRole('button', { name: 'Go live (tray)' }).click();
     const player = await playerPromise;
     await expect(player).toHaveTitle('Trifold player');
     await expect(player.getByTestId('player-blackout')).toBeVisible();
