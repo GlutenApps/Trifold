@@ -12,7 +12,12 @@ import { createPublicKey, verify } from 'node:crypto';
  * a lost or leaked key can be retired by a release signed with the spare. With no key here, this
  * build never installs an update itself and offers the release page instead.
  */
-export const UPDATE_PUBLIC_KEYS: readonly string[] = [];
+export const UPDATE_PUBLIC_KEYS: readonly string[] = [
+  // Current key (2026-11-19): its private half is the TRIFOLD_UPDATE_SIGNING_KEY Actions secret.
+  'Abi1K5zlBDMGTPC0Pj3OvTZBfkF3FWbucIyIz0kGhkY',
+  // Spare (2026-11-19): kept offline, used only to retire the current key.
+  't3IRQEJYSs4PO82Jxxb6pQ7sz6uBnDYQ4AVjQUTkBSM',
+];
 
 /** The signature file published beside the manifest. */
 export const SIGNATURE_SUFFIX = '.sig';
