@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fitTabs, SubTabs, type SubTab } from './SubTabs';
@@ -56,5 +56,41 @@ describe('SubTabs', () => {
     await userEvent.click(within(menu).getByRole('menuitem', { name: 'Rules' }));
     expect(onSelect).toHaveBeenCalledWith('rule');
     expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('measures again once a row mounted in a hidden tab is shown', () => {
+    // A tab that is not showing lays out at 0, so every label first measures 0 and all fit.
+    const observers: Array<() => void> = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private cb: () => void) {}
+        observe() {
+          observers.push(this.cb);
+        }
+        disconnect() {}
+      },
+    );
+    let shown = false;
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() =>
+      shown ? 260 : 0,
+    );
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(() =>
+      shown ? 80 : 0,
+    );
+    render(<SubTabs label="Record kind" tabs={TABS} active="monster" onSelect={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /^More:/ })).toBeNull();
+
+    // The tab is shown: the bar and the hidden copy both change size.
+    shown = true;
+    act(() => observers.forEach((cb) => cb()));
+    const list = screen.getByRole('tablist', { name: 'Record kind' });
+    expect(
+      within(list)
+        .getAllByRole('tab')
+        .map((t) => t.textContent),
+    ).toEqual(['Monsters', 'Spells']);
+    expect(screen.getByRole('button', { name: /^More:/ })).toBeTruthy();
+    vi.unstubAllGlobals();
   });
 });

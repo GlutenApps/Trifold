@@ -76,12 +76,21 @@ export function SubTabs<T extends string>({
   }, []);
 
   // Each label's width, from the hidden copy (fonts and labels change it, the panel does not).
+  // A row mounted in a tab that is not showing measures 0, so it measures again when the copy
+  // changes size: when its tab is shown, and when a font finishes loading.
   useLayoutEffect(() => {
     const row = measureRef.current;
     if (!row) return;
-    const buttons = [...row.querySelectorAll<HTMLElement>('[data-measure]')];
-    setWidths(buttons.slice(0, -1).map((b) => b.offsetWidth + 2));
-    setMoreWidth((buttons[buttons.length - 1]?.offsetWidth ?? 0) + 8);
+    const measure = () => {
+      const buttons = [...row.querySelectorAll<HTMLElement>('[data-measure]')];
+      setWidths(buttons.slice(0, -1).map((b) => b.offsetWidth + 2));
+      setMoreWidth((buttons[buttons.length - 1]?.offsetWidth ?? 0) + 8);
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(row);
+    return () => ro.disconnect();
   }, [labels]);
 
   useEffect(() => {
