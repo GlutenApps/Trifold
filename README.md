@@ -21,7 +21,7 @@ The [user guide](docs/USER-GUIDE.md) walks through all of it.
 
 Download the build for your computer from the [releases page](../../releases).
 
-- **Windows:** `Trifold-Setup-<version>-win-x64.exe` installs for your user only, so you don't need administrator rights. `Trifold-Portable-<version>-win-x64.exe` runs without installing. The builds aren't code-signed yet, so the first time you run one, Windows shows "Windows protected your PC". Click **More info**, then **Run anyway**.
+- **Windows:** `Trifold-Setup-<version>-win-x64.exe` installs for your user only, so you don't need administrator rights. `Trifold-Portable-<version>-win-x64.exe` runs without installing. With the update check on (Settings › Updates), the installed version downloads new versions itself and installs them when you choose **Restart now**; the portable one sends you to the releases page. The builds aren't code-signed yet, so the first time you run one, Windows shows "Windows protected your PC". Click **More info**, then **Run anyway**.
 - **macOS:** pick the `.dmg` for your Mac's chip (`arm64` for Apple Silicon, `x64` for Intel), open it and drag Trifold to Applications. The app isn't notarised yet, so the first launch says it can't be opened. Go to **System Settings → Privacy & Security**, find the message about Trifold and click **Open Anyway**.
 
 On first launch Trifold creates its Library in `Documents/Trifold Library`; you can choose another folder in Settings. It also includes a short sample campaign, *The Lantern at Greyford*, so you have something to try things on.
