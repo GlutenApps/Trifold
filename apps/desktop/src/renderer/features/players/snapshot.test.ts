@@ -218,9 +218,21 @@ describe('tableSnapshotFrom', () => {
   it('gives a new fog a new image key', () => {
     const a = map([]);
     const b = map([], { fog: { enabled: true, shapes: [] } });
-    const ka = tableSnapshotFrom(input({ liveScene: a, presenter: live(a) })).scene!.fogKey;
-    const kb = tableSnapshotFrom(input({ liveScene: b, presenter: live(b) })).scene!.fogKey;
+    const ka = tableSnapshotFrom(input({ liveScene: a, presenter: live(a) })).scene!.imageKey;
+    const kb = tableSnapshotFrom(input({ liveScene: b, presenter: live(b) })).scene!.imageKey;
     expect(ka).not.toBe(kb);
+  });
+
+  it('gives another background a new image key, so phones fetch it', () => {
+    // A scene's Backgrounds swap the picture in place: same scene, same fog, new image.
+    const day = map([]);
+    const night = map([], {
+      image: { path: 'maps/n.jpg', displayPath: 'maps/n-display.jpg', width: 700, height: 700 },
+    });
+    const kd = tableSnapshotFrom(input({ liveScene: day, presenter: live(day) })).scene!.imageKey;
+    const kn = tableSnapshotFrom(input({ liveScene: night, presenter: live(night) })).scene!
+      .imageKey;
+    expect(kd).not.toBe(kn);
   });
 
   it('sends no map when the TV shows another scene', () => {
