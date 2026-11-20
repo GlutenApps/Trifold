@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Playlist, Scene } from '@trifold/schema';
+import type { Playlist, Scene, Track } from '@trifold/schema';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
 
@@ -14,15 +14,43 @@ import { Icon } from '../shell/icons';
 export function SceneEditor({
   scene,
   playlists,
+  tracks = [],
   onChange,
   onRemove,
 }: {
   scene: Scene;
   playlists: Playlist[];
+  /** The music library's tracks a scene can link on its own (sound effects are left out). */
+  tracks?: Pick<Track, 'id' | 'title' | 'artist' | 'kind'>[];
   onChange(s: Scene): void;
   onRemove(): void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const audio = scene.audio;
+  const linked = audio?.playlistId
+    ? `p:${audio.playlistId}`
+    : audio?.trackId
+      ? `t:${audio.trackId}`
+      : '';
+  const linkedPlaylist = playlists.find((p) => p.id === audio?.playlistId);
+  const songs = tracks
+    .filter((t) => t.kind !== 'sfx')
+    .sort((a, b) => a.title.localeCompare(b.title));
+  const missingTrack = !!audio?.trackId && !songs.some((t) => t.id === audio.trackId);
+  // A playlist follows its own saved loop until the scene says otherwise; a track plays once.
+  const loops = audio?.loop ?? linkedPlaylist?.loop ?? false;
+  const link = (value: string) => {
+    const ambienceIds = audio?.ambienceIds ?? [];
+    if (value.startsWith('p:')) {
+      const id = value.slice(2);
+      const loop = playlists.find((p) => p.id === id)?.loop ?? true;
+      onChange({ ...scene, audio: { ambienceIds, playlistId: id, loop } });
+    } else if (value.startsWith('t:')) {
+      onChange({ ...scene, audio: { ambienceIds, trackId: value.slice(2), loop: true } });
+    } else {
+      onChange({ ...scene, audio: { ambienceIds } });
+    }
+  };
   return (
     <div className="card">
       <h2>Edit scene</h2>
@@ -73,26 +101,49 @@ export function SceneEditor({
         {scene.kind !== 'folder' && (
           <label className="field">
             Music on go-live
-            <select
-              value={scene.audio?.playlistId ?? ''}
+            <select value={linked} onChange={(e) => link(e.target.value)}>
+              <option value="">Keep current audio</option>
+              {playlists.length > 0 && (
+                <optgroup label="Playlists">
+                  {playlists.map((p) => (
+                    <option key={p.id} value={`p:${p.id}`}>
+                      {p.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {(songs.length > 0 || missingTrack) && (
+                <optgroup label="Tracks">
+                  {missingTrack && <option value={linked}>Missing track</option>}
+                  {songs.map((t) => (
+                    <option key={t.id} value={`t:${t.id}`}>
+                      {t.artist ? `${t.title} · ${t.artist}` : t.title}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </label>
+        )}
+        {scene.kind !== 'folder' && linked && (
+          <label className="field inline">
+            <input
+              type="checkbox"
+              checked={loops}
               onChange={(e) =>
                 onChange({
                   ...scene,
-                  audio: {
-                    ambienceIds: scene.audio?.ambienceIds ?? [],
-                    ...(e.target.value ? { playlistId: e.target.value } : {}),
-                  },
+                  audio: { ...(audio ?? { ambienceIds: [] }), loop: e.target.checked },
                 })
               }
-            >
-              <option value="">Keep current audio</option>
-              {playlists.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            />
+            {audio?.playlistId ? 'Loop the playlist' : 'Loop the track'}
           </label>
+        )}
+        {scene.kind !== 'folder' && playlists.length === 0 && songs.length === 0 && (
+          <p className="muted small">
+            Add a music folder in the Music tool to link music to this scene.
+          </p>
         )}
         {scene.kind === 'title' && (
           <label className="field">

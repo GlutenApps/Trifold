@@ -24,7 +24,7 @@ export function MusicTransport() {
   const track = music.library?.tracks.find((t) => t.id === current) ?? null;
   const playlist = music.playlists.find((p) => p.id === music.playlistId) ?? null;
   const { settings } = music;
-  const loop = loopMode(music.loopTrack, playlist?.loop ?? null);
+  const loop = loopMode(music.loopTrack, playlist ? (music.playlistLoop ?? playlist.loop) : null);
 
   useEffect(() => {
     void music.refreshDevices();

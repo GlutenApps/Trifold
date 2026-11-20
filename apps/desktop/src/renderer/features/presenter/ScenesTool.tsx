@@ -36,6 +36,7 @@ export function ScenesTool() {
   const blackout = usePresenterStore((s) => s.state.blackout);
   const recent = usePresenterStore((s) => s.recent);
   const playlists = useMusicStore((s) => s.playlists);
+  const tracks = useMusicStore((s) => s.library?.tracks);
   const selectedId = useSceneStore((s) => s.selectedId);
   const hoverId = useSceneStore((s) => s.hoverId);
   const draft = useSceneStore((s) => s.draft);
@@ -326,6 +327,7 @@ export function ScenesTool() {
           <SceneEditor
             scene={draft}
             playlists={playlists}
+            tracks={tracks}
             onChange={setDraft}
             onRemove={() => {
               void removeScene(selected.id);
