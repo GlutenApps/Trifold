@@ -17,7 +17,9 @@ import { PresenterHub } from './presenter';
 import { SaveFlush } from './saveFlush';
 import { createSplashWindow, Splash } from './splash';
 import { TableHub } from './table/hub';
-import { UpdateService } from './updates';
+import { NsisSelfInstaller, selfUpdateBlocker } from './updateInstaller';
+import { UpdateService, releaseFolder } from './updates';
+import { UPDATE_PUBLIC_KEYS } from './updateSignature';
 import { WindowManager } from './windows';
 
 // Test hooks: the smoke test points both at temporary folders.
@@ -126,15 +128,46 @@ async function main(): Promise<void> {
     }),
   );
 
-  // The update check (ADR 0034): off until the DM turns it on; then at most once a day.
+  // The update check (ADR 0034): off until the DM turns it on; then at launch and daily. The
+  // installed Windows build also downloads and installs signed updates (ADR 0045); every other
+  // build opens the release page.
+  const selfUpdateOff = selfUpdateBlocker({
+    platform: process.platform,
+    packaged: app.isPackaged,
+    windowsStore: process.windowsStore === true,
+    portable: Boolean(process.env['PORTABLE_EXECUTABLE_DIR']),
+    keys: UPDATE_PUBLIC_KEYS,
+  });
+  if (selfUpdateOff) logger.info(`in-app updates are off (${selfUpdateOff})`);
   const updates = new UpdateService(
     config,
     logger,
     app.getVersion(),
     (status) => windows.sendToConsole(EVENT_CHANNELS.updateStatus, status),
     net.fetch,
+    undefined,
+    selfUpdateOff ? null : new NsisSelfInstaller(logger, releaseFolder),
   );
   updates.start();
+
+  // Restart to update, only ever on the DM's click: the same close flow as closing the console
+  // (flush saves, on-close backup), then the installer, which relaunches Trifold when done.
+  const restartToUpdate = async (): Promise<boolean> => {
+    if (closing !== 'open' || !updates.readyToInstall()) return false;
+    closing = 'busy';
+    const bounds = windows.consoleBounds();
+    if (bounds) await config.update({ consoleWindow: bounds }).catch(() => undefined);
+    await finishBeforeClose();
+    closing = 'done';
+    if (updates.install()) {
+      app.quit();
+      return true;
+    }
+    // The installer did not start: carry on as if nothing happened.
+    closing = 'open';
+    windows.showConsole();
+    return false;
+  };
 
   // The table server (ADR 0043): off until the DM starts it from the VTT tab.
   const smokePort = Number(process.env['TRIFOLD_TABLE_PORT']);
@@ -163,6 +196,7 @@ async function main(): Promise<void> {
       phoneAudio,
       saves,
       updates,
+      restartToUpdate,
     }),
     logger,
   );

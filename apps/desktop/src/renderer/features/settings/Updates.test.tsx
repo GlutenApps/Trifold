@@ -15,6 +15,8 @@ const base: UpdateStatus = {
   available: null,
   dismissed: false,
   lastError: null,
+  mode: 'browser',
+  download: { state: 'idle', percent: 0, error: null },
 };
 const found = {
   version: '0.4.0',
@@ -29,7 +31,7 @@ const showing = (status: Partial<UpdateStatus>) =>
 describe('UpdatePrompt', () => {
   beforeEach(() => showing({}));
 
-  it('asks once, and Turn on switches the daily check on', async () => {
+  it('asks once, and Turn on switches the check on', async () => {
     vi.mocked(window.trifold.updates.setEnabled).mockResolvedValue({
       ...base,
       enabled: true,
@@ -54,7 +56,7 @@ describe('UpdatePrompt', () => {
 });
 
 describe('UpdatesCard', () => {
-  it('offers Check now with the daily check off, and says what it found', async () => {
+  it('offers Check now with the check off, and says what it found', async () => {
     showing({ asked: true });
     vi.mocked(window.trifold.updates.checkNow).mockResolvedValue({
       ...base,
@@ -63,9 +65,7 @@ describe('UpdatesCard', () => {
       available: found,
     });
     render(<UpdatesCard />);
-    expect(
-      screen.getByRole('checkbox', { name: 'Check for new versions once a day' }),
-    ).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Check for new versions' })).not.toBeChecked();
     expect(screen.getByTestId('update-status')).toHaveTextContent(
       'You have Trifold 0.3.0. Not checked yet.',
     );
@@ -76,12 +76,10 @@ describe('UpdatesCard', () => {
     expect(window.trifold.updates.openDownload).toHaveBeenCalled();
   });
 
-  it('turns the daily check on and off at any time', async () => {
+  it('turns the check on and off at any time', async () => {
     showing({ asked: true });
     render(<UpdatesCard />);
-    await userEvent.click(
-      screen.getByRole('checkbox', { name: 'Check for new versions once a day' }),
-    );
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Check for new versions' }));
     expect(window.trifold.updates.setEnabled).toHaveBeenCalledWith(true);
   });
 
@@ -94,7 +92,88 @@ describe('UpdatesCard', () => {
   });
 });
 
+describe('UpdatesCard on the installed Windows build', () => {
+  it('shows the background download, then Restart now once it is ready', async () => {
+    showing({
+      asked: true,
+      enabled: true,
+      mode: 'install',
+      available: found,
+      download: { state: 'downloading', percent: 42, error: null },
+    });
+    const { rerender } = render(<UpdatesCard />);
+    expect(screen.getByTestId('update-status')).toHaveTextContent('Downloading Trifold 0.4.0… 42%');
+    expect(screen.getByRole('progressbar', { name: 'Downloading Trifold 0.4.0' })).toHaveValue(42);
+    expect(screen.queryByRole('button', { name: /Download/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Restart now' })).toBeNull();
+
+    showing({
+      asked: true,
+      enabled: true,
+      mode: 'install',
+      available: found,
+      download: { state: 'ready', percent: 100, error: null },
+    });
+    rerender(<UpdatesCard />);
+    expect(screen.getByTestId('update-status')).toHaveTextContent(
+      'Trifold 0.4.0 is ready to install.',
+    );
+    vi.mocked(window.trifold.updates.restartToUpdate).mockResolvedValue(true);
+    await userEvent.click(screen.getByRole('button', { name: 'Restart now' }));
+    expect(window.trifold.updates.restartToUpdate).toHaveBeenCalled();
+  });
+
+  it('says why a download failed and offers the release page instead', async () => {
+    showing({
+      asked: true,
+      enabled: true,
+      mode: 'install',
+      available: found,
+      download: { state: 'failed', percent: 0, error: 'This computer is offline' },
+    });
+    render(<UpdatesCard />);
+    expect(screen.getByTestId('update-status')).toHaveTextContent(
+      'the download did not work: This computer is offline. Trifold will try again.',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Download 0.4.0' }));
+    expect(window.trifold.updates.openDownload).toHaveBeenCalled();
+  });
+
+  it('reports a restart that could not start', async () => {
+    showing({
+      asked: true,
+      mode: 'install',
+      available: found,
+      download: { state: 'ready', percent: 100, error: null },
+    });
+    vi.mocked(window.trifold.updates.restartToUpdate).mockResolvedValue(false);
+    render(<UpdatesCard />);
+    await userEvent.click(screen.getByRole('button', { name: 'Restart now' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('The update could not be installed');
+  });
+});
+
 describe('UpdateTopBarButton', () => {
+  it('reads Restart to update once the installer is ready, and still only opens Settings', async () => {
+    vi.mocked(window.trifold.updates.restartToUpdate).mockClear();
+    showing({
+      asked: true,
+      mode: 'install',
+      available: found,
+      download: { state: 'ready', percent: 100, error: null },
+    });
+    render(<UpdateTopBarButton />);
+    const enterLibrary = vi.spyOn(useShellStore.getState(), 'enterLibrary');
+    useShellStore.setState({ enterLibrary });
+    const button = screen.getByRole('button', {
+      name: 'Trifold 0.4.0 is ready: restart to update',
+    });
+    expect(button).toHaveTextContent('Restart to update');
+    await userEvent.click(button);
+    expect(enterLibrary).toHaveBeenCalledWith('settings');
+    expect(window.trifold.updates.restartToUpdate).not.toHaveBeenCalled();
+  });
+
   it('appears only while a newer version is out and not dismissed, and opens Settings', async () => {
     showing({ asked: true });
     const { rerender } = render(<UpdateTopBarButton />);

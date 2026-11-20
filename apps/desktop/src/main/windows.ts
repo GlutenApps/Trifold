@@ -276,6 +276,18 @@ export class WindowManager {
     if (win && !win.isDestroyed()) win.hide();
   }
 
+  /** The console's bounds as they would be saved on close; null when it is not open. */
+  consoleBounds(): WindowBounds | null {
+    const win = this.consoleWin;
+    return win && !win.isDestroyed() ? boundsOf(win) : null;
+  }
+
+  /** Shows a hidden console again (Restart to update, when the installer did not start). */
+  showConsole(): void {
+    const win = this.consoleWin;
+    if (win && !win.isDestroyed()) win.show();
+  }
+
   isConsoleOpen(): boolean {
     return this.consoleWin !== null && !this.consoleWin.isDestroyed();
   }

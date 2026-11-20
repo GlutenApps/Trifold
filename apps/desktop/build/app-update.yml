@@ -1,0 +1,11 @@
+# electron-updater's settings file (ADR 0045), shipped as resources/app-update.yml by
+# electron-builder.yml. Trifold sets the feed in code (updateInstaller.ts reads the signed
+# manifest of the release the update check found), so this file only names the cache folder
+# and, once the installer is Authenticode-signed, the publisher electron-updater must see on a
+# downloaded installer before it runs it.
+provider: custom
+updaterCacheDirName: trifold-updater
+# Uncomment once SignPath signing is live (docs/RELEASING.md), with the certificate's subject
+# common name exactly as Windows shows it:
+# publisherName:
+#   - <certificate common name>

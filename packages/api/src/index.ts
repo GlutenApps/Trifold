@@ -343,7 +343,7 @@ export interface BackupFileInfo {
 export interface UpdateStatus {
   /** The running build's version. */
   current: string;
-  /** The daily check is on. */
+  /** The update check is on (at launch, then daily while open). */
   enabled: boolean;
   /** The Library's one-time question was answered. */
   asked: boolean;
@@ -356,6 +356,24 @@ export interface UpdateStatus {
   dismissed: boolean;
   /** The last check's failure, cleared by the next answer. */
   lastError: string | null;
+  /**
+   * How this build updates (ADR 0045): `install` downloads the installer in the background and
+   * installs it when the DM restarts (the installed Windows build); `browser` opens the release
+   * page (macOS, the portable exe, a Store build).
+   */
+  mode: 'install' | 'browser';
+  /** The installer for `available`, in `install` mode; idle otherwise. */
+  download: UpdateDownload;
+}
+
+/** The background download of an update's installer (ADR 0045). */
+export interface UpdateDownload {
+  /** `ready`: downloaded and verified, waiting for Restart to update. */
+  state: 'idle' | 'downloading' | 'ready' | 'failed';
+  /** 0–100 while downloading. */
+  percent: number;
+  /** Why the last download failed; it is tried again with the next check. */
+  error: string | null;
 }
 
 /** The second backup location (ADR 0015). */
@@ -781,14 +799,15 @@ export interface TrifoldApi {
     savesFlushed(): Promise<void>;
   };
   /**
-   * The update check (ADR 0034): opt-in, at most once a day, only ever reads the project's
-   * public releases list, never downloads or installs anything.
+   * The update check (ADR 0034, ADR 0045): opt-in; when on, at launch and once a day after. It
+   * reads the project's public releases list; the installed Windows build then downloads the
+   * signed update in the background and installs it only when the DM restarts to update.
    */
   updates: {
     status(): Promise<UpdateStatus>;
     /**
-     * Turns the daily check on or off and records that the one-time question was answered.
-     * Turning it on checks at once when a check is due.
+     * Turns the check on or off and records that the one-time question was answered. Turning
+     * it on checks at once.
      */
     setEnabled(enabled: boolean): Promise<UpdateStatus>;
     /** Checks now, on or off; the answer also arrives as an `updateStatus` event. */
@@ -797,6 +816,12 @@ export interface TrifoldApi {
     dismiss(): Promise<UpdateStatus>;
     /** Opens the found release's page in the system browser; false when there is none. */
     openDownload(): Promise<boolean>;
+    /**
+     * Restart to update (ADR 0045): runs the usual close flow (flush saves, on-close backup),
+     * starts the downloaded installer and quits; it relaunches Trifold when done. Only ever on
+     * the DM's click. Resolves false, with the console left open, when no installer is ready.
+     */
+    restartToUpdate(): Promise<boolean>;
   };
   library: {
     getInfo(): Promise<LibraryInfo>;
@@ -1211,7 +1236,7 @@ export type ApiNamespace = keyof TrifoldApi;
 /** Every method, by namespace. The preload and the IPC registry iterate this table. */
 export const API_METHODS = {
   app: ['getInfo', 'openSystemPage', 'openExternal', 'savesFlushed'],
-  updates: ['status', 'setEnabled', 'checkNow', 'dismiss', 'openDownload'],
+  updates: ['status', 'setEnabled', 'checkNow', 'dismiss', 'openDownload', 'restartToUpdate'],
   library: ['getInfo', 'chooseFolder', 'open', 'openInExplorer', 'updateSettings'],
   displays: ['list'],
   player: ['open', 'close', 'isOpen'],

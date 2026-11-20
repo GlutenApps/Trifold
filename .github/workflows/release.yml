@@ -4,6 +4,11 @@ name: Release
 # itself (ADR 0006): Windows gets the NSIS installer and the portable exe, macOS a dmg and a zip
 # for the runner's architecture (macos-latest is Apple Silicon; macos-15-intel is x64). The content
 # step is not allowed to fail here: a release without the SRD snapshot is a content-less build.
+#
+# Windows also publishes latest.yml and latest.yml.sig, which installed copies read to update
+# themselves (ADR 0045). The manifest is written and signed after code signing, from the final
+# installer, with the Ed25519 key in the TRIFOLD_UPDATE_SIGNING_KEY secret; the private key exists
+# nowhere else in CI. Everything lands in a draft release that a maintainer publishes by hand.
 on:
   push:
     tags: ['v*']
@@ -32,6 +37,16 @@ jobs:
           if [ "v$version" != "${GITHUB_REF_NAME}" ]; then
             echo "tag ${GITHUB_REF_NAME} does not match package version v$version"; exit 1
           fi
+      - name: Check that the update signing key is set
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          TRIFOLD_UPDATE_SIGNING_KEY: ${{ secrets.TRIFOLD_UPDATE_SIGNING_KEY }}
+        run: |
+          if [ -z "$TRIFOLD_UPDATE_SIGNING_KEY" ]; then
+            echo "::error::The TRIFOLD_UPDATE_SIGNING_KEY secret is not set (docs/RELEASING.md, Update signing key)."
+            exit 1
+          fi
       - run: pnpm install --frozen-lockfile
       - run: pnpm fetch:content
       - run: pnpm check:content
@@ -40,11 +55,39 @@ jobs:
       - run: pnpm build -- --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      # ==========================================================================================
+      # SIGNPATH PLACEHOLDER: Windows code signing is NOT live yet; this step is always skipped.
+      # When the SignPath project is approved (docs/RELEASING.md, Code signing):
+      #   1. upload dist/Trifold-Setup-*.exe and dist/Trifold-Portable-*.exe with
+      #      actions/upload-artifact (give that step `id: unsigned`);
+      #   2. replace this step with signpath/github-action-submit-signing-request (pinned), passing
+      #      api-token: ${{ secrets.SIGNPATH_API_TOKEN }}, organization-id, project-slug,
+      #      signing-policy-slug, artifact-configuration-slug,
+      #      github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }},
+      #      wait-for-completion: true and output-artifact-directory: dist, so the signed exes
+      #      replace the unsigned ones in dist/;
+      #   3. set publisherName in apps/desktop/build/app-update.yml to the certificate's subject
+      #      name, so installed copies also refuse an installer that is not signed by it.
+      # Keep it before the manifest step: signing changes the installer's sha512.
+      # ==========================================================================================
+      - name: Code-sign the Windows exes (SignPath placeholder, not live)
+        if: runner.os == 'Windows' && false
+        shell: bash
+        run: echo "SignPath signing is not set up yet"
+
+      - name: Write and sign the update manifest
+        if: runner.os == 'Windows'
+        env:
+          TRIFOLD_UPDATE_SIGNING_KEY: ${{ secrets.TRIFOLD_UPDATE_SIGNING_KEY }}
+        run: node scripts/update-manifest.mjs dist
       - uses: actions/upload-artifact@v4
         with:
           name: trifold-${{ matrix.os }}
           path: |
             dist/*.exe
+            dist/latest.yml
+            dist/latest.yml.sig
             dist/*.dmg
             dist/*-mac-*.zip
           if-no-files-found: error

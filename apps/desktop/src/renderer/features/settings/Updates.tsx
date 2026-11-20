@@ -1,14 +1,19 @@
 import { useEffect } from 'react';
+import type { UpdateStatus } from '@trifold/api';
 import { landOn } from '../../navigate';
 import { useShellStore } from '../../stores/shellStore';
 import { useUpdateStore } from '../../stores/updateStore';
 import { Icon } from '../shell/icons';
 
 /**
- * The update check's screens (ADR 0034, DESIGN.md §10 Beta 2): the Settings card, the top bar's
- * button when a newer version is out, and the Library's one-time question. Main does the
- * checking; nothing here touches the network. No copy names the release host (CLAUDE.md ground
- * rule 1): it is "the public release list".
+ * The update check's screens (ADR 0034, ADR 0045, DESIGN.md §10 Beta 2): the Settings card, the
+ * top bar's button when a newer version is out or ready to install, and the Library's one-time
+ * question. Main does the checking and downloading; nothing here touches the network. No copy
+ * names the release host (CLAUDE.md ground rule 1): it is "the public release list".
+ *
+ * The installed Windows build (`mode: 'install'`) downloads in the background and installs only
+ * when the DM presses Restart now on the card; the top bar only points there, so a stray click
+ * never closes the app mid-session. Other builds open the release page.
  */
 
 /** Where the top bar's button lands: the Updates card in Settings. */
@@ -25,6 +30,34 @@ export function useUpdateEvents(): void {
 const when = (iso: string) =>
   new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
+/** What the check sends and what happens next, for the card and the one-time question. */
+function whatItDoes(mode: UpdateStatus['mode']): string {
+  return mode === 'install'
+    ? 'It sends only its own version number, never your games. A new version downloads in the background and installs only when you choose Restart now.'
+    : 'It sends only its own version number, never your games, and nothing is downloaded or installed for you.';
+}
+
+/** The status line's words after "You have Trifold x." */
+function statusText(status: UpdateStatus): string {
+  const { available, download } = status;
+  if (status.checking) return 'Checking…';
+  if (available && status.mode === 'install') {
+    switch (download.state) {
+      case 'downloading':
+        return `Downloading Trifold ${available.version}… ${download.percent}%`;
+      case 'ready':
+        return `Trifold ${available.version} is ready to install.`;
+      case 'failed':
+        return `Trifold ${available.version} is out, but the download did not work: ${download.error ?? 'unknown error'}. Trifold will try again.`;
+      default:
+        return `Trifold ${available.version} is out.`;
+    }
+  }
+  if (available) return `Trifold ${available.version} is out.`;
+  if (status.lastCheckAt) return `It is the newest version (checked ${when(status.lastCheckAt)}).`;
+  return 'Not checked yet.';
+}
+
 export function UpdatesCard() {
   const status = useUpdateStore((s) => s.status);
   const error = useUpdateStore((s) => s.error);
@@ -32,8 +65,11 @@ export function UpdatesCard() {
   const checkNow = useUpdateStore((s) => s.checkNow);
   const dismiss = useUpdateStore((s) => s.dismiss);
   const openDownload = useUpdateStore((s) => s.openDownload);
+  const restartToUpdate = useUpdateStore((s) => s.restartToUpdate);
   if (!status) return null;
-  const { available } = status;
+  const { available, download } = status;
+  const installs = status.mode === 'install';
+  const ready = installs && download.state === 'ready';
 
   return (
     <div className="card updates-card" data-nav={UPDATES_NAV_KEY} aria-label="Updates">
@@ -44,22 +80,29 @@ export function UpdatesCard() {
           checked={status.enabled}
           onChange={(e) => void setEnabled(e.target.checked)}
         />
-        Check for new versions once a day
+        Check for new versions
       </label>
       <p className="muted small">
-        Trifold asks its public release list whether a newer version is out. It sends only its own
-        version number, never your games, and nothing is downloaded or installed for you.
+        When Trifold starts, and once a day while it stays open, it asks its public release list
+        whether a newer version is out. {whatItDoes(status.mode)}
       </p>
       <p data-testid="update-status">
-        You have Trifold {status.current}.{' '}
-        {status.checking
-          ? 'Checking…'
-          : available
-            ? `Trifold ${available.version} is out.`
-            : status.lastCheckAt
-              ? `It is the newest version (checked ${when(status.lastCheckAt)}).`
-              : 'Not checked yet.'}
+        You have Trifold {status.current}. {statusText(status)}
       </p>
+      {installs && download.state === 'downloading' && (
+        <progress
+          className="update-progress"
+          max={100}
+          value={download.percent}
+          aria-label={`Downloading Trifold ${available?.version ?? ''}`}
+        />
+      )}
+      {ready && (
+        <p className="muted small">
+          Restarting saves your work and makes the on-close backup, then installs the update and
+          opens Trifold again.
+        </p>
+      )}
       {status.lastError && !status.checking && (
         <p className="muted small" role="status">
           The last check did not work: {status.lastError}.
@@ -71,10 +114,21 @@ export function UpdatesCard() {
         </p>
       )}
       <div className="row">
-        {available && (
+        {ready && (
           <button
             type="button"
             className="btn primary"
+            title="Closes Trifold, installs the update and opens it again"
+            onClick={() => void restartToUpdate()}
+          >
+            <Icon name="refresh" />
+            Restart now
+          </button>
+        )}
+        {available && (!installs || download.state === 'failed') && (
+          <button
+            type="button"
+            className={installs ? 'btn' : 'btn primary'}
             title="Opens the release page in your browser"
             onClick={() => void openDownload()}
           >
@@ -105,25 +159,32 @@ export function UpdatesCard() {
   );
 }
 
-/** The top bar's quiet notice: shown while a newer version is out and not dismissed. */
+/**
+ * The top bar's quiet notice: shown while a newer version is out and not dismissed. Once the
+ * installer is downloaded it reads Restart to update; either way it opens the Updates card.
+ */
 export function UpdateTopBarButton() {
   const status = useUpdateStore((s) => s.status);
   const enterLibrary = useShellStore((s) => s.enterLibrary);
   const available = status?.available;
   if (!available || status.dismissed) return null;
+  const ready = status.mode === 'install' && status.download.state === 'ready';
+  const name = ready
+    ? `Trifold ${available.version} is ready: restart to update`
+    : `Trifold ${available.version} is available`;
   return (
     <button
       type="button"
       className="btn ghost update-available"
-      aria-label={`Trifold ${available.version} is available`}
-      title={`Trifold ${available.version} is available: see Settings › Updates`}
+      aria-label={name}
+      title={`${name}. See Settings › Updates`}
       onClick={() => {
         enterLibrary('settings');
         landOn(UPDATES_NAV_KEY);
       }}
     >
-      <Icon name="bell" />
-      <span className="topbar-label">Update available</span>
+      <Icon name={ready ? 'refresh' : 'bell'} />
+      <span className="topbar-label">{ready ? 'Restart to update' : 'Update available'}</span>
     </button>
   );
 }
@@ -136,9 +197,9 @@ export function UpdatePrompt() {
   return (
     <div className="banner warn wraps update-prompt" role="region" aria-label="Check for updates">
       <span>
-        <strong>Check for new versions of Trifold?</strong> Once a day it can ask its public release
-        list whether a newer version is out. It sends only its own version number, never your games,
-        and you can change this in Settings.
+        <strong>Check for new versions of Trifold?</strong> When it starts, it can ask its public
+        release list whether a newer version is out. {whatItDoes(status.mode)} You can change this
+        in Settings.
       </span>
       <span className="row">
         <button type="button" className="btn primary small" onClick={() => void setEnabled(true)}>

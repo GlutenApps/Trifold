@@ -50,7 +50,7 @@ export const AppConfig = z.object({
    */
   updates: z
     .object({
-      /** The DM turned the daily check on. */
+      /** The DM turned the update check on. */
       enabled: z.boolean().default(false),
       /** The Library's one-time question was answered, either way. */
       asked: z.boolean().default(false),

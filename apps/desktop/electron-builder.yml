@@ -26,6 +26,10 @@ extraResources:
     to: licenses
     filter:
       - '*-OFL.txt'
+  # electron-updater's settings (ADR 0045): the cache folder and, once signing is live, the
+  # publisher name. The updater only runs in the installed Windows build.
+  - from: build/app-update.yml
+    to: app-update.yml
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 win:
   icon: build/icon.ico
@@ -34,6 +38,11 @@ win:
       arch: [x64]
     - target: portable
       arch: [x64]
+# Publishing is off, including the GitHub target electron-builder would infer from the git
+# remote: release.yml uploads the files, and scripts/update-manifest.mjs writes and signs
+# latest.yml once the installer is final (ADR 0045), so nothing here names a host and no
+# generated app-update.yml replaces build/app-update.yml.
+publish: null
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
