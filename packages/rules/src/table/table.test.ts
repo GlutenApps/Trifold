@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fogKey } from '../fog';
+import { mapImageKey } from './view';
 import { isClaimable } from './claimable';
 import { hostAllowed, isPrivateAddress, portsToTry, TABLE_PORTS, tableUrl } from './network';
 import type { Claim, TableSnapshot, TableToken } from './types';
@@ -46,7 +46,7 @@ function snapshot(tokens: TableToken[], fogOn = true): TableSnapshot {
       hasImage: true,
       grid,
       fog,
-      fogKey: fogKey(fog),
+      imageKey: mapImageKey(fog, 'maps/a.webp'),
       tokenStyle: 'engraved',
       tokens,
     },
@@ -159,12 +159,12 @@ describe('viewFor', () => {
     const snap = snapshot([brannocToken(1)]);
     expect(viewFor(snap, claims, 'd1', false).map?.imageUrl).toBeUndefined();
     expect(viewFor(snap, claims, 'd1', true).map?.imageUrl).toBe(
-      `/map/s1/${snap.scene!.fogKey}.jpg`,
+      `/map/s1/${snap.scene!.imageKey}.jpg`,
     );
   });
 
   it('gives a new fog state a new image key', () => {
-    expect(snapshot([], true).scene!.fogKey).not.toBe(snapshot([], false).scene!.fogKey);
+    expect(snapshot([], true).scene!.imageKey).not.toBe(snapshot([], false).scene!.imageKey);
   });
 
   it('shows the owner its stats with no map on the TV', () => {

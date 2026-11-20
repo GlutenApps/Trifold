@@ -5,6 +5,9 @@ import { FogLayer, GridLines, RulerLayer } from '../renderer/features/presenter/
 import { cellCentre, squaresBetween } from '../renderer/features/presenter/ruler';
 import { TokenDisc } from '../renderer/features/presenter/TokenDisc';
 
+/** How long a phone waits before fetching a map picture again after a failed load. */
+const MAP_RETRY_MS = 1500;
+
 /**
  * The live map on a phone (docs/PLAYER-CONNECTOR.md): the fogged image the console drew, the fog
  * shapes over it for clean edges, the grid and the tokens this device may see. One finger on one
@@ -108,23 +111,32 @@ export function MapView({
     setDrag(d);
   };
 
-  // The map picture: a new one (a fog change) replaces the old only once it has loaded, so the
-  // map never goes blank while the console draws and sends it.
+  // The map picture: a new one (a fog change, another background) replaces the old only once it
+  // has loaded, so the map never goes blank while the console draws and sends it. A failed load
+  // tries again after a moment.
   const [shown, setShown] = useState<{ mapId: string; url: string } | null>(null);
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     const url = map.imageUrl;
     if (!url || (shown?.mapId === map.id && shown.url === url)) return;
     let live = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const img = new Image();
     img.onload = () => {
       if (live) setShown({ mapId: map.id, url });
     };
+    img.onerror = () => {
+      if (live) timer = setTimeout(() => setRetry((n) => n + 1), MAP_RETRY_MS);
+    };
     img.src = url;
     return () => {
       live = false;
+      if (timer) clearTimeout(timer);
     };
-  }, [map.id, map.imageUrl, shown]);
+  }, [map.id, map.imageUrl, shown, retry]);
   const imageUrl = shown?.mapId === map.id ? shown.url : undefined;
+  // Loading: the scene has a picture and the one it has now is not on screen yet.
+  const loading = map.hasImage && (!map.imageUrl || imageUrl !== map.imageUrl);
 
   const fit = useCallback(() => {
     const el = box.current;
@@ -352,7 +364,14 @@ export function MapView({
       onContextMenu={(e) => e.preventDefault()}
       aria-label={`Map: ${map.title}`}
       role="img"
+      aria-busy={loading || undefined}
     >
+      {loading && (
+        <div className="pc-map-loading" data-testid="pc-map-loading">
+          <span className="pc-spinner" aria-hidden="true" />
+          Loading map…
+        </div>
+      )}
       {view && (
         <div
           className="pc-map-surface"

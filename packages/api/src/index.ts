@@ -866,7 +866,7 @@ export interface TrifoldApi {
      * The live map image with fog filled black, as a JPEG (PLAYER-CONNECTOR.md, "The fogged map
      * image").
      */
-    setMapImage(sceneId: string, fogKey: string, jpeg: Uint8Array): Promise<void>;
+    setMapImage(sceneId: string, imageKey: string, jpeg: Uint8Array): Promise<void>;
     /** Open, PIN or Approval, saved in the campaign's players.json. */
     setReclaimMode(mode: ReclaimMode): Promise<TableStatus>;
     /** Accept or Deny a device waiting in Approval mode. */

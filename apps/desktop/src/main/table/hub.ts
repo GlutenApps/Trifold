@@ -214,7 +214,7 @@ export class TableHub {
   private clients = new Set<Client>();
   private players: PlayersStore | null = null;
   private snapshot: TableSnapshot | null = null;
-  private mapImage: { sceneId: string; fogKey: string; jpeg: Buffer } | null = null;
+  private mapImage: { sceneId: string; imageKey: string; jpeg: Buffer } | null = null;
   private localName: string | null = null;
   private mdns: TableHubOptions['mdns'];
   private anyConnected = false;
@@ -469,9 +469,9 @@ export class TableHub {
     if (namesChanged) this.emit();
   }
 
-  setMapImage(sceneId: string, fogKey: string, jpeg: Uint8Array): void {
+  setMapImage(sceneId: string, imageKey: string, jpeg: Uint8Array): void {
     if (this.state !== 'on') return;
-    this.mapImage = { sceneId, fogKey, jpeg: Buffer.from(jpeg) };
+    this.mapImage = { sceneId, imageKey, jpeg: Buffer.from(jpeg) };
     this.scheduleBroadcast();
   }
 
@@ -1228,7 +1228,7 @@ export class TableHub {
       !!scene &&
       !!this.mapImage &&
       this.mapImage.sceneId === scene.id &&
-      this.mapImage.fogKey === scene.fogKey
+      this.mapImage.imageKey === scene.imageKey
     );
   }
 
@@ -1277,7 +1277,7 @@ export class TableHub {
       const map = /^\/map\/([^/]+)\/([^/]+)\.jpg$/.exec(path);
       if (map) {
         const img = this.mapImage;
-        if (!img || img.sceneId !== map[1] || img.fogKey !== map[2]) return this.notFound(res);
+        if (!img || img.sceneId !== map[1] || img.imageKey !== map[2]) return this.notFound(res);
         res.writeHead(200, {
           ...common,
           'Content-Type': 'image/jpeg',

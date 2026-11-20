@@ -215,8 +215,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         ctx.table.push(snapshot);
         return Promise.resolve();
       },
-      setMapImage(sceneId, fogKey, jpeg) {
-        ctx.table.setMapImage(sceneId, fogKey, jpeg);
+      setMapImage(sceneId, imageKey, jpeg) {
+        ctx.table.setMapImage(sceneId, imageKey, jpeg);
         return Promise.resolve();
       },
       setReclaimMode(mode) {

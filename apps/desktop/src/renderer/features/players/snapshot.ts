@@ -5,7 +5,7 @@ import {
   type TableToken,
   type TokenStyle,
 } from '@trifold/api';
-import { activeFog, fogKey, isClaimable, type Role } from '@trifold/rules';
+import { activeFog, isClaimable, mapImageKey, type Role } from '@trifold/rules';
 import type {
   CampaignSettings,
   CombatState,
@@ -102,7 +102,7 @@ export function tableScene(input: SnapshotInput): TableSnapshot['scene'] {
       visible: grid.showToPlayers,
     },
     fog: fog ? { enabled: true, shapes: fog.shapes } : null,
-    fogKey: fogKey(fog),
+    imageKey: mapImageKey(fog, liveScene.image?.displayPath),
     tokenStyle: input.campaign.tokenStyle,
     tokens: liveScene.tokens.map((t) => {
       const art = input.artFor(t);

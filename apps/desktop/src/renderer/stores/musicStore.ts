@@ -47,6 +47,11 @@ export interface MusicState {
   muted: boolean;
   /** Repeat the current track (session only); the playlist's own `loop` is saved with it. */
   loopTrack: boolean;
+  /**
+   * A scene's Loop for the playlist it started (session only), over the playlist's saved `loop`;
+   * null follows the playlist. Cleared by any other play and by the loop button.
+   */
+  playlistLoop: boolean | null;
   position: { current: number; duration: number };
   /** Loudness pass: track being measured now, and how many remain. */
   measuring: { trackId: string; remaining: number } | null;
@@ -69,9 +74,20 @@ export interface MusicState {
   addToPlaylist(playlistId: string, trackId: string): Promise<void>;
   removeFromPlaylist(playlistId: string, trackId: string): Promise<void>;
 
-  /** Starts a playlist (crossfading from whatever plays). `ifDifferent` skips a restart of the same one. */
-  playPlaylist(playlistId: string, options?: { ifDifferent?: boolean }): Promise<void>;
-  playTrack(trackId: string, playlistId?: string | null): Promise<void>;
+  /**
+   * Starts a playlist (crossfading from whatever plays). `ifDifferent` skips a restart of the same
+   * one; `loop` overrides the playlist's own loop for this run.
+   */
+  playPlaylist(
+    playlistId: string,
+    options?: { ifDifferent?: boolean; loop?: boolean },
+  ): Promise<void>;
+  /** Plays one track, inside a playlist's order or alone; `loop` repeats it, `ifDifferent` as above. */
+  playTrack(
+    trackId: string,
+    playlistId?: string | null,
+    options?: { ifDifferent?: boolean; loop?: boolean },
+  ): Promise<void>;
   togglePlay(): Promise<void>;
   next(): Promise<void>;
   previous(): Promise<void>;
@@ -105,6 +121,13 @@ export function newPlaylist(name: string): Playlist {
 
 export const useMusicStore = create<MusicState>((set, get) => {
   const fail = (err: unknown) => set({ error: err instanceof Error ? err.message : String(err) });
+  /** Whether the playing playlist loops: a scene's override, else its saved setting. */
+  const playlistLoops = (playlistId: string | null): boolean | undefined => {
+    const override = get().playlistLoop;
+    if (override !== null) return override;
+    return get().playlists.find((p) => p.id === playlistId)?.loop;
+  };
+
   const trackById = (id: string): TrackView | undefined =>
     get().library?.tracks.find((t) => t.id === id);
   const fadeFor = (playlistId: string | null) =>
@@ -129,7 +152,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
       const following = nextIndex({
         order,
         index,
-        loop: get().playlists.find((p) => p.id === playlistId)?.loop ?? true,
+        loop: playlistLoops(playlistId) ?? true,
       });
       if (following !== null && following !== index) return startAt(following);
       return;
@@ -154,8 +177,8 @@ export const useMusicStore = create<MusicState>((set, get) => {
   };
 
   engine.onEnded = () => {
-    const { order, index, playlistId, playlists } = get();
-    const loop = playlists.find((p) => p.id === playlistId)?.loop ?? false;
+    const { order, index, playlistId } = get();
+    const loop = playlistLoops(playlistId) ?? false;
     const following = nextIndex({ order, index, loop });
     if (following === null) {
       set({ playing: false });
@@ -194,6 +217,7 @@ export const useMusicStore = create<MusicState>((set, get) => {
     playing: false,
     muted: false,
     loopTrack: false,
+    playlistLoop: null,
     position: { current: 0, duration: 0 },
     measuring: null,
     source: 'computer',
@@ -356,19 +380,29 @@ export const useMusicStore = create<MusicState>((set, get) => {
       if (get().source === 'phone') return;
       const playlist = get().playlists.find((p) => p.id === playlistId);
       if (!playlist || playlist.trackIds.length === 0) return;
-      if (options?.ifDifferent && get().playlistId === playlistId && get().playing) return;
+      if (options?.ifDifferent && get().playlistId === playlistId && get().playing) {
+        if (options.loop !== undefined) set({ playlistLoop: options.loop });
+        return;
+      }
       const order = buildOrder(playlist.trackIds, playlist.shuffle, null);
       // A new playlist (often a scene or combat change) plays through rather than sticking on
       // its first track.
-      set({ playlistId, order, loopTrack: false });
+      set({ playlistId, order, loopTrack: false, playlistLoop: options?.loop ?? null });
       await startAt(0);
     },
 
-    async playTrack(trackId, playlistId = null) {
+    async playTrack(trackId, playlistId = null, options) {
       if (get().source === 'phone') return;
+      const loopTrack = options?.loop ?? get().loopTrack;
+      const { order: now, index, playing } = get();
+      if (options?.ifDifferent && playing && now[index] === trackId) {
+        set({ loopTrack });
+        engine.setLoop(loopTrack);
+        return;
+      }
       const playlist = playlistId ? get().playlists.find((p) => p.id === playlistId) : undefined;
       const order = playlist ? buildOrder(playlist.trackIds, playlist.shuffle, trackId) : [trackId];
-      set({ playlistId: playlist?.id ?? null, order });
+      set({ playlistId: playlist?.id ?? null, order, loopTrack, playlistLoop: null });
       await startAt(Math.max(0, order.indexOf(trackId)));
     },
 
@@ -441,10 +475,11 @@ export const useMusicStore = create<MusicState>((set, get) => {
       const { loopTrack, playlistId, playlists } = get();
       const playlist = playlists.find((p) => p.id === playlistId) ?? null;
       const next: LoopMode = nextLoopMode(
-        loopMode(loopTrack, playlist?.loop ?? null),
+        loopMode(loopTrack, playlist ? (playlistLoops(playlistId) ?? null) : null),
         playlist !== null,
       );
-      set({ loopTrack: next === 'track' });
+      // The loop button is the DM's own choice: it ends a scene's override and is saved.
+      set({ loopTrack: next === 'track', playlistLoop: null });
       engine.setLoop(next === 'track');
       if (playlist && playlist.loop !== (next !== 'off')) {
         await get().savePlaylist({ ...playlist, loop: next !== 'off' });

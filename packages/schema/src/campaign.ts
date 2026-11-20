@@ -495,8 +495,17 @@ export const Scene = z.object({
     .optional(),
   tokens: z.array(Token).default([]),
   entryMarkers: z.array(EntryMarker).default([]),
+  /**
+   * Music on go-live (DESIGN.md §6.6): a playlist or a single track (one at most), and whether it
+   * loops. Absent `loop`: a playlist follows its own saved setting, a track plays once.
+   */
   audio: z
-    .object({ playlistId: z.string().optional(), ambienceIds: z.array(z.string()).default([]) })
+    .object({
+      playlistId: z.string().optional(),
+      trackId: z.string().optional(),
+      loop: z.boolean().optional(),
+      ambienceIds: z.array(z.string()).default([]),
+    })
     .optional(),
   encounterId: z.string().optional(),
   /** Map and blank-grid scenes: fog of war (ADR 0029). Absent = no fog. */

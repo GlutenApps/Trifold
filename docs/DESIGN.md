@@ -182,7 +182,7 @@ Spell, item, feat, species, background, class, condition and rule records keep t
 `Combatant`: `{ id, templateId?, name, maskedName, revealed, ref, role, initiative, initiativeBonus, dexterity, hp: { current, max, temp }, ac?, saves, damage and condition immunities, resistances and vulnerabilities, conditions: ConditionInstance[], concentrating, counters: Counter[], recharges, deathSaves, dead, hidden, held, isLair, tokenId?, recordId? }`
 `EncounterResult`: `{ endedAt, rounds, xpEarned, casualties, log }`
 
-**Scene**: `{ id, kind: "folder"|"title"|"image"|"map"|"blankGrid", title, subtitle, showTitleOverride: boolean|null, parentId, order, notes, image?: { path, displayPath, width, height }, backgrounds?: { id, name, image }[], activeBackgroundId?, backdrop?: "parchment"|"stone"|"dark", grid?: { cellPx, offsetX, offsetY, color, opacity, showToPlayers }, blank?: { cols, rows }, tokens: Token[], entryMarkers (unused), audio?: { playlistId?, ambienceIds (unused) }, encounterId?, fog?: { enabled, shapes }, playerCamera: { mode: "fitMap"|"fitTokens"|"follow"|"manual", x, y, zoom } }`
+**Scene**: `{ id, kind: "folder"|"title"|"image"|"map"|"blankGrid", title, subtitle, showTitleOverride: boolean|null, parentId, order, notes, image?: { path, displayPath, width, height }, backgrounds?: { id, name, image }[], activeBackgroundId?, backdrop?: "parchment"|"stone"|"dark", grid?: { cellPx, offsetX, offsetY, color, opacity, showToPlayers }, blank?: { cols, rows }, tokens: Token[], entryMarkers (unused), audio?: { playlistId?, trackId?, loop?, ambienceIds (unused) }, encounterId?, fog?: { enabled, shapes }, playerCamera: { mode: "fitMap"|"fitTokens"|"follow"|"manual", x, y, zoom } }`
 
 `backgrounds` are art variants of one map (day and night, say) that share its grid and tokens. Fog shapes are rectangles, polygons or the whole map, each revealing or hiding, applied in order, in map pixels.
 
@@ -300,7 +300,7 @@ The presenter is two pieces: **Scenes**, the scene list in the dock, and the **V
 - *Image:* a full-bleed illustration; no grid or tokens; the player camera fits the image.
 - *Map:* image, grid and tokens. A map can hold several backgrounds (day and night, say) that share its grid and tokens.
 - *Blank grid:* a generated backdrop (parchment, stone or dark) with a grid and tokens, for improvised combat.
-- Any scene can have DM notes, a linked playlist and a linked encounter.
+- Any scene can have DM notes, linked music (a playlist or a single track) and a linked encounter.
 
 **Images.** Import copies the file into `campaigns/<slug>/images/`, stores its size, and makes a display-size version (long edge ≤ 4096 px, JPEG, `<id>.display.jpg`) for the player window. PNG, JPG and WebP are supported.
 
@@ -338,7 +338,7 @@ During a fight, on the map in play (the live map, else the encounter's map), a t
 
 An **Audio source** toggle at the top of the Music tool chooses "This computer" (Trifold's player) or "Phone". Phone pauses Trifold's player and makes its transport, hotkeys and scene links inert, and the live strip shows the phone's name, state and one Connect or Disconnect button in place of the player controls. The choice is remembered per computer.
 
-**Scene linking.** A scene may set a playlist. When a scene with a different playlist is sent, the music crossfades to it. A scene set to "Keep current audio" leaves the music alone.
+**Scene linking.** A scene may link a playlist or a single track, with a **Loop** switch: a looping playlist repeats, one that does not plays through once and stops; a looping track repeats, one that does not plays once. A playlist starts with its own saved loop setting, and the scene's switch overrides it for that scene only, until the DM presses the loop button. When a scene with different music is sent, the music crossfades to it; the same music keeps playing and only takes the scene's loop. A scene set to "Keep current audio" leaves the music alone. Sound effects are not offered.
 
 ### 6.7 Dice and reference
 

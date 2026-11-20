@@ -1,4 +1,4 @@
-import { isRevealed, tokenCentre } from '../fog';
+import { fogKey, isRevealed, tokenCentre, type FogLike } from '../fog';
 import type {
   Claim,
   ReclaimMode,
@@ -19,8 +19,8 @@ import type {
  * path, so a client never learns a file name or the art of something it cannot see.
  */
 export const tablePaths = {
-  map: (sceneId: string, fogKey: string) =>
-    `/map/${encodeURIComponent(sceneId)}/${encodeURIComponent(fogKey)}.jpg`,
+  map: (sceneId: string, imageKey: string) =>
+    `/map/${encodeURIComponent(sceneId)}/${encodeURIComponent(imageKey)}.jpg`,
   tokenArt: (tokenId: string, src: string) =>
     `/t/${encodeURIComponent(tokenId)}/art?v=${shortHash(src)}`,
   screenImage: (sceneId: string, src: string) =>
@@ -39,6 +39,14 @@ export function shortHash(text: string): string {
     h = Math.imul(h, 0x01000193);
   }
   return (h >>> 0).toString(36);
+}
+
+/**
+ * Which map image goes with a scene's state: the picture showing (a scene's backgrounds swap it)
+ * and the fog over it. Either changing gives a new key, so phones fetch the new image.
+ */
+export function mapImageKey(fog: FogLike | null, imagePath: string | undefined): string {
+  return `${fogKey(fog)}-${shortHash(imagePath ?? '')}`;
 }
 
 import { creatureKey, movementLocked, type MovementLocks } from './movement';
@@ -194,7 +202,10 @@ export function viewFor(
         width: scene.width,
         height: scene.height,
         backdrop: scene.backdrop,
-        ...(scene.hasImage && hasImage ? { imageUrl: tablePaths.map(scene.id, scene.fogKey) } : {}),
+        hasImage: scene.hasImage,
+        ...(scene.hasImage && hasImage
+          ? { imageUrl: tablePaths.map(scene.id, scene.imageKey) }
+          : {}),
         grid: scene.grid,
         fog: scene.fog ? scene.fog.shapes : null,
         tokenStyle: scene.tokenStyle,

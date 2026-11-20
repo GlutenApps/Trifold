@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fogKey } from '../fog';
+import { mapImageKey } from './view';
 import { companionsOf, DragLocks, dropProblem, movementLocked, snapToCell } from './movement';
 import type { TableCreature, TableScene, TableToken } from './types';
 import { viewFor } from './view';
@@ -18,7 +18,7 @@ const scene: TableScene = {
   hasImage: false,
   grid,
   fog,
-  fogKey: fogKey(fog),
+  imageKey: mapImageKey(fog, undefined),
   tokenStyle: 'engraved',
   tokens: [],
 };
