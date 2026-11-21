@@ -6,7 +6,17 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { ulid } from 'ulid';
-import { mediaUrl, type CompendiumRow, type LiveRuler } from '@trifold/api';
+import { mediaUrl, type CompendiumRow, type LiveArea, type LiveRuler } from '@trifold/api';
+import {
+  AREA_DEFAULT_FT,
+  AREA_KINDS,
+  areaLabel,
+  areaOutline,
+  areaSquares,
+  snapToCorner,
+  type AreaKind,
+  type AreaShape,
+} from '@trifold/rules';
 import { nextNumberedName, numberedNames } from '@trifold/rules';
 import {
   nowIso,
@@ -31,7 +41,7 @@ import { useArtStore } from '../../stores/artStore';
 import { useShellStore } from '../../stores/shellStore';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { Icon } from '../shell/icons';
-import { FogLayer, GridLines, RulerLayer } from './MapLayer';
+import { AreaLayer, FogLayer, GridLines, RulerLayer } from './MapLayer';
 import { cellAt, cellCentre, rulerLabel, squaresBetween } from './ruler';
 import { tokenArtUrl } from './tokenArt';
 import {
@@ -86,7 +96,7 @@ import {
  * here belong to the editor's modes and pop-ups; `MapEditor` further down has the detail.
  */
 
-type Mode = 'select' | 'align' | 'party' | 'place' | 'fog' | 'ruler';
+type Mode = 'select' | 'align' | 'party' | 'place' | 'fog' | 'ruler' | 'area';
 
 /** A measurement on the console map (Beta 9): from and to as square centres in map pixels. */
 interface Measure {
@@ -216,6 +226,15 @@ export function MapEditor({
   const [ruler, setRuler] = useState<Measure | null>(null);
   /** Where the ruler drag started, in grid cells, while the button is down. */
   const rulerStart = useRef<Point | null>(null);
+  /** The area-shape tool (ADR 0050): which shape and its size, and the shape drawn, kept until
+   * Escape or Clear. */
+  const [areaTool, setAreaTool] = useState<{ kind: AreaKind; sizeFt: number }>({
+    kind: 'cone',
+    sizeFt: AREA_DEFAULT_FT.cone,
+  });
+  const [area, setArea] = useState<AreaShape | null>(null);
+  /** True while the left button aims the shape. */
+  const areaAiming = useRef(false);
   /** How far the token being dragged has moved, shown only during the drag. */
   const [tokenMeasure, setTokenMeasure] = useState<Measure | null>(null);
   const drag = useRef<{
@@ -571,6 +590,10 @@ export function MapEditor({
       onRulerDown(e);
       return;
     }
+    if (mode === 'area') {
+      onAreaDown(e);
+      return;
+    }
     if (e.button === 2) return;
     setMenu(null);
     const at = mapPoint(e);
@@ -634,7 +657,28 @@ export function MapEditor({
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
+  /**
+   * Area mode (ADR 0050): the left button sets the point of origin on the nearest grid corner and
+   * the drag aims the shape; right or middle pans.
+   */
+  const onAreaDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    setMenu(null);
+    if (e.button !== 0) {
+      pan.current = { startX: e.clientX, startY: e.clientY, camX: cam.x, camY: cam.y };
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      return;
+    }
+    const origin = snapToCorner(mapPoint(e), grid);
+    setArea({ ...areaTool, origin, aim: mapPoint(e) });
+    areaAiming.current = true;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
   const onBackgroundMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (mode === 'area' && areaAiming.current && area && !pan.current) {
+      setArea({ ...area, aim: mapPoint(e) });
+      return;
+    }
     if (mode === 'ruler' && rulerStart.current && !pan.current) {
       const start = rulerStart.current;
       const cell = cellAt(mapPoint(e), grid);
@@ -664,6 +708,7 @@ export function MapEditor({
   const onBackgroundUp = () => {
     pan.current = null;
     rulerStart.current = null;
+    areaAiming.current = false;
     if (fogDrag) {
       const r = dragRect(fogDrag.a, fogDrag.b, fogDrag.free ? null : fogGrid);
       // A click without a drag reveals one cell on a grid, nothing without one.
@@ -1070,7 +1115,7 @@ export function MapEditor({
       ? pan.current
         ? 'grabbing'
         : 'grab'
-      : mode === 'align' || mode === 'fog' || mode === 'ruler'
+      : mode === 'align' || mode === 'fog' || mode === 'ruler' || mode === 'area'
         ? 'crosshair'
         : 'copy';
 
@@ -1105,6 +1150,25 @@ export function MapEditor({
     setFogDrag(null);
     setRuler(null);
     rulerStart.current = null;
+    setArea(null);
+    areaAiming.current = false;
+  };
+  const toggleAreaMode = () => {
+    if (mode === 'area') {
+      cancelMode();
+      return;
+    }
+    cancelMode();
+    closePop();
+    setMode('area');
+    containerRef.current?.focus();
+  };
+  const toggleAreaRef = useRef(toggleAreaMode);
+  toggleAreaRef.current = toggleAreaMode;
+  /** A new shape or size reshapes the one drawn, from the same origin and aim. */
+  const pickArea = (next: { kind: AreaKind; sizeFt: number }) => {
+    setAreaTool(next);
+    if (area) setArea({ ...area, ...next });
   };
   const toggleRulerMode = () => {
     if (mode === 'ruler') {
@@ -1139,6 +1203,27 @@ export function MapEditor({
   }, [liveRulerKey, setLiveRuler]);
   // Leaving the map takes its ruler off the TV.
   useEffect(() => () => setLiveRuler(null), [setLiveRuler]);
+
+  // ---------- area shapes on the TV and phones (ADR 0050) ----------
+  const areaDrawn = area
+    ? {
+        label: areaLabel(area.kind, area.sizeFt),
+        outline: areaOutline(area, grid),
+        squares: areaSquares(area, grid, size),
+      }
+    : null;
+  const setLiveArea = usePresenterStore((s) => s.setArea);
+  // Like the ruler, a shape whose point of origin is under fog stays off the TV and phones; the
+  // squares it covers under fog are hidden there anyway.
+  const liveArea: LiveArea | null =
+    areaDrawn && area && liveSceneId === scene.id && isRevealed(activeFog(scene.fog), area.origin)
+      ? { sceneId: scene.id, ...areaDrawn }
+      : null;
+  const liveAreaKey = JSON.stringify(liveArea);
+  useEffect(() => {
+    setLiveArea(liveAreaKey === 'null' ? null : (JSON.parse(liveAreaKey) as LiveArea));
+  }, [liveAreaKey, setLiveArea]);
+  useEffect(() => () => setLiveArea(null), [setLiveArea]);
   const toggleFogMode = () => {
     if (mode === 'fog') {
       cancelMode();
@@ -1163,6 +1248,18 @@ export function MapEditor({
         // A parked (hidden) panel stays mounted; only the map on screen answers.
         run: () => {
           if (containerRef.current?.getClientRects().length) toggleFogRef.current();
+        },
+      }),
+    [],
+  );
+  useEffect(
+    () =>
+      registerHotkey({
+        id: 'map.area',
+        combo: 'S',
+        description: 'Area shapes (cone, sphere, cube, line) on the map',
+        run: () => {
+          if (containerRef.current?.getClientRects().length) toggleAreaRef.current();
         },
       }),
     [],
@@ -1222,6 +1319,16 @@ export function MapEditor({
           onClick={toggleRulerMode}
         >
           <Icon name="ruler" />
+        </button>
+        <button
+          type="button"
+          className={`chrome-btn${mode === 'area' ? ' on' : ''}`}
+          aria-pressed={mode === 'area'}
+          aria-label="Area shapes"
+          title={`Area shapes: a cone, sphere, cube or line to see what an effect covers; the TV and phones show it too (${hk('S')})`}
+          onClick={toggleAreaMode}
+        >
+          <Icon name="area" />
         </button>
 
         {/* Map setup: grid and backgrounds */}
@@ -1733,6 +1840,12 @@ export function MapEditor({
             setRuler(null);
             return;
           }
+          // The same for a shape: the first Escape clears it, the next leaves the tool.
+          if (e.key === 'Escape' && mode === 'area' && area) {
+            e.stopPropagation();
+            setArea(null);
+            return;
+          }
           if (e.key === 'Escape') {
             cancelMode();
             setMenu(null);
@@ -1764,6 +1877,15 @@ export function MapEditor({
             />
           )}
           <GridLines width={size.width} height={size.height} grid={grid} />
+          {areaDrawn && (
+            <AreaLayer
+              width={size.width}
+              height={size.height}
+              grid={grid}
+              area={areaDrawn}
+              zoom={cam.zoom}
+            />
+          )}
           {fog.enabled && (
             <FogLayer
               dm
@@ -2141,8 +2263,61 @@ export function MapEditor({
         )}
       </div>
 
-      <div className={`map-context${mode === 'fog' ? ' fog-context' : ''}`}>
-        {mode === 'fog' ? (
+      <div className={`map-context${mode === 'fog' || mode === 'area' ? ' fog-context' : ''}`}>
+        {mode === 'area' ? (
+          <div className="fog-tools" role="toolbar" aria-label="Area tools">
+            <span className="seg" role="group" aria-label="Area shape">
+              {AREA_KINDS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  className="btn small"
+                  aria-pressed={areaTool.kind === k}
+                  onClick={() => pickArea({ kind: k, sizeFt: AREA_DEFAULT_FT[k] })}
+                >
+                  {k[0]!.toUpperCase() + k.slice(1)}
+                </button>
+              ))}
+            </span>
+            <label className="field inline">
+              {areaTool.kind === 'sphere' ? 'Radius' : areaTool.kind === 'cube' ? 'Side' : 'Length'}
+              <input
+                type="number"
+                className="narrow"
+                aria-label="Size in feet"
+                min={5}
+                max={500}
+                step={5}
+                value={areaTool.sizeFt}
+                onChange={(e) =>
+                  pickArea({
+                    ...areaTool,
+                    sizeFt: Math.max(5, Math.min(500, Math.round(Number(e.target.value) || 5))),
+                  })
+                }
+              />
+              ft
+            </label>
+            <p className="muted small fog-hint" role="status" data-testid="area-hint">
+              {areaDrawn
+                ? `${areaDrawn.label}: ${areaDrawn.squares.length} square${areaDrawn.squares.length === 1 ? '' : 's'}. Drag again to move it; Escape clears.`
+                : areaTool.kind === 'sphere'
+                  ? 'Click where it centres (it snaps to a grid corner). Right-drag pans.'
+                  : 'Drag from the point of origin to aim it. Right-drag pans.'}
+            </p>
+            <button
+              type="button"
+              className="btn small"
+              disabled={!area}
+              onClick={() => setArea(null)}
+            >
+              Clear
+            </button>
+            <button type="button" className="btn small" onClick={cancelMode}>
+              Done
+            </button>
+          </div>
+        ) : mode === 'fog' ? (
           <div className="fog-tools" role="toolbar" aria-label="Fog tools">
             <label className="check" title="Off shows the players the whole map; your shapes stay">
               <input

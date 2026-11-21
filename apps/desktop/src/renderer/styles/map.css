@@ -865,3 +865,35 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Area shapes (ADR 0050): the covered squares filled, the outline in the ruler's colour. */
+.area-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.area-square {
+  fill: var(--area-fill);
+  stroke: var(--ruler);
+  stroke-width: 1;
+  stroke-opacity: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.area-outline {
+  fill: none;
+  stroke: var(--ruler);
+  stroke-width: 3;
+  stroke-dasharray: 10 6;
+  vector-effect: non-scaling-stroke;
+}
+
+.area-origin {
+  fill: var(--ruler);
+  stroke: var(--ruler-casing);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}

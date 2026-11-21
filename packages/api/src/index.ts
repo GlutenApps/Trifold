@@ -1,3 +1,4 @@
+import type { AreaOutline } from '@trifold/rules';
 import type {
   Adventure,
   Campaign,
@@ -274,6 +275,8 @@ export interface PresenterState {
    * may see is sent: never one that starts or ends under fog, nor one on a hidden token.
    */
   ruler?: LiveRuler | null;
+  /** The area shape the DM drew on the live map (ADR 0050), or null. */
+  area?: LiveArea | null;
   /**
    * The player connector's join code on the TV (ADR 0043), while Show join code on TV is
    * ticked: the address the QR encodes (always the IP) and the local name, when there is one.
@@ -281,6 +284,18 @@ export interface PresenterState {
   joinCode?: { url: string; localUrl: string | null } | null;
   /** Milliseconds since epoch; lets the player ignore stale updates. */
   updatedAt: number;
+}
+
+/**
+ * An area shape on the live map (ADR 0050), worked out by the console so every screen draws the
+ * same: its outline in map pixels, the squares it covers (cell indices, at least half inside)
+ * and its reading ("15-ft cone"). Visual only: it selects nothing.
+ */
+export interface LiveArea {
+  sceneId: string;
+  label: string;
+  outline: AreaOutline;
+  squares: Array<{ x: number; y: number }>;
 }
 
 /** A measurement on the live map: a line in map pixels and its length. */

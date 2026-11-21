@@ -78,7 +78,12 @@ export function PlayerScreen() {
             />
           )}
           {(scene.kind === 'map' || scene.kind === 'blankGrid') && (
-            <MapLayer scene={scene} combat={combat} ruler={state.ruler ?? null} />
+            <MapLayer
+              scene={scene}
+              combat={combat}
+              ruler={state.ruler ?? null}
+              area={state.area ?? null}
+            />
           )}
         </div>
       )}

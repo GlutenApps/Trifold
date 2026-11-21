@@ -215,6 +215,7 @@ export function viewFor(
           : {}),
         grid: scene.grid,
         fog: scene.fog ? scene.fog.shapes : null,
+        ...(scene.area ? { area: scene.area } : {}),
         tokenStyle: scene.tokenStyle,
         tokens,
       }

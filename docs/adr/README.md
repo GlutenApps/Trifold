@@ -54,6 +54,7 @@ An architecture decision record (ADR) is a short file about one choice that refi
 | [0047](0047-hordes.md) | Each creature rolls its own initiative (group initiative is gone); Horde on a row makes several of one creature one combatant with one token, one turn, pooled HP, damage per member standing, and the CR its members' XP adds up to. |
 | [0044](0044-who-from-the-party-fights.md) | The fight is whoever is here: the party on the map, the PCs the encounter names, or the whole party when that leaves nobody. |
 | [0048](0048-cr-follows-the-parts.md) | The CR scaler ticks every part, an extra attack too (each attack its own roll), and the CR the monster ends at follows what is ticked, blended by weight; quick scale keeps the number of attacks. |
+| [0050](0050-area-shapes.md) | Area shapes on the map (`S`): the DM's cone, sphere, cube or line, squares at least half inside shaded, visual only; the TV and phones show it under the fog, not when its origin is fogged. |
 
 ## Decision log
 

@@ -757,6 +757,90 @@ describe('MapEditor: movement ruler (Beta 9)', () => {
   });
 });
 
+describe('MapEditor: area shapes (ADR 0050)', () => {
+  beforeEach(() => {
+    latest = blank;
+    useCampaignStore.setState({
+      current: {
+        campaign: { settings: {} },
+        pcs: [],
+        encounters: [],
+        scenes: [blank],
+      } as unknown as CampaignBundle,
+    });
+    useCombatStore.setState({ encounterId: null, state: null });
+    // The scene is live, so the shape mirrors to the TV and phones.
+    usePresenterStore.setState((s) => ({
+      state: { ...s.state, scene: { kind: 'blankGrid', id: 's1' } as never, area: null },
+    }));
+  });
+
+  it('draws a cube from its origin, shades its squares, shows it on the TV, and Escape clears it', async () => {
+    render(<Harness />);
+    const canvas = screen.getByTestId('map-canvas');
+    await userEvent.click(screen.getByRole('button', { name: 'Area shapes' }));
+    const tools = screen.getByRole('toolbar', { name: 'Area tools' });
+    await userEvent.click(within(tools).getByRole('button', { name: 'Cube' }));
+    expect(within(tools).getByLabelText('Size in feet')).toHaveValue(10);
+
+    // Client px × 4 = map px; 70 px squares. Origin on the corner (70, 70), aimed right: the
+    // 10-ft cube spans x 70–210 and y 0–140, which is 4 whole squares.
+    fireEvent.pointerDown(canvas, { button: 0, clientX: 17.5, clientY: 17.5 });
+    fireEvent.pointerMove(canvas, { clientX: 52.5, clientY: 17.5 });
+    fireEvent.pointerUp(canvas, { clientX: 52.5, clientY: 17.5 });
+    expect(screen.getByTestId('area-label')).toHaveTextContent('10-ft cube');
+    expect(screen.getByTestId('area-hint')).toHaveTextContent('10-ft cube: 4 squares');
+    await waitFor(() =>
+      expect(usePresenterStore.getState().state.area).toMatchObject({
+        sceneId: 's1',
+        label: '10-ft cube',
+        squares: expect.arrayContaining([
+          { x: 1, y: 0 },
+          { x: 2, y: 0 },
+          { x: 1, y: 1 },
+          { x: 2, y: 1 },
+        ]),
+      }),
+    );
+    expect(usePresenterStore.getState().state.area!.squares).toHaveLength(4);
+
+    // A bigger size reshapes the one drawn.
+    fireEvent.change(within(tools).getByLabelText('Size in feet'), { target: { value: '20' } });
+    expect(screen.getByTestId('area-label')).toHaveTextContent('20-ft cube');
+
+    fireEvent.keyDown(canvas, { key: 'Escape' });
+    expect(screen.queryByTestId('area-label')).toBeNull();
+    await waitFor(() => expect(usePresenterStore.getState().state.area).toBeNull());
+    expect(screen.getByRole('button', { name: 'Area shapes' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    fireEvent.keyDown(canvas, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Area shapes' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+  it('keeps a shape whose origin is under fog off the TV, though the DM sees it', async () => {
+    const fogged: Scene = {
+      ...blank,
+      fog: {
+        enabled: true,
+        shapes: [{ id: 'r', mode: 'reveal', kind: 'rect', x: 0, y: 0, w: 140, h: 140 }],
+      },
+    };
+    render(<Harness initial={fogged} />);
+    const canvas = screen.getByTestId('map-canvas');
+    await userEvent.click(screen.getByRole('button', { name: 'Area shapes' }));
+    // Origin on the corner (280, 280), outside the revealed 140 × 140.
+    fireEvent.pointerDown(canvas, { button: 0, clientX: 70, clientY: 70 });
+    fireEvent.pointerMove(canvas, { clientX: 105, clientY: 70 });
+    fireEvent.pointerUp(canvas, { clientX: 105, clientY: 70 });
+    expect(screen.getByTestId('area-label')).toHaveTextContent('15-ft cone');
+    await waitFor(() => expect(usePresenterStore.getState().state.area ?? null).toBeNull());
+  });
+});
+
 describe('MapEditor: token art (ADR 0033)', () => {
   const goblin: Token = {
     ...wolf,

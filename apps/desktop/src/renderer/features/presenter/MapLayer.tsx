@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import type { CombatSummary, LiveRuler, MapScene } from '@trifold/api';
+import type { CombatSummary, LiveArea, LiveRuler, MapScene } from '@trifold/api';
 import type { FogShape } from '@trifold/schema';
 import { svgPoints } from './fog';
 import { rulerLabel } from './ruler';
@@ -154,6 +154,61 @@ export function RulerLayer({
   );
 }
 
+/**
+ * An area shape (ADR 0050) in map pixels: the squares it covers shaded, its outline over them and
+ * its reading at the origin. Drawn under the fog on the TV and phones, so fogged squares stay
+ * hidden; it selects nothing.
+ */
+export function AreaLayer({
+  width,
+  height,
+  grid,
+  area,
+  zoom,
+}: {
+  width: number;
+  height: number;
+  grid: { cellPx: number; offsetX: number; offsetY: number };
+  area: Pick<LiveArea, 'label' | 'outline' | 'squares'>;
+  zoom: number;
+}) {
+  const k = 1 / (zoom || 1);
+  const o = area.outline;
+  const at = o.kind === 'circle' ? { x: o.cx, y: o.cy } : o.points[0]!;
+  return (
+    <>
+      <svg className="area-layer" width={width} height={height} aria-hidden="true">
+        {area.squares.map((c) => (
+          <rect
+            key={`${c.x},${c.y}`}
+            className="area-square"
+            x={grid.offsetX + c.x * grid.cellPx}
+            y={grid.offsetY + c.y * grid.cellPx}
+            width={grid.cellPx}
+            height={grid.cellPx}
+          />
+        ))}
+        {o.kind === 'circle' ? (
+          <circle className="area-outline" cx={o.cx} cy={o.cy} r={o.r} />
+        ) : (
+          <polygon
+            className="area-outline"
+            points={o.points.map((p) => `${p.x},${p.y}`).join(' ')}
+          />
+        )}
+        <circle className="area-origin" cx={at.x} cy={at.y} r={4 * k} />
+      </svg>
+      <div
+        className="ruler-label area-label"
+        data-testid="area-label"
+        style={{ left: at.x, top: at.y, transform: `scale(${k}) translate(-50%, -140%)` }}
+      >
+        {area.label}
+      </div>
+    </>
+  );
+}
+
 const FADE_MS = 900;
 
 /**
@@ -209,11 +264,14 @@ export function MapLayer({
   scene,
   combat,
   ruler = null,
+  area = null,
 }: {
   scene: MapScene;
   combat: CombatSummary | null;
   /** The DM's movement ruler on this map, when the players may see it (Beta 9). */
   ruler?: LiveRuler | null;
+  /** The DM's area shape on this map (ADR 0050). */
+  area?: LiveArea | null;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
@@ -272,6 +330,15 @@ export function MapLayer({
         )}
         {scene.grid.visible && (
           <GridLines width={scene.width} height={scene.height} grid={scene.grid} />
+        )}
+        {area && area.sceneId === scene.id && (
+          <AreaLayer
+            width={scene.width}
+            height={scene.height}
+            grid={scene.grid}
+            area={area}
+            zoom={scale}
+          />
         )}
         {scene.fog && (
           <FogLayer width={scene.width} height={scene.height} shapes={scene.fog.shapes} />

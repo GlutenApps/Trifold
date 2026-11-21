@@ -152,7 +152,7 @@ Drag to pan and use the wheel to zoom; this is your view, not the players'. The 
 - **Camera**: the dashed box the TV shows, set with **Fit map**, **Fit tokens**, **Follow active** or **Use my view**.
 - **Player characters**: **Place whole party**, then click the map.
 - **Creatures**: your campaign's NPCs at the top, one token each, starting neutral; then a compendium search to place any creature, or a marker token.
-- **Ruler** and **Fog of war**, described below.
+- **Ruler**, **Area shapes** and **Fog of war**, described below.
 
 **Tokens** snap to the grid; hold Alt for free placement, and Delete removes the selected one. A second creature of the same name added to the map is numbered (Goblin 2). The inspector sets label, role and size, masks or reveals the name (players see the creature's type until you reveal it), hides the token, marks it dead and sets its art.
 
@@ -161,6 +161,8 @@ Drag to pan and use the wheel to zoom; this is your view, not the players'. The 
 **Library › Images** lists every creature, PC and NPC that can be a token with its art, so you can see what still needs some. Find by name, filter by kind, type, source or campaign, or tick **Needs art**. Each row adds, replaces or removes its art. **Add from folder…** matches image files to creatures by name (`goblin-warrior.png`, `Owlbear token 02.png`), shows what matched and what did not, and adds them; art already set is kept unless you tick **Replace art that is already set**.
 
 **Measuring.** **Ruler** in the map toolbar (`R`): drag from one square to another and the reading shows beside the end, such as *6 squares · 30 ft*. Every square counts as 5 ft, diagonals too. The reading stays until you drag again or press Escape, and a second Escape puts the ruler away. Right-drag pans while you measure. Dragging a token shows how far it has moved since you picked it up. When the map is on the TV, the players see the same line and reading, but never one that starts or ends under fog or that moves a hidden token.
+
+**Area shapes.** **Area shapes** in the map toolbar (`S`) shows what an effect would cover. Pick **Cone**, **Sphere**, **Cube** or **Line** and its size in feet, then drag from the point of origin to aim it (it starts on the nearest grid corner; a sphere centres there). The squares it covers are shaded, a square counting when at least half of it is inside, as the 2024 rules suggest for grids, and the bar says how many. It's only a picture: nothing is selected or damaged. The TV and phones show it too, under the fog, unless its origin is under fog. Escape or **Clear** takes it away.
 
 **Fog of war.** **Fog of war** in the map toolbar (`F`) opens the fog bar under the map. Tick **Fog on** to cover the whole map on the TV; you still see it, under a light hatched mist. Pick **Reveal** or **Hide**, then a **Rectangle** (drag across the map; on a grid it takes whole cells, and Alt draws freely) or a **Polygon** (click its corners; click the first corner again, double-click or press Enter to finish; Backspace drops a corner and Escape drops the shape). **Reveal all** and **Hide all** cover the whole map, and **Undo** (`Ctrl+Z` while the bar is open) steps back. Right-drag pans while you draw. Tokens whose centre is under fog do not appear on the TV at all, and the player camera ignores them, as it does tokens you have hidden. Untick **Fog on** to show the whole map again; your shapes are kept for next time. **Done** closes the bar.
 
@@ -309,6 +311,7 @@ Ctrl means the Command key on macOS, and Alt means Option. Keys without Ctrl or 
 | Scenes      | Send the previous or next scene                                   | `Alt+Up`, `Alt+Down`                           |
 | Scenes      | Send the parent scene, or the first child scene                   | `Alt+Left`, `Alt+Right`                        |
 | Map         | Movement ruler                                                    | `R`                                            |
+| Map         | Area shapes (cone, sphere, cube, line)                            | `S`                                            |
 | Map         | Fog of war tools                                                  | `F`                                            |
 | Map         | Undo the last fog change (while the fog bar is open)              | `Ctrl+Z`                                       |
 | Combat      | Next turn                                                         | `N`                                            |
