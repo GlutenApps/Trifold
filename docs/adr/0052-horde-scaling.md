@@ -100,7 +100,6 @@ creature up to CR 5 and fought them against parties of four. It found:
 - **Hordes last longer** than single monsters of the same CR: about 4.3 rounds against 3.3.
   That is the cost of pooled hit points, and area effects only partly make up for it.
 - **A horde is still chosen in the builder** and cannot be split mid-fight (ADR 0047).
-- **Some SRD 5.2 creatures have no attack button** in the tracker (Rat, Bat, Cat and about 30
-  others). Their attack text reads "1 Piercing damage" with no "Hit:", or "+5 (with Advantage
-  if…)", and the importer does not read it. That gap is older than this ADR. Until it is fixed,
-  the DM rolls those creatures' attacks by hand.
+- **The swarm bite needs the creature's attack button.** SRD 5.2 writes the Rat's and about 30
+  other tiny creatures' attacks without "Hit:"; the importer reads that wording since the
+  attack-text fix (PR #63), so their hordes roll swarm bites from the tracker.
