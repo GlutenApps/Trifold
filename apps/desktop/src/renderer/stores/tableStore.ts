@@ -231,7 +231,9 @@ export function installTableSync(): () => void {
         s.moving !== prev.moving ||
         s.state.scene !== prev.state.scene ||
         s.state.breakScreen !== prev.state.breakScreen ||
-        s.state.blackout !== prev.state.blackout
+        s.state.blackout !== prev.state.blackout ||
+        // Going live or ending it shows or hides the table on phones (ADR 0046).
+        s.state.live !== prev.state.live
       ) {
         schedule();
       }

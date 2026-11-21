@@ -245,6 +245,12 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await expect(phone.getByTestId('pc-map-loading')).toHaveCount(0);
     await expect(pop.getByText('Smoke phone')).toBeVisible();
     await expect(pop.getByText('Brannoc Hale')).toBeVisible();
+    // (The strip closes the pop-up.) End live hides the table on phones and Go live brings it back (ADR 0046).
+    const liveStrip = page.getByTestId('live-strip');
+    await liveStrip.getByRole('button', { name: 'End live (tray)' }).click();
+    await expect(phone.getByTestId('pc-waiting')).toHaveText('Waiting for the DM to go live.');
+    await liveStrip.getByRole('button', { name: 'Go live (tray)' }).click();
+    await expect(phone.locator('.pc-map-art')).toBeVisible({ timeout: 15_000 });
 
     // A reload reconnects with the stored token, straight to Brannoc.
     await phone.reload();
