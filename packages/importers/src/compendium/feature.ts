@@ -73,19 +73,24 @@ export function buildFeature(node: XmlNode, ctx: NormalizeContext): Feature {
 
   if (feature.attacks.length === 0 && triples.length === 0) {
     for (const a of textAttacks) {
-      feature.attacks.push({
-        label: parsed.displayName,
-        toHit: a.toHit,
-        damage: a.damage,
-        damageType: a.damageType,
-        ...(a.reach ? { reach: a.reach } : {}),
-        ...(a.range ? { range: a.range } : {}),
-        extraDamage: a.extraDamage,
-      });
+      feature.attacks.push(attackFromText(parsed.displayName, a));
     }
   }
 
   return feature;
+}
+
+/** An attack read from the text alone; one that deals no damage keeps just its to-hit. */
+export function attackFromText(label: string, a: TextAttack): Attack {
+  return {
+    label,
+    toHit: a.toHit,
+    ...(a.damage ? { damage: a.damage } : {}),
+    ...(a.damageType ? { damageType: a.damageType } : {}),
+    ...(a.reach ? { reach: a.reach } : {}),
+    ...(a.range ? { range: a.range } : {}),
+    extraDamage: a.extraDamage,
+  };
 }
 
 const TYPE_LABEL = /^([A-Za-z]+) damage$/i;
@@ -96,14 +101,14 @@ function mergeAttack(
 ): Attack {
   const attack: Attack = { label: triple.label, extraDamage: [] };
   if (triple.damage) attack.damage = triple.damage;
-  else if (fromText) attack.damage = fromText.damage;
+  else if (fromText?.damage) attack.damage = fromText.damage;
 
   if (triple.toHit !== undefined) attack.toHit = triple.toHit;
   else if (fromText) attack.toHit = fromText.toHit;
 
   const labelType = TYPE_LABEL.exec(triple.label)?.[1];
   if (labelType) attack.damageType = labelType.toLowerCase();
-  else if (fromText) attack.damageType = fromText.damageType;
+  else if (fromText?.damageType) attack.damageType = fromText.damageType;
 
   if (fromText) {
     if (fromText.reach) attack.reach = fromText.reach;
