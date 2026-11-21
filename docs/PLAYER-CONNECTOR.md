@@ -274,6 +274,11 @@ chosen in their target chips: the character first, then each companion in play.
 - **Move:** "Drag the token, or tap where it should go." With Move open, a tap on the map sends
   the chosen token there through the same grab and drop as a drag. On a phone in portrait, Move
   sits under the map with Cancel and Done. "Movement locked by the DM" shows when it is.
+  **Move | Measure** at the top switches to measuring: a one-finger drag on the map (from a token
+  or any square) draws a ruler from the square it starts on, on that phone only. Nothing is sent,
+  so the TV and the DM never see it; two fingers still zoom. It stays until the next drag,
+  **Clear** or leaving Measure, works when movement is locked or the character has no token, and
+  Move is the default each time the tool opens.
 
 **Initiative.** When the loaded fight is waiting for a claimed character's initiative, a card
 with one number box and Submit floats over the top of the map (see

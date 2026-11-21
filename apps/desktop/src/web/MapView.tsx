@@ -68,6 +68,12 @@ const PREVIEW_MS = 100;
 
 const rounded = (p: { x: number; y: number }) => ({ x: Math.round(p.x), y: Math.round(p.y) });
 
+/** A measurement on this phone only (Move's Measure): from one square to another, in cells. */
+export interface MeasureLine {
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+}
+
 export function MapView({
   map,
   selectedTokenId,
@@ -78,6 +84,7 @@ export function MapView({
   fullScreen,
   onFullScreen,
   overlay,
+  measure,
 }: {
   map: ClientMap;
   selectedTokenId: string | null;
@@ -91,10 +98,16 @@ export function MapView({
   onFullScreen?: () => void;
   /** Cards and banners floating over the map (initiative, Move). */
   overlay?: React.ReactNode;
+  /**
+   * Move's Measure is on: a one-finger drag draws a ruler on this phone only, from the square
+   * it starts on; nothing is sent. Two fingers still zoom.
+   */
+  measure?: { line: MeasureLine | null; onChange(line: MeasureLine | null): void };
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const measuring = useRef<number | null>(null);
   const gesture = useRef<{ dist: number; mid: { x: number; y: number }; moved: boolean } | null>(
     null,
   );
@@ -214,10 +227,27 @@ export function MapView({
   const shownAt = (t: Pick<ClientToken, 'id' | 'x' | 'y'>) =>
     drag?.tokenId === t.id ? drag.at : plan?.tokenId === t.id ? plan.at : { x: t.x, y: t.y };
 
+  /** The square under a screen point. */
+  const squareAt = (p: { x: number; y: number }) => {
+    const c = toCells(p);
+    return { x: Math.floor(c.x), y: Math.floor(c.y) };
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
     box.current?.setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, local(e));
     const pts = [...pointers.current.values()];
+    // Measure: one finger draws the ruler from its square; a second finger turns it into a pinch.
+    if (measure && view) {
+      if (pts.length === 1) {
+        const at = squareAt(local(e));
+        measuring.current = e.pointerId;
+        measure.onChange({ from: at, to: at });
+        gesture.current = null;
+        return;
+      }
+      measuring.current = null;
+    }
     // A second finger is a pinch: a drag in progress stops where it was (the plan stays).
     if (pts.length > 1 && dragRef.current) setDragBoth(null);
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-token-id]');
@@ -250,6 +280,13 @@ export function MapView({
   const onPointerMove = (e: React.PointerEvent) => {
     if (!pointers.current.has(e.pointerId)) return;
     pointers.current.set(e.pointerId, local(e));
+    if (measure?.line && measuring.current === e.pointerId) {
+      const to = squareAt(local(e));
+      if (to.x !== measure.line.to.x || to.y !== measure.line.to.y) {
+        measure.onChange({ from: measure.line.from, to });
+      }
+      return;
+    }
     const d = dragRef.current;
     if (d && d.pointerId === e.pointerId) {
       const cells = toCells(local(e));
@@ -285,6 +322,11 @@ export function MapView({
   const onPointerUp = (e: React.PointerEvent) => {
     const d = dragRef.current;
     pointers.current.delete(e.pointerId);
+    if (measuring.current === e.pointerId) {
+      // The ruler stays until the next drag, Clear or leaving Measure.
+      measuring.current = null;
+      return;
+    }
     if (d && d.pointerId === e.pointerId) {
       setDragBoth(null);
       if (!d.moved) onSelectToken(d.tokenId);
@@ -403,6 +445,18 @@ export function MapView({
               height={map.height}
               shapes={map.fog as unknown as FogShape[]}
             />
+          )}
+          {measure?.line && view && squaresBetween(measure.line.from, measure.line.to) > 0 && (
+            <div className="pc-measure" data-testid="pc-measure">
+              <RulerLayer
+                width={map.width}
+                height={map.height}
+                from={cellCentre(measure.line.from, map.grid, 1)}
+                to={cellCentre(measure.line.to, map.grid, 1)}
+                squares={squaresBetween(measure.line.from, measure.line.to)}
+                zoom={view.scale}
+              />
+            </div>
           )}
           {(() => {
             // A faded copy where the move began and the ruler from there, so the player sees how

@@ -493,6 +493,10 @@ export function MoveTool({
   onCancel,
   onDone,
   closes = false,
+  measuring = false,
+  measureSquares = null,
+  onMeasuring,
+  onClearMeasure,
 }: {
   creature: CreatureView;
   /** Squares the planned move covers, or null with no plan. */
@@ -502,15 +506,70 @@ export function MoveTool({
   onDone?: () => void;
   /** The buttons also close Move (a phone in portrait), so they work with no plan too. */
   closes?: boolean;
+  /** Measure is on: a drag on the map measures on this phone only, and moves nothing. */
+  measuring?: boolean;
+  /** Squares the measurement covers, or null with none drawn. */
+  measureSquares?: number | null;
+  onMeasuring?: (on: boolean) => void;
+  onClearMeasure?: () => void;
 }) {
+  // Move is the default; Measure is for checking distances, never seen on the TV or the DM's map.
+  const modes = onMeasuring && (
+    <div className="pc-segment" role="group" aria-label="Move or measure">
+      <button type="button" aria-pressed={!measuring} onClick={() => onMeasuring(false)}>
+        Move
+      </button>
+      <button type="button" aria-pressed={measuring} onClick={() => onMeasuring(true)}>
+        Measure
+      </button>
+    </div>
+  );
+  if (measuring) {
+    return (
+      <div className="pc-tool-move">
+        {modes}
+        <p className="pc-move-hint" data-testid="pc-measure-hint">
+          {measureSquares
+            ? `${rulerLabel(measureSquares)}. Only you see this.`
+            : 'Drag on the map to measure. Only you see it.'}
+        </p>
+        {onClearMeasure && (
+          <div className="pc-row pc-move-actions">
+            <button
+              type="button"
+              className="pc-btn"
+              disabled={!measureSquares}
+              onClick={onClearMeasure}
+            >
+              Clear
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
   if (creature.movementLocked) {
+    if (modes) {
+      return (
+        <div className="pc-tool-move">
+          {modes}
+          <p className="pc-locked">Movement locked by the DM</p>
+        </div>
+      );
+    }
     return <p className="pc-locked">Movement locked by the DM</p>;
   }
   if (!creature.tokenId) {
-    return <p className="pc-hint">{creature.name} isn’t on the map right now.</p>;
+    return (
+      <div className="pc-tool-move">
+        {modes}
+        <p className="pc-hint">{creature.name} isn’t on the map right now.</p>
+      </div>
+    );
   }
   return (
     <div className="pc-tool-move">
+      {modes}
       <p className="pc-move-hint">
         {sending
           ? 'Moving…'

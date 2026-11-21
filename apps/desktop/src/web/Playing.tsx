@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ClientView, CreatureView, TableIntent } from '@trifold/api';
 import type { Connection } from './connection';
 import { AddCompanion } from './AddCompanion';
-import { MapView, type DragHandlers, type MovePlan } from './MapView';
+import { MapView, type DragHandlers, type MeasureLine, type MovePlan } from './MapView';
 import { ScreenView } from './ScreenView';
 import { TvBottom, TvTop } from './TvOverlays';
 import { rulerLabel, squaresBetween } from '../renderer/features/presenter/ruler';
@@ -57,6 +57,16 @@ export function Playing({
   useEffect(() => {
     if (tool !== 'companions') setAdding(false);
   }, [tool]);
+  // Move's Measure (local to this phone): off, and the ruler gone, whenever Move closes.
+  const [measuring, setMeasuring] = useState(false);
+  const [measured, setMeasured] = useState<MeasureLine | null>(null);
+  useEffect(() => {
+    if (tool !== 'move') {
+      setMeasuring(false);
+      setMeasured(null);
+    }
+  }, [tool]);
+  const measureSquares = measured ? squaresBetween(measured.from, measured.to) : null;
   useEffect(() => {
     if (persistent && !tool) setTool('health');
   }, [persistent, tool]);
@@ -239,6 +249,13 @@ export function Playing({
           sending={!!plan?.sending}
           // On a phone in portrait Move is a strip under the map, and its buttons also close it.
           closes={layout === 'phonePortrait'}
+          measuring={measuring}
+          measureSquares={measureSquares || null}
+          onMeasuring={(on) => {
+            setMeasuring(on);
+            if (!on) setMeasured(null);
+          }}
+          onClearMeasure={() => setMeasured(null)}
           onCancel={() => {
             cancelMove();
             if (layout === 'phonePortrait') close();
@@ -301,13 +318,17 @@ export function Playing({
             onSubmit={(value) => send(c, { kind: 'initiative', value })}
           />
         ))}
-        {tool === 'move' && !phoneMove && current.tokenId && !current.movementLocked && (
-          <div className="pc-movebanner" role="status">
-            {plan
-              ? `Moving ${current.name}: ${rulerLabel(planSquares)}. Done to confirm.`
-              : `Moving ${current.name}: drag the token or tap a spot.`}
-          </div>
-        )}
+        {tool === 'move' &&
+          !phoneMove &&
+          current.tokenId &&
+          !current.movementLocked &&
+          !measuring && (
+            <div className="pc-movebanner" role="status">
+              {plan
+                ? `Moving ${current.name}: ${rulerLabel(planSquares)}. Done to confirm.`
+                : `Moving ${current.name}: drag the token or tap a spot.`}
+            </div>
+          )}
       </div>
       {tv && <TvBottom overlays={tv} />}
     </>
@@ -323,7 +344,10 @@ export function Playing({
           if (hit) setTarget(creatureKey(hit));
         }}
         drag={drag}
-        tapMove={tool === 'move' ? (current.tokenId ?? null) : null}
+        tapMove={tool === 'move' && !measuring ? (current.tokenId ?? null) : null}
+        {...(tool === 'move' && measuring
+          ? { measure: { line: measured, onChange: setMeasured } }
+          : {})}
         centerOn={me.tokenId ?? null}
         fullScreen={fullScreen}
         onFullScreen={() => setFullScreen((f) => !f)}
