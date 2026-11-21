@@ -239,6 +239,8 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
         },
       )
       .toBeGreaterThan(0);
+    // Once it is on screen, the phone's "Loading map" pill is gone.
+    await expect(phone.getByTestId('pc-map-loading')).toHaveCount(0);
     await expect(pop.getByText('Smoke phone')).toBeVisible();
     await expect(pop.getByText('Brannoc Hale')).toBeVisible();
 

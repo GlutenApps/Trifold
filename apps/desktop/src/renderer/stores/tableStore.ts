@@ -131,7 +131,7 @@ export function installTableSync(): () => void {
     const scene = snapshot.scene;
     const image = liveScene?.image;
     if (scene && image) {
-      const key = `${scene.id}|${scene.fogKey}|${image.displayPath}`;
+      const key = `${scene.id}|${scene.imageKey}`;
       if (key !== lastImageKey) {
         lastImageKey = key;
         void fogMapJpeg(
@@ -142,7 +142,7 @@ export function installTableSync(): () => void {
         )
           .then((jpeg) => {
             if (lastImageKey === key) {
-              void window.trifold.table.setMapImage(scene.id, scene.fogKey, jpeg);
+              void window.trifold.table.setMapImage(scene.id, scene.imageKey, jpeg);
             }
           })
           .catch(() => {

@@ -58,8 +58,8 @@ export interface TableScene {
   grid: TableGrid;
   /** The fog when it is on; null when it is off or the scene has none. */
   fog: { enabled: true; shapes: FogShapeLike[] } | null;
-  /** `fogKey(fog)`: which fogged map image goes with this state. */
-  fogKey: string;
+  /** `mapImageKey(fog, image)`: which map image (picture and fog) goes with this state. */
+  imageKey: string;
   tokenStyle: 'engraved' | 'flat' | 'twoTone' | 'plain';
   tokens: TableToken[];
 }
@@ -181,6 +181,8 @@ export interface ClientMap {
   width: number;
   height: number;
   backdrop: 'parchment' | 'stone' | 'dark';
+  /** Whether the scene has a map picture (a blank grid has none), so a phone can show it loading. */
+  hasImage: boolean;
   /**
    * The fogged map image (PLAYER-CONNECTOR.md, "The fogged map image"), absent until the console
    * has drawn it.

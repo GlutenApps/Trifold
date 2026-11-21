@@ -121,9 +121,12 @@ connected device can see.
 
 Phones never receive the original map. The console draws the scene's display image on a canvas
 (longest side 2048 px), fills every fogged area solid black, encodes a JPEG at quality 0.8 and
-sends it to main keyed by scene id and a fog key. Main keeps the latest image in memory only and
-serves it at `/map/<sceneId>/<fogKey>.jpg`. Phones also draw the fog shapes over it for clean
-edges. A scene with fog off is served the same way, without the black.
+sends it to main keyed by scene id and an image key, which changes with the fog and with the
+picture showing (switching a scene's background gives a new key). Main keeps the latest image in
+memory only and serves it at `/map/<sceneId>/<imageKey>.jpg`. Phones also draw the fog shapes
+over it for clean edges. A scene with fog off is served the same way, without the black. While a
+new picture is on its way, a phone keeps the old one (or the backdrop) under a "Loading map…"
+pill, and tries a failed load again after a moment.
 
 ### Transport
 
