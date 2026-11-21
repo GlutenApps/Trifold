@@ -97,6 +97,7 @@ describe('AppConfig', () => {
         lastError: null,
       },
       tableServerPort: null,
+      textSize: 'default',
     });
   });
 

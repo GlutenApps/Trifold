@@ -14,13 +14,17 @@ export async function reopenLibrary(
   ctx: Pick<ApiContext, 'session' | 'config' | 'logger' | 'windows'>,
   path: string,
 ): Promise<LibraryInfo> {
+  // The Library being left counts as recent too: the first one opened at startup is never
+  // switched to, so this is how it reaches the list.
+  const leaving = ctx.session.store?.root ?? null;
   const info = await ctx.session.open(path);
   if (info.ok) {
     // A restored or different Library may carry the other theme; the window controls follow.
     if (ctx.session.store) ctx.windows.setTheme(ctx.session.store.getSettings().theme);
     const recent = [
       info.path,
-      ...ctx.config.get().recentLibraries.filter((p) => p !== info.path),
+      ...(leaving && leaving !== info.path ? [leaving] : []),
+      ...ctx.config.get().recentLibraries.filter((p) => p !== info.path && p !== leaving),
     ].slice(0, RECENT_LIBRARIES);
     await ctx.config.update({ libraryPath: info.path, recentLibraries: recent });
     void runDailyBackup(ctx);

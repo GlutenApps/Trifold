@@ -57,6 +57,9 @@ export function installBridgeMock(): TrifoldBridge {
       openSystemPage: vi.fn(async () => true),
       openExternal: vi.fn(async () => true),
       savesFlushed: vi.fn(async () => undefined),
+      textSize: vi.fn(async () => 'default' as const),
+      setTextSize: vi.fn(async (size) => size),
+      openLogsFolder: vi.fn(async () => undefined),
     },
     updates: (() => {
       // Off and already answered, so no test sees the Library's question unless it asks to.
@@ -98,10 +101,13 @@ export function installBridgeMock(): TrifoldBridge {
         index: { ok: true, version: 1, error: null },
       })),
       openInExplorer: vi.fn(async () => undefined),
+      recent: vi.fn(async () => []),
+      forgetRecent: vi.fn(async () => []),
       updateSettings: vi.fn(async (patch) => ({ ...settings, ...patch })),
     },
     displays: {
       list: vi.fn(async () => []),
+      identify: vi.fn(async () => undefined),
     },
     player: {
       open: vi.fn(async () => undefined),

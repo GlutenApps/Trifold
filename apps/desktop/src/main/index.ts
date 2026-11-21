@@ -1,6 +1,7 @@
 import { app, net, screen } from 'electron';
 import { join } from 'node:path';
 import { EVENT_CHANNELS } from '@trifold/api';
+import { TEXT_SIZE_ZOOM } from '@trifold/schema';
 import { createApi } from './api';
 import { AppConfigStore } from './appConfig';
 import { configCopyTarget, copyStatus } from './backupCopy';
@@ -210,6 +211,7 @@ async function main(): Promise<void> {
     logger,
   );
   splash.setStatus('Loading the console…');
+  windows.setConsoleZoom(TEXT_SIZE_ZOOM[config.get().textSize]);
   windows.openConsole(config.get().consoleWindow).once('ready-to-show', () => splash.done());
 
   app.on('second-instance', () => windows.focusConsole());

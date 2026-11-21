@@ -5,12 +5,13 @@ import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { flushPendingSaves } from '../../stores/pendingSaves';
 import { Icon } from '../shell/icons';
+import { SettingRow, SettingsSection } from './SettingsLayout';
 
 /**
- * The Backups card on Library › Settings (DESIGN.md §4.2 and §10 M1 item 8, ADR 0015): the
+ * The Backups section of Library › Settings (DESIGN.md §4.2 and §10 M1 item 8, ADR 0015): the
  * daily backup switch and keep days, Back up now, the second copy location, the zips in the
  * Library and restore from one of them or from any file. Pending saves are flushed before a
- * backup or restore so the zip holds the last edit. `BackupsCard` below is the card; the
+ * backup or restore so the zip holds the last edit. `BackupsSection` below is the section; the
  * helpers above it format sizes, dates and a picked zip's manifest.
  */
 function size(bytes: number): string {
@@ -68,10 +69,10 @@ function CopyStatusLine({ status }: { status: BackupCopyStatus }) {
 }
 
 /**
- * Backups card (DESIGN.md §4.2 and §10 M1 item 8, ADR 0015): schedule, second location, back up,
- * restore.
+ * Settings › Backups (DESIGN.md §4.2 and §10 M1 item 8, ADR 0015; layout ADR 0054): the schedule,
+ * back up now, the second location, and restore from a file or the list.
  */
-export function BackupsCard() {
+export function BackupsSection() {
   const library = useAppStore((s) => s.library);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const refreshLibrary = useAppStore((s) => s.load);
@@ -168,27 +169,23 @@ export function BackupsCard() {
     });
 
   return (
-    <div className="card span" data-testid="backups-card">
-      <h2>Backups</h2>
-      <p className="muted">
-        A zip of the Library (everything except the search index, logs and music files) is written
-        once a day while Trifold is open, and again when it closes if anything changed, into the
-        Library&apos;s backups folder.
-      </p>
-      <div className="row">
-        <label className="field inline">
-          <input
-            type="checkbox"
-            disabled={!hasLibrary}
-            checked={settings?.enabled ?? true}
-            onChange={(e) =>
-              void updateSettings({
-                backups: { ...(settings ?? { keepDays: 14 }), enabled: e.target.checked },
-              })
-            }
-          />
-          Daily backup
-        </label>
+    <SettingsSection id="backups" title="Backups" testId="backups-card">
+      <SettingRow
+        label="Daily backup"
+        htmlFor="backup-daily"
+        hint="A zip of the Library (everything but the search index, logs and music files), written once a day while Trifold is open and again when it closes if anything changed."
+      >
+        <input
+          id="backup-daily"
+          type="checkbox"
+          disabled={!hasLibrary}
+          checked={settings?.enabled ?? true}
+          onChange={(e) =>
+            void updateSettings({
+              backups: { ...(settings ?? { keepDays: 14 }), enabled: e.target.checked },
+            })
+          }
+        />
         <label className="field inline">
           Keep
           <input
@@ -209,7 +206,9 @@ export function BackupsCard() {
           />
           days
         </label>
-        <span className="spacer" />
+      </SettingRow>
+
+      <SettingRow label="Back up now" hint="Writes a backup into the Library's backups folder now.">
         <button
           type="button"
           className="btn primary"
@@ -226,25 +225,33 @@ export function BackupsCard() {
         >
           Open backups folder
         </button>
-      </div>
+      </SettingRow>
 
-      <h3>Also copy to</h3>
-      {copy?.folder ? (
-        <>
-          <p>
-            <code className="backup-copy-target" data-testid="backup-copy-target">
-              {copy.target ?? copy.folder}
-            </code>
-          </p>
-          <CopyStatusLine status={copy} />
-          <div className="row">
+      <SettingRow
+        label="Second copy"
+        hint="Keep a copy off this computer: a folder on another drive, or one your cloud sync app keeps. Every backup is copied there too."
+        status={
+          copy?.folder ? (
+            <>
+              <p className="small">
+                <code className="backup-copy-target" data-testid="backup-copy-target">
+                  {copy.target ?? copy.folder}
+                </code>
+              </p>
+              <CopyStatusLine status={copy} />
+            </>
+          ) : null
+        }
+      >
+        {copy?.folder ? (
+          <>
             <button
               type="button"
               className="btn"
               disabled={!hasLibrary || busy !== null}
               onClick={() => void chooseCopyFolder()}
             >
-              Change folder…
+              Change copy folder…
             </button>
             <button
               type="button"
@@ -254,15 +261,8 @@ export function BackupsCard() {
             >
               Stop copying
             </button>
-          </div>
-        </>
-      ) : (
-        <div className="row">
-          <p className="muted">
-            Keep a copy off this computer: choose a folder on another drive, or one your cloud sync
-            app keeps. Every backup is copied there too.
-          </p>
-          <span className="spacer" />
+          </>
+        ) : (
           <button
             type="button"
             className="btn"
@@ -271,16 +271,88 @@ export function BackupsCard() {
           >
             Choose folder…
           </button>
-        </div>
-      )}
+        )}
+      </SettingRow>
 
-      <h3>Restore</h3>
-      <div className="row">
-        <p className="muted">
-          Restoring replaces the Library with the backup. A zip of the current state is saved first.
-          On a new computer, restore the newest zip from your copy folder.
-        </p>
-        <span className="spacer" />
+      <SettingRow
+        label="Restore"
+        hint="Replaces the Library with a backup. A zip of the current state is saved first. On a new computer, restore the newest zip from your copy folder."
+        below={
+          <>
+            {picked && (
+              <div className="row" data-testid="backup-file-picked">
+                {picked.problem ? (
+                  <>
+                    <span className="warn-text">
+                      {picked.name}: {picked.problem}
+                    </span>
+                    <span className="spacer" />
+                    <button type="button" className="btn small" onClick={() => setPicked(null)}>
+                      Dismiss
+                    </button>
+                  </>
+                ) : (
+                  <InlineConfirm
+                    name={picked.name}
+                    verb="Restore"
+                    question={`Replace the Library with ${contents(picked)}?`}
+                    onConfirm={() => void restoreFile(picked)}
+                    onKeep={() => setPicked(null)}
+                  />
+                )}
+              </div>
+            )}
+            {backups.length > 0 && (
+              <details className="settings-fold">
+                <summary>Backups in this Library ({backups.length})</summary>
+                <table className="track-table">
+                  <thead>
+                    <tr>
+                      <th>Backup</th>
+                      <th>Kind</th>
+                      <th>Size</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {backups.map((b) => (
+                      <tr key={b.name} className="backup-row" data-testid="backup-row">
+                        <td>{b.name}</td>
+                        <td className="muted small">{KIND_LABEL[b.kind]}</td>
+                        <td className="muted small">{size(b.sizeBytes)}</td>
+                        <td>
+                          {confirm === b.name ? (
+                            <InlineConfirm
+                              name={b.name}
+                              verb="Restore"
+                              question="Replace the Library with this backup?"
+                              onConfirm={() => void restore(b.name)}
+                              onKeep={() => setConfirm(null)}
+                            />
+                          ) : (
+                            <span className="row-actions">
+                              <button
+                                type="button"
+                                className="chrome-btn xs"
+                                title="Restore this backup"
+                                aria-label={`Restore ${b.name}`}
+                                disabled={busy !== null}
+                                onClick={() => setConfirm(b.name)}
+                              >
+                                <Icon name="undo" />
+                              </button>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </details>
+            )}
+          </>
+        }
+      >
         <button
           type="button"
           className="btn"
@@ -289,77 +361,12 @@ export function BackupsCard() {
         >
           Restore from file…
         </button>
-      </div>
-      {picked && (
-        <div className="row" data-testid="backup-file-picked">
-          {picked.problem ? (
-            <>
-              <span className="warn-text">
-                {picked.name}: {picked.problem}
-              </span>
-              <span className="spacer" />
-              <button type="button" className="btn small" onClick={() => setPicked(null)}>
-                Dismiss
-              </button>
-            </>
-          ) : (
-            <InlineConfirm
-              name={picked.name}
-              verb="Restore"
-              question={`Replace the Library with ${contents(picked)}?`}
-              onConfirm={() => void restoreFile(picked)}
-              onKeep={() => setPicked(null)}
-            />
-          )}
-        </div>
+      </SettingRow>
+      {message && (
+        <p className="muted small settings-message" role="status">
+          {message}
+        </p>
       )}
-
-      {message && <p className="muted small">{message}</p>}
-      {backups.length > 0 && (
-        <table className="track-table">
-          <thead>
-            <tr>
-              <th>Backup</th>
-              <th>Kind</th>
-              <th>Size</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {backups.map((b) => (
-              <tr key={b.name} className="backup-row" data-testid="backup-row">
-                <td>{b.name}</td>
-                <td className="muted small">{KIND_LABEL[b.kind]}</td>
-                <td className="muted small">{size(b.sizeBytes)}</td>
-                <td>
-                  {confirm === b.name ? (
-                    <InlineConfirm
-                      name={b.name}
-                      verb="Restore"
-                      question="Replace the Library with this backup?"
-                      onConfirm={() => void restore(b.name)}
-                      onKeep={() => setConfirm(null)}
-                    />
-                  ) : (
-                    <span className="row-actions">
-                      <button
-                        type="button"
-                        className="chrome-btn xs"
-                        title="Restore this backup"
-                        aria-label={`Restore ${b.name}`}
-                        disabled={busy !== null}
-                        onClick={() => setConfirm(b.name)}
-                      >
-                        <Icon name="undo" />
-                      </button>
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+    </SettingsSection>
   );
 }

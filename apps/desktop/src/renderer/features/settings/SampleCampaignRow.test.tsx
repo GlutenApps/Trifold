@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CampaignPackageResult } from '@trifold/api';
 import { defaultLibrarySettings } from '@trifold/schema';
 import { useAppStore } from '../../stores/appStore';
-import { SampleCampaignCard } from './SampleCampaignCard';
+import { SampleCampaignRow } from './SampleCampaignRow';
 
 const NAME = 'The Lantern at Greyford';
 
@@ -21,7 +21,7 @@ const result = (mode: CampaignPackageResult['mode']): CampaignPackageResult => (
   safety: mode === 'replace' ? '2026-11-07-preRestore.zip' : null,
 });
 
-describe('SampleCampaignCard', () => {
+describe('SampleCampaignRow', () => {
   beforeEach(() => {
     useAppStore.setState({
       library: {
@@ -39,7 +39,7 @@ describe('SampleCampaignCard', () => {
       .mockResolvedValueOnce({ available: true, present: false, name: NAME })
       .mockResolvedValueOnce({ available: true, present: true, name: NAME });
     vi.mocked(window.trifold.campaigns.addSample).mockResolvedValueOnce(result('new'));
-    render(<SampleCampaignCard />);
+    render(<SampleCampaignRow />);
 
     expect(await screen.findByText(`${NAME} is not in this Library.`)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Add the sample campaign' }));
@@ -55,7 +55,7 @@ describe('SampleCampaignCard', () => {
       name: NAME,
     });
     vi.mocked(window.trifold.campaigns.addSample).mockResolvedValueOnce(result('replace'));
-    render(<SampleCampaignCard />);
+    render(<SampleCampaignRow />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Reset the sample campaign' }));
     expect(window.trifold.campaigns.addSample).not.toHaveBeenCalled();
@@ -70,7 +70,7 @@ describe('SampleCampaignCard', () => {
       present: false,
       name: null,
     });
-    render(<SampleCampaignCard />);
+    render(<SampleCampaignRow />);
     expect(
       await screen.findByText('This build of Trifold has no sample campaign.'),
     ).toBeInTheDocument();

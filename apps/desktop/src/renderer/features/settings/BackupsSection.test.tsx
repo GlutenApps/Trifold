@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BackupCopyStatus, BackupFileInfo } from '@trifold/api';
 import { defaultLibrarySettings } from '@trifold/schema';
 import { useAppStore } from '../../stores/appStore';
-import { BackupsCard } from './BackupsCard';
+import { BackupsSection } from './BackupsSection';
 
 const OFF: BackupCopyStatus = { folder: null, target: null, lastCopyAt: null, lastError: null };
 
@@ -23,7 +23,7 @@ const PICKED: BackupFileInfo = {
   problem: null,
 };
 
-describe('BackupsCard', () => {
+describe('BackupsSection', () => {
   beforeEach(() => {
     useAppStore.setState({
       library: {
@@ -44,7 +44,7 @@ describe('BackupsCard', () => {
       lastError: null,
     };
     vi.mocked(window.trifold.backups.chooseCopyFolder).mockResolvedValue(chosen);
-    render(<BackupsCard />);
+    render(<BackupsSection />);
     await userEvent.click(screen.getByRole('button', { name: 'Choose folder…' }));
     expect(await screen.findByTestId('backup-copy-target')).toHaveTextContent(chosen.target!);
     expect(screen.getByTestId('backup-copy-status')).toHaveTextContent('Nothing copied yet');
@@ -61,7 +61,7 @@ describe('BackupsCard', () => {
       lastCopyAt: '2026-11-01T10:00:00.000Z',
       lastError: "E:\\ can't be reached",
     });
-    render(<BackupsCard />);
+    render(<BackupsSection />);
     expect(await screen.findByTestId('backup-copy-status')).toHaveTextContent(
       "The last copy failed: E:\\ can't be reached",
     );
@@ -69,7 +69,7 @@ describe('BackupsCard', () => {
 
   it('restores a picked file after an inline confirm that says what it holds', async () => {
     vi.mocked(window.trifold.backups.chooseFile).mockResolvedValue(PICKED);
-    render(<BackupsCard />);
+    render(<BackupsSection />);
     await userEvent.click(screen.getByRole('button', { name: 'Restore from file…' }));
     const picked = await screen.findByTestId('backup-file-picked');
     expect(picked).toHaveTextContent('3 campaigns, 41 homebrew records, 1 imported source');
@@ -84,7 +84,7 @@ describe('BackupsCard', () => {
       ...PICKED,
       problem: 'Made by a newer Trifold (2.0.0); update Trifold to restore it',
     });
-    render(<BackupsCard />);
+    render(<BackupsSection />);
     await userEvent.click(screen.getByRole('button', { name: 'Restore from file…' }));
     expect(await screen.findByTestId('backup-file-picked')).toHaveTextContent('newer Trifold');
     expect(screen.queryByRole('button', { name: 'Restore' })).toBeNull();

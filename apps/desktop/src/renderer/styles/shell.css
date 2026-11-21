@@ -1043,21 +1043,136 @@ body.resizing {
   height: auto;
 }
 
-/* Library › Settings: short cards share a row; the backups table and the About text span it. */
+/* Library › Settings (ADR 0054): one column of sections, each a heading and setting rows. A row
+   is the name and what it does, with its controls beside it from 640 px and under it below. */
 .settings-page {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 12px;
-  align-items: stretch;
+  max-width: 760px;
 }
 
-.settings-page > .card {
-  margin: 0;
+.settings-jump {
+  display: none;
+}
+
+@container panel (min-width: 640px) {
+  .settings-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 16px;
+  }
+}
+
+.settings-section {
+  padding: 16px 0 8px;
+  border-top: 1px solid var(--border);
+  scroll-margin-top: 8px;
+}
+
+.settings-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.settings-section > h2 {
+  margin: 0 0 4px;
+}
+
+.settings-section h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 16px 0 6px;
+}
+
+.setting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.setting-row + .setting-row {
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+@container panel (min-width: 640px) {
+  .setting-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    column-gap: 24px;
+  }
+
+  .setting-control {
+    justify-content: flex-end;
+    max-width: 380px;
+  }
+
+  .setting-below {
+    grid-column: 1 / -1;
+  }
+}
+
+.setting-text {
   min-width: 0;
 }
 
-.settings-page > .card.span {
-  grid-column: 1 / -1;
+.setting-name {
+  display: block;
+  font-weight: 600;
+}
+
+.setting-text p {
+  margin: 2px 0 0;
+}
+
+.setting-hint {
+  max-width: 60ch;
+}
+
+.setting-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  align-content: flex-start;
+}
+
+/* The TV screen's choices: one per line, the buttons under them. */
+.settings-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.settings-choices > .row {
+  margin: 2px 0 0;
+}
+
+.settings-path {
+  overflow-wrap: anywhere;
+}
+
+.settings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.settings-fold > summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.settings-message {
+  margin: 4px 0 0;
 }
 
 /* The update's background download (ADR 0045): a full-width bar under the status line. */
@@ -2300,4 +2415,17 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 10px;
+}
+
+/* Settings section titles: the guideline's 12 px label, set as small capitals so they read as
+   the page's dividers rather than another row (ADR 0054). */
+.settings-section > h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* About's credits are required fine print: shown, small and muted. */
+.settings-section .attribution p {
+  font-size: 12px;
+  color: var(--text-muted);
 }

@@ -23,6 +23,7 @@ import type {
   Scene,
   SceneImage,
   Source,
+  TextSize,
   Track,
 } from '@trifold/schema';
 import type {
@@ -82,11 +83,21 @@ export type SystemPage = 'bluetooth' | 'bluetoothReceiverStore' | 'airplay' | 's
 /** A display from Electron's `screen`; `id` is what `LibrarySettings.playerDisplayId` stores. */
 export interface DisplayInfo {
   id: number;
+  /** 1, 2, … from left to right, the number Identify shows on each screen (ADR 0054). */
+  number: number;
+  /** "Display 2", with the monitor's own name after it when the OS gives one. */
   label: string;
   bounds: { x: number; y: number; width: number; height: number };
   scaleFactor: number;
   isPrimary: boolean;
   isInternal: boolean;
+}
+
+/** A Library opened on this computer before (Settings › Library, ADR 0054). */
+export interface RecentLibrary {
+  path: string;
+  /** False when the folder is no longer there (a removed drive, a renamed folder). */
+  exists: boolean;
 }
 
 /**
@@ -820,6 +831,12 @@ export interface TrifoldApi {
     openExternal(url: string): Promise<boolean>;
     /** The console's answer to a `flushSaves` event: every pending save has been written. */
     savesFlushed(): Promise<void>;
+    /** The console's text size (ADR 0054); this computer's choice, kept in config.json. */
+    textSize(): Promise<TextSize>;
+    /** Zooms the console (never the TV) and remembers the size. */
+    setTextSize(size: TextSize): Promise<TextSize>;
+    /** Opens the folder Trifold writes its logs to: the Library's, or the app's before one is open. */
+    openLogsFolder(): Promise<void>;
   };
   /**
    * The update check (ADR 0034, ADR 0045): opt-in; when on, at launch and once a day after. It
@@ -853,6 +870,10 @@ export interface TrifoldApi {
     /** Opens (creating the layout if needed) and switches the app to that Library. */
     open(path: string): Promise<LibraryInfo>;
     openInExplorer(): Promise<void>;
+    /** Libraries opened on this computer before, most recent first, without the open one. */
+    recent(): Promise<RecentLibrary[]>;
+    /** Takes a Library off the recent list; its folder is not touched. */
+    forgetRecent(path: string): Promise<RecentLibrary[]>;
     /**
      * Shallow merge into `library.json`: a nested object such as `workspace` replaces the whole
      * object.
@@ -861,6 +882,8 @@ export interface TrifoldApi {
   };
   displays: {
     list(): Promise<DisplayInfo[]>;
+    /** Shows each display's number on that screen for a few seconds (ADR 0054). */
+    identify(): Promise<void>;
   };
   player: {
     /**
@@ -1264,10 +1287,26 @@ export type ApiNamespace = keyof TrifoldApi;
 
 /** Every method, by namespace. The preload and the IPC registry iterate this table. */
 export const API_METHODS = {
-  app: ['getInfo', 'openSystemPage', 'openExternal', 'savesFlushed'],
+  app: [
+    'getInfo',
+    'openSystemPage',
+    'openExternal',
+    'savesFlushed',
+    'textSize',
+    'setTextSize',
+    'openLogsFolder',
+  ],
   updates: ['status', 'setEnabled', 'checkNow', 'dismiss', 'openDownload', 'restartToUpdate'],
-  library: ['getInfo', 'chooseFolder', 'open', 'openInExplorer', 'updateSettings'],
-  displays: ['list'],
+  library: [
+    'getInfo',
+    'chooseFolder',
+    'open',
+    'openInExplorer',
+    'recent',
+    'forgetRecent',
+    'updateSettings',
+  ],
+  displays: ['list', 'identify'],
   player: ['open', 'openForLive', 'close', 'isOpen'],
   presenter: ['push', 'get'],
   table: [
