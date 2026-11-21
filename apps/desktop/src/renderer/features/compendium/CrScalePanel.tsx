@@ -218,7 +218,7 @@ export function CrScalePanel({
           <p className="muted small">
             {mode === 'quick'
               ? 'Damage keeps its dice size and adds or drops dice. Untick anything to leave it as it is.'
-              : 'Each part sits at a CR of its own; the challenge is what they add up to. Balance brings it back to the CR picked above.'}{' '}
+              : 'Each part moves only when you move it, and the challenge shows what they add up to. Balance is the only thing that adjusts for you: it brings the challenge back to the CR picked above.'}{' '}
             The name stays the same; the stat block shows a Scaled tag.
           </p>
           {crLine && (
