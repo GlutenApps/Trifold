@@ -16,6 +16,7 @@ fixtures/local/
 # Built at build time by `pnpm fetch:content`; only the manifests are committed
 resources/*.jsonl
 resources/icons/svg/
+resources/icons/glyphs.json
 resources/icons/credits.json
 resources/icons/license.txt
 resources/sample/

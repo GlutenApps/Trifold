@@ -349,7 +349,7 @@ An **Audio source** toggle at the top of the Music tool chooses "This computer" 
 
 ### 6.8 Token art pipeline
 
-- **Icons.** The build step `scripts/fetch-game-icons.ts` fetches the game-icons repository, copies the SVGs into `resources/icons/svg/`, refreshes `resources/icons/manifest.json`, and writes `resources/icons/credits.json` (the author list) for the About page.
+- **Icons.** The build step `scripts/fetch-game-icons.ts` fetches the game-icons repository, packs the SVGs into one bundle, `resources/icons/glyphs.json` (one file instead of four thousand keeps installs and updates fast), refreshes `resources/icons/manifest.json`, and writes `resources/icons/credits.json` (the author list) for the About page.
 - **Token renderer.** A glyph inside a disc. Treatments: **engraved** (parchment disc, dark glyph, brown ring; the default), **flat** (type-colored disc, white glyph, dark ring), **two-tone** (dark disc, type-colored glyph) and **plain** (disc and initials), with an ally or enemy ring color. The glyph is a CSS mask, so the treatment colors it; one component draws tokens on both screens.
 - **Glyph selection** for creatures: custom art, then the `ancestry` table, then a name keyword table (species and humanoid roles), then a synonym table (undead and beast families), then the creature type's default. Item and spell tables (name keywords and type codes; spell schools) live in `resources/icons/mapping.json` beside the creature tables and have lookups in `packages/rules`, but only creature tokens are drawn. Unmatched names are logged so the tables can grow.
 - **Creature art** (ADR 0033):

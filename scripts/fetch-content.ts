@@ -1,6 +1,6 @@
 // Build-time only. Runs every content fetch step in order (DESIGN.md §6.1 and §6.8):
 //   1. Open5e SRD snapshot  → resources/srd-*.jsonl + srd-manifest.json
-//   2. game-icons SVG set   → resources/icons/svg + credits.json + manifest.json
+//   2. game-icons SVG set   → resources/icons/glyphs.json + credits.json + manifest.json
 //   3. sample campaign      → resources/sample/greyford.trifold-campaign (local; needs step 1)
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';

@@ -733,7 +733,7 @@ test('console, Library, import, search, stat block and player window all work en
     expect(await readdir(join(copyDir, 'pcs'))).toEqual([]);
 
     // Bundled glyphs are served to the player over the media scheme (only when fetched).
-    if (existsSync(join(__dirname, '..', '..', '..', 'resources', 'icons', 'svg'))) {
+    if (existsSync(join(__dirname, '..', '..', '..', 'resources', 'icons', 'glyphs.json'))) {
       const loads = (url: string) =>
         player.evaluate(
           (src) =>

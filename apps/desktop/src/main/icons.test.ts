@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,8 +13,10 @@ describe('IconResources', () => {
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'trifold-icons-'));
     logDir = join(dir, 'logs');
-    mkdirSync(join(dir, 'svg'));
-    writeFileSync(join(dir, 'svg', 'goblin-head.svg'), '<svg/>');
+    writeFileSync(
+      join(dir, 'glyphs.json'),
+      JSON.stringify({ 'goblin-head': '<svg/>', '../mapping': '<svg/>', bad: 42 }),
+    );
     writeFileSync(
       join(dir, 'mapping.json'),
       JSON.stringify({
@@ -37,10 +39,11 @@ describe('IconResources', () => {
   it('lists glyphs, resolves safe names only, and fills missing tables', () => {
     const icons = new IconResources(dir, logger, () => logDir);
     expect([...icons.available()]).toEqual(['goblin-head']);
-    expect(icons.svgPath('goblin-head.svg')).toBe(join(dir, 'svg', 'goblin-head.svg'));
-    expect(icons.svgPath('goblin-head')).toBe(join(dir, 'svg', 'goblin-head.svg'));
-    expect(icons.svgPath('../mapping.json')).toBeNull();
-    expect(icons.svgPath('skull')).toBeNull();
+    expect(icons.svg('goblin-head.svg')).toBe('<svg/>');
+    expect(icons.svg('goblin-head')).toBe('<svg/>');
+    expect(icons.svg('../mapping.svg')).toBeNull();
+    expect(icons.svg('bad')).toBeNull();
+    expect(icons.svg('skull')).toBeNull();
     expect(icons.tables().nameKeywords).toEqual({ goblin: 'goblin-head' });
     expect(icons.tables().synonyms).toEqual({});
     expect(icons.credits()).toMatchObject({ icons: 1, authors: [{ name: 'lorc', icons: 1 }] });

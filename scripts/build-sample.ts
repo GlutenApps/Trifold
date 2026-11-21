@@ -67,17 +67,13 @@ for (const line of readFileSync(srdFile, 'utf8').split('\n')) {
   if (wanted.has(record.id)) records.set(record.id, record);
 }
 
-// Token glyphs: the mapping tables are committed; the svg set is fetched.
+// Token glyphs: the mapping tables are committed; the glyph bundle is fetched.
 const icons = IconTables.parse(
   JSON.parse(readFileSync(join(root, 'resources', 'icons', 'mapping.json'), 'utf8')),
 );
-const svgDir = join(root, 'resources', 'icons', 'svg');
+const glyphsPath = join(root, 'resources', 'icons', 'glyphs.json');
 const availableIcons = new Set(
-  existsSync(svgDir)
-    ? readdirSync(svgDir)
-        .filter((f) => f.endsWith('.svg'))
-        .map((f) => f.slice(0, -4))
-    : [],
+  existsSync(glyphsPath) ? Object.keys(JSON.parse(readFileSync(glyphsPath, 'utf8')) as object) : [],
 );
 if (availableIcons.size === 0) console.warn('build-sample: no icon set; tokens will show initials');
 
