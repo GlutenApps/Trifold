@@ -1,6 +1,8 @@
+import { mkdir, stat } from 'node:fs/promises';
+import { join } from 'node:path';
 import { app, dialog, shell } from 'electron';
 import { reviewBooks, sourceOrder, type BookReview } from '@trifold/rules';
-import type { Source } from '@trifold/schema';
+import { TEXT_SIZE_ZOOM, type Source } from '@trifold/schema';
 import { reopenLibrary } from './libraryOpen';
 import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
@@ -45,6 +47,24 @@ export interface ApiContext {
   updates: UpdateService;
   /** Restart to update (ADR 0045): the close flow, then the installer; false when none is ready. */
   restartToUpdate: () => Promise<boolean>;
+}
+
+/** The recent Libraries list (ADR 0054): up to five, newest first, without the open one. */
+async function recentLibraries(ctx: ApiContext) {
+  const open = ctx.session.store?.root ?? ctx.config.get().libraryPath;
+  const paths = ctx.config
+    .get()
+    .recentLibraries.filter((p) => p !== open)
+    .slice(0, 5);
+  return Promise.all(
+    paths.map(async (path) => ({
+      path,
+      exists: await stat(path).then(
+        (s) => s.isDirectory(),
+        () => false,
+      ),
+    })),
+  );
 }
 
 /** The main-process implementation of `TrifoldApi`. Registered by `registerIpc`. */
@@ -125,6 +145,20 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async savesFlushed() {
         ctx.saves.acknowledge();
       },
+      async textSize() {
+        return ctx.config.get().textSize;
+      },
+      async setTextSize(size) {
+        const saved = await ctx.config.update({ textSize: size });
+        ctx.windows.setConsoleZoom(TEXT_SIZE_ZOOM[saved.textSize]);
+        return saved.textSize;
+      },
+      async openLogsFolder() {
+        const dir = ctx.session.logDir ?? join(app.getPath('userData'), 'logs');
+        await mkdir(dir, { recursive: true });
+        const error = await shell.openPath(dir);
+        if (error) throw new Error(error);
+      },
     },
     updates: {
       async status() {
@@ -168,6 +202,15 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         const error = await shell.openPath(requireStore().root);
         if (error) throw new Error(error);
       },
+      async recent() {
+        return recentLibraries(ctx);
+      },
+      async forgetRecent(path) {
+        await ctx.config.update({
+          recentLibraries: ctx.config.get().recentLibraries.filter((p) => p !== path),
+        });
+        return recentLibraries(ctx);
+      },
       async updateSettings(patch) {
         const settings = await requireStore().updateSettings(patch);
         if (patch.theme) ctx.windows.setTheme(settings.theme);
@@ -182,6 +225,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     displays: {
       async list() {
         return WindowManager.listDisplays();
+      },
+      async identify() {
+        WindowManager.identifyDisplays();
       },
     },
 

@@ -78,8 +78,23 @@ export const AppConfig = z.object({
    * stored their tokens under.
    */
   tableServerPort: z.number().int().min(1).max(65535).nullable().default(null),
+  /**
+   * The console's text size (Settings › Appearance, ADR 0054), as a zoom of the whole console.
+   * Kept per computer, since it depends on the screen and how far away the DM sits. The TV window
+   * is never zoomed.
+   */
+  textSize: z.enum(['small', 'default', 'large', 'larger']).default('default'),
 });
 export type AppConfig = z.infer<typeof AppConfig>;
+export type TextSize = AppConfig['textSize'];
+
+/** The console's zoom factor for each text size. */
+export const TEXT_SIZE_ZOOM: Record<TextSize, number> = {
+  small: 0.9,
+  default: 1,
+  large: 1.15,
+  larger: 1.3,
+};
 
 export function defaultAppConfig(): AppConfig {
   return AppConfig.parse({ schemaVersion: APP_CONFIG_SCHEMA_VERSION });

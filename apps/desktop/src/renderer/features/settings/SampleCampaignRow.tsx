@@ -4,12 +4,13 @@ import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { flushPendingSaves } from '../../stores/pendingSaves';
 import { InlineConfirm } from '../shell/InlineConfirm';
+import { SettingRow } from './SettingsLayout';
 
 /**
- * Settings › Sample campaign (ADR 0016). Every Library is given the sample once; this card is
+ * Settings › Library › Sample campaign (ADR 0016). Every Library is given the sample once; this row is
  * how a DM who deleted it gets it back, or puts a played-through copy back as it ships.
  */
-export function SampleCampaignCard() {
+export function SampleCampaignRow() {
   const library = useAppStore((s) => s.library);
   const reloadCampaign = useCampaignStore((s) => s.load);
   const hasLibrary = library?.ok === true;
@@ -57,59 +58,55 @@ export function SampleCampaignCard() {
   const name = status?.name ?? 'The sample campaign';
 
   return (
-    <div className="card" data-testid="sample-campaign-card">
-      <h2>Sample campaign</h2>
-      <p className="muted">
-        A short adventure set up to show every part of Trifold: notes, NPCs, the party, encounters,
-        maps and a handout. Every Library gets it once; delete it from Campaigns whenever you like.
-      </p>
-      {status && !status.available ? (
-        <p className="muted">This build of Trifold has no sample campaign.</p>
-      ) : (
+    <SettingRow
+      label="Sample campaign"
+      hint="A short adventure that shows every part of Trifold. Every Library gets it once; delete it from Campaigns whenever you like."
+      status={
         <>
-          <p data-testid="sample-campaign-status">
-            {status === null
-              ? '…'
-              : status.present
-                ? `${name} is in this Library.`
-                : `${name} is not in this Library.`}
+          <p className="small" data-testid="sample-campaign-status">
+            {status && !status.available
+              ? 'This build of Trifold has no sample campaign.'
+              : status === null
+                ? '…'
+                : status.present
+                  ? `${name} is in this Library.`
+                  : `${name} is not in this Library.`}
           </p>
-          <div className="row">
-            {confirm ? (
-              <InlineConfirm
-                name={name}
-                verb="Reset"
-                question={`Put ${name} back as it ships? Changes to it are lost; a backup is saved first.`}
-                onConfirm={() => void add()}
-                onKeep={() => setConfirm(false)}
-              />
-            ) : status?.present ? (
-              <button
-                type="button"
-                className="btn"
-                disabled={!hasLibrary || busy}
-                onClick={() => setConfirm(true)}
-              >
-                Reset the sample campaign
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn"
-                disabled={!hasLibrary || busy || status === null}
-                onClick={() => void add()}
-              >
-                {busy ? 'Adding…' : 'Add the sample campaign'}
-              </button>
-            )}
-          </div>
+          {message && (
+            <p className={message.warn ? 'warn-text small' : 'muted small'} role="status">
+              {message.text}
+            </p>
+          )}
         </>
+      }
+    >
+      {status && !status.available ? null : confirm ? (
+        <InlineConfirm
+          name={name}
+          verb="Reset"
+          question={`Put ${name} back as it ships? Changes to it are lost; a backup is saved first.`}
+          onConfirm={() => void add()}
+          onKeep={() => setConfirm(false)}
+        />
+      ) : status?.present ? (
+        <button
+          type="button"
+          className="btn"
+          disabled={!hasLibrary || busy}
+          onClick={() => setConfirm(true)}
+        >
+          Reset the sample campaign
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="btn"
+          disabled={!hasLibrary || busy || status === null}
+          onClick={() => void add()}
+        >
+          {busy ? 'Adding…' : 'Add the sample campaign'}
+        </button>
       )}
-      {message && (
-        <p className={message.warn ? 'warn-text small' : 'muted small'} role="status">
-          {message.text}
-        </p>
-      )}
-    </div>
+    </SettingRow>
   );
 }

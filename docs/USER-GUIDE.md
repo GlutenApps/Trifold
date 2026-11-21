@@ -10,7 +10,7 @@ This guide walks through installing Trifold, each of its tools in the order you 
 
 **macOS.** Download the build for your Mac's chip (Intel or Apple silicon). The app is unsigned. On macOS 15 a double-click shows "Not opened": open **System Settings › Privacy & Security**, scroll to the message about Trifold, click **Open Anyway** and confirm. Right-click › Open does not get past this on macOS 15.
 
-**Your Library.** On first launch Trifold creates a `Trifold Library` folder in your Documents folder. Everything you make lives there as plain files and pictures, so you can zip it, copy it to another computer, or move it with **Settings › Library › Change folder…**. The one file you can ignore is `index.sqlite`, the search index, which Trifold builds from everything else and can rebuild at any time.
+**Your Library.** On first launch Trifold creates a `Trifold Library` folder in your Documents folder. Everything you make lives there as plain files and pictures, so you can zip it, copy it to another computer, or move it with **Settings › Library › Open another Library…**. The one file you can ignore is `index.sqlite`, the search index, which Trifold builds from everything else and can rebuild at any time.
 
 **The sample campaign.** Every Library starts with *The Lantern at Greyford*, a short adventure for four level-3 characters with notes, NPCs, a ready-made party, encounters, maps and a handout, so you can see how the parts fit together. Open it from **Campaigns** and start with its *Start here* note. Delete it whenever you like; it does not come back on its own. **Settings › Sample campaign** adds it again, or resets it to how it ships (a backup is written first). Its maps are by 2-Minute Tabletop.
 
@@ -32,7 +32,7 @@ Trifold has two spaces. The **Library** (the mark at the top left) holds what ev
 
 ## Compendium
 
-Trifold ships the System Reference Document in both its 2024 and 2014 versions (the 2014 one is shown as "legacy"), with attribution on the About card in Settings.
+Trifold ships the System Reference Document in both its 2024 and 2014 versions (the 2014 one is shown as "legacy"), with attribution in Settings › About.
 
 **Browsing.** The compendium (the console's Compendium tab, or **Library › Compendium**) has sub-tabs for Monsters, Spells, Conditions, Rules, Items, Classes, Feats, Species and Backgrounds, in the order you reach for them at the table. In a narrow panel the last ones fold into **More**. **Rules** holds the SRD's rules chapters, one entry per rule with its section and formatted text, tables included. Each kind has a search over names and text and filters for source and edition; monsters add CR range, type, size, environment and a **Named** filter (stat blocks a book marks as a named character), and spells add level. `Ctrl+K` jumps to the search. Each row shows one pill: the source its version comes from ("SRD 5.2", or "· legacy" for 2014 rules), plus a **+** when the record is in other sources or editions too; hover the + to see which. An open record has a dropdown at the top listing every version by edition and source, highest priority first, to switch between them. A monster that a campaign NPC uses as its stat block lists those NPCs at the end under **Used by**; click one to open it in its own campaign.
 
@@ -262,7 +262,14 @@ A web tab is a page you choose, shown inside the stage. In a group's `+` menu pi
 
 ## Settings
 
-**Library** shows the folder and the search index's status, with **Change folder…**, **Open folder** and **Rebuild index**. **Displays** picks the screen the TV opens on. **Appearance** switches between the dark and light themes. **Sample campaign**, **Backups** and **Updates** are described in this guide, and **About** shows the version and the credits for the SRD, the icons, the sample campaign's maps and the fonts.
+Settings is one page of sections, most used first; the links at the top jump to each.
+
+- **Table display** picks the screen the TV opens on. Screens are numbered from left to right, with the monitor's name when Windows or macOS gives one. **Identify** shows each screen's number on it for a few seconds, and **Refresh displays** picks up one you just plugged in. **Automatic** uses a screen that is not the primary; with one screen, only players' phones show the table.
+- **Appearance**: **Theme** (dark or light, saved with the Library) and **Text size** (Small to Extra large), which zooms the whole console on this computer. The TV is never zoomed.
+- **Backups** and **Updates** are described below.
+- **Library** shows the folder, with **Open folder** and **Open another Library…**. Once you have used more than one Library, **Recent Libraries** lists the others: the folder button opens one, the × takes it off the list (its folder is kept). **Sample campaign** adds or resets *The Lantern at Greyford*.
+- **Troubleshooting** shows the search index's status with **Rebuild index**, and **Open logs folder**.
+- **About** shows the version, with **Copy version info** for a bug report, and the credits for the SRD, the icons, the sample campaign's maps and the fonts.
 
 **Updates.** Trifold can check whether a newer version is out each time it starts, and once a day while it stays open. It is off until you say so: the Campaigns page asks once, and the switch in **Settings › Updates** changes your answer at any time. **Check now** asks straight away, whether the switch is on or off. The check reads the project's public release list and sends only Trifold's version number. When a newer version is out, an **Update available** button appears in the top bar. If you installed Trifold with the Windows installer, the new version downloads in the background (its progress shows in Settings › Updates) and the button then reads **Restart to update**. Nothing installs until you press **Restart now** in Settings › Updates: Trifold saves, makes its on-close backup, installs the update and opens again. While it installs, a small "Updating Trifold" window shows its progress; Trifold opens again by itself when it finishes. Each update is checked against the project's signature first, and one that fails is never installed. With the portable exe or on a Mac, **Download** opens the release page in your browser. **Not now** hides the top bar button until the next version. If a check or download fails (offline, say), the reason shows in Settings › Updates and Trifold tries again later.
 
@@ -270,9 +277,9 @@ A web tab is a page you choose, shown inside the stage. In a group's `+` menu pi
 
 **Daily backups.** In **Settings › Backups**, with **Daily backup** on, Trifold zips the Library into its `backups` folder once a day while it is open, and again on close if anything changed (`<date>-quit.zip`). **Back up now** writes one whenever you like. A zip holds everything except the search index, logs and earlier backups; your music files live outside the Library and are not included. **Keep** sets how many days of zips stay.
 
-**Also copy to.** **Choose folder…** names a folder on another drive, or one your cloud sync app keeps, and every backup is copied there under `Trifold backups/<Library folder name>/`. That folder keeps the same days of zips as the Library, plus one a week for eight weeks. The card shows when the last copy was made, or the error when the folder cannot be reached. **Stop copying** turns it off.
+**Second copy.** **Choose folder…** names a folder on another drive, or one your cloud sync app keeps, and every backup is copied there under `Trifold backups/<Library folder name>/`. That folder keeps the same days of zips as the Library, plus one a week for eight weeks. Settings shows when the last copy was made, or the error when the folder cannot be reached. **Stop copying** turns it off.
 
-**Restore.** Each listed zip has a restore icon, and **Restore from file…** takes any backup zip, including one from your copy folder on a new computer. Restoring **replaces** the Library with the backup rather than merging; a zip of the current state is written first and kept for 30 days.
+**Restore.** Open **Backups in this Library** to see the zips; each has a restore icon, and **Restore from file…** takes any backup zip, including one from your copy folder on a new computer. Restoring **replaces** the Library with the backup rather than merging; a zip of the current state is written first and kept for 30 days.
 
 **Campaign export.** The export icon on a campaign card opens its options. **State** is **As it is now** (everything, including a fight in progress) or **Fresh start** (keeps notes, maps, token positions, encounters and NPCs; resets HP, the dead and fights in progress). Tick **Party**, **Homebrew it uses** and **Console layout** as needed, then **Export…** writes `<campaign name>.trifold-campaign`. Imported compendium sources and scene music are never included.
 
@@ -330,14 +337,14 @@ The scene-sending keys work while the Scenes tool is open, the map keys while a 
 
 ## Troubleshooting
 
-**"No bundled content in this build"** on the About card means the build was made without the SRD. Searches stay empty until you import a compendium XML file.
+**"No bundled content in this build"** in Settings › About means the build was made without the SRD. Searches stay empty until you import a compendium XML file.
 
-**The TV opened on the wrong display.** Close it, pick the right display in **Settings › Displays** (press **Refresh displays** if it is missing) and open it again.
+**The TV opened on the wrong display.** Close it, pick the right display in **Settings › Table display** (press **Refresh displays** if it is missing, and **Identify** to see which screen is which) and open it again.
 
 **No sound, or the wrong speakers.** Check that the strip is not showing **Muted**, then check the **Output** menu on the Music transport. Phone audio ignores that menu and uses the system's default output.
 
-**Search misses a record you know is there.** **Settings › Library** shows the index status, with **Rebuild index** beside it. Rebuilding re-reads every file in the Library and loses nothing. Trifold keeps the index up to date on its own, so this is only a repair. If the status says unavailable, the reason follows in brackets and rebuilding is switched off; restart Trifold, and if it stays unavailable, check the logs.
+**Search misses a record you know is there.** **Settings › Troubleshooting** shows the index status, with **Rebuild index** beside it. Rebuilding re-reads every file in the Library and loses nothing. Trifold keeps the index up to date on its own, so this is only a repair. If the status says unavailable, the reason follows in brackets and rebuilding is switched off; restart Trifold, and if it stays unavailable, check the logs.
 
 **Players can't connect.** See the end of [Getting a character back](#getting-a-character-back): usually the firewall or a Wi-Fi network that keeps devices apart.
 
-**You need details on an error.** Open **Settings › Library › Open folder**, then read the newest file in `logs`.
+**You need details on an error.** **Settings › Troubleshooting › Open logs folder** opens the logs; the newest file is today's. **Settings › About › Copy version info** copies the version for a bug report.

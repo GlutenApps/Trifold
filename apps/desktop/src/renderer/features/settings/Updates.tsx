@@ -4,19 +4,20 @@ import { landOn } from '../../navigate';
 import { useShellStore } from '../../stores/shellStore';
 import { useUpdateStore } from '../../stores/updateStore';
 import { Icon } from '../shell/icons';
+import { SettingRow, SettingsSection } from './SettingsLayout';
 
 /**
- * The update check's screens (ADR 0034, ADR 0045, DESIGN.md §10 Beta 2): the Settings card, the
+ * The update check's screens (ADR 0034, ADR 0045, DESIGN.md §10 Beta 2): the Settings section, the
  * top bar's button when a newer version is out or ready to install, and the Library's one-time
  * question. Main does the checking and downloading; nothing here touches the network. No copy
  * names the release host (CLAUDE.md ground rule 1): it is "the public release list".
  *
  * The installed Windows build (`mode: 'install'`) downloads in the background and installs only
- * when the DM presses Restart now on the card; the top bar only points there, so a stray click
+ * when the DM presses Restart now in Settings; the top bar only points there, so a stray click
  * never closes the app mid-session. Other builds open the release page.
  */
 
-/** Where the top bar's button lands: the Updates card in Settings. */
+/** Where the top bar's button lands: the Updates section in Settings. */
 export const UPDATES_NAV_KEY = 'settings:updates';
 
 /** Reads the status once and follows main's `updateStatus` events. Mounted by the app shell. */
@@ -30,7 +31,7 @@ export function useUpdateEvents(): void {
 const when = (iso: string) =>
   new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
-/** What the check sends and what happens next, for the card and the one-time question. */
+/** What the check sends and what happens next, for Settings and the one-time question. */
 function whatItDoes(mode: UpdateStatus['mode']): string {
   return mode === 'install'
     ? 'It sends only its own version number, never your games. A new version downloads in the background and installs only when you choose Restart now.'
@@ -58,7 +59,7 @@ function statusText(status: UpdateStatus): string {
   return 'Not checked yet.';
 }
 
-export function UpdatesCard() {
+export function UpdatesSection() {
   const status = useUpdateStore((s) => s.status);
   const error = useUpdateStore((s) => s.error);
   const setEnabled = useUpdateStore((s) => s.setEnabled);
@@ -72,48 +73,53 @@ export function UpdatesCard() {
   const ready = installs && download.state === 'ready';
 
   return (
-    <div className="card updates-card" data-nav={UPDATES_NAV_KEY} aria-label="Updates">
-      <h2>Updates</h2>
-      <label className="row">
+    <SettingsSection id="updates" title="Updates" nav={UPDATES_NAV_KEY}>
+      <SettingRow
+        label="Check for new versions"
+        htmlFor="updates-enabled"
+        hint={`When Trifold starts, and once a day while it stays open, it asks its public release list whether a newer version is out. ${whatItDoes(status.mode)}`}
+      >
         <input
+          id="updates-enabled"
           type="checkbox"
           checked={status.enabled}
           onChange={(e) => void setEnabled(e.target.checked)}
         />
-        Check for new versions
-      </label>
-      <p className="muted small">
-        When Trifold starts, and once a day while it stays open, it asks its public release list
-        whether a newer version is out. {whatItDoes(status.mode)}
-      </p>
-      <p data-testid="update-status">
-        You have Trifold {status.current}. {statusText(status)}
-      </p>
-      {installs && download.state === 'downloading' && (
-        <progress
-          className="update-progress"
-          max={100}
-          value={download.percent}
-          aria-label={`Downloading Trifold ${available?.version ?? ''}`}
-        />
-      )}
-      {ready && (
-        <p className="muted small">
-          Restarting saves your work and makes the on-close backup, then installs the update and
-          opens Trifold again.
-        </p>
-      )}
-      {status.lastError && !status.checking && (
-        <p className="muted small" role="status">
-          The last check did not work: {status.lastError}.
-        </p>
-      )}
-      {error && (
-        <p className="muted small" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="row">
+      </SettingRow>
+      <SettingRow
+        label="Version"
+        status={
+          <>
+            <p className="small" data-testid="update-status">
+              You have Trifold {status.current}. {statusText(status)}
+            </p>
+            {installs && download.state === 'downloading' && (
+              <progress
+                className="update-progress"
+                max={100}
+                value={download.percent}
+                aria-label={`Downloading Trifold ${available?.version ?? ''}`}
+              />
+            )}
+            {ready && (
+              <p className="muted small">
+                Restarting saves your work and makes the on-close backup, then installs the update
+                and opens Trifold again.
+              </p>
+            )}
+            {status.lastError && !status.checking && (
+              <p className="muted small" role="status">
+                The last check did not work: {status.lastError}.
+              </p>
+            )}
+            {error && (
+              <p className="muted small" role="alert">
+                {error}
+              </p>
+            )}
+          </>
+        }
+      >
         {ready && (
           <button
             type="button"
@@ -154,14 +160,14 @@ export function UpdatesCard() {
         >
           Check now
         </button>
-      </div>
-    </div>
+      </SettingRow>
+    </SettingsSection>
   );
 }
 
 /**
  * The top bar's quiet notice: shown while a newer version is out and not dismissed. Once the
- * installer is downloaded it reads Restart to update; either way it opens the Updates card.
+ * installer is downloaded it reads Restart to update; either way it opens Settings › Updates.
  */
 export function UpdateTopBarButton() {
   const status = useUpdateStore((s) => s.status);

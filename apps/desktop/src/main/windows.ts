@@ -2,6 +2,7 @@ import { app, BrowserWindow, screen, session, shell, type Display } from 'electr
 import { join } from 'node:path';
 import { EVENT_CHANNELS, type DisplayInfo } from '@trifold/api';
 import type { WindowBounds } from '@trifold/schema';
+import { describeDisplays, IDENTIFY_MS, identifyPage } from './displays';
 import {
   forwardableInput,
   isWebUrl,
@@ -62,6 +63,7 @@ export class WindowManager {
   private consoleWin: BrowserWindow | null = null;
   private playerWin: BrowserWindow | null = null;
   private theme: Theme = 'dark';
+  private consoleZoom = 1;
 
   constructor(private readonly hooks: WindowHooks) {}
 
@@ -71,6 +73,13 @@ export class WindowManager {
     const win = this.consoleWin;
     if (process.platform === 'darwin' || !win || win.isDestroyed()) return;
     win.setTitleBarOverlay({ ...OVERLAY[theme], height: 44 });
+  }
+
+  /** The console's text size (ADR 0054) as a zoom factor; the TV window is never zoomed. */
+  setConsoleZoom(factor: number): void {
+    this.consoleZoom = factor;
+    const win = this.consoleWin;
+    if (win && !win.isDestroyed()) win.webContents.setZoomFactor(factor);
   }
 
   private static webPreferences(route: Route): Electron.WebPreferences {
@@ -195,6 +204,8 @@ export class WindowManager {
       webPreferences: WindowManager.webPreferences('console'),
     });
     WindowManager.hostWebTabs(win);
+    // Every load (a reload, a dev rebuild) starts at 100 %: apply the text size again.
+    win.webContents.on('did-finish-load', () => win.webContents.setZoomFactor(this.consoleZoom));
     win.once('ready-to-show', () => {
       if (bounds?.maximized) win.maximize();
       win.show();
@@ -305,15 +316,40 @@ export class WindowManager {
   }
 
   static listDisplays(): DisplayInfo[] {
-    const primaryId = screen.getPrimaryDisplay().id;
-    return screen.getAllDisplays().map((d) => ({
-      id: d.id,
-      label: d.label || `Display ${d.id}`,
-      bounds: d.bounds,
-      scaleFactor: d.scaleFactor,
-      isPrimary: d.id === primaryId,
-      isInternal: d.internal,
-    }));
+    return describeDisplays(screen.getAllDisplays(), screen.getPrimaryDisplay().id);
+  }
+
+  /**
+   * Identify (ADR 0054): a small window in the middle of every screen with its number, closed
+   * after a few seconds. It takes no focus, so the console keeps the keyboard.
+   */
+  static identifyDisplays(): void {
+    for (const display of WindowManager.listDisplays()) {
+      const width = 320;
+      const height = 240;
+      const win = new BrowserWindow({
+        x: Math.round(display.bounds.x + (display.bounds.width - width) / 2),
+        y: Math.round(display.bounds.y + (display.bounds.height - height) / 2),
+        width,
+        height,
+        frame: false,
+        resizable: false,
+        movable: false,
+        minimizable: false,
+        maximizable: false,
+        focusable: false,
+        skipTaskbar: true,
+        alwaysOnTop: true,
+        show: false,
+        backgroundColor: WINDOW_BG,
+        webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+      });
+      win.once('ready-to-show', () => win.showInactive());
+      void win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(identifyPage(display))}`);
+      setTimeout(() => {
+        if (!win.isDestroyed()) win.close();
+      }, IDENTIFY_MS);
+    }
   }
 
   /**

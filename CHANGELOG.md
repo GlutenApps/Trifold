@@ -4,6 +4,17 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Changed
+
+- **Settings, reorganised** (ADR 0054): one column of sections in the order you reach for them (Table display, Appearance, Backups, Updates, Library, Troubleshooting, About), each setting with a line on what it does, and links at the top to jump between them.
+
+### Added
+
+- **Text size** in Settings › Appearance zooms the console from Small to Extra large on this computer; the TV is never zoomed.
+- **Identify** in Settings › Table display shows each screen's number on it, and screens are named by number (and the monitor's name) instead of an internal id.
+- **Recent Libraries** in Settings › Library reopens a Library used before in one click.
+- **Open logs folder** and **Copy version info**, for bug reports.
+
 ### Fixed
 
 - **Restart now shows the update** (ADR 0053): a small "Updating Trifold" window shows the installer's progress until Trifold opens again, instead of nothing.

@@ -19,6 +19,8 @@ interface AppState {
 
   load(): Promise<void>;
   chooseLibrary(): Promise<void>;
+  /** Switches to the Library at `path` (Settings › Library's recent list). */
+  openLibrary(path: string): Promise<void>;
   openLibraryFolder(): Promise<void>;
   updateSettings(patch: Partial<LibrarySettings>): Promise<void>;
   refreshDisplays(): Promise<void>;
@@ -57,7 +59,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   async chooseLibrary() {
     try {
       const path = await window.trifold.library.chooseFolder();
-      if (!path) return;
+      if (path) await get().openLibrary(path);
+    } catch (err) {
+      set({ error: errorMessage(err) });
+    }
+  },
+
+  async openLibrary(path) {
+    try {
       const library = await window.trifold.library.open(path);
       set({ library, error: library.ok ? null : library.error });
       applyTheme(library.settings?.theme);
