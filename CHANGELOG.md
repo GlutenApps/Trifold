@@ -4,6 +4,25 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-11-20
+
+The rest of the table-testing list: conditions that last between fights, a measuring tool on phones, and area shapes on the map.
+
+### Added
+
+- **Conditions between fights** (ADR 0049): PCs, NPCs and companions keep their conditions all the time. Players change them from their phones in or out of a fight, and each PC and NPC row in the Campaign tab shows them, with **+ Condition** and a remove button. They go into a fight and come back out like HP, without their durations.
+- **Measure on the phone**: the phone's Move tool has **Move | Measure**. In Measure, a drag on the map shows the distance (*3 squares · 15 ft*) on that phone only; the TV and your map never see it.
+- **Area shapes** (ADR 0050): **Area shapes** in the map toolbar (`S`) draws a cone, sphere, cube or line at the size you set in feet, from the nearest grid corner, aimed by dragging. The squares at least half inside are shaded. It's only a picture and selects nothing. The TV and phones show it too, under the fog.
+
+### Changed
+
+- **Long rest** also lowers Exhaustion by one level.
+- **Companions that stay after a fight** keep their HP from it, as well as their conditions.
+
+### Fixed
+
+- **Two settings changes made at once no longer lose one of them.** This could undo a setting such as the TV's display when the console saved its layout at the same moment.
+
 ## [0.4.3] - 2026-11-20
 
 Table-testing feedback: one switch for the TV and phones, phones that show everything the TV does, hordes, and fixes.
