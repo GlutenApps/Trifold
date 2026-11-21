@@ -2,7 +2,7 @@ import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { ulid } from 'ulid';
 import type { ZodType } from 'zod';
 import type { CampaignBundle, CampaignSummary } from '@trifold/api';
-import { normalizeKey, sortCounters } from '@trifold/rules';
+import { carriedOut, normalizeKey, sortCounters } from '@trifold/rules';
 import {
   Adventure,
   CAMPAIGN_SCHEMA_VERSION,
@@ -549,7 +549,8 @@ export class CampaignRepository {
 
   /**
    * What a fight leaves behind (ADR 0012): PC cards keep their current and temp HP, named NPCs
-   * keep HP and whether they are alive. A card or NPC that no longer exists is skipped.
+   * keep HP and whether they are alive, and both keep their conditions without the durations
+   * that only count in a fight (ADR 0049). A card or NPC that no longer exists is skipped.
    */
   private async carryOver(combatants: CombatState['combatants']): Promise<void> {
     const slug = this.requireSlug();
@@ -560,7 +561,14 @@ export class CampaignRepository {
           PCCard,
           'pc',
         );
-        if (pc) await this.savePc({ ...pc, currentHp: c.hp.current, tempHp: c.hp.temp });
+        if (pc) {
+          await this.savePc({
+            ...pc,
+            currentHp: c.hp.current,
+            tempHp: c.hp.temp,
+            conditions: carriedOut(c.conditions),
+          });
+        }
       } else if (c.ref.kind === 'npc') {
         const npc = await this.readOptional(
           this.dir(slug, 'npcs', `${c.ref.npcId}.json`),
@@ -575,6 +583,7 @@ export class CampaignRepository {
               ...npc,
               hp: { current: c.hp.current, max: c.hp.max, temp: c.hp.temp },
               isAlive: !c.dead,
+              conditions: carriedOut(c.conditions),
               updatedAt: nowIso(),
             }),
           );

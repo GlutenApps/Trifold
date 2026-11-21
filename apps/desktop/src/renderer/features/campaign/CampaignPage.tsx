@@ -16,6 +16,8 @@ import { SummonsTab } from '../players/SummonsTab';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { AddMenu } from './AddMenu';
+import { HeldConditions } from './HeldConditions';
+import { afterLongRest } from '@trifold/rules';
 import { AddNpcPanel, type AddNpcMode } from './AddNpcPanel';
 import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './CharacterEditors';
 import { describePlan } from '../encounters/replaceReferences';
@@ -118,13 +120,22 @@ function PartyTab() {
     );
   }
 
+  const exhausted = (pc: PCCard) => (pc.conditions ?? []).some((c) => c.name === 'Exhaustion');
   const wounded = current.pcs.filter(
-    (pc) => (pc.currentHp !== undefined && pc.currentHp < pc.maxHp) || (pc.tempHp ?? 0) > 0,
+    (pc) =>
+      (pc.currentHp !== undefined && pc.currentHp < pc.maxHp) ||
+      (pc.tempHp ?? 0) > 0 ||
+      exhausted(pc),
   );
+  // A long rest (2024 rules): full HP, temp HP gone, Exhaustion down a level (ADR 0049).
   const longRest = async () => {
     for (const pc of wounded) {
       const { currentHp: _spent, ...rested } = pc;
-      await savePc({ ...rested, tempHp: 0 });
+      await savePc({
+        ...rested,
+        tempHp: 0,
+        ...(pc.conditions ? { conditions: afterLongRest(pc.conditions) } : {}),
+      });
     }
   };
   return (
@@ -136,7 +147,7 @@ function PartyTab() {
           type="button"
           className="btn"
           disabled={wounded.length === 0}
-          title="Everyone back to full HP, temp HP gone"
+          title="Everyone back to full HP, temp HP gone, Exhaustion down a level"
           onClick={() => void longRest()}
         >
           Long rest
@@ -170,6 +181,11 @@ function PartyTab() {
             {pc.initiativeBonus >= 0 ? '+' : ''}
             {pc.initiativeBonus} · PP {pc.passives.perception}
           </span>
+          <HeldConditions
+            name={pc.name}
+            conditions={pc.conditions}
+            onChange={(conditions) => void savePc({ ...pc, conditions })}
+          />
           <span className="spacer" />
           {confirmId === pc.id ? (
             <InlineConfirm
@@ -422,6 +438,11 @@ function NpcsTab() {
               </span>
             )}
             {!n.isAlive && <span className="badge">dead</span>}
+            <HeldConditions
+              name={n.name}
+              conditions={n.conditions}
+              onChange={(conditions) => void saveNpc({ ...n, conditions })}
+            />
             {n.recordRef && (
               <span
                 className="badge source-pill npc-home"

@@ -72,7 +72,7 @@ export function intentProblem(intent: TableIntent, creature: TableCreature): str
       if (!creature.editable.ac) return 'AC can’t be changed here.';
       return within(intent.value, INTENT_LIMITS.ac) ? null : 'AC must be 0 to 40.';
     case 'addCondition':
-      if (!creature.editable.conditions) return 'Conditions are tracked during fights.';
+      if (!creature.editable.conditions) return 'Conditions can’t be changed here.';
       if (!(CONDITION_NAMES as readonly string[]).includes(intent.name))
         return 'Unknown condition.';
       if (intent.level !== undefined) {
@@ -82,7 +82,7 @@ export function intentProblem(intent: TableIntent, creature: TableCreature): str
       }
       return null;
     case 'removeCondition':
-      if (!creature.editable.conditions) return 'Conditions are tracked during fights.';
+      if (!creature.editable.conditions) return 'Conditions can’t be changed here.';
       return creature.conditions.some((c) => c.id === intent.id) ? null : 'That condition is gone.';
     case 'initiative':
       if (!creature.needsInitiative) return 'Initiative is already in.';

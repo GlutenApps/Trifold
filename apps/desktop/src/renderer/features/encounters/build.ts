@@ -130,7 +130,8 @@ export function combatantFromPc(pc: PCCard, template?: CombatantTemplate): Comba
     damageResistances: [],
     damageImmunities: [],
     conditionImmunities: [],
-    conditions: [],
+    // The conditions the card carries come into the fight (ADR 0049).
+    conditions: [...(pc.conditions ?? [])],
     concentrating: null,
     counters: [],
     recharges: [],
@@ -266,6 +267,7 @@ export function combatantFromNpc(
     ...base,
     ref: { kind: 'npc', npcId: npc.id, name: npc.name },
     hp: { current, max, temp: npc.hp?.temp ?? 0 },
+    conditions: [...(npc.conditions ?? [])],
     dead: !npc.isAlive,
   };
 }

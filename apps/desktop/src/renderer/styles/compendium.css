@@ -3723,3 +3723,22 @@ input[type='range'].wide {
 .images-matches .badge {
   margin-left: 6px;
 }
+
+/* Conditions a PC or NPC carries between fights (ADR 0049), on its Campaign row. */
+.held-conditions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.held-condition {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.held-condition-add {
+  width: auto;
+}

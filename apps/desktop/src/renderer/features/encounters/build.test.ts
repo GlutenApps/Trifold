@@ -249,6 +249,13 @@ describe('buildCombatants', () => {
 });
 
 describe('what carries between fights (ADR 0012)', () => {
+  it('brings the conditions a PC card carries into the fight (ADR 0049)', () => {
+    const e = encounter({ combatants: [encounter().combatants[0]!] });
+    const carried = [{ id: 'x', name: 'Poisoned', appliedRound: 0 }];
+    const built = buildCombatants(e, [{ ...pc, conditions: carried }], byId, {});
+    expect(built.combatants[0]!.conditions).toEqual(carried);
+  });
+
   it('starts a PC from the card’s current and temp HP, clamped to max', () => {
     const e = encounter({ combatants: [encounter().combatants[0]!] });
     const hurt = buildCombatants(e, [{ ...pc, currentHp: 12, tempHp: 3 }], byId, {});
