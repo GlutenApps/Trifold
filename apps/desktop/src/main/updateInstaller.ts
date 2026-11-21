@@ -22,7 +22,7 @@ export interface SelfInstaller {
    * manifest is missing, unsigned, signed by an unknown key or for another version.
    */
   download(version: string, onProgress: (percent: number) => void): Promise<void>;
-  /** Starts the downloaded installer silently, to relaunch Trifold when done; false when none. */
+  /** Starts the downloaded installer (its progress window only), to relaunch Trifold when done; false when none. */
   install(): boolean;
 }
 
@@ -172,8 +172,9 @@ export class NsisSelfInstaller implements SelfInstaller {
 
   install(): boolean {
     if (!this.ready) return false;
-    // Silent, then relaunch: the DM already chose Restart to update, and the installer keeps the
-    // folder they installed to.
-    return this.updater.install(true, true);
+    // Not silent: the installer shows its progress bar alone (build/installer.nsh skips every
+    // other page on an update), so the DM can see the update running until the new version
+    // starts (ADR 0053). It keeps the folder and install mode they chose.
+    return this.updater.install(false, true);
   }
 }

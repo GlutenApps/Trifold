@@ -40,7 +40,7 @@ packages/rules/          pure functions: dice, CR/XP tables, 2024 budgets, comba
 packages/importers/      xml/ (stream parser), compendium/ (Lion's Den XML), campaign/ (campaign XML, GM export, package export),
                          open5e/ (build-time SRD normalisation)
 resources/               built at build time: srd-2024.jsonl, srd-2014.jsonl (git-ignored), srd-manifest.json,
-                         sample/ (git-ignored), icons/ (svg/ and credits.json git-ignored; mapping.json and manifest.json committed)
+                         sample/ (git-ignored), icons/ (glyphs.json and credits.json git-ignored; mapping.json and manifest.json committed)
 scripts/                 dev.mjs, fetch-content.ts (runs fetch-open5e.ts + fetch-game-icons.ts + verify-mapping.ts
                          + build-sample.ts), rebuild-native.mjs, check-content.mjs (build guard),
                          update-keygen.mjs + update-manifest.mjs (update signing key and signed latest.yml, ADR 0045),

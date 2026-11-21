@@ -51,7 +51,7 @@ import type { AppConfigStore } from '../appConfig';
 import type { IconResources } from '../icons';
 import type { LibrarySession } from '../library/session';
 import { errorMessage, type Logger } from '../log';
-import { resolveMediaPath } from '../media';
+import { resolveMediaIcon, resolveMediaPath } from '../media';
 import { lanAddresses, listenOnFirstFreePort, type BoundListener, type LanAddress } from './listen';
 import { MdnsResponder } from './mdns';
 import { pinMatches, PlayersStore } from './players';
@@ -1338,7 +1338,23 @@ export class TableHub {
     src: string | undefined,
     headers: Record<string, string>,
   ): Promise<void> {
-    const file = src ? resolveMediaPath(src, this.opts.session, this.opts.icons) : null;
+    const svgHeaders = {
+      'Cache-Control': 'private, max-age=86400',
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
+    };
+    const glyph = src ? resolveMediaIcon(src, this.opts.icons) : null;
+    if (glyph !== null) {
+      const body = Buffer.from(glyph, 'utf8');
+      res.writeHead(200, {
+        ...headers,
+        'Content-Type': CONTENT_TYPES['.svg']!,
+        'Content-Length': body.length,
+        ...svgHeaders,
+      });
+      res.end(body);
+      return;
+    }
+    const file = src ? resolveMediaPath(src, this.opts.session) : null;
     const ext = file ? extname(file).toLowerCase() : '';
     if (!file || !IMAGE_EXTS.has(ext)) return this.notFound(res);
     const info = await stat(file).catch(() => null);
@@ -1347,10 +1363,7 @@ export class TableHub {
       ...headers,
       'Content-Type': CONTENT_TYPES[ext]!,
       'Content-Length': info.size,
-      'Cache-Control': 'private, max-age=86400',
-      ...(ext === '.svg'
-        ? { 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" }
-        : {}),
+      ...(ext === '.svg' ? svgHeaders : { 'Cache-Control': svgHeaders['Cache-Control'] }),
     });
     createReadStream(file).pipe(res);
   }

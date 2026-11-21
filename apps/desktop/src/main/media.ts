@@ -37,26 +37,33 @@ async function serveFile(path: string, request: Request): Promise<Response> {
   return new Response(upstream.body, { status: upstream.status, headers });
 }
 
-/**
- * The file a `trifold-media://` URL names, or null when it names nothing servable: a bundled
- * icon, a music track, or a file inside the open Library. The table server reuses it to serve
- * token art to browsers (ADR 0043).
- */
-export function resolveMediaPath(
-  rawUrl: string,
-  session: LibrarySession,
-  icons: IconResources,
-): string | null {
-  let url: URL;
+function mediaUrl(rawUrl: string): URL | null {
   try {
-    url = new URL(rawUrl);
+    const url = new URL(rawUrl);
+    return url.protocol === `${MEDIA_SCHEME}:` ? url : null;
   } catch {
     return null;
   }
-  if (url.protocol !== `${MEDIA_SCHEME}:`) return null;
-  if (url.host === 'icons') {
-    return icons.svgPath(decodeURIComponent(url.pathname.replace(/^\//, ''))) ?? null;
-  }
+}
+
+/**
+ * The SVG text of the bundled glyph a `trifold-media://icons/<name>.svg` URL names, or null.
+ * Glyphs live in one bundle file, not one file each (`IconResources`), so they are served as text.
+ */
+export function resolveMediaIcon(rawUrl: string, icons: IconResources): string | null {
+  const url = mediaUrl(rawUrl);
+  if (url?.host !== 'icons') return null;
+  return icons.svg(decodeURIComponent(url.pathname.replace(/^\//, '')));
+}
+
+/**
+ * The file a `trifold-media://` URL names, or null when it names no servable file: a music track
+ * or a file inside the open Library (bundled icons go through `resolveMediaIcon`). The table
+ * server reuses it to serve token art to browsers (ADR 0043).
+ */
+export function resolveMediaPath(rawUrl: string, session: LibrarySession): string | null {
+  const url = mediaUrl(rawUrl);
+  if (!url) return null;
   if (url.host === 'track') {
     return session.music?.trackPath(decodeURIComponent(url.pathname.replace(/^\//, ''))) ?? null;
   }
@@ -82,7 +89,19 @@ export function installMediaHandler(session: LibrarySession, icons: IconResource
     if (!['icons', 'track', 'library'].includes(url.host)) {
       return new Response('not found', { status: 404 });
     }
-    const file = resolveMediaPath(request.url, session, icons);
+    if (url.host === 'icons') {
+      const svg = resolveMediaIcon(request.url, icons);
+      if (svg === null) return new Response('not found', { status: 404 });
+      return new Response(svg, {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/svg+xml',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'max-age=86400',
+        },
+      });
+    }
+    const file = resolveMediaPath(request.url, session);
     if (!file) {
       return new Response(url.host === 'library' ? 'forbidden' : 'not found', {
         status: url.host === 'library' ? 403 : 404,

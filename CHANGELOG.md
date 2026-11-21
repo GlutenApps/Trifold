@@ -4,6 +4,11 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Fixed
+
+- **Restart now shows the update** (ADR 0053): a small "Updating Trifold" window shows the installer's progress until Trifold opens again, instead of nothing.
+- **Updates take seconds, not minutes** (ADR 0053): the game-icons ship as one file instead of 4,176, so Windows has far fewer files to check. An update went from about 8 minutes to about 30 seconds on a test machine.
+
 ## [0.4.4] - 2026-11-20
 
 The rest of the table-testing list: conditions that last between fights, a measuring tool on phones, and area shapes on the map.

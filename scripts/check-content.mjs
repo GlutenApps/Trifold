@@ -3,7 +3,7 @@
 // only the manifests are committed, so a clean clone can build a silently content-less installer.
 // This runs as `prebuild` in apps/desktop and in the release workflow.
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,21 +30,27 @@ if (!existsSync(manifestPath)) {
   }
 }
 
-// Icons: the svg set, its credits and licence, and the count the manifest recorded.
+// Icons: the glyph bundle, its credits and licence, and the count the manifest recorded.
 const iconsDir = join(resources, 'icons');
 const iconManifestPath = join(iconsDir, 'manifest.json');
 if (!existsSync(iconManifestPath)) {
   problems.push('resources/icons/manifest.json is missing');
 } else {
   const iconManifest = JSON.parse(readFileSync(iconManifestPath, 'utf8'));
-  const svgDir = join(iconsDir, 'svg');
-  const count = existsSync(svgDir)
-    ? readdirSync(svgDir).filter((f) => f.endsWith('.svg')).length
+  const glyphsPath = join(iconsDir, 'glyphs.json');
+  const count = existsSync(glyphsPath)
+    ? Object.keys(JSON.parse(readFileSync(glyphsPath, 'utf8'))).length
     : 0;
-  if (count === 0) problems.push('resources/icons/svg/ is missing or empty');
+  if (count === 0) problems.push('resources/icons/glyphs.json is missing or empty');
   else if (iconManifest.icons && count !== iconManifest.icons) {
     problems.push(
-      `resources/icons/svg/ has ${count} icons; manifest.json recorded ${iconManifest.icons}`,
+      `resources/icons/glyphs.json has ${count} icons; manifest.json recorded ${iconManifest.icons}`,
+    );
+  }
+  // One file per icon made installs and updates take minutes; only the bundle ships.
+  if (existsSync(join(iconsDir, 'svg'))) {
+    problems.push(
+      'resources/icons/svg/ is left from an older fetch; delete it or run fetch:content',
     );
   }
   for (const name of ['credits.json', 'license.txt']) {
