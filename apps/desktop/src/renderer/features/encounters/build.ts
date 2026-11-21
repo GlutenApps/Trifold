@@ -2,6 +2,7 @@ import { ulid } from 'ulid';
 import {
   abilityModifier,
   groupNames,
+  hordeXp,
   maskedNameFor,
   numberedNames,
   rollInitiative,
@@ -300,6 +301,19 @@ function forToken(template: CombatantTemplate, i: number): CombatantTemplate {
  */
 export function isHorde(template: CombatantTemplate): boolean {
   return template.horde === true && template.quantity > 1 && template.ref.kind === 'record';
+}
+
+/**
+ * The XP a row counts for, in the encounter budget and the XP earned: a horde its horde CR's
+ * (ADR 0052), others each creature's. `cr` and `xpEach` override the row's own (quick scale's
+ * picks).
+ */
+export function templateXp(
+  t: CombatantTemplate,
+  cr: string = t.cache?.cr ?? '0',
+  xpEach: number = t.cache?.xp ?? 0,
+): number {
+  return isHorde(t) ? hordeXp(cr, t.quantity) : xpEach * t.quantity;
 }
 
 /**

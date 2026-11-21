@@ -72,6 +72,8 @@ describe('2024 encounter budget', () => {
     expect(difficultyBand(899, budget)).toBe('low');
     expect(difficultyBand(900, budget)).toBe('moderate');
     expect(difficultyBand(1600, budget)).toBe('high');
-    expect(difficultyBand(9999, budget)).toBe('high');
+    expect(difficultyBand(3199, budget)).toBe('high');
+    // Twice the High budget is Impossible (ADR 0052).
+    expect(difficultyBand(3200, budget)).toBe('impossible');
   });
 });

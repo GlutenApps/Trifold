@@ -121,7 +121,7 @@ describe('EncountersPage: named NPCs (ADR 0012)', () => {
     useCombatStore.setState({ encounterId: null, state: null, finished: null });
   });
 
-  it('makes a group of compendium creatures a horde, showing the CR their XP adds up to', async () => {
+  it('makes a group of compendium creatures a horde, showing the CR it fights like', async () => {
     const b = bundle();
     b.encounters[0]!.combatants = [
       {
@@ -143,12 +143,54 @@ describe('EncountersPage: named NPCs (ADR 0012)', () => {
     const row = screen.getByTestId('template-row');
     expect(row).toHaveTextContent('CR 1/8 · 25 XP');
     await userEvent.click(screen.getByRole('button', { name: 'Fight Bandit as a horde' }));
-    // Four CR 1/8 bandits: 100 XP together, CR 1/2 (ADR 0047).
-    expect(screen.getByTestId('template-row')).toHaveTextContent('Horde of 4 · CR 1/2 · 100 XP');
+    // Four CR 1/8 bandits fight like a CR 1, and count its 200 XP (ADR 0052).
+    expect(screen.getByTestId('template-row')).toHaveTextContent('Horde of 4 · CR 1 · 200 XP');
+    expect(screen.queryByTestId('horde-note')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Fight Bandit as individuals' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
+  });
+
+  it('notes that a horde of CR 3+ creatures hits very hard (ADR 0052)', async () => {
+    const b = bundle();
+    b.encounters[0]!.combatants = [
+      {
+        id: 'g',
+        ref: {
+          kind: 'record',
+          ref: { recordId: 'r', sourceId: 'srd', key: 'ogre', edition: '2024' },
+          name: 'Ogre',
+        },
+        quantity: 4,
+        role: 'enemy',
+        hidden: false,
+        horde: true,
+        cache: { xp: 450, cr: '2', type: 'giant', hp: 68, ac: 11 },
+      },
+      {
+        id: 'h',
+        ref: {
+          kind: 'record',
+          ref: { recordId: 's', sourceId: 'srd', key: 'owlbear', edition: '2024' },
+          name: 'Owlbear',
+        },
+        quantity: 4,
+        role: 'enemy',
+        hidden: false,
+        horde: true,
+        cache: { xp: 700, cr: '3', type: 'monstrosity', hp: 59, ac: 13 },
+      },
+    ];
+    useCampaignStore.setState({ current: b });
+    render(<EncountersPage />);
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Bridge ambush' }));
+    const [ogres, owlbears] = screen.getAllByTestId('template-row');
+    expect(within(ogres!).queryByTestId('horde-note')).not.toBeInTheDocument();
+    expect(within(owlbears!).getByTestId('horde-note')).toHaveTextContent(
+      'Hordes suit weaker creatures',
+    );
+    expect(owlbears).toHaveTextContent('Horde of 4 · CR 6 · 2,300 XP');
   });
 
   it('splits one creature out of a group as an NPC, and offers NPCs not yet in it', async () => {

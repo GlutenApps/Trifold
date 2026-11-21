@@ -17,7 +17,7 @@ import { CreatureEditor } from '../compendium/CreatureEditor';
 import { editRow, retargetTokens, useCreatureEditStore } from './creatureEdits';
 import { retargetToNpc, templateTokenIds } from './templates';
 import { isHorde, withParty } from './build';
-import { hordeCr } from '@trifold/rules';
+import { crToNumber, HORDE_NOTE_FROM_CR, hordeCr, hordeXp } from '@trifold/rules';
 
 /**
  * The Encounters major (DESIGN.md §6.4, ADR 0005): the encounter list and builder while no
@@ -64,13 +64,13 @@ function TemplateRow({
   const [editing, setEditing] = useState(false);
   const name = t.label || t.ref.name;
   const creature = t.ref.kind === 'record' || t.ref.kind === 'custom';
-  // A horde shows the CR its members' XP add up to (ADR 0047); its XP is theirs together.
+  // A horde shows the CR it fights like (ADR 0052), and counts that CR's XP.
   const horde = isHorde(t);
   const canHorde = t.ref.kind === 'record' && t.quantity > 1;
   const meta = [
     t.label ? t.ref.name : '',
     horde && t.cache
-      ? `Horde of ${t.quantity} · CR ${hordeCr(t.cache.xp, t.quantity)} · ${t.cache.xp * t.quantity} XP`
+      ? `Horde of ${t.quantity} · CR ${hordeCr(t.cache.cr, t.quantity)} · ${hordeXp(t.cache.cr, t.quantity).toLocaleString()} XP`
       : t.cache && (t.cache.cr || t.cache.xp)
         ? `CR ${t.cache.cr} · ${t.cache.xp} XP`
         : '',
@@ -110,6 +110,12 @@ function TemplateRow({
               )}
             </span>
             {meta && <span className="muted small">{meta}</span>}
+            {horde && (crToNumber(t.cache?.cr ?? '') ?? 0) >= HORDE_NOTE_FROM_CR && (
+              <span className="muted small" data-testid="horde-note">
+                Hordes suit weaker creatures. With CR {HORDE_NOTE_FROM_CR} or higher members it hits
+                very hard; the difficulty bar shows how hard.
+              </span>
+            )}
           </>
         )}
       </div>
@@ -145,7 +151,7 @@ function TemplateRow({
             aria-pressed={horde}
             title={
               horde
-                ? 'A horde: one token, one turn and their hit points pooled; its attack rolls damage once for each member standing. Click for individuals'
+                ? 'A horde: one token, one turn and their hit points pooled; it attacks once for every three members standing, and an area effect hurts each member it catches. Click for individuals'
                 : 'Individuals: each has its own token, turn and initiative. Click to make them a horde'
             }
             onClick={() => onChange({ horde: !horde })}

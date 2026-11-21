@@ -3759,3 +3759,28 @@ input[type='range'].wide {
 .held-condition-add {
   width: auto;
 }
+
+/* Impossible (ADR 0052): twice the High budget, filled so it reads as past the scale. */
+.band-impossible .difficulty-band {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--danger-contrast);
+}
+
+.band-impossible .difficulty-fill {
+  background: var(--danger);
+}
+
+/* Members of a horde inside an area effect (ADR 0052): its own line under the horde's target
+   row, across both columns, with a line saying what it is for. */
+.dmg-caught {
+  grid-column: 1 / -1;
+}
+
+.dmg-caught .row {
+  gap: 6px;
+}
+
+.dmg-caught p {
+  margin: 2px 0 0;
+}

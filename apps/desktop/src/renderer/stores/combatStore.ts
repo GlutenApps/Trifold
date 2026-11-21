@@ -1,6 +1,10 @@
 import { ulid } from 'ulid';
 import { create } from 'zustand';
 import {
+  HORDE_HIT_MEMBERS,
+  hordeDamageTaken,
+  hordeMemberDamage,
+  hordeAttackGroups,
   hordeStanding,
   abilityModifier,
   advanceTurn,
@@ -46,6 +50,7 @@ import {
   combatantFromNpc,
   combatantFromPc,
   customCombatant,
+  templateXp,
 } from '../features/encounters/build';
 import {
   replaceInCombatants,
@@ -112,6 +117,8 @@ export interface PendingDamage {
 export interface DamageTarget {
   id: string;
   share: 'full' | 'half';
+  /** Members of a horde inside an area effect: each takes the damage (ADR 0052). */
+  caught?: number;
 }
 
 interface CombatStoreState {
@@ -147,7 +154,11 @@ interface CombatStoreState {
   sortByInitiative(): void;
   next(): void;
   previous(): void;
-  damage(id: string, amount: number, type?: string): void;
+  /**
+   * Damage to one combatant, after resistances. On a horde it is one hit (felling at most three
+   * members) or, with `caught` above 1, an area effect hurting each member caught (ADR 0052).
+   */
+  damage(id: string, amount: number, type?: string, caught?: number): void;
   heal(id: string, amount: number): void;
   tempHp(id: string, amount: number): void;
   /** Max HP as a player set it: current HP is kept within it. */
@@ -475,7 +486,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
   const enemyXpOf = (encounter: Encounter) =>
     encounter.combatants
       .filter((t) => t.role === 'enemy')
-      .reduce((sum, t) => sum + (t.cache?.xp ?? 0) * t.quantity, 0);
+      .reduce((sum, t) => sum + templateXp(t), 0);
 
   return {
     encounterId: null,
@@ -689,7 +700,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       if (active) set({ selectedId: active.id });
     },
 
-    damage(id, amount, type) {
+    damage(id, amount, type, caught = 1) {
       const c = find(id);
       if (!c || amount <= 0) return;
       const mult = damageMultiplier(type, {
@@ -697,7 +708,17 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         resistances: c.damageResistances,
         immunities: c.damageImmunities,
       });
-      const outcome = applyDamage(c.hp, amount, mult.multiplier);
+      // A horde takes one hit as felling at most three members, and an area effect as each member
+      // caught taking it (ADR 0052), after its resistances.
+      let hordeNote = '';
+      let outcome = applyDamage(c.hp, amount, mult.multiplier);
+      if (c.horde) {
+        const taken = hordeDamageTaken(outcome.adjusted, caught, c.horde, c.hp.current);
+        if (caught > 1) hordeNote = `, ${caught} members caught`;
+        else if (taken < outcome.adjusted)
+          hordeNote = `, one hit fells at most ${HORDE_HIT_MEMBERS}`;
+        outcome = applyDamage(c.hp, taken, 1);
+      }
       const isPc = c.ref.kind === 'pc';
       const droppedTo0 = outcome.hp.current === 0 && c.hp.current > 0;
       patchCombatant(id, (x) => ({
@@ -713,7 +734,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
           : ` (${mult.reason}${mult.qualified ? ', qualified' : ''} → ${outcome.adjusted})`;
       log(
         'damage',
-        `${c.name} takes ${amount}${type ? ` ${type}` : ''} damage${why}${outcome.absorbedByTemp ? `, ${outcome.absorbedByTemp} absorbed by temp HP` : ''} → ${outcome.hp.current}/${outcome.hp.max}${droppedTo0 ? (isPc ? ' — down!' : ' — dead') : ''}${outcome.massive ? ' (massive damage: instant death if it exceeded max HP)' : ''}`,
+        `${c.name} takes ${amount}${type ? ` ${type}` : ''} damage${why}${hordeNote ? ` (${outcome.adjusted} to the horde${hordeNote})` : ''}${outcome.absorbedByTemp ? `, ${outcome.absorbedByTemp} absorbed by temp HP` : ''} → ${outcome.hp.current}/${outcome.hp.max}${droppedTo0 ? (isPc ? ' — down!' : ' — dead') : ''}${outcome.massive ? ' (massive damage: instant death if it exceeded max HP)' : ''}`,
         id,
       );
       if (c.concentrating && outcome.dealt + outcome.absorbedByTemp > 0 && !droppedTo0) {
@@ -1082,76 +1103,87 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     rollAttackFor(id, feature, attack, mode = 'normal') {
       const c = find(id);
       if (!c) return;
-      // A horde makes one attack whose damage is one member's for each still standing (ADR 0047).
-      const members = c.horde ? hordeStanding(c.hp.current, c.horde.memberHp, c.horde.size) : 1;
-      const result = rollAttack(attack, mode, Math.random, Math.max(1, members));
-      const hit = result.toHit;
-      const parts: string[] = [];
-      if (attack.toHit !== undefined) {
-        parts.push(
-          `to hit ${hit.total} (d20 ${hit.faces.join('/')}${hit.modifier ? ` ${hit.modifier >= 0 ? '+' : ''}${hit.modifier}` : ''})${result.crit ? ' CRIT' : result.fumble ? ' natural 1' : ''}`,
-        );
-      }
-      if (result.damage)
-        parts.push(
-          `${result.damage.total} ${attack.damageType ?? ''} damage (${facesText(result.damage)}${result.damage.crit ? ', dice doubled' : ''})`.replace(
-            '  ',
-            ' ',
-          ),
-        );
-      for (const x of result.extraDamage)
-        parts.push(`+${x.total} ${x.damageType ?? ''} (${facesText(x)})`);
-      const modeText = attack.toHit !== undefined && mode !== 'normal' ? ` with ${mode}` : '';
-      const hordeText = c.horde && result.damage ? ` (${members} of ${c.horde.size} standing)` : '';
-      const text = `${c.name} — ${feature.displayName} [${attack.label}]${modeText}${hordeText}: ${parts.join('; ')}`;
-      log('attack', text, id);
-      const damageParts: PendingDamage['parts'] = [];
-      if (result.damage) {
-        damageParts.push({
-          amount: result.damage.total,
-          ...(attack.damageType ? { type: attack.damageType } : {}),
+      // A horde attacks once for every three members standing, each roll with its members' damage
+      // (ADR 0052); a lone creature once.
+      const standing = c.horde ? hordeStanding(c.hp.current, c.horde.memberHp, c.horde.size) : 1;
+      const groups = c.horde ? hordeAttackGroups(standing) : [1];
+      if (groups.length === 0) groups.push(1);
+      // A tiny creature's bite counts as 1d4 in a horde, as a swarm's do (ADR 0052).
+      const swarmed =
+        c.horde && attack.damage ? { ...attack, damage: hordeMemberDamage(attack.damage) } : attack;
+      groups.forEach((members, gi) => {
+        const result = rollAttack(swarmed, mode, Math.random, members);
+        const hit = result.toHit;
+        const parts: string[] = [];
+        if (attack.toHit !== undefined) {
+          parts.push(
+            `to hit ${hit.total} (d20 ${hit.faces.join('/')}${hit.modifier ? ` ${hit.modifier >= 0 ? '+' : ''}${hit.modifier}` : ''})${result.crit ? ' CRIT' : result.fumble ? ' natural 1' : ''}`,
+          );
+        }
+        if (result.damage)
+          parts.push(
+            `${result.damage.total} ${attack.damageType ?? ''} damage (${facesText(result.damage)}${result.damage.crit ? ', dice doubled' : ''})`.replace(
+              '  ',
+              ' ',
+            ),
+          );
+        for (const x of result.extraDamage)
+          parts.push(`+${x.total} ${x.damageType ?? ''} (${facesText(x)})`);
+        const modeText = attack.toHit !== undefined && mode !== 'normal' ? ` with ${mode}` : '';
+        const groupText =
+          groups.length > 1 ? `group ${gi + 1} of ${groups.length}: ${members} members, ` : '';
+        const hordeText =
+          c.horde && result.damage ? ` (${groupText}${standing} of ${c.horde.size} standing)` : '';
+        const text = `${c.name} — ${feature.displayName} [${attack.label}]${modeText}${hordeText}: ${parts.join('; ')}`;
+        log('attack', text, id);
+        const damageParts: PendingDamage['parts'] = [];
+        if (result.damage) {
+          damageParts.push({
+            amount: result.damage.total,
+            ...(attack.damageType ? { type: attack.damageType } : {}),
+          });
+        }
+        for (const x of result.extraDamage) {
+          damageParts.push({ amount: x.total, ...(x.damageType ? { type: x.damageType } : {}) });
+        }
+        if (damageParts.length > 0) {
+          const hitInfo =
+            attack.toHit !== undefined
+              ? {
+                  hit: {
+                    total: hit.total,
+                    natural: hit.natural,
+                    crit: result.crit,
+                    fumble: result.fumble,
+                  },
+                }
+              : {};
+          set({
+            pendingDamage: [
+              ...get().pendingDamage,
+              {
+                id: ulid(),
+                sourceId: id,
+                sourceName: c.name,
+                featureName: feature.displayName,
+                label: groups.length > 1 ? `${attack.label} · group ${gi + 1}` : attack.label,
+                ...hitInfo,
+                parts: damageParts,
+              },
+            ],
+          });
+        }
+        useRollLogStore.getState().add({
+          kind: 'attack',
+          label: `${feature.displayName} (${c.name})`,
+          expression: attack.damage ?? 'd20',
+          total: result.damage?.total ?? hit.total,
+          faces: parts.join('; '),
+          actor: c.name,
+          source: 'tracker',
+          ...(get().encounterId ? { encounterId: get().encounterId! } : {}),
+          ...(result.crit ? { outcome: 'crit' } : result.fumble ? { outcome: 'fumble' } : {}),
         });
-      }
-      for (const x of result.extraDamage) {
-        damageParts.push({ amount: x.total, ...(x.damageType ? { type: x.damageType } : {}) });
-      }
-      if (damageParts.length > 0) {
-        const hitInfo =
-          attack.toHit !== undefined
-            ? {
-                hit: {
-                  total: hit.total,
-                  natural: hit.natural,
-                  crit: result.crit,
-                  fumble: result.fumble,
-                },
-              }
-            : {};
-        set({
-          pendingDamage: [
-            ...get().pendingDamage,
-            {
-              id: ulid(),
-              sourceId: id,
-              sourceName: c.name,
-              featureName: feature.displayName,
-              label: attack.label,
-              ...hitInfo,
-              parts: damageParts,
-            },
-          ],
-        });
-      }
-      useRollLogStore.getState().add({
-        kind: 'attack',
-        label: `${feature.displayName} (${c.name})`,
-        expression: attack.damage ?? 'd20',
-        total: result.damage?.total ?? hit.total,
-        faces: parts.join('; '),
-        actor: c.name,
-        source: 'tracker',
-        ...(get().encounterId ? { encounterId: get().encounterId! } : {}),
-        ...(result.crit ? { outcome: 'crit' } : result.fumble ? { outcome: 'fumble' } : {}),
       });
     },
 
@@ -1162,9 +1194,10 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         if (!target) continue;
         for (const part of parts) {
           const amount = t.share === 'half' ? Math.floor(part.amount / 2) : part.amount;
-          if (amount > 0) get().damage(t.id, amount, part.type);
+          if (amount > 0) get().damage(t.id, amount, part.type, t.caught ?? 1);
         }
-        names.push(`${target.name}${t.share === 'half' ? ' (halved)' : ''}`);
+        const members = target.horde && t.caught && t.caught > 1 ? `, ${t.caught} members` : '';
+        names.push(`${target.name}${t.share === 'half' ? ' (halved)' : ''}${members}`);
       }
       if (source && names.length > 0) log('note', `${source} applied to ${names.join(', ')}`);
     },

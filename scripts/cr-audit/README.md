@@ -11,7 +11,7 @@ monster of the CR it claims (ADR 0051, ADR 0047). It reads only the bundled SRD 
   the median real CR X monster.
 - `scale.ts` runs the scaler audit: `pnpm tsx scripts/cr-audit/scale.ts [parts to leave out]`.
   It takes about five minutes. Rerun it after any change to `packages/rules/src/crScale.ts`.
-- `horde.ts` runs the horde trials.
+- `horde.ts` runs the horde audit (ADR 0052): `pnpm tsx scripts/cr-audit/horde.ts`. It fights hordes the way the tracker runs them and compares `hordeCr` with the CR they fight like.
 
 The model leaves out spells, conditions and Legendary Resistance, and the SRD has few monsters
 above CR 12, so read the results as steps on the CR list, give or take one. Real monsters land

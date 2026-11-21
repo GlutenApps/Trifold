@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { formatTerms, parseDice, timesDice } from '../dice';
-import { hordeCr, hordeStanding } from './horde';
+import {
+  hordeAttackGroups,
+  hordeCr,
+  hordeDamageTaken,
+  hordeMemberDamage,
+  hordeStanding,
+  hordeXp,
+} from './horde';
 import { rollAttack } from './rolls';
 
-/** Hordes (ADR 0047): one combatant, one pool of hit points, damage per member standing. */
+/** Hordes (ADR 0047, ADR 0052): one combatant, one pool of hit points, attacks in threes. */
 describe('hordes', () => {
   it('counts the members still standing from the hit points left', () => {
     // Four bandits of 11 HP: 44 at full.
@@ -17,13 +24,53 @@ describe('hordes', () => {
     expect(hordeStanding(60, 11, 4)).toBe(4);
   });
 
-  it('shows the highest CR whose XP fits the members together', () => {
-    // Four CR 1/8 bandits: 100 XP, so CR 1/2 (100 XP).
-    expect(hordeCr(25, 4)).toBe('1/2');
-    // Six CR 1/4 goblins: 300 XP, so CR 1 (200 XP); CR 2 (450 XP) does not fit.
-    expect(hordeCr(50, 6)).toBe('1');
-    // Ten CR 1 creatures: 2,000 XP, so CR 5 (1,800 XP).
-    expect(hordeCr(200, 10)).toBe('5');
+  it('shows the CR it fights like, by the audit fit (ADR 0052)', () => {
+    // Twelve CR 1/2 creatures fight like a CR 6.
+    expect(hordeCr('1/2', 12)).toBe('6');
+    // Bigger members climb faster: six CR 1/8 bandits are CR 2, six CR 2 creatures CR 7.
+    expect(hordeCr('1/8', 6)).toBe('2');
+    expect(hordeCr('2', 6)).toBe('7');
+    // Big hordes keep climbing: fifty bandits are CR 11.
+    expect(hordeCr('1/8', 50)).toBe('11');
+    // A CR 0 creature counts its table XP (10): ten rats are CR 2, thirty CR 5.
+    expect(hordeCr('0', 10)).toBe('2');
+    expect(hordeCr('0', 30)).toBe('5');
+    // Never below a member's own CR, and one member is just itself.
+    expect(hordeCr('20', 2)).toBe('20');
+    expect(hordeCr('3', 1)).toBe('3');
+    // The encounter budget counts that CR's XP.
+    expect(hordeXp('1/2', 12)).toBe(2300);
+  });
+
+  it('attacks once for every three members standing (ADR 0052)', () => {
+    expect(hordeAttackGroups(8)).toEqual([3, 3, 2]);
+    expect(hordeAttackGroups(3)).toEqual([3]);
+    expect(hordeAttackGroups(1)).toEqual([1]);
+    expect(hordeAttackGroups(0)).toEqual([]);
+  });
+
+  it("takes area damage once for each member caught, up to a member's hit points", () => {
+    const bandits = { memberHp: 11, size: 6 };
+    // A Fireball of 28 catching three: 11 each, 33.
+    expect(hordeDamageTaken(28, 3, bandits, 66)).toBe(33);
+    // 8 damage stays 8 each: 24.
+    expect(hordeDamageTaken(8, 3, bandits, 66)).toBe(24);
+    // Never more members than are standing: two left (22 HP), five caught counts two.
+    expect(hordeDamageTaken(28, 5, bandits, 22)).toBe(22);
+  });
+
+  it('fells at most three members with one hit, so a sword does not fell nine rats', () => {
+    const rats = { memberHp: 1, size: 30 };
+    expect(hordeDamageTaken(9, 1, rats, 30)).toBe(3);
+    // Bandits of 11 HP: any ordinary hit lands in full.
+    expect(hordeDamageTaken(20, 1, { memberHp: 11, size: 6 }, 66)).toBe(20);
+  });
+
+  it('lets tiny creatures bite as a swarm: 2 damage or less counts as 1d4', () => {
+    expect(hordeMemberDamage('1')).toBe('1d4');
+    expect(hordeMemberDamage('1d4-1')).toBe('1d4');
+    expect(hordeMemberDamage('1d4+2')).toBe('1d4+2');
+    expect(hordeMemberDamage('1d6+2')).toBe('1d6+2');
   });
 
   it('takes damage dice n times over as one roll', () => {

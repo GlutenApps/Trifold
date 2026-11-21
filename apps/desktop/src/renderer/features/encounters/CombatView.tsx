@@ -3,6 +3,7 @@ import { ulid } from 'ulid';
 import type { Combatant, ConditionDuration, Scene, Token } from '@trifold/schema';
 import {
   CONDITION_NAMES,
+  HORDE_HIT_MEMBERS,
   hordeStanding,
   normalizeKey,
   TRACKER_ONLY_CONDITIONS,
@@ -796,6 +797,8 @@ function DamagePopup({ request, queued }: { request: DamageRequest; queued: numb
   const [shares, setShares] = useState<Record<string, Share>>(request.initial);
   const [amount, setAmount] = useState(request.amount ? String(request.amount) : '');
   const [type, setType] = useState(request.type ?? '');
+  // Members of a horde inside an area effect (ADR 0052); 1 is a single attack.
+  const [caught, setCaught] = useState<Record<string, number>>({});
   const ref = useRef<HTMLDivElement>(null);
   const targets = combatants.filter((c) => !c.isLair && !c.dead && c.id !== request.sourceId);
   const n = Number.parseInt(amount, 10);
@@ -807,7 +810,9 @@ function DamagePopup({ request, queued }: { request: DamageRequest; queued: numb
   const types = parts.flatMap((p) => (p.type ? [p.type] : []));
   const chosen: DamageTarget[] = targets.flatMap((c) => {
     const share = shares[c.id] ?? 'none';
-    return share === 'none' ? [] : [{ id: c.id, share }];
+    if (share === 'none') return [];
+    const members = c.horde ? (caught[c.id] ?? 1) : 1;
+    return [{ id: c.id, share, ...(members > 1 ? { caught: members } : {}) }];
   });
   const canApply = chosen.length > 0 && parts.length > 0;
   const apply = () => {
@@ -946,6 +951,13 @@ function DamagePopup({ request, queued }: { request: DamageRequest; queued: numb
                   </button>
                 ))}
               </span>
+              {c.horde && share !== 'none' && (
+                <HordeCaught
+                  combatant={c}
+                  value={caught[c.id] ?? 1}
+                  onChange={(v) => setCaught({ ...caught, [c.id]: v })}
+                />
+              )}
             </div>
           );
         })}
@@ -968,6 +980,48 @@ function DamagePopup({ request, queued }: { request: DamageRequest; queued: numb
           Apply
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * How many of a horde's members an area effect catches (ADR 0052): each takes the damage, up to
+ * one member's hit points. A single attack leaves it at 1. Shown under a horde chosen in the
+ * damage pop-up, with a line saying what it is for.
+ */
+function HordeCaught({
+  combatant: c,
+  value,
+  onChange,
+}: {
+  combatant: Combatant;
+  value: number;
+  onChange(v: number): void;
+}) {
+  if (!c.horde) return null;
+  const standing = hordeStanding(c.hp.current, c.horde.memberHp, c.horde.size);
+  return (
+    <div className="dmg-caught" data-testid="horde-caught">
+      <label className="row">
+        <span>Members in the area</span>
+        <input
+          type="number"
+          className="narrow"
+          aria-label={`Members of ${c.name} in the area`}
+          min={1}
+          max={Math.max(1, standing)}
+          value={value}
+          onChange={(e) =>
+            onChange(Math.max(1, Math.min(Math.max(1, standing), Number(e.target.value) || 1)))
+          }
+        />
+        <span className="muted small">of {standing} standing</span>
+      </label>
+      <p className="muted small">
+        For an area effect such as a Fireball: each member inside it takes the damage, up to{' '}
+        {c.horde.memberHp} (one member&rsquo;s hit points). Leave it at 1 for a single hit, which
+        fells at most {HORDE_HIT_MEMBERS} members.
+      </p>
     </div>
   );
 }

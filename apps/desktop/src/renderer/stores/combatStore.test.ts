@@ -96,6 +96,78 @@ describe('rolled damage queue', () => {
     expect(log.some((t) => t.includes('(2 of 4 standing)'))).toBe(true);
   });
 
+  it('rolls a big horde in groups of three members standing (ADR 0052)', () => {
+    const pack = combatant('horde', {
+      name: 'Wolf horde',
+      hp: { current: 88, max: 88, temp: 0 },
+      horde: { size: 8, memberHp: 11 },
+    });
+    useCombatStore.setState({
+      state: { ...useCombatStore.getState().state!, combatants: [pack] },
+    });
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    useCombatStore.getState().rollAttackFor('horde', bite, bite.attacks[0]!);
+    vi.restoreAllMocks();
+    // Eight standing: three rolls of 3, 3 and 2 members' damage, each its own pending hit.
+    // 2d4+2 three times over is 6d4+6 (d4 = 3): 24; twice over 4d4+4: 16.
+    const pending = useCombatStore.getState().pendingDamage;
+    expect(pending.map((p) => p.parts[0]!.amount)).toEqual([24, 24, 16]);
+    expect(pending.map((p) => p.label)).toEqual([
+      'Bite · group 1',
+      'Bite · group 2',
+      'Bite · group 3',
+    ]);
+    const log = useCombatStore.getState().state!.log.map((e) => e.text);
+    expect(log.filter((t) => t.includes('8 of 8 standing'))).toHaveLength(3);
+  });
+
+  it('hurts each horde member an area effect catches, up to its hit points (ADR 0052)', () => {
+    const pack = combatant('horde', {
+      name: 'Wolf horde',
+      hp: { current: 66, max: 66, temp: 0 },
+      horde: { size: 6, memberHp: 11 },
+    });
+    useCombatStore.setState({
+      state: { ...useCombatStore.getState().state!, combatants: [pack] },
+    });
+    // A 28-damage Fireball catching three wolves: 11 each, 33 in all.
+    useCombatStore
+      .getState()
+      .damageTargets([{ id: 'horde', share: 'full', caught: 3 }], [{ amount: 28 }], 'Fireball');
+    const after = useCombatStore.getState().state!.combatants[0]!;
+    expect(after.hp.current).toBe(33);
+    const log = useCombatStore.getState().state!.log.map((e) => e.text);
+    expect(log.some((t) => t.includes('Wolf horde, 3 members'))).toBe(true);
+  });
+
+  it('fells at most three rats with one hit, and rats bite as a swarm (ADR 0052)', () => {
+    const rats = combatant('rats', {
+      name: 'Rat horde',
+      hp: { current: 20, max: 20, temp: 0 },
+      horde: { size: 20, memberHp: 1 },
+    });
+    useCombatStore.setState({
+      state: { ...useCombatStore.getState().state!, combatants: [rats] },
+    });
+    // A 9-damage sword hit fells three rats, not nine.
+    useCombatStore.getState().damage('rats', 9, 'slashing');
+    expect(useCombatStore.getState().state!.combatants[0]!.hp.current).toBe(17);
+    const log = useCombatStore.getState().state!.log.map((e) => e.text);
+    expect(log.some((t) => t.includes('3 to the horde, one hit fells at most 3'))).toBe(true);
+
+    // A 1-damage bite counts as 1d4 per member: a group of three rolls 3d4 (d4 = 3 at rng 0.5).
+    const nibble: Feature = {
+      ...bite,
+      attacks: [{ label: 'Bite', toHit: 2, damage: '1', damageType: 'piercing', extraDamage: [] }],
+    };
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    useCombatStore.getState().rollAttackFor('rats', nibble, nibble.attacks[0]!);
+    vi.restoreAllMocks();
+    const pending = useCombatStore.getState().pendingDamage;
+    // 17 standing: five rolls of three and one of two.
+    expect(pending.map((p) => p.parts[0]!.amount)).toEqual([9, 9, 9, 9, 9, 6]);
+  });
+
   it('queues each attack roll with its damage parts, then applies them to a chosen target', () => {
     const store = useCombatStore.getState();
     store.rollAttackFor('wolf', bite, bite.attacks[0]!);
