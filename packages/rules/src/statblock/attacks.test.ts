@@ -94,6 +94,65 @@ describe('findAttacksInText', () => {
     expect(b[0]).toMatchObject({ toHit: 2, damage: '1', damageType: 'slashing' });
   });
 
+  it('reads SRD 5.2 attacks that drop "Hit:" (flat and dice damage)', () => {
+    expect(findAttacksInText('Melee Attack Roll: +2, reach 5 ft. 1 Piercing damage.')).toEqual([
+      {
+        kind: 'melee',
+        toHit: 2,
+        reach: '5 ft',
+        average: 1,
+        damage: '1',
+        damageType: 'piercing',
+        extraDamage: [],
+        index: 0,
+      },
+    ]);
+    const spider = findAttacksInText(
+      'Melee Attack Roll: +4, reach 5 ft. 1 Piercing damage plus 2 (1d4) Poison damage.',
+    );
+    expect(spider[0]?.extraDamage).toEqual([{ damage: '1d4', damageType: 'poison' }]);
+    const giantRat = findAttacksInText(
+      'Melee Attack Roll: +5, reach 5 feet. 5 (1d4 + 3) Piercing damage.',
+    );
+    expect(giantRat[0]).toMatchObject({ toHit: 5, reach: '5 feet', damage: '1d4+3' });
+  });
+
+  it('reads a note after the bonus and "+4 to hit"', () => {
+    const grappler = findAttacksInText(
+      'Melee Attack Roll: +5 (with Advantage if the target is Grappled by the mimic), reach 5 ft. 7 (1d8 + 3) Piercing damage—or 12 (2d8 + 3) Piercing damage if the target is Grappled.',
+    );
+    expect(grappler).toHaveLength(1);
+    expect(grappler[0]).toMatchObject({ toHit: 5, reach: '5 ft', damage: '1d8+3' });
+    const bat = findAttacksInText('Melee Attack Roll: +4 to hit, reach 5 ft. 1 Piercing damage.');
+    expect(bat[0]).toMatchObject({ toHit: 4, damage: '1', damageType: 'piercing' });
+  });
+
+  it('reads a 2024 reach-or-range attack', () => {
+    const [hammer] = findAttacksInText(
+      'Melee or Ranged Attack Roll: +4 (with Advantage if the target is Grappled by the bugbear), reach 10 ft. or range 20/60 ft. 9 (3d4 + 2) Bludgeoning damage.',
+    );
+    expect(hammer).toMatchObject({
+      kind: 'melee or ranged',
+      toHit: 4,
+      reach: '10 ft. or range 20/60 ft',
+      damage: '3d4+2',
+      damageType: 'bludgeoning',
+    });
+  });
+
+  it('keeps an attack that deals no damage as a to-hit roll', () => {
+    const [tentacle] = findAttacksInText(
+      'Melee Attack Roll: +7, reach 60 ft. The target has the Grappled condition (escape DC 14).',
+    );
+    expect(tentacle).toEqual({
+      kind: 'melee',
+      toHit: 7,
+      reach: '60 ft',
+      extraDamage: [],
+      index: 0,
+    });
+  });
+
   it('returns nothing for non-attack text', () => {
     expect(
       findAttacksInText('The creature regains 10 hit points at the start of its turn.'),

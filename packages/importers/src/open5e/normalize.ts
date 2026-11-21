@@ -19,6 +19,7 @@ import type {
   Size,
 } from '@trifold/schema';
 import { RECORD_SCHEMA_VERSION } from '@trifold/schema';
+import { attackFromText } from '../compendium/feature';
 import type {
   O5eAction,
   O5eAttack,
@@ -201,15 +202,7 @@ function featureFrom(name: string, body: string, action?: O5eAction): Feature {
     });
     if (feature.attacks.length === 0 && !(action.attacks ?? []).length) {
       for (const a of findAttacksInText(body)) {
-        feature.attacks.push({
-          label: parsed.displayName,
-          toHit: a.toHit,
-          damage: a.damage,
-          damageType: a.damageType,
-          ...(a.reach ? { reach: a.reach } : {}),
-          ...(a.range ? { range: a.range } : {}),
-          extraDamage: a.extraDamage,
-        });
+        feature.attacks.push(attackFromText(parsed.displayName, a));
       }
     }
   }

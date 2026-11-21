@@ -22,7 +22,7 @@ import {
  * failed import (CLAUDE.md ground rule 5).
  */
 /** Bump when normalization changes in a way that makes existing records.jsonl files stale. */
-export const IMPORTER_VERSION = 3;
+export const IMPORTER_VERSION = 4;
 
 export interface CompendiumImportOptions {
   sourceId: string;
