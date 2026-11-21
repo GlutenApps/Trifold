@@ -3,6 +3,7 @@ import { ulid } from 'ulid';
 import type { Combatant, ConditionDuration, Scene, Token } from '@trifold/schema';
 import {
   CONDITION_NAMES,
+  HORDE_HIT_MEMBERS,
   hordeStanding,
   normalizeKey,
   TRACKER_ONLY_CONDITIONS,
@@ -1018,8 +1019,8 @@ function HordeCaught({
       </label>
       <p className="muted small">
         For an area effect such as a Fireball: each member inside it takes the damage, up to{' '}
-        {c.horde.memberHp} (one member&rsquo;s hit points). Leave it at 1 for an attack on one
-        member.
+        {c.horde.memberHp} (one member&rsquo;s hit points). Leave it at 1 for a single hit, which
+        fells at most {HORDE_HIT_MEMBERS} members.
       </p>
     </div>
   );

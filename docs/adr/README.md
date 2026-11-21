@@ -57,7 +57,7 @@ An architecture decision record (ADR) is a short file about one choice that refi
 | [0049](0049-conditions-between-fights.md) | PC cards, NPCs and companions carry conditions between fights, set from their rows or a phone at any time; they go into and out of fights like HP, durations dropped; Long rest lowers Exhaustion a level. |
 | [0050](0050-area-shapes.md) | Area shapes on the map (`S`): the DM's cone, sphere, cube or line, squares at least half inside shaded, visual only; the TV and phones show it under the fog, not when its origin is fogged. |
 | [0051](0051-cr-scaler-tune-and-audit.md) | CR scaler after the fight-simulation audit: SRD values below CR 1, flat damage scales, odd numbers pulled toward typical on big steps, attacks follow the CR in quick scale too, legendary actions dropped below CR 10 and added past it (with an area attack), sharing the damage budget; Tune mode sets each part on its own with Balance. |
-| [0052](0052-horde-scaling.md) | Hordes after the fight-simulation audit: CR from XP 1.6 × member XP^0.85 × members^1.3 (the budget and XP earned count that CR's XP), one attack roll per three members standing, area damage per member caught (Members in the area), a note on hordes of CR 3+ creatures, and an Impossible band from twice the High budget. |
+| [0052](0052-horde-scaling.md) | Hordes after the fight-simulation audit: CR from XP 1.75 × member XP^0.775 × members^1.5 (the budget and XP earned count that CR's XP), one attack roll per three members standing, tiny creatures bite as a swarm (1d4), one hit fells at most three members, area damage per member caught (Members in the area), a note on hordes of CR 3+ creatures, and an Impossible band from twice the High budget. |
 
 ## Decision log
 

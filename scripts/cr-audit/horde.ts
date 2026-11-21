@@ -1,14 +1,15 @@
 /**
  * Horde audit (ADR 0052). Usage: `tsx scripts/cr-audit/horde.ts`
  *
- * Builds hordes of 2–20 of every SRD creature up to CR 5, fights each the way the tracker runs a
- * horde (pooled hit points, one attack roll per three members standing, an area effect hurting
- * each member it catches), and finds the CR it fights like. Prints that next to the CR the app
+ * Builds hordes of 2–50 of every SRD creature up to CR 5, fights each the way the tracker runs a
+ * horde (pooled hit points, one attack roll per three members standing, one hit felling at most
+ * three members, an area effect hurting each member it catches, tiny creatures biting as a
+ * swarm), and finds the CR it fights like. Prints that next to the CR the app
  * shows (`hordeCr`), and how the fights feel next to real monsters of that CR.
  */
 import { fileURLToPath } from 'node:url';
 import {
-  hordeAreaDamage,
+  hordeDamageTaken,
   hordeAttackGroups,
   hordeCr,
   hordeStanding,
@@ -30,7 +31,7 @@ import {
 } from './lib';
 
 const RUNS = 160;
-const SIZES = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20];
+const SIZES = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 30, 40, 50];
 interface Stats {
   taken: number;
   rounds: number;
@@ -77,13 +78,14 @@ function fight(foe: Foe, party: Party, seed: number): Stats {
         if (pcs[i]! <= 0) continue;
         if (area && i === 0) {
           const dmg = party.dmg * 0.75 * foe.resistFactor;
-          hp -= foe.horde ? hordeAreaDamage(dmg, 3, foe.horde, hp) : dmg;
+          hp -= foe.horde ? hordeDamageTaken(dmg, 3, foe.horde, hp) : dmg;
           continue;
         }
         const roll = d20();
         if (roll === 1) continue;
         if (roll === 20 || roll + party.toHit >= foe.ac) {
-          hp -= party.dmg * (roll === 20 ? 1.5 : 1) * foe.resistFactor;
+          const d = party.dmg * (roll === 20 ? 1.5 : 1) * foe.resistFactor;
+          hp -= foe.horde ? hordeDamageTaken(d, 1, foe.horde, hp) : d;
         }
       }
     };
@@ -92,7 +94,9 @@ function fight(foe: Foe, party: Party, seed: number): Stats {
       const o = foe.offence;
       if (foe.horde) {
         const standing = hordeStanding(hp, foe.horde.memberHp, foe.horde.size);
-        if (o.best) for (const g of hordeAttackGroups(standing)) attack(o.best, g);
+        // A tiny creature bites as a swarm: 2 damage or less counts as 1d4 (2.5).
+        const bite = o.best && o.best.dmg <= 2 ? { ...o.best, dmg: 2.5 } : o.best;
+        if (bite) for (const g of hordeAttackGroups(standing)) attack(bite, g);
         return;
       }
       o.saves.forEach((s, j) => {

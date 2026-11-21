@@ -1,7 +1,9 @@
 import { ulid } from 'ulid';
 import { create } from 'zustand';
 import {
-  hordeAreaDamage,
+  HORDE_HIT_MEMBERS,
+  hordeDamageTaken,
+  hordeMemberDamage,
   hordeAttackGroups,
   hordeStanding,
   abilityModifier,
@@ -152,7 +154,11 @@ interface CombatStoreState {
   sortByInitiative(): void;
   next(): void;
   previous(): void;
-  damage(id: string, amount: number, type?: string): void;
+  /**
+   * Damage to one combatant, after resistances. On a horde it is one hit (felling at most three
+   * members) or, with `caught` above 1, an area effect hurting each member caught (ADR 0052).
+   */
+  damage(id: string, amount: number, type?: string, caught?: number): void;
   heal(id: string, amount: number): void;
   tempHp(id: string, amount: number): void;
   /** Max HP as a player set it: current HP is kept within it. */
@@ -694,7 +700,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       if (active) set({ selectedId: active.id });
     },
 
-    damage(id, amount, type) {
+    damage(id, amount, type, caught = 1) {
       const c = find(id);
       if (!c || amount <= 0) return;
       const mult = damageMultiplier(type, {
@@ -702,7 +708,17 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         resistances: c.damageResistances,
         immunities: c.damageImmunities,
       });
-      const outcome = applyDamage(c.hp, amount, mult.multiplier);
+      // A horde takes one hit as felling at most three members, and an area effect as each member
+      // caught taking it (ADR 0052), after its resistances.
+      let hordeNote = '';
+      let outcome = applyDamage(c.hp, amount, mult.multiplier);
+      if (c.horde) {
+        const taken = hordeDamageTaken(outcome.adjusted, caught, c.horde, c.hp.current);
+        if (caught > 1) hordeNote = `, ${caught} members caught`;
+        else if (taken < outcome.adjusted)
+          hordeNote = `, one hit fells at most ${HORDE_HIT_MEMBERS}`;
+        outcome = applyDamage(c.hp, taken, 1);
+      }
       const isPc = c.ref.kind === 'pc';
       const droppedTo0 = outcome.hp.current === 0 && c.hp.current > 0;
       patchCombatant(id, (x) => ({
@@ -718,7 +734,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
           : ` (${mult.reason}${mult.qualified ? ', qualified' : ''} → ${outcome.adjusted})`;
       log(
         'damage',
-        `${c.name} takes ${amount}${type ? ` ${type}` : ''} damage${why}${outcome.absorbedByTemp ? `, ${outcome.absorbedByTemp} absorbed by temp HP` : ''} → ${outcome.hp.current}/${outcome.hp.max}${droppedTo0 ? (isPc ? ' — down!' : ' — dead') : ''}${outcome.massive ? ' (massive damage: instant death if it exceeded max HP)' : ''}`,
+        `${c.name} takes ${amount}${type ? ` ${type}` : ''} damage${why}${hordeNote ? ` (${outcome.adjusted} to the horde${hordeNote})` : ''}${outcome.absorbedByTemp ? `, ${outcome.absorbedByTemp} absorbed by temp HP` : ''} → ${outcome.hp.current}/${outcome.hp.max}${droppedTo0 ? (isPc ? ' — down!' : ' — dead') : ''}${outcome.massive ? ' (massive damage: instant death if it exceeded max HP)' : ''}`,
         id,
       );
       if (c.concentrating && outcome.dealt + outcome.absorbedByTemp > 0 && !droppedTo0) {
@@ -1092,8 +1108,11 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       const standing = c.horde ? hordeStanding(c.hp.current, c.horde.memberHp, c.horde.size) : 1;
       const groups = c.horde ? hordeAttackGroups(standing) : [1];
       if (groups.length === 0) groups.push(1);
+      // A tiny creature's bite counts as 1d4 in a horde, as a swarm's do (ADR 0052).
+      const swarmed =
+        c.horde && attack.damage ? { ...attack, damage: hordeMemberDamage(attack.damage) } : attack;
       groups.forEach((members, gi) => {
-        const result = rollAttack(attack, mode, Math.random, members);
+        const result = rollAttack(swarmed, mode, Math.random, members);
         const hit = result.toHit;
         const parts: string[] = [];
         if (attack.toHit !== undefined) {
@@ -1174,14 +1193,8 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         const target = find(t.id);
         if (!target) continue;
         for (const part of parts) {
-          const each = t.share === 'half' ? Math.floor(part.amount / 2) : part.amount;
-          // An area effect hurts each horde member it catches, up to one member's hit points.
-          const live = find(t.id);
-          const amount =
-            live?.horde && t.caught && t.caught > 1
-              ? hordeAreaDamage(each, t.caught, live.horde, live.hp.current)
-              : each;
-          if (amount > 0) get().damage(t.id, amount, part.type);
+          const amount = t.share === 'half' ? Math.floor(part.amount / 2) : part.amount;
+          if (amount > 0) get().damage(t.id, amount, part.type, t.caught ?? 1);
         }
         const members = target.horde && t.caught && t.caught > 1 ? `, ${t.caught} members` : '';
         names.push(`${target.name}${t.share === 'half' ? ' (halved)' : ''}${members}`);
