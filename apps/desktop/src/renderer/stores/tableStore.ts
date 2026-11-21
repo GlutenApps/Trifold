@@ -233,7 +233,13 @@ export function installTableSync(): () => void {
         s.state.breakScreen !== prev.state.breakScreen ||
         s.state.blackout !== prev.state.blackout ||
         // Going live or ending it shows or hides the table on phones (ADR 0046).
-        s.state.live !== prev.state.live
+        s.state.live !== prev.state.live ||
+        // The TV's overlays, which phones show too.
+        s.state.overlays !== prev.state.overlays ||
+        s.state.showSceneTitle !== prev.state.showSceneTitle ||
+        s.state.combat !== prev.state.combat ||
+        s.state.counters !== prev.state.counters ||
+        s.state.timer !== prev.state.timer
       ) {
         schedule();
       }

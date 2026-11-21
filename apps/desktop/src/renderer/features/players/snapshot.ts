@@ -1,6 +1,7 @@
 import {
   iconUrl,
   type PresenterState,
+  type TableOverlays,
   type TableSnapshot,
   type TableToken,
   type TokenStyle,
@@ -42,7 +43,12 @@ export interface SnapshotInput {
   pcs: readonly PCCard[];
   npcs: readonly NPC[];
   presenter: Pick<PresenterState, 'blackout' | 'scene'> &
-    Partial<Pick<PresenterState, 'breakScreen' | 'live'>>;
+    Partial<
+      Pick<
+        PresenterState,
+        'breakScreen' | 'live' | 'overlays' | 'showSceneTitle' | 'combat' | 'counters' | 'timer'
+      >
+    >;
   liveScene: Scene | null;
   combat: CombatState | null;
   /** A token's picture (ADR 0033), as a `trifold-media://` URL. */
@@ -221,12 +227,14 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       },
     });
   }
+  const overlays = tableOverlays(input.presenter);
   return {
     campaignId: input.campaign.id,
     campaignName: input.campaign.name,
     live: input.presenter.live !== false,
     scene,
     screen: tableScreen(input.presenter),
+    ...(overlays ? { overlays } : {}),
     creatures,
     summonOptions: (input.campaign.summonable ?? []).map((e) => ({
       key: e.ref.recordId,
@@ -235,6 +243,34 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       ac: e.ac,
       hp: e.hp,
     })),
+  };
+}
+
+/**
+ * What the TV shows over the scene (ADR 0046), for phones to show the same: each part only while
+ * its overlay switch is on, and nothing when not live or blacked out. The combat summary is the
+ * TV's own, so names are already masked and hidden creatures left out.
+ */
+export function tableOverlays(presenter: SnapshotInput['presenter']): TableOverlays | undefined {
+  if (presenter.live === false || presenter.blackout || !presenter.overlays) return undefined;
+  const { overlays, scene, combat } = presenter;
+  const sceneTitle =
+    scene && scene.kind !== 'title' && presenter.showSceneTitle ? scene.title : undefined;
+  return {
+    ...(sceneTitle ? { sceneTitle } : {}),
+    ...(combat && overlays.initiativeStrip
+      ? {
+          initiative: {
+            round: combat.round,
+            activeId: combat.activeId,
+            entries: combat.entries.map(({ tokenId: _tokenId, ...entry }) => entry),
+          },
+        }
+      : {}),
+    healthBars: overlays.pcHealthBars,
+    ...(combat && overlays.roundCounter && combat.round > 0 ? { round: combat.round } : {}),
+    timer: overlays.timers ? (presenter.timer ?? null) : null,
+    counters: overlays.counters ? [...(presenter.counters ?? [])] : [],
   };
 }
 

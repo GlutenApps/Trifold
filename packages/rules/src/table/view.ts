@@ -249,6 +249,7 @@ export function viewFor(
     mine,
     picker: [],
     map,
+    ...(snapshot.overlays && snapshot.live !== false ? { overlays: snapshot.overlays } : {}),
     screen:
       screen?.kind === 'image'
         ? {

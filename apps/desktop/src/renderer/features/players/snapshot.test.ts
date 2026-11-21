@@ -9,7 +9,7 @@ import {
   type Token,
 } from '@trifold/schema';
 import { blankNpc, blankPc } from '../campaign/CharacterEditors';
-import { tableScreen, tableSnapshotFrom, type SnapshotInput } from './snapshot';
+import { tableOverlays, tableScreen, tableSnapshotFrom, type SnapshotInput } from './snapshot';
 
 const T = '2026-01-01T00:00:00.000Z';
 
@@ -371,5 +371,84 @@ describe('tableScreen (all screen types on phones)', () => {
     expect(
       tableScreen({ blackout: true, scene: { kind: 'title', id: 't', title: 'Hidden' } }),
     ).toBeNull();
+  });
+});
+
+describe('tableOverlays: what the TV shows over the scene, for phones (ADR 0046)', () => {
+  const combat = {
+    round: 3,
+    activeId: 'c2',
+    entries: [
+      {
+        id: 'c1',
+        name: 'Brannoc',
+        role: 'ally' as const,
+        isPc: true,
+        dead: false,
+        bloodied: false,
+        tokenId: 't1',
+        hpFraction: 0.5,
+      },
+      {
+        id: 'c2',
+        name: 'Humanoid 3',
+        role: 'enemy' as const,
+        isPc: false,
+        dead: false,
+        bloodied: true,
+        tokenId: 't2',
+      },
+    ],
+  };
+  const timer = {
+    id: 'tm',
+    name: 'Guards return',
+    status: 'running' as const,
+    endsAt: 1000,
+    leftMs: 0,
+  };
+  const counter = { id: 'k', name: 'Torches', value: 3, bound: null };
+  const onAir = {
+    ...initialPresenterState,
+    live: true,
+    blackout: false,
+    scene: { kind: 'map', id: 'bridge', title: 'Holding the bridges' } as MapScene,
+    showSceneTitle: true,
+    combat,
+    timer,
+    counters: [counter],
+  };
+
+  it('sends each overlay the TV shows, without token ids', () => {
+    const overlays = tableOverlays(onAir)!;
+    expect(overlays).toMatchObject({
+      sceneTitle: 'Holding the bridges',
+      round: 3,
+      timer,
+      counters: [counter],
+      initiative: { round: 3, activeId: 'c2' },
+    });
+    expect(overlays.initiative!.entries.map((e) => e.name)).toEqual(['Brannoc', 'Humanoid 3']);
+    expect(JSON.stringify(overlays)).not.toContain('tokenId');
+  });
+
+  it('follows the overlay switches', () => {
+    const off = tableOverlays({
+      ...onAir,
+      showSceneTitle: false,
+      overlays: {
+        ...onAir.overlays,
+        initiativeStrip: false,
+        roundCounter: false,
+        timers: false,
+        counters: false,
+      },
+    })!;
+    expect(off).toEqual({ healthBars: false, timer: null, counters: [] });
+  });
+
+  it('sends nothing before going live or behind a blackout', () => {
+    expect(tableOverlays({ ...onAir, live: false })).toBeUndefined();
+    expect(tableOverlays({ ...onAir, blackout: true })).toBeUndefined();
   });
 });

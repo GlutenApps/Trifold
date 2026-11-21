@@ -40,5 +40,8 @@ also no longer the only place a scene shows, so its wording misleads.
   screen (to preview, or to stream) chooses that display in Settings.
 - Smoke specs that drive the TV window choose the primary display first, since CI runners have
   one display (`smoke/tv.ts`).
-- The overlays (initiative strip, round, counters, timer, handouts, scene title) still show on
-  the TV only; sending them to phones is the next step of the same change.
+- Phones show the TV's overlays too, each while its switch is on: the scene title, the round
+  and the initiative strip in a row along the top (the TV's own strip, folding into "+N" on a
+  narrow screen), the timer and counters in the bottom-left corner on the DM's clock. They come
+  from the TV's own combat summary, so names are masked and hidden creatures left out as on the
+  TV. Handouts stay on the TV only while the console has no control for them.
