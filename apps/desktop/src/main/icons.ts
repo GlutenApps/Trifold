@@ -1,5 +1,5 @@
 import { appendFile, mkdir } from 'node:fs/promises';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { IconCreditsInfo } from '@trifold/api';
 import { IconCredits, IconTables } from '@trifold/schema';
@@ -7,18 +7,24 @@ import type { Logger } from './log';
 
 /**
  * Main-process access to the bundled game-icons set (DESIGN.md §6.8): the mapping tables, which
- * glyphs exist, their SVG paths for the media handler, and the credits for the About page.
+ * glyphs exist, their SVG text for the media handler, and the credits for the About page.
  * `IconResources` below.
  */
 const NAME = /^[a-z0-9-]+$/;
 
+/** The glyph bundle in the icons folder: `{ "<name>": "<svg>" }`, written by fetch-game-icons. */
+export const GLYPH_BUNDLE = 'glyphs.json';
+
 /**
- * The bundled game-icons set (DESIGN.md §6.8): resources/icons/svg/<name>.svg plus the mapping
- * tables and credits. Everything is read once and cached; a build without the fetched set is
- * fine (tokens fall back to initials). Unmatched creatures go to Library/logs/icon-misses.txt.
+ * The bundled game-icons set (DESIGN.md §6.8): resources/icons/glyphs.json, every glyph's SVG by
+ * name in one file, plus the mapping tables and credits. One file rather than four thousand keeps
+ * installs and updates fast: Windows checks each file an installer deletes or writes.
+ * Everything is read once and cached; a build without the fetched set is fine (tokens fall back
+ * to initials). Unmatched creatures go to Library/logs/icon-misses.txt.
  */
 export class IconResources {
   private tablesCache: IconTables | null = null;
+  private glyphsCache: Map<string, string> | null = null;
   private availableCache: Set<string> | null = null;
   private creditsCache: IconCreditsInfo | null | undefined;
   private readonly reported = new Set<string>();
@@ -42,28 +48,36 @@ export class IconResources {
     return this.tablesCache;
   }
 
-  available(): Set<string> {
-    if (!this.availableCache) {
-      const svgDir = join(this.dir, 'svg');
-      this.availableCache = new Set(
-        existsSync(svgDir)
-          ? readdirSync(svgDir)
-              .filter((f) => f.endsWith('.svg'))
-              .map((f) => f.slice(0, -4))
-          : [],
-      );
-      if (this.availableCache.size === 0) {
+  private glyphs(): Map<string, string> {
+    if (!this.glyphsCache) {
+      this.glyphsCache = new Map();
+      try {
+        const raw: unknown = JSON.parse(readFileSync(join(this.dir, GLYPH_BUNDLE), 'utf8'));
+        if (raw && typeof raw === 'object') {
+          for (const [name, svg] of Object.entries(raw)) {
+            if (NAME.test(name) && typeof svg === 'string') this.glyphsCache.set(name, svg);
+          }
+        }
+      } catch {
+        // No bundle: handled below.
+      }
+      if (this.glyphsCache.size === 0) {
         this.logger.warn('no bundled icons found; tokens will show initials');
       }
     }
+    return this.glyphsCache;
+  }
+
+  available(): Set<string> {
+    this.availableCache ??= new Set(this.glyphs().keys());
     return this.availableCache;
   }
 
-  /** Absolute path of a glyph's SVG, or null for unknown or unsafe names. */
-  svgPath(file: string): string | null {
+  /** A glyph's SVG text, by `name` or `name.svg`, or null for unknown or unsafe names. */
+  svg(file: string): string | null {
     const name = file.endsWith('.svg') ? file.slice(0, -4) : file;
-    if (!NAME.test(name) || !this.available().has(name)) return null;
-    return join(this.dir, 'svg', `${name}.svg`);
+    if (!NAME.test(name)) return null;
+    return this.glyphs().get(name) ?? null;
   }
 
   credits(): IconCreditsInfo | null {
@@ -72,7 +86,7 @@ export class IconResources {
         const parsed = IconCredits.parse(
           JSON.parse(readFileSync(join(this.dir, 'credits.json'), 'utf8')),
         );
-        this.creditsCache = { ...parsed, icons: this.available().size };
+        this.creditsCache = { ...parsed, icons: this.glyphs().size };
       } catch {
         this.creditsCache = null;
       }

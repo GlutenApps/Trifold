@@ -1,17 +1,11 @@
-// Build-time only (DESIGN.md §6.8). Clones github.com/game-icons/icons at depth 1, copies every
-// SVG into resources/icons/svg/<name>.svg, writes resources/icons/credits.json (authors and
-// their icon counts, for the About page) and refreshes the committed resources/icons/manifest.json.
-// The SVG set and credits are git-ignored; only the manifest and mapping tables are committed.
+// Build-time only (DESIGN.md §6.8). Clones github.com/game-icons/icons at depth 1, packs every
+// SVG into resources/icons/glyphs.json ({ "<name>": "<svg>" }), writes resources/icons/credits.json
+// (authors and their icon counts, for the About page) and refreshes the committed
+// resources/icons/manifest.json. One bundle file instead of four thousand SVGs keeps installs and
+// updates fast, since Windows checks every file an installer deletes or writes.
+// The bundle and credits are git-ignored; only the manifest and mapping tables are committed.
 import { spawnSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,7 +13,9 @@ import { fileURLToPath } from 'node:url';
 const REPO = 'https://github.com/game-icons/icons.git';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ICONS_DIR = join(ROOT, 'resources', 'icons');
-const SVG_DIR = join(ICONS_DIR, 'svg');
+const GLYPHS = join(ICONS_DIR, 'glyphs.json');
+/** Where earlier builds put one file per icon; removed so it can't be shipped by mistake. */
+const OLD_SVG_DIR = join(ICONS_DIR, 'svg');
 const BACKGROUND_SQUARE = /<path d="M0 0h512v512H0z"[^>]*\/>/;
 
 interface Credits {
@@ -45,8 +41,8 @@ function main(): void {
       encoding: 'utf8',
     }).stdout.trim();
 
-    rmSync(SVG_DIR, { recursive: true, force: true });
-    mkdirSync(SVG_DIR, { recursive: true });
+    rmSync(OLD_SVG_DIR, { recursive: true, force: true });
+    const glyphs: Record<string, string> = {};
 
     // Layout: <author>/<icon>.svg at the repo root. Names are unique across authors; keep the
     // first on a collision and say so.
@@ -69,13 +65,19 @@ function main(): void {
         // The repo SVGs start with a black 512×512 square behind a white glyph. The renderer
         // masks with the glyph's alpha, so drop the square and keep only the glyph.
         const svg = readFileSync(join(dir, file), 'utf8').replace(BACKGROUND_SQUARE, '');
-        writeFileSync(join(SVG_DIR, file), svg);
+        glyphs[name] = svg;
         count += 1;
         copied += 1;
       }
       if (count > 0) authors.push({ name: author.name, icons: count });
     }
     authors.sort((a, b) => b.icons - a.icons || a.name.localeCompare(b.name));
+    const sorted = Object.fromEntries(
+      Object.keys(glyphs)
+        .sort()
+        .map((name) => [name, glyphs[name]]),
+    );
+    writeFileSync(GLYPHS, JSON.stringify(sorted));
 
     const licenseText = existsSync(join(repo, 'license.txt'))
       ? readFileSync(join(repo, 'license.txt'), 'utf8')

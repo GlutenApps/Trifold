@@ -1,6 +1,6 @@
 # ADR 0045 · In-app updates on Windows, with a signed manifest
 
-**Status:** accepted, 2026-11-19. Amends ADR 0034 and `CLAUDE.md` ground rule 1.
+**Status:** accepted, 2026-11-19. Amends ADR 0034 and `CLAUDE.md` ground rule 1. Amended by ADR 0053: the installer shows its progress window instead of running silently.
 
 ## Context
 

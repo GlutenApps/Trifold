@@ -443,7 +443,7 @@ export function trackUrl(trackId: string): string {
 /** Media inside the Library is served to the renderer over this scheme (main registers it). */
 export const MEDIA_SCHEME = 'trifold-media';
 
-/** A bundled game-icons glyph, served by main from resources/icons/svg. */
+/** A bundled game-icons glyph, served by main from resources/icons/glyphs.json. */
 export function iconUrl(name: string): string {
   return `${MEDIA_SCHEME}://icons/${encodeURIComponent(name)}.svg`;
 }

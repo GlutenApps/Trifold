@@ -1,25 +1,21 @@
 // Build-time check (DATA-FORMATS.md §6): every icon name in resources/icons/mapping.json must
 // exist in the fetched SVG set. Exits non-zero on a missing name so a typo can't ship.
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { iconNamesIn } from '@trifold/rules';
 import { IconTables } from '@trifold/schema';
 
 const ICONS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'resources', 'icons');
-const SVG_DIR = join(ICONS_DIR, 'svg');
+const GLYPHS = join(ICONS_DIR, 'glyphs.json');
 
-if (!existsSync(SVG_DIR)) {
-  console.error('resources/icons/svg is missing; run `pnpm fetch:content` first');
+if (!existsSync(GLYPHS)) {
+  console.error('resources/icons/glyphs.json is missing; run `pnpm fetch:content` first');
   process.exit(1);
 }
 
 const tables = IconTables.parse(JSON.parse(readFileSync(join(ICONS_DIR, 'mapping.json'), 'utf8')));
-const available = new Set(
-  readdirSync(SVG_DIR)
-    .filter((f) => f.endsWith('.svg'))
-    .map((f) => f.slice(0, -4)),
-);
+const available = new Set(Object.keys(JSON.parse(readFileSync(GLYPHS, 'utf8')) as object));
 const missing = [...iconNamesIn(tables)].filter((name) => !available.has(name)).sort();
 
 if (missing.length) {
