@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, open, rename, unlink } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { mkdir, open, readdir, rename, stat, unlink } from 'node:fs/promises';
+import { basename, dirname, join, resolve } from 'node:path';
 
 /**
  * The atomic file write every Library file goes through (CLAUDE.md ground rule 2): temp file,
@@ -78,6 +78,39 @@ export async function writeFileAtomic(path: string, data: string | Uint8Array): 
       throw err;
     }
   });
+}
+
+/**
+ * Deletes the temp files `writeFileAtomic` left beside `path` when a process ended between writing
+ * one and renaming it over the target (`<name>.<pid>.<hex>.tmp`). This process's own temp files and
+ * any written in the last `minAgeMs` are kept, in case another process is mid-write. Returns how
+ * many were removed; nothing here throws.
+ */
+export async function removeStaleTemps(path: string, minAgeMs = 60_000): Promise<number> {
+  const target = resolve(path);
+  const prefix = `${basename(target)}.`;
+  const own = `${prefix}${process.pid}.`;
+  const shape = /^\d+\.[0-9a-f]+\.tmp$/;
+  let names: string[];
+  try {
+    names = await readdir(dirname(target));
+  } catch {
+    return 0;
+  }
+  let removed = 0;
+  for (const name of names) {
+    if (!name.startsWith(prefix) || name.startsWith(own)) continue;
+    if (!shape.test(name.slice(prefix.length))) continue;
+    const file = join(dirname(target), name);
+    try {
+      if (Date.now() - (await stat(file)).mtimeMs < minAgeMs) continue;
+      await unlink(file);
+      removed += 1;
+    } catch {
+      // Gone already or held open: try again next time.
+    }
+  }
+  return removed;
 }
 
 /** UTF-8, 2-space indent, trailing newline (DATA-FORMATS.md §5). */

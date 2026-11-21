@@ -8,6 +8,7 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 - **Restart now shows the update** (ADR 0053): a small "Updating Trifold" window shows the installer's progress until Trifold opens again, instead of nothing.
 - **Updates take seconds, not minutes** (ADR 0053): the game-icons ship as one file instead of 4,176, so Windows has far fewer files to check. An update went from about 8 minutes to about 30 seconds on a test machine.
+- **Settings saves finish before Trifold quits**: closing could cut off the save of the window position and leave a `config.json.*.tmp` file behind, and two settings changes at once could lose one of them. Old leftover temp files are removed at startup.
 
 ## [0.4.4] - 2026-11-20
 

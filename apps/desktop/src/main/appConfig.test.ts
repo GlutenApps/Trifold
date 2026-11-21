@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -32,6 +32,33 @@ describe('AppConfigStore', () => {
 
     const reloaded = await AppConfigStore.load(file, logger);
     expect(reloaded.get().libraryPath).toBe('C:\\Libraries\\One');
+  });
+
+  it('keeps both changes when two updates overlap, and idle waits for them', async () => {
+    const file = join(dir, 'config.json');
+    const store = await AppConfigStore.load(file, logger);
+    const bounds = { x: 1, y: 2, width: 800, height: 600, maximized: false };
+    void store.update({ consoleWindow: bounds });
+    void store.update({ libraryPath: 'C:\\Libraries\\Two' });
+    await store.idle();
+    const saved = JSON.parse(await readFile(file, 'utf8'));
+    expect(saved.consoleWindow).toEqual(bounds);
+    expect(saved.libraryPath).toBe('C:\\Libraries\\Two');
+  });
+
+  it('clears temp files a cut-off write left behind, but not fresh ones', async () => {
+    const file = join(dir, 'config.json');
+    const stale = join(dir, 'config.json.4242.0a1b2c3d.tmp');
+    const fresh = join(dir, 'config.json.4343.deadbeef.tmp');
+    const other = join(dir, 'other.json.4242.0a1b2c3d.tmp');
+    for (const f of [stale, fresh, other]) await writeFile(f, '{}');
+    const old = new Date(Date.now() - 5 * 60_000);
+    await utimes(stale, old, old);
+    await utimes(other, old, old);
+    await AppConfigStore.load(file, logger);
+    const left = (await readdir(dir)).sort();
+    expect(left).toEqual(['config.json.4343.deadbeef.tmp', 'other.json.4242.0a1b2c3d.tmp']);
+    expect(logger.info).toHaveBeenCalledWith('removed 1 leftover config.json temp file(s)');
   });
 
   it('warns and falls back to defaults when the file is corrupt', async () => {
