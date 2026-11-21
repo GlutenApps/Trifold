@@ -4,19 +4,34 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
-### Changed
+## [0.4.5] - 2026-11-21
 
-- **Settings, reorganised** (ADR 0054): one column of sections in the order you reach for them (Table display, Appearance, Backups, Updates, Library, Troubleshooting, About), each setting with a line on what it does, and links at the top to jump between them.
+Scaled creatures and hordes that fight like their CR, an attack button for every SRD creature, updates that take seconds and show their progress, and a reorganised Settings page.
 
 ### Added
 
+- **Tune mode in the CR scaler** (ADR 0051): beside **Quick**, **Tune** lets you move hit points, damage, attack count, legendary actions and an area attack one step at a time. The challenge rating shown is what they add up to, and nothing else moves unless you press **Balance**, which brings the CR back to the one you picked.
+- **Scaling up adds what big monsters have** (ADR 0051): scaled to CR 11 or higher, a creature gains legendary actions (and, from CR 16, Legendary Resistance) and an area attack, sharing its damage budget rather than adding to it.
+- **Swarm bites** (ADR 0052): in a horde, a creature whose attack averages 2 damage or less (a Rat's 1) bites for 1d4 per member, so a horde of rats is a real threat at 20 or more.
+- **An Impossible band** on the difficulty bar, from twice the High budget.
 - **Text size** in Settings › Appearance zooms the console from Small to Extra large on this computer; the TV is never zoomed.
 - **Identify** in Settings › Table display shows each screen's number on it, and screens are named by number (and the monitor's name) instead of an internal id.
 - **Recent Libraries** in Settings › Library reopens a Library used before in one click.
 - **Open logs folder** and **Copy version info**, for bug reports.
 
+### Changed
+
+- **The CR scaler fights true** (ADR 0051): tested by simulated fights against every SRD monster, scaled creatures now land within one CR step of real monsters three times in four (about half before). Creatures below CR 1 scale from SRD values, flat damage scales, quick scale changes the number of attacks, odd stats move toward typical on big jumps, and legendary actions are dropped below CR 10.
+- **Hordes** (ADR 0052, replacing ADR 0047's CR rule):
+  - A horde's CR now matches how it fights, up to 50 members, and the encounter budget counts that CR's XP. Ten bandits show CR 3, fifty show CR 11.
+  - A horde attacks once for every three members standing, each roll going to the damage queue on its own, so ten or more no longer one-shot a PC.
+  - One hit fells at most three members; an area effect such as a Fireball hurts each member caught, which you enter as **Members in the area** when you apply the damage.
+  - A horde of CR 3 or stronger creatures warns that it hits very hard.
+- **Settings, reorganised** (ADR 0054): one column of sections in the order you reach for them (Table display, Appearance, Backups, Updates, Library, Troubleshooting, About), each setting with a line on what it does, and links at the top to jump between them.
+
 ### Fixed
 
+- **Every SRD 2024 creature with an attack has its attack button.** 33 creatures, the Rat, Bat, Cat, Mimic and Bugbear Warrior among them, had none, because their stat blocks leave out "Hit:" or add a note after the bonus. About 260 more now take their damage and damage types from the stat block itself, fixing wrong dice (the Adult Bronze Dragon's lightning, the Baboon's bite) and damage types that resistances need. Imported XML compendiums show **parser updated** in Compendium › Sources, so you can re-read them.
 - **Restart now shows the update** (ADR 0053): a small "Updating Trifold" window shows the installer's progress until Trifold opens again, instead of nothing.
 - **Updates take seconds, not minutes** (ADR 0053): the game-icons ship as one file instead of 4,176, so Windows has far fewer files to check. An update went from about 8 minutes to about 30 seconds on a test machine.
 - **Settings saves finish before Trifold quits**: closing could cut off the save of the window position and leave a `config.json.*.tmp` file behind, and two settings changes at once could lose one of them. Old leftover temp files are removed at startup.
