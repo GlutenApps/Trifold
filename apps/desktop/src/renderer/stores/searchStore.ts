@@ -290,14 +290,16 @@ const byRank = (a: SearchResult, b: SearchResult) =>
   a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
 
 /** A note body as the editor shows it; computed once per saved note, not per keystroke. */
-const plainBodies = new WeakMap<Note, string>();
-function plainBody(note: Note): string {
-  let text = plainBodies.get(note);
-  if (text === undefined) {
-    text = stripMarkdown(note.body);
-    plainBodies.set(note, text);
+/** A note's plain text and its lowercase copy, kept per note object (bodies are immutable). */
+const plainBodies = new WeakMap<Note, { text: string; lower: string }>();
+function plainBody(note: Note): { text: string; lower: string } {
+  let plain = plainBodies.get(note);
+  if (plain === undefined) {
+    const text = stripMarkdown(note.body);
+    plain = { text, lower: text.toLowerCase() };
+    plainBodies.set(note, plain);
   }
-  return text;
+  return plain;
 }
 
 const mentionDetail = (count: number, where: string) =>
@@ -318,13 +320,15 @@ export function searchMentions(query: string, bundle: CampaignBundle | null): Se
     type: 'note' | 'encounter' | 'npc' | 'pc' | 'scene',
     id: string,
     title: string,
-    text: string,
+    body: string | undefined | { text: string; lower: string },
     where: string,
     icon: IconName,
     target: (occurrence: number) => NavTarget,
   ) => {
+    const text = typeof body === 'object' ? body.text : body;
     if (!text) return;
-    const { count, snippets } = phraseSnippets(text, phrase, opts);
+    const lower = typeof body === 'object' ? body.lower : undefined;
+    const { count, snippets } = phraseSnippets(text, phrase, lower ? { ...opts, lower } : opts);
     const first = snippets[0];
     if (!count || !first) return;
     out.push({

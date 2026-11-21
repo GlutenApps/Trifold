@@ -34,6 +34,11 @@ export interface NoteSearchOptions {
   maxSnippets?: number;
   /** Characters of context kept on each side of a hit. */
   context?: number;
+  /**
+   * The text already lowercased, for callers that search the same text on every keystroke and
+   * keep it (global search); saves lowercasing it each time.
+   */
+  lower?: string;
 }
 
 /** Markdown as plain text: headings, emphasis, list markers, links and code fences removed. */
@@ -87,10 +92,10 @@ function cutAfter(text: string, start: number, context: number): string {
 }
 
 /** Every occurrence of `phrase` in `text`, case-insensitive, as start offsets. */
-export function findPhrase(text: string, phrase: string): number[] {
+export function findPhrase(text: string, phrase: string, lower?: string): number[] {
   const needle = phrase.toLowerCase();
   if (!needle) return [];
-  const hay = text.toLowerCase();
+  const hay = lower ?? text.toLowerCase();
   const out: number[] = [];
   let from = 0;
   for (;;) {
@@ -113,7 +118,7 @@ export function phraseSnippets(
 ): { count: number; snippets: SearchSnippet[] } {
   const maxSnippets = options.maxSnippets ?? 3;
   const context = options.context ?? 60;
-  const offsets = findPhrase(text, phrase);
+  const offsets = findPhrase(text, phrase, options.lower);
   return {
     count: offsets.length,
     snippets: offsets.slice(0, maxSnippets).map((at, occurrence) => ({
