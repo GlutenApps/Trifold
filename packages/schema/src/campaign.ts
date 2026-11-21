@@ -59,6 +59,25 @@ export const Campaign = z.object({
 });
 export type Campaign = z.infer<typeof Campaign>;
 
+export const ConditionDuration = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('rounds'), remaining: int.min(0) }),
+  z.object({ kind: z.literal('untilStartOfTurn'), combatantId: z.string() }),
+  z.object({ kind: z.literal('untilEndOfTurn'), combatantId: z.string() }),
+  z.object({ kind: z.literal('untilSave'), ability: Ability, dc: int }),
+]);
+export type ConditionDuration = z.infer<typeof ConditionDuration>;
+
+export const ConditionInstance = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  /** Exhaustion level 1–6; unused for other conditions. */
+  level: int.min(1).max(6).optional(),
+  duration: ConditionDuration.optional(),
+  source: z.string().optional(),
+  appliedRound: int.default(1),
+});
+export type ConditionInstance = z.infer<typeof ConditionInstance>;
+
 export const PCCard = z.object({
   schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
   id: z.string().min(1),
@@ -70,6 +89,11 @@ export const PCCard = z.object({
   /** HP at the end of the last fight; absent means full. Carried into the next one (ADR 0012). */
   currentHp: int.min(0).optional(),
   tempHp: int.min(0).optional(),
+  /**
+   * Conditions the PC carries between fights (ADR 0049): set from a phone or the card at any
+   * time, taken into a fight and back out of it like HP. Durations only run in a fight.
+   */
+  conditions: z.array(ConditionInstance).optional(),
   ac: int.default(10),
   initiativeBonus: int.default(0),
   speed: int.default(30),
@@ -134,25 +158,6 @@ export const CombatantTemplate = z.object({
     .optional(),
 });
 export type CombatantTemplate = z.infer<typeof CombatantTemplate>;
-
-export const ConditionDuration = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('rounds'), remaining: int.min(0) }),
-  z.object({ kind: z.literal('untilStartOfTurn'), combatantId: z.string() }),
-  z.object({ kind: z.literal('untilEndOfTurn'), combatantId: z.string() }),
-  z.object({ kind: z.literal('untilSave'), ability: Ability, dc: int }),
-]);
-export type ConditionDuration = z.infer<typeof ConditionDuration>;
-
-export const ConditionInstance = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  /** Exhaustion level 1–6; unused for other conditions. */
-  level: int.min(1).max(6).optional(),
-  duration: ConditionDuration.optional(),
-  source: z.string().optional(),
-  appliedRound: int.default(1),
-});
-export type ConditionInstance = z.infer<typeof ConditionInstance>;
 
 export const Counter = z.object({
   id: z.string().min(1),
@@ -344,6 +349,8 @@ export const NPC = z.object({
   isAlive: z.boolean().default(true),
   /** HP at the end of the last fight this NPC was in; absent until then (ADR 0012). */
   hp: z.object({ current: int.min(0), max: int.min(0), temp: int.min(0).default(0) }).optional(),
+  /** Conditions the NPC carries between fights, like a PC's (ADR 0049). */
+  conditions: z.array(ConditionInstance).optional(),
   /**
    * Offered to players at the table to claim (ADR 0043) while it is not marked enemy on the live
    * scene or in the running fight.
@@ -421,6 +428,8 @@ export const Token = z.object({
       type: z.string().default(''),
       hp: z.object({ current: int.min(0), max: int.min(0), temp: int.min(0).default(0) }),
       ac: int.default(10),
+      /** Conditions outside a fight (ADR 0049); in one, its combatant has them. */
+      conditions: z.array(ConditionInstance).optional(),
       initiative: z.enum(['shared', 'own']).default('shared'),
       /** In a fight: the round it goes at. */
       expiresAtRound: int.optional(),

@@ -55,7 +55,7 @@ describe('intentProblem', () => {
     });
     expect(intentProblem({ kind: 'ac', value: 15 }, outside)).toMatch(/AC/);
     expect(intentProblem({ kind: 'addCondition', name: 'Prone' }, outside)).toMatch(
-      /during fights/,
+      /can’t be changed/,
     );
   });
 
