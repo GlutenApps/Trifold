@@ -44,6 +44,28 @@ describe('CrScalePanel', () => {
     expect(applied.scaled).toEqual({ fromCr: goblin.data.cr, toCr: '3' });
   });
 
+  it('ticks the extra attack too, and the CR drops when it is left out (ADR 0048)', async () => {
+    const onApply = vi.fn();
+    render(<CrScalePanel data={goblin.data} name="Goblin Warrior" onApply={onApply} />);
+    const panel = screen.getByTestId('cr-scale');
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'New challenge rating' }),
+      '5',
+    );
+    const extra = within(panel).getByRole('checkbox', { name: 'Add an attack' });
+    expect(extra).toBeChecked();
+    expect(screen.getByTestId('cr-scale-cr')).toHaveTextContent('→ 5 (1,800 XP)');
+    expect(screen.queryByTestId('cr-scale-short')).not.toBeInTheDocument();
+
+    await userEvent.click(extra);
+    expect(screen.getByTestId('cr-scale-cr')).toHaveTextContent('→ 4 (1,100 XP)');
+    expect(screen.getByTestId('cr-scale-short')).toHaveTextContent('CR 5 with everything ticked');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Apply CR 4 to the form' }));
+    const applied = onApply.mock.calls[0]![0] as MonsterRecord['data'];
+    expect(applied.cr).toBe('4');
+    expect(applied.actions.some((f) => /multiattack/i.test(f.name))).toBe(false);
+  });
+
   it('shows the Scaled tag on the stat block, the name unchanged', () => {
     const scaled = {
       ...goblin,

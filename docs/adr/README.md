@@ -53,6 +53,7 @@ An architecture decision record (ADR) is a short file about one choice that refi
 | [0046](0046-go-live.md) | Go live is one switch for the TV and phones (the TV opens on a second display by itself); Set active scene and Clear active scene replace Send to TV and Take off TV; phones show only what the TV shows. |
 | [0047](0047-hordes.md) | Each creature rolls its own initiative (group initiative is gone); Horde on a row makes several of one creature one combatant with one token, one turn, pooled HP, damage per member standing, and the CR its members' XP adds up to. |
 | [0044](0044-who-from-the-party-fights.md) | The fight is whoever is here: the party on the map, the PCs the encounter names, or the whole party when that leaves nobody. |
+| [0048](0048-cr-follows-the-parts.md) | The CR scaler ticks every part, an extra attack too (each attack its own roll), and the CR the monster ends at follows what is ticked, blended by weight; quick scale keeps the number of attacks. |
 
 ## Decision log
 

@@ -1,4 +1,4 @@
-import { crToNumber, normalizeCr, proficiencyBonusForCr, xpForCr } from './tables';
+import { CR_ORDER, crToNumber, normalizeCr, proficiencyBonusForCr, xpForCr } from './tables';
 
 /**
  * The CR scaler (DESIGN.md §6.2, Beta 8, ADR 0038): a monster moved to another CR by shifting
@@ -19,7 +19,11 @@ export const CR_BASELINE = {
   damage: (cr: number) => (cr <= 20 ? 6 * (cr + 1) : 126 + 12 * (cr - 20)),
 };
 
-/** The parts of a stat block the scaler can change; the DM can leave any of them out. */
+/**
+ * The parts of a stat block the scaler can change; the DM can leave any of them out, and the CR
+ * follows what is applied (ADR 0048). `attacks` is the extra (or dropped) attack, on offer at a
+ * big step.
+ */
 export type ScalePart = 'hp' | 'ac' | 'attack' | 'dc' | 'damage' | 'proficiency' | 'attacks';
 export const SCALE_PARTS: readonly ScalePart[] = [
   'hp',
@@ -28,7 +32,34 @@ export const SCALE_PARTS: readonly ScalePart[] = [
   'dc',
   'damage',
   'proficiency',
+  'attacks',
 ];
+
+/**
+ * How much each part weighs in the CR the scaled monster ends at (ADR 0048): defence is hit
+ * points and armor class, offence damage per round and accuracy, with hit points and damage
+ * weighing most, as in the DMG's own CR method. Proficiency moves saves and skills only.
+ */
+export const CR_WEIGHTS = { hp: 0.35, ac: 0.15, damage: 0.35, attack: 0.075, dc: 0.075 } as const;
+
+/** The CR whose typical damage per round is `dpr` (the inverse of the damage baseline). */
+function crForDamage(dpr: number): number {
+  return dpr <= 126 ? dpr / 6 - 1 : 20 + (dpr - 126) / 12;
+}
+
+/** The listed CR nearest a number, the lower one on a tie. */
+export function nearestCr(value: number): string {
+  let best: string = CR_ORDER[0]!;
+  let gap = Infinity;
+  for (const cr of CR_ORDER) {
+    const d = Math.abs((crToNumber(cr) ?? 0) - value);
+    if (d < gap - 1e-9) {
+      best = cr;
+      gap = d;
+    }
+  }
+  return best;
+}
 
 export interface ScalableFeature {
   name: string;
@@ -67,6 +98,8 @@ export interface ScaleLine {
 
 export interface ScaleResult<M> {
   monster: M;
+  /** The CR the applied parts add up to (ADR 0048); the target when every part is applied. */
+  cr: string;
   lines: ScaleLine[];
   /** What the scaler left alone that may want a look. */
   notes: string[];
@@ -199,12 +232,14 @@ export function scaleCr<M extends ScalableMonster>(
   toCr: string,
   parts: ReadonlySet<ScalePart>,
   name = 'creature',
+  /** Quick scale keeps the number of attacks; only the editor's scaler offers one more or fewer. */
+  options: { offerAttacks?: boolean } = {},
 ): ScaleResult<M> {
   const to = normalizeCr(toCr);
   const fromNum = crToNumber(monster.cr);
   const toNum = crToNumber(to);
   if (to === null || fromNum === null || toNum === null) {
-    return { monster, lines: [], notes: [], attackOffer: null };
+    return { monster, cr: monster.cr, lines: [], notes: [], attackOffer: null };
   }
   const lines: ScaleLine[] = [];
   const notes: string[] = [];
@@ -224,12 +259,6 @@ export function scaleCr<M extends ScalableMonster>(
     from: `${monster.cr} (${monster.xp.toLocaleString('en-US')} XP)`,
     to: `${to} (${xpTo.toLocaleString('en-US')} XP)`,
   });
-  next.cr = to;
-  next.xp = xpTo;
-  next.proficiencyBonus = pbTo;
-  const fromCr = monster.scaled?.fromCr ?? monster.cr;
-  if (fromCr === to) delete next.scaled;
-  else next.scaled = { fromCr, toCr: to };
 
   // Hit points: the same die size, the Constitution bonus per die kept.
   if (parts.has('hp') && monster.hp) {
@@ -273,11 +302,16 @@ export function scaleCr<M extends ScalableMonster>(
   const count = multi ? (multiattackCount(multi.text) ?? 1) : 1;
   const step = toNum - fromNum;
   const attackOffer: 'add' | 'remove' | null =
-    step >= ATTACK_OFFER_STEP && count < NUMBER_WORDS.length && (multi || attackers.length > 0)
-      ? 'add'
-      : step <= -ATTACK_OFFER_STEP && multi && count >= 2
-        ? 'remove'
-        : null;
+    options.offerAttacks === false
+      ? null
+      : step >= ATTACK_OFFER_STEP && count < NUMBER_WORDS.length && (multi || attackers.length > 0)
+        ? 'add'
+        : step <= -ATTACK_OFFER_STEP && multi && count >= 2
+          ? 'remove'
+          : null;
+  // The attacks the target's damage per round is shared across: with one on offer, that one
+  // counts, so leaving it out leaves the others as they are and the damage (and CR) lower.
+  const planned = attackOffer === 'add' ? count + 1 : attackOffer === 'remove' ? count - 1 : count;
   let attacksAfter = count;
   let nextActions = actions;
   if (attackOffer && parts.has('attacks')) {
@@ -306,10 +340,11 @@ export function scaleCr<M extends ScalableMonster>(
     });
   }
 
-  // Damage per round scales; with an attack more or fewer, each attack roll carries its share.
-  // Save effects such as a breath weapon are not part of the Multiattack and scale as they are.
+  // Damage per round scales to the target's, shared across the planned attacks: each attack is
+  // its own roll, so the attacks made set the damage per round (ADR 0048). Save effects such as a
+  // breath weapon are not part of the Multiattack and scale as they are.
   const damageRatio = ratio('damage');
-  const attackRatio = damageRatio * (count / attacksAfter);
+  const attackRatio = damageRatio * (count / planned);
   const changed: TextChanges[] = [];
   const scaleList = (list: ScalableFeature[]) =>
     list.map((f) => {
@@ -378,5 +413,31 @@ export function scaleCr<M extends ScalableMonster>(
   if (all.some((f) => /regain/i.test(f.text) && !HAS_DAMAGE_ROLL.test(f.text))) {
     notes.push('Fixed numbers in text, like hit points regained, stay the same.');
   }
-  return { monster: next, lines, notes, attackOffer };
+  // The CR the applied parts add up to (ADR 0048): each part lands at the target or stays where
+  // it was, damage per round counts the attacks made, and the weights blend them.
+  const moved = (part: ScalePart) => (parts.has(part) ? toNum - fromNum : 0);
+  const dprRatio = (parts.has('damage') ? attackRatio : 1) * (attacksAfter / count);
+  const damageCr = crForDamage(CR_BASELINE.damage(fromNum) * dprRatio);
+  const value =
+    fromNum +
+    CR_WEIGHTS.hp * moved('hp') +
+    CR_WEIGHTS.ac * moved('ac') +
+    CR_WEIGHTS.damage * (damageCr - fromNum) +
+    CR_WEIGHTS.attack * moved('attack') +
+    CR_WEIGHTS.dc * moved('dc');
+  const cr = nearestCr(value);
+  const xp = xpForCr(cr) ?? monster.xp;
+  lines[0] = {
+    part: 'cr',
+    label: 'Challenge',
+    from: `${monster.cr} (${monster.xp.toLocaleString('en-US')} XP)`,
+    to: `${cr} (${xp.toLocaleString('en-US')} XP)`,
+  };
+  next.cr = cr;
+  next.xp = xp;
+  next.proficiencyBonus = proficiencyBonusForCr(cr) ?? pbTo;
+  const fromCr = monster.scaled?.fromCr ?? monster.cr;
+  if (fromCr === cr) delete next.scaled;
+  else next.scaled = { fromCr, toCr: cr };
+  return { monster: next, cr, lines, notes, attackOffer };
 }
