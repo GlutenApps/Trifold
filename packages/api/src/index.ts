@@ -250,6 +250,12 @@ export interface LiveTimer {
 /** Authoritative presenter state. Owned by the console, relayed by main, rendered by the player. */
 export interface PresenterState {
   schemaVersion: 1;
+  /**
+   * Whether the table's output is on (ADR 0046): Go live opens the TV (on a second display, or
+   * the one chosen in Settings) and lets phones see the table. Off, the TV is closed and phones
+   * wait; the active scene stays set, ready for going live.
+   */
+  live: boolean;
   blackout: boolean;
   scene: LiveScene | null;
   /** Whether the scene title overlay applies to the live scene (global toggle + per-scene override). */
@@ -286,6 +292,7 @@ export interface LiveRuler {
 
 export const initialPresenterState: PresenterState = {
   schemaVersion: 1,
+  live: false,
   blackout: true,
   scene: null,
   showSceneTitle: true,
@@ -845,6 +852,12 @@ export interface TrifoldApi {
      * then the first non-primary display, then the primary. An open window is moved instead.
      */
     open(displayId?: number | null): Promise<void>;
+    /**
+     * Opens the TV for going live (ADR 0046): on the display chosen in Settings when it is
+     * attached, else on a display that is not the primary. With one display and Automatic
+     * chosen it opens nothing (phones still see the table). Resolves whether the TV is open.
+     */
+    openForLive(): Promise<boolean>;
     close(): Promise<void>;
     isOpen(): Promise<boolean>;
   };
@@ -1239,7 +1252,7 @@ export const API_METHODS = {
   updates: ['status', 'setEnabled', 'checkNow', 'dismiss', 'openDownload', 'restartToUpdate'],
   library: ['getInfo', 'chooseFolder', 'open', 'openInExplorer', 'updateSettings'],
   displays: ['list'],
-  player: ['open', 'close', 'isOpen'],
+  player: ['open', 'openForLive', 'close', 'isOpen'],
   presenter: ['push', 'get'],
   table: [
     'status',

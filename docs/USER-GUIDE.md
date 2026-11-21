@@ -124,21 +124,22 @@ Once PCs are in the encounter, a row at the top of the builder shows the 2024 di
 
 ## The TV and the VTT
 
-**Settings › Displays** lists attached displays; pick one, or leave **Automatic** (the first display that is not the primary). **Open TV** in the VTT tab, on the strip, or `Ctrl+Shift+P` opens the player window full screen there, and the button becomes a red **TV on** tally. The player window has no controls of its own.
+**Go live** in the VTT tab, on the strip, or `Ctrl+Shift+P` turns the table on: the TV opens full screen and phones see the table, and the button becomes a red **End live** tally. Until you go live, nothing reaches the table: the TV is closed and phones say they are waiting for you. **Settings › Displays** lists attached displays; pick one, or leave **Automatic**, which opens the TV on a display that is not the primary and, with only one display, opens no TV at all (phones still see the table). Pick your own display to see the TV there. The player window has no controls of its own.
 
-**Scenes** (in the dock) is the list of what you can show. The new-scene row makes a title card, an image scene, a map, a blank grid or a folder; scenes nest in folders, and rows drag to reorder or move. Clicking a scene selects it and shows it in the VTT tab; Enter, double-click or the play icon **sends** it to the TV. **Recent** lists the last scenes sent. **Edit** sets the title, subtitle, whether the title shows on the TV, music that starts when the scene goes live, a backdrop for title cards, and DM notes.
+**Scenes** (in the dock) is the list of what you can show. The new-scene row makes a title card, an image scene, a map, a blank grid or a folder; scenes nest in folders, and rows drag to reorder or move. Clicking a scene selects it and shows it in the VTT tab; Enter, double-click or the play icon makes it the **active scene**, the one the TV and phones show. Set it before going live and it waits, marked **active**, until you go live; once live it is marked **live**. **Recent** lists the last scenes set active. **Edit** sets the title, subtitle, whether the title shows on the TV, music that starts when the scene goes live, a backdrop for title cards, and DM notes.
 
 **The VTT tab** shows the selected scene, or the live one, and carries every control for the TV:
 
-- a scene picker with previous and next (`Ctrl+Alt+Up` and `Ctrl+Alt+Down`, which select but never send);
-- **Send to TV**, which becomes **Take off TV** once the scene is on the TV (`Ctrl+Shift+X`: the scene goes, the overlays stay; the Scenes row's ■ and the strip's stop icon do the same);
+- **Go live** and **End live** (`Ctrl+Shift+P`);
+- a scene picker with previous and next (`Ctrl+Alt+Up` and `Ctrl+Alt+Down`, which select but never set a scene active);
+- **Set active scene**, which becomes **Clear active scene** once the scene is active (`Ctrl+Shift+X`: the scene goes, the overlays stay; the Scenes row's ■ and the strip's stop icon do the same);
 - **Blackout** (`Ctrl+Shift+B`), which hides everything, overlays too; press it again to bring the scene back;
 - **Break…**, a title and a countdown on the TV; **End break** takes it down;
 - undo (`Ctrl+Shift+Z`), which reverses the last scene change;
 - **Overlays**: scene title, initiative strip, PC health bars, round counter, counters and timers;
 - **Player devices**, the phone icon (see the next section).
 
-With the Scenes tool open, `Alt+Up`, `Alt+Down`, `Alt+Left` and `Alt+Right` send the previous, next, parent or first child scene straight to the TV.
+With the Scenes tool open, `Alt+Up`, `Alt+Down`, `Alt+Left` and `Alt+Right` set the previous, next, parent or first child scene active.
 
 **The initiative strip** on the TV stays on one row along the top. It starts at whoever's turn it is, shrinks its chips a little in a big fight, and folds the rest into a **+N** chip. A masked creature shows as its type, numbered like the rest (Humanoid 2).
 
@@ -300,9 +301,9 @@ Ctrl means the Command key on macOS, and Alt means Option. Keys without Ctrl or 
 | Counters    | Add or take the primary step on a focused counter                 | `Up`, `Down`                                   |
 | Counters    | Add or take the alternate step (the primary one if there is none) | `Shift+Up`, `Shift+Down`, `PageUp`, `PageDown` |
 | Counters    | Go to the minimum or maximum, when set                            | `Home`, `End`                                  |
-| TV          | Open or close the TV                                              | `Ctrl+Shift+P`                                 |
+| TV          | Go live, or end it                                                | `Ctrl+Shift+P`                                 |
 | TV          | Toggle blackout on the TV                                         | `Ctrl+Shift+B`                                 |
-| TV          | Take the scene off the TV (overlays stay)                         | `Ctrl+Shift+X`                                 |
+| TV          | Clear the active scene (overlays stay)                            | `Ctrl+Shift+X`                                 |
 | TV          | Undo the last scene change                                        | `Ctrl+Shift+Z`                                 |
 | TV          | Select the previous or next scene in the VTT tab (does not send)  | `Ctrl+Alt+Up`, `Ctrl+Alt+Down`                 |
 | Scenes      | Send the previous or next scene                                   | `Alt+Up`, `Alt+Down`                           |

@@ -70,6 +70,7 @@ const map = (tokens: Token[], extra: Partial<Scene> = {}): Scene => ({
 
 const live = (scene: Scene) => ({
   ...initialPresenterState,
+  live: true,
   blackout: false,
   scene: { kind: 'map', id: scene.id } as MapScene,
 });
@@ -233,6 +234,15 @@ describe('tableSnapshotFrom', () => {
     const kn = tableSnapshotFrom(input({ liveScene: night, presenter: live(night) })).scene!
       .imageKey;
     expect(kd).not.toBe(kn);
+  });
+
+  it('sends no map and no screen until the DM goes live (ADR 0046)', () => {
+    const scene = map([]);
+    const waiting = tableSnapshotFrom(
+      input({ liveScene: scene, presenter: { ...live(scene), live: false } }),
+    );
+    expect(waiting).toMatchObject({ live: false, scene: null, screen: null });
+    expect(tableSnapshotFrom(input({ liveScene: scene, presenter: live(scene) })).live).toBe(true);
   });
 
   it('sends no map when the TV shows another scene', () => {

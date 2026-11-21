@@ -21,7 +21,10 @@ interface SceneState {
   select(id: string | null): void;
   setHover(id: string | null): void;
   setDraft(scene: Scene): void;
-  /** Sends a scene to the TV (Enter, double-click, ▶, Send to TV) and starts its playlist. */
+  /**
+   * Sets the active scene (Enter, double-click, ▶, Set active scene; ADR 0046). Live, it shows on
+   * the TV and phones and its music starts; not live, it waits for Go live.
+   */
   send(scene: Scene): void;
   /**
    * Changes a saved scene wherever it is: the draft when it is the selected one (so the editor
@@ -70,16 +73,8 @@ export const useSceneStore = create<SceneState>((set, get) => ({
     const slug = useCampaignStore.getState().current?.campaign.slug ?? '';
     const presenter = usePresenterStore.getState();
     if (!presenter.showScene(scene, slug)) return;
-    // Scene-linked music (DESIGN.md §6.6): crossfade only when the playlist or track changes.
-    const audio = scene.audio;
-    const loop = audio?.loop !== undefined ? { loop: audio.loop } : {};
-    if (audio?.playlistId) {
-      void useMusicStore.getState().playPlaylist(audio.playlistId, { ifDifferent: true, ...loop });
-    } else if (audio?.trackId) {
-      void useMusicStore
-        .getState()
-        .playTrack(audio.trackId, null, { ifDifferent: true, loop: audio.loop ?? false });
-    }
+    // A scene set active before going live starts its music when the DM goes live (ADR 0046).
+    if (presenter.state.live) playSceneMusic(scene);
   },
 
   patchScene(sceneId, fn) {
@@ -133,3 +128,16 @@ useCampaignStore.subscribe((s, prev) => {
   if (draft?.id === saved.id && hasPendingSave(SCENE_SLOT)) return;
   if (!draft || saved.updatedAt !== draft.updatedAt) useSceneStore.setState({ draft: saved });
 });
+
+/** Starts a scene's linked music (DESIGN.md §6.6): crossfades only when the playlist or track changes. */
+export function playSceneMusic(scene: Scene): void {
+  const audio = scene.audio;
+  const loop = audio?.loop !== undefined ? { loop: audio.loop } : {};
+  if (audio?.playlistId) {
+    void useMusicStore.getState().playPlaylist(audio.playlistId, { ifDifferent: true, ...loop });
+  } else if (audio?.trackId) {
+    void useMusicStore
+      .getState()
+      .playTrack(audio.trackId, null, { ifDifferent: true, loop: audio.loop ?? false });
+  }
+}

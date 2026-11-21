@@ -2,6 +2,7 @@ import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
+import { tvOnPrimary } from './tv';
 import { keepLogs } from './keepLogs';
 
 /**
@@ -68,8 +69,9 @@ test('timers run side by side, count down on the TV, and come back idle after a 
     await newTimer(page, 'Guards return', '1m');
 
     // The TV: open it and lift the blackout with a title card from Scenes.
+    await tvOnPrimary(page);
     const playerPromise = app.waitForEvent('window');
-    await page.getByTestId('live-strip').getByRole('button', { name: 'Open TV (tray)' }).click();
+    await page.getByTestId('live-strip').getByRole('button', { name: 'Go live (tray)' }).click();
     const player = await playerPromise;
     await openTool(page, 'Scenes', page.getByLabel('New scene title'));
     await page.getByLabel('New scene title').fill('The bridge');

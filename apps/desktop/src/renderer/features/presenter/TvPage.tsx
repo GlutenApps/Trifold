@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { mediaUrl, type PresenterOverlays } from '@trifold/api';
 import type { Scene } from '@trifold/schema';
 import { useAppStore } from '../../stores/appStore';
+import { toggleLive } from '../../stores/live';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { isMapScene, useSceneStore } from '../../stores/sceneStore';
@@ -56,29 +57,38 @@ export function TvPage() {
   const liveId = live.scene?.id ?? null;
   const liveStored = liveId ? (scenes?.find((s) => s.id === liveId) ?? null) : null;
   const shown: Scene | null = draft ?? liveStored;
-  const isLive = !!shown && shown.id === liveId && !live.blackout;
+  // On air: the active scene, while live and not blacked out (ADR 0046).
+  const isLive = !!shown && shown.id === liveId && live.live && !live.blackout;
+  const isActive = !!shown && shown.id === liveId && !live.live;
 
   return (
     <section className="map-page tv-page" data-testid="tv-page">
       <header className="row map-head tv-head">
-        <ScenePicker scenes={scenes ?? []} shown={shown} liveId={liveId} blackout={live.blackout} />
+        <ScenePicker
+          scenes={scenes ?? []}
+          shown={shown}
+          liveId={liveId}
+          onAir={live.live}
+          blackout={live.blackout}
+        />
         {shown ? (
           <>
             {isLive && <span className="badge live">live</span>}
+            {isActive && <span className="badge">active</span>}
             {live.scene && shown.id !== liveId && liveStored && (
               <button
                 type="button"
                 className="link small"
-                title="Show the scene that is on the TV"
+                title="Show the active scene"
                 onClick={() => select(liveStored.id)}
               >
-                Live: {liveStored.title}
+                Active: {liveStored.title}
               </button>
             )}
           </>
         ) : (
           <span className="muted small" data-testid="tv-status">
-            Nothing live
+            {live.live ? 'No active scene' : 'Not live'}
           </span>
         )}
         <span className="spacer" />
@@ -108,11 +118,13 @@ function ScenePicker({
   scenes,
   shown,
   liveId,
+  onAir,
   blackout,
 }: {
   scenes: readonly Scene[];
   shown: Scene | null;
   liveId: string | null;
+  onAir: boolean;
   blackout: boolean;
 }) {
   const select = useSceneStore((s) => s.select);
@@ -182,7 +194,10 @@ function ScenePicker({
               >
                 <Icon name={kindIcon(scene)} size={14} />
                 <span className="scene-pick-name">{scene.title}</span>
-                {scene.id === liveId && !blackout && <span className="badge live">live</span>}
+                {scene.id === liveId && onAir && !blackout && (
+                  <span className="badge live">live</span>
+                )}
+                {scene.id === liveId && !onAir && <span className="badge">active</span>}
               </div>
             ),
           )}
@@ -214,14 +229,12 @@ function ScenePicker({
   );
 }
 
-/** The TV tally, what to show (Send to TV, Blackout, Break) and the tools (undo, overlays). */
+/** Go live, what to show (Set active scene, Blackout, Break) and the tools (undo, overlays). */
 function TvControls({ shown }: { shown: Scene | null }) {
   const presenter = usePresenterStore();
   const live = presenter.state;
   const send = useSceneStore((s) => s.send);
   const playerOpen = useAppStore((s) => s.playerOpen);
-  const openPlayer = useAppStore((s) => s.openPlayer);
-  const closePlayer = useAppStore((s) => s.closePlayer);
   const [pop, setPop] = useState<Pop | null>(null);
   const [breakTitle, setBreakTitle] = useState('Back in a few minutes');
   const [breakMinutes, setBreakMinutes] = useState('10');
@@ -229,44 +242,51 @@ function TvControls({ shown }: { shown: Scene | null }) {
   const togglePop = (next: Pop) => setPop((p) => (p === next ? null : next));
   const overlayCount = Object.values(live.overlays).filter(Boolean).length;
   const canSend = !!shown && shown.kind !== 'folder';
-  // The shown scene is on the TV, even behind a blackout: it can be taken off, not sent again.
+  // The shown scene is the active one, even behind a blackout or before going live: it can be
+  // cleared, not set again.
   const onTv = !!shown && shown.id === live.scene?.id;
 
   return (
     <>
       <button
         type="button"
-        className={`btn tv-power${playerOpen ? ' tally' : ''}`}
-        aria-pressed={playerOpen}
+        className={`btn tv-power${live.live ? ' tally' : ''}`}
+        aria-pressed={live.live}
         title={
-          playerOpen
-            ? `TV on: the players can see it. Click to close it (${hk('Ctrl+Shift+P')})`
-            : `Open the TV on the second display (${hk('Ctrl+Shift+P')})`
+          live.live
+            ? `Live: the ${playerOpen ? 'TV and phones show' : 'phones show'} the active scene. Click to end (${hk('Ctrl+Shift+P')})`
+            : `Go live: the TV opens on a second display and phones see the table (${hk('Ctrl+Shift+P')})`
         }
-        onClick={() => void (playerOpen ? closePlayer() : openPlayer())}
+        onClick={() => void toggleLive()}
       >
-        {playerOpen && <span className="tally-dot" aria-hidden="true" />}
-        {playerOpen ? 'TV on' : 'Open TV'}
+        {live.live && <span className="tally-dot" aria-hidden="true" />}
+        {live.live ? 'End live' : 'Go live'}
       </button>
-      <span className="row tv-show" role="group" aria-label="Show on the TV">
+      <span className="row tv-show" role="group" aria-label="Active scene">
         {onTv ? (
           <button
             type="button"
             className="btn"
-            title={`Take the scene off the TV; overlays stay up (${hk('Ctrl+Shift+X')})`}
+            title={`Clear the active scene; overlays stay up (${hk('Ctrl+Shift+X')})`}
             onClick={presenter.clearScene}
           >
-            Take off TV
+            Clear active scene
           </button>
         ) : (
           <button
             type="button"
             className="btn primary"
             disabled={!canSend}
-            title={canSend ? 'Put the selected scene on the TV' : 'Select a scene first'}
+            title={
+              !canSend
+                ? 'Select a scene first'
+                : live.live
+                  ? 'Show the selected scene on the TV and phones (Enter in Scenes)'
+                  : 'Make the selected scene the one that shows when you go live (Enter in Scenes)'
+            }
             onClick={() => shown && send(shown)}
           >
-            Send to TV
+            Set active scene
           </button>
         )}
         <button

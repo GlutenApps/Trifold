@@ -89,7 +89,9 @@ rule the TV follows. The table server is a second relay beside the player window
 source of truth.
 
 - **The console** pushes a `TableSnapshot` to main whenever the live scene, the fight or a
-  claimable creature changes: the map scene live on the TV, unfiltered (tokens with their refs,
+  claimable creature changes. Phones show only what the TV shows (ADR 0046): until the DM goes
+  live the snapshot says `live: false` and carries no map and no screen, and phones keep their
+  character tabs and say they are waiting. Live, it carries: the map scene live on the TV, unfiltered (tokens with their refs,
   roles and hidden flags, fog shapes, grid, size); what the TV shows when it is not a map (title,
   image or break); every offered PC and NPC with its HP, temp HP, AC and conditions (from its
   combatant in the loaded fight, else from the PC card or the NPC's carried HP); summons on the

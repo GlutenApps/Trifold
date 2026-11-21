@@ -316,6 +316,20 @@ export class WindowManager {
     }));
   }
 
+  /**
+   * Where the TV opens when the DM goes live (ADR 0046): the saved display if still attached,
+   * else the first display that is not the primary, else none (one screen: phones only).
+   */
+  static liveDisplay(preferredId: number | null | undefined): Display | null {
+    const all = screen.getAllDisplays();
+    const primary = screen.getPrimaryDisplay();
+    if (preferredId !== null && preferredId !== undefined) {
+      const match = all.find((d) => d.id === preferredId);
+      if (match) return match;
+    }
+    return all.find((d) => d.id !== primary.id) ?? null;
+  }
+
   /** The saved display if still attached, else the first non-primary display, else the primary. */
   static pickDisplay(preferredId: number | null | undefined): Display {
     const all = screen.getAllDisplays();

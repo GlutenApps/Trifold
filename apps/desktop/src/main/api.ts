@@ -190,6 +190,11 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         const preferred = displayId ?? ctx.session.store?.getSettings().playerDisplayId ?? null;
         ctx.windows.openPlayer(WindowManager.pickDisplay(preferred));
       },
+      async openForLive() {
+        const display = WindowManager.liveDisplay(ctx.session.store?.getSettings().playerDisplayId);
+        if (display) ctx.windows.openPlayer(display);
+        return display !== null;
+      },
       async close() {
         ctx.windows.closePlayer();
       },

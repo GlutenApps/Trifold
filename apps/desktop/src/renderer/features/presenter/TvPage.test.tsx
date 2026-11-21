@@ -54,7 +54,8 @@ describe('TvPage: the screen', () => {
     seed([card, grid]);
     useSceneStore.getState().reset();
     usePresenterStore.setState({
-      state: initialPresenterState,
+      // Live unless a test says otherwise; ADR 0046's not-live state has its own test.
+      state: { ...initialPresenterState, live: true },
       history: [],
       recent: [],
       liveOverride: null,
@@ -62,13 +63,13 @@ describe('TvPage: the screen', () => {
     });
   });
 
-  it('offers the way in when nothing is selected or live', () => {
+  it('offers the way in when nothing is selected or active', () => {
     render(<TvPage />);
-    // The player starts black, but with nothing sent that is "Nothing live", not a blackout.
-    expect(screen.getByTestId('tv-status')).toHaveTextContent('Nothing live');
+    // The player starts black, but with nothing set that is "No active scene", not a blackout.
+    expect(screen.getByTestId('tv-status')).toHaveTextContent('No active scene');
     expect(screen.getByRole('button', { name: 'Blackout the TV' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Open Scenes' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Send to TV' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Set active scene' })).toBeDisabled();
   });
 
   it('previews a selected title card and sends it from the header', async () => {
@@ -78,26 +79,26 @@ describe('TvPage: the screen', () => {
     expect(preview).toHaveClass('backdrop-stone');
     expect(within(preview).getByText('Session 4')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Send to TV' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Set active scene' }));
     expect(usePresenterStore.getState().state.scene?.id).toBe('card');
     expect(screen.getByText('live')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Send to TV' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Set active scene' })).not.toBeInTheDocument();
   });
 
   it('takes the live scene off the TV, leaves the overlays alone, and undoes it', async () => {
     useSceneStore.getState().select('card');
     render(<TvPage />);
-    await userEvent.click(screen.getByRole('button', { name: 'Send to TV' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Set active scene' }));
     usePresenterStore.getState().setOverlay('initiativeStrip', true);
     usePresenterStore.getState().setBlackout(true);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Take off TV' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Clear active scene' }));
     const after = usePresenterStore.getState().state;
     expect(after.scene).toBeNull();
     expect(after.blackout).toBe(false);
     expect(after.overlays.initiativeStrip).toBe(true);
     expect(screen.queryByText('live')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Send to TV' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Set active scene' })).toBeEnabled();
 
     await userEvent.click(screen.getByRole('button', { name: 'Undo the last scene' }));
     expect(usePresenterStore.getState().state.scene?.id).toBe('card');
@@ -111,7 +112,7 @@ describe('TvPage: the screen', () => {
     expect(screen.getByText('live')).toBeInTheDocument();
 
     useSceneStore.getState().select('grid');
-    const liveLink = await screen.findByRole('button', { name: 'Live: The Sunken Keep' });
+    const liveLink = await screen.findByRole('button', { name: 'Active: The Sunken Keep' });
     expect(screen.getByTestId('tv-title')).toHaveTextContent('Old bridge');
 
     await userEvent.click(liveLink);
@@ -121,7 +122,7 @@ describe('TvPage: the screen', () => {
   it('carries blackout, the break screen and overlays itself, not only on the strip', async () => {
     useSceneStore.getState().send(card);
     render(<TvPage />);
-    const show = screen.getByRole('group', { name: 'Show on the TV' });
+    const show = screen.getByRole('group', { name: 'Active scene' });
     const tools = screen.getByRole('group', { name: 'TV tools' });
 
     await userEvent.click(within(show).getByRole('button', { name: 'Blackout the TV' }));
@@ -146,22 +147,42 @@ describe('TvPage: the screen', () => {
     expect(screen.queryByRole('button', { name: 'Handout' })).not.toBeInTheDocument();
   });
 
-  it('opens the TV first and lights the on-air tally while it is open', async () => {
+  it('goes live, opening the TV, and lights the on-air tally until it ends (ADR 0046)', async () => {
+    usePresenterStore.setState({ state: initialPresenterState });
     useAppStore.setState({ playerOpen: false });
     render(<TvPage />);
-    const open = screen.getByRole('button', { name: 'Open TV' });
-    expect(open).toHaveAttribute('aria-pressed', 'false');
-    expect(open).not.toHaveClass('tally');
+    expect(screen.getByTestId('tv-status')).toHaveTextContent('Not live');
+    const go = screen.getByRole('button', { name: 'Go live' });
+    expect(go).toHaveAttribute('aria-pressed', 'false');
+    expect(go).not.toHaveClass('tally');
 
-    await userEvent.click(open);
-    const on = await screen.findByRole('button', { name: 'TV on' });
+    await userEvent.click(go);
+    const end = await screen.findByRole('button', { name: 'End live' });
+    expect(usePresenterStore.getState().state.live).toBe(true);
+    expect(window.trifold.player.openForLive).toHaveBeenCalled();
     expect(useAppStore.getState().playerOpen).toBe(true);
-    expect(on).toHaveAttribute('aria-pressed', 'true');
-    expect(on).toHaveClass('tally');
+    expect(end).toHaveAttribute('aria-pressed', 'true');
+    expect(end).toHaveClass('tally');
 
-    await userEvent.click(on);
-    await screen.findByRole('button', { name: 'Open TV' });
+    await userEvent.click(end);
+    await screen.findByRole('button', { name: 'Go live' });
+    expect(usePresenterStore.getState().state.live).toBe(false);
     expect(useAppStore.getState().playerOpen).toBe(false);
+  });
+
+  it('sets the active scene before going live, and shows it when the DM goes live', async () => {
+    usePresenterStore.setState({ state: initialPresenterState });
+    useSceneStore.getState().select('card');
+    render(<TvPage />);
+    await userEvent.click(screen.getByRole('button', { name: 'Set active scene' }));
+    expect(usePresenterStore.getState().state.scene?.id).toBe('card');
+    // Active, not on air: the badge says so until Go live.
+    expect(screen.getByText('active')).toBeInTheDocument();
+    expect(screen.queryByText('live')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Go live' }));
+    expect(await screen.findByText('live')).toBeInTheDocument();
+    expect(screen.queryByText('active')).not.toBeInTheDocument();
   });
 
   it('steps between prepared scenes and jumps from the list without sending', async () => {

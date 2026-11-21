@@ -190,6 +190,8 @@ interface PresenterStore {
    */
   clearScene(): void;
   undo(): void;
+  /** Turns the table's output on or off (ADR 0046); the window and music follow in stores/live. */
+  setLive(on: boolean): void;
   setBlackout(on: boolean): void;
   toggleBlackout(): void;
   setOverlay<K extends keyof PresenterOverlays>(key: K, value: boolean): void;
@@ -370,6 +372,11 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
         blackout: previous.scene ? false : state.blackout,
         showSceneTitle: previous.override ?? state.overlays.sceneTitle,
       });
+    },
+
+    setLive(on) {
+      if (get().state.live === on) return;
+      commit({ ...get().state, live: on });
     },
 
     setBlackout(on) {

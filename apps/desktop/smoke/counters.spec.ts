@@ -2,6 +2,7 @@ import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
+import { tvOnPrimary } from './tv';
 import { keepLogs } from './keepLogs';
 
 /**
@@ -87,8 +88,9 @@ test('counters are made, changed, held at their bounds, shown on the TV and kept
     await expect(torches.getByRole('button', { name: /^Torches: 8/ })).toBeVisible();
 
     // The TV: open it, lift the blackout with a title card from Scenes, then put a counter on.
+    await tvOnPrimary(page);
     const playerPromise = app.waitForEvent('window');
-    await page.getByTestId('live-strip').getByRole('button', { name: 'Open TV (tray)' }).click();
+    await page.getByTestId('live-strip').getByRole('button', { name: 'Go live (tray)' }).click();
     const player = await playerPromise;
     await expect(player.getByTestId('player-blackout')).toBeVisible();
     await openTool(page, 'Scenes', page.getByLabel('New scene title'));
