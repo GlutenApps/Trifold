@@ -49,7 +49,7 @@ import {
 import { registerHotkey } from '../../hotkeys';
 import { hk } from '../../platform';
 import { MapPop } from './MapPop';
-import { creatureGroupNames, withParty } from '../encounters/build';
+import { creatureGroupNames, isHorde, withParty } from '../encounters/build';
 import { TokenDisc } from './TokenDisc';
 import {
   combatantCandidates,
@@ -148,9 +148,6 @@ export function MapEditor({
   const pcs = useCampaignStore((s) => s.current?.pcs ?? []);
   const npcs = useCampaignStore((s) => s.current?.npcs ?? NO_NPCS);
   const encounters = useCampaignStore((s) => s.current?.encounters ?? []);
-  const initiativeMode = useCampaignStore(
-    (s) => s.current?.campaign.settings.initiativeMode ?? 'perGroup',
-  );
   const saveEncounter = useCampaignStore((s) => s.saveEncounter);
   const savePc = useCampaignStore((s) => s.savePc);
   const moving = usePresenterStore((s) => s.moving);
@@ -958,7 +955,7 @@ export function MapEditor({
       const fight = withParty(withLoose, pcs, partyOnMap());
       const saved = await saveEncounter({ ...fight, updatedAt: nowIso() });
       if (!saved) return;
-      await begin(saved, pcs, initiativeMode);
+      await begin(saved, pcs);
       openMajor('encounters', { avoid: 'map' });
       return;
     }
@@ -983,7 +980,7 @@ export function MapEditor({
     const saved = await saveEncounter(encounter);
     if (!saved) return;
     patch({ encounterId: saved.id });
-    await begin(saved, pcs, initiativeMode);
+    await begin(saved, pcs);
     openMajor('encounters', { avoid: 'map' });
   };
 
@@ -1021,6 +1018,7 @@ export function MapEditor({
       }
       const glyph = glyphFor({ name: template.ref.name, ...(type ? { type } : {}) }, 'creature');
       const had = template.tokenIds ?? (template.tokenId ? [template.tokenId] : []);
+      const horde = isHorde(template);
       const names =
         creatureNames.get(template.id) ??
         numberedNames(template.label || template.ref.name, template.quantity);
@@ -1032,10 +1030,11 @@ export function MapEditor({
           kind: 'creature',
           ref: template.ref,
           label,
-          maskedLabel: type ? capitalize(type) : 'Creature',
+          // A horde is one token, at least two squares across, named as a horde (ADR 0047).
+          maskedLabel: `${type ? capitalize(type) : 'Creature'}${horde ? ' horde' : ''}`,
           x: 0,
           y: 0,
-          footprint: footprintForSize(size),
+          footprint: horde && footprintForSize(size) < 2 ? 2 : footprintForSize(size),
           role: template.role,
           hidden: true,
           nameMasked: true,

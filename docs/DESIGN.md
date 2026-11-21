@@ -156,7 +156,7 @@ Spell, item, feat, species, background, class, condition and rule records keep t
 
 ### 5.2 Campaign
 
-**Campaign**: `{ id, name, slug, preferredEdition, allowLegacy, enabledSourceIds (unused; sources say which campaigns see them), settings: { playerOverlays: { sceneTitle, initiativeStrip, pcHealthBars, roundCounter }, tokenStyle: "engraved"|"flat"|"twoTone"|"plain", hpDisplayMode: "hidden"|"bloodied"|"exact", initiativeMode: "perGroup"|"perCreature", summonable: { ref, name, type, size, ac, hp }[] }, activeAdventureId? }`
+**Campaign**: `{ id, name, slug, preferredEdition, allowLegacy, enabledSourceIds (unused; sources say which campaigns see them), settings: { playerOverlays: { sceneTitle, initiativeStrip, pcHealthBars, roundCounter }, tokenStyle: "engraved"|"flat"|"twoTone"|"plain", hpDisplayMode: "hidden"|"bloodied"|"exact", summonable: { ref, name, type, size, ac, hp }[] }, activeAdventureId? }`
 
 `summonable` is the campaign's companion list: the creatures players may bring into play from their phones.
 
@@ -261,7 +261,7 @@ One **Encounters** tab holds the list and the builder; while a fight is loaded, 
 
 **Encounter builder.** Add PCs (all or some) and creatures from the compendium. Quantity, label, role and hidden flag per row. Creatures of the same name are numbered across the encounter (Goblin 1, Goblin 2), and the numbers follow them onto tokens and into the tracker. Difficulty uses the **2024 XP budget** (§7.4): creature XP is summed (no multiplier) and set against the party's Low, Moderate and High budgets. One row at the top of the builder shows the band, XP per PC and a meter against the budgets. **Scale** there gives each compendium creature a CR picker; the band follows the picks, and Apply saves same-named scaled copies to the campaign. An **encounter assistant** that suggests a group for a budget is **(not built)**.
 
-**Starting combat.** Initiative is rolled per creature or per identical group (a campaign setting). PCs prompt for their rolled initiative or roll from the card's bonus; a player connected from a phone gets a box for it instead. Surprise gives a combatant disadvantage on its initiative roll. A "Lair" entry joins at initiative 20 when any combatant has lair actions. Ties go to Dexterity, then to the DM's drag. The fight is whoever is here (ADR 0044): from a map, the party on it plus any PCs the encounter names; from the Encounters tab, the PCs it names; the whole party when that would leave nobody.
+**Starting combat.** Every creature rolls its own initiative, and a horde one for all its members (ADR 0047). PCs prompt for their rolled initiative or roll from the card's bonus; a player connected from a phone gets a box for it instead. Surprise gives a combatant disadvantage on its initiative roll. A "Lair" entry joins at initiative 20 when any combatant has lair actions. Ties go to Dexterity, then to the DM's drag. The fight is whoever is here (ADR 0044): from a map, the party on it plus any PCs the encounter names; from the Encounters tab, the PCs it names; the whole party when that would leave nobody.
 
 **Adding mid-fight.** **Add to fight** (`A`) opens a panel with the party members and named NPCs not yet in the fight as one-tap buttons, and a creature search with a quantity. Newcomers join in initiative order, are numbered after any of the same name already there, are kept on the encounter, and tie themselves to a waiting token on the map in play.
 

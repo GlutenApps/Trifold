@@ -1,6 +1,7 @@
 import { ulid } from 'ulid';
 import { create } from 'zustand';
 import {
+  hordeStanding,
   abilityModifier,
   advanceTurn,
   applyDamage,
@@ -129,11 +130,7 @@ interface CombatStoreState {
   /** The fight that just ended, shown once in the Encounters tab until dismissed. */
   finished: { encounterId: string; result: EncounterResult } | null;
 
-  begin(
-    encounter: Encounter,
-    pcs: PCCard[],
-    initiativeMode: 'perGroup' | 'perCreature',
-  ): Promise<void>;
+  begin(encounter: Encounter, pcs: PCCard[]): Promise<void>;
   resume(encounter: Encounter): Promise<void>;
   /**
    * Puts the loaded fight down without ending it (ADR 0022): its state is saved to the
@@ -359,7 +356,6 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
   /** Combatants for a template added mid-fight, with their records fetched and cached. */
   const buildFor = async (template: CombatantTemplate): Promise<Combatant[]> => {
     const campaign = useCampaignStore.getState().current;
-    const mode = campaign?.campaign.settings.initiativeMode ?? 'perGroup';
     const ref = template.ref;
     const fetchMonster = async (recordId: string) => {
       const found = await window.trifold.compendium.get(recordId).catch(() => null);
@@ -384,9 +380,9 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     const record = ref.kind === 'record' ? await fetchMonster(ref.ref.recordId) : undefined;
     if (!record) return names.map((name) => customCombatant(template, name));
     const bonus = record.data.initiativeBonus ?? abilityModifier(record.data.abilities.dex);
-    const groupRoll = mode === 'perGroup' ? rollInitiative(bonus, 'normal') : null;
+    // Every creature rolls its own initiative (ADR 0047).
     return names.map((name) =>
-      combatantFromMonster(record, template, name, groupRoll ?? rollInitiative(bonus, 'normal')),
+      combatantFromMonster(record, template, name, rollInitiative(bonus, 'normal')),
     );
   };
 
@@ -495,7 +491,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     error: null,
     finished: null,
 
-    async begin(encounter, pcs, initiativeMode) {
+    async begin(encounter, pcs) {
       // Another loaded fight waits in progress; starting the loaded one again replaces it.
       const loaded = get().encounterId;
       if (loaded && loaded !== encounter.id && !(await get().pause())) return;
@@ -504,7 +500,7 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       const records = await loadRecords(null, encounter);
       const map = new Map(Object.entries(records));
       const npcs = useCampaignStore.getState().current?.npcs ?? [];
-      const built = buildCombatants(encounter, pcs, map, { initiativeMode, npcs });
+      const built = buildCombatants(encounter, pcs, map, { npcs });
       // Tokens already on the map in play are the players' view at this moment: tie the fight
       // to them and start from what they show (ADR 0012). From here on the fight drives them.
       const tokens = mapInPlay(encounter)?.tokens ?? [];
@@ -1084,7 +1080,9 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
     rollAttackFor(id, feature, attack, mode = 'normal') {
       const c = find(id);
       if (!c) return;
-      const result = rollAttack(attack, mode);
+      // A horde makes one attack whose damage is one member's for each still standing (ADR 0047).
+      const members = c.horde ? hordeStanding(c.hp.current, c.horde.memberHp, c.horde.size) : 1;
+      const result = rollAttack(attack, mode, Math.random, Math.max(1, members));
       const hit = result.toHit;
       const parts: string[] = [];
       if (attack.toHit !== undefined) {
@@ -1102,7 +1100,8 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
       for (const x of result.extraDamage)
         parts.push(`+${x.total} ${x.damageType ?? ''} (${facesText(x)})`);
       const modeText = attack.toHit !== undefined && mode !== 'normal' ? ` with ${mode}` : '';
-      const text = `${c.name} — ${feature.displayName} [${attack.label}]${modeText}: ${parts.join('; ')}`;
+      const hordeText = c.horde && result.damage ? ` (${members} of ${c.horde.size} standing)` : '';
+      const text = `${c.name} — ${feature.displayName} [${attack.label}]${modeText}${hordeText}: ${parts.join('; ')}`;
       log('attack', text, id);
       const damageParts: PendingDamage['parts'] = [];
       if (result.damage) {

@@ -236,6 +236,20 @@ export function doubleDice(terms: Term[]): Term[] {
   });
 }
 
+/**
+ * `terms` taken `n` times over, as one roll: "1d6+2" three times is "3d6+6". A kept or grouped
+ * term is repeated instead, since multiplying its count would change what it keeps. A horde
+ * rolls an attack's damage once for each member still standing (ADR 0047).
+ */
+export function timesDice(terms: Term[], n: number): Term[] {
+  if (n <= 1) return terms;
+  return terms.flatMap((t): Term[] => {
+    if (t.kind === 'dice' && !t.keep) return [{ ...t, count: t.count * n }];
+    if (t.kind === 'const') return [{ ...t, value: t.value * n }];
+    return Array.from({ length: n }, () => t);
+  });
+}
+
 export function formatTerms(terms: Term[]): string {
   return terms
     .map((t, i) => {

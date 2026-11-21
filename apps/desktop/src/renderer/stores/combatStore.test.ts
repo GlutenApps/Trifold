@@ -76,6 +76,26 @@ beforeEach(() => {
 });
 
 describe('rolled damage queue', () => {
+  it('rolls a horde’s damage once for each member standing (ADR 0047)', () => {
+    const hurt = combatant('horde', {
+      name: 'Wolf horde',
+      hp: { current: 20, max: 44, temp: 0 },
+      horde: { size: 4, memberHp: 11 },
+    });
+    useCombatStore.setState({
+      state: { ...useCombatStore.getState().state!, combatants: [hurt] },
+    });
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    useCombatStore.getState().rollAttackFor('horde', bite, bite.attacks[0]!);
+    vi.restoreAllMocks();
+    // 20 of 44 HP: 2 of 4 standing, so 2d4+2 twice over (4d4+4) and 1d6 twice (2d6).
+    // Each die rolls its middle face under rng 0.5: d4 = 3, d6 = 4.
+    const parts = useCombatStore.getState().pendingDamage[0]!.parts;
+    expect(parts.map((p) => p.amount)).toEqual([4 * 3 + 4, 2 * 4]);
+    const log = useCombatStore.getState().state!.log.map((e) => e.text);
+    expect(log.some((t) => t.includes('(2 of 4 standing)'))).toBe(true);
+  });
+
   it('queues each attack roll with its damage parts, then applies them to a chosen target', () => {
     const store = useCombatStore.getState();
     store.rollAttackFor('wolf', bite, bite.attacks[0]!);
@@ -330,7 +350,7 @@ describe('the fight and the map (ADR 0012)', () => {
         scenes: [{ ...cave, tokens: [{ ...wolfToken, hidden: true }] }],
       } as unknown as CampaignBundle,
     });
-    await useCombatStore.getState().begin(enc, [], 'perGroup');
+    await useCombatStore.getState().begin(enc, []);
     const wolf = useCombatStore.getState().state!.combatants[0]!;
     expect(wolf).toMatchObject({ name: 'wolf', tokenId: 'w1', hidden: true });
     useCombatStore.getState().toggleHidden(wolf.id);
@@ -463,7 +483,7 @@ describe('pausing fights (ADR 0022)', () => {
   });
 
   it('starting another fight pauses the loaded one, so both stay in progress', async () => {
-    await useCombatStore.getState().begin(waiting('other', 'Crypt'), [], 'perGroup');
+    await useCombatStore.getState().begin(waiting('other', 'Crypt'), []);
     expect(useCombatStore.getState().encounterId).toBe('other');
     const encounters = useCampaignStore.getState().current!.encounters;
     expect(encounters.find((e) => e.id === 'enc')?.state?.round).toBe(1);

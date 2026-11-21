@@ -83,10 +83,10 @@ function encounter(overrides: Partial<Encounter> = {}): Encounter {
 }
 
 describe('buildCombatants', () => {
-  it('expands groups, numbers names, masks creatures, rolls group initiative and adds a lair entry', () => {
+  it('expands groups, numbers names, masks creatures, rolls each its own initiative and adds a lair entry', () => {
+    let n = 0;
     const result = buildCombatants(encounter(), [pc], byId, {
-      initiativeMode: 'perGroup',
-      rng: () => 0.5,
+      rng: () => [0.1, 0.5, 0.9][n++ % 3]!,
     });
     expect(result.missing).toEqual([]);
     expect(result.hasLair).toBe(true);
@@ -109,7 +109,8 @@ describe('buildCombatants', () => {
       role: 'ally',
     });
     const goblins = result.combatants.slice(1, 4);
-    expect(goblins.every((g) => g.initiative === goblins[0]!.initiative)).toBe(true);
+    // Every creature rolls its own initiative (ADR 0047).
+    expect(new Set(goblins.map((g) => g.initiative)).size).toBe(3);
     expect(goblins[0]).toMatchObject({
       maskedName: 'Fey',
       hp: { max: 10 },
@@ -134,7 +135,7 @@ describe('buildCombatants', () => {
         { ...aboleth!, tokenId: 'ab' },
       ],
     });
-    const result = buildCombatants(e, [pc], byId, { initiativeMode: 'perGroup', rng: () => 0.5 });
+    const result = buildCombatants(e, [pc], byId, { rng: () => 0.5 });
     expect(result.combatants.map((c) => c.tokenId)).toEqual([
       'pc-token',
       'g1',
@@ -145,7 +146,32 @@ describe('buildCombatants', () => {
     ]);
   });
 
-  it('rolls per creature when asked and falls back to cached values for missing records', () => {
+  it('makes a horde one combatant with one token, one roll and its members’ HP pooled', () => {
+    const base = encounter();
+    const goblins = base.combatants.find((t) => t.quantity === 3)!;
+    const e = encounter({
+      combatants: [{ ...goblins, horde: true, tokenIds: ['g1', 'g2', 'g3'] }],
+    });
+    const result = buildCombatants(e, [], byId, { rng: () => 0.5 });
+    expect(result.combatants).toHaveLength(1);
+    expect(result.combatants[0]).toMatchObject({
+      name: 'Goblin Warrior horde',
+      maskedName: 'Fey horde',
+      hp: { current: 30, max: 30 },
+      horde: { size: 3, memberHp: 10 },
+      tokenId: 'g1',
+    });
+    // Horde on a single creature changes nothing.
+    const one = buildCombatants(
+      encounter({ combatants: [{ ...goblins, quantity: 1, horde: true }] }),
+      [],
+      byId,
+      {},
+    );
+    expect(one.combatants[0]).not.toHaveProperty('horde');
+  });
+
+  it('rolls per creature and falls back to cached values for missing records', () => {
     let n = 0;
     const rng = () => [0.1, 0.9, 0.5][n++ % 3]!;
     const e = encounter({
@@ -175,7 +201,7 @@ describe('buildCombatants', () => {
         },
       ],
     });
-    const result = buildCombatants(e, [], byId, { initiativeMode: 'perCreature', rng });
+    const result = buildCombatants(e, [], byId, { rng });
     expect(result.missing).toEqual(['Vanished']);
     expect(result.combatants.slice(0, 2).map((c) => c.hp.max)).toEqual([22, 22]);
     expect(result.combatants[0]?.maskedName).toBe('Undead');
@@ -225,13 +251,9 @@ describe('buildCombatants', () => {
 describe('what carries between fights (ADR 0012)', () => {
   it('starts a PC from the card’s current and temp HP, clamped to max', () => {
     const e = encounter({ combatants: [encounter().combatants[0]!] });
-    const hurt = buildCombatants(e, [{ ...pc, currentHp: 12, tempHp: 3 }], byId, {
-      initiativeMode: 'perGroup',
-    });
+    const hurt = buildCombatants(e, [{ ...pc, currentHp: 12, tempHp: 3 }], byId, {});
     expect(hurt.combatants[0]!.hp).toEqual({ current: 12, max: 44, temp: 3 });
-    const over = buildCombatants(e, [{ ...pc, currentHp: 90 }], byId, {
-      initiativeMode: 'perGroup',
-    });
+    const over = buildCombatants(e, [{ ...pc, currentHp: 90 }], byId, {});
     expect(over.combatants[0]!.hp).toEqual({ current: 44, max: 44, temp: 0 });
   });
 
@@ -258,7 +280,7 @@ describe('what carries between fights (ADR 0012)', () => {
         { id: 'gone', ref: peteRef, quantity: 1, role: 'neutral', hidden: false },
       ],
     });
-    const result = buildCombatants(e, [], byId, { initiativeMode: 'perGroup', npcs: [npc] });
+    const result = buildCombatants(e, [], byId, { npcs: [npc] });
     const [grak, pete] = result.combatants;
     expect(grak).toMatchObject({
       name: 'Grak',

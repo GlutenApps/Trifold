@@ -20,8 +20,6 @@ export const CampaignSettings = z.object({
   tokenStyle: z.enum(['engraved', 'flat', 'twoTone', 'plain']).default('engraved'),
   /** How creature HP appears on the player window. */
   hpDisplayMode: z.enum(['hidden', 'bloodied', 'exact']).default('bloodied'),
-  /** Roll one initiative per identical group or one per creature (DESIGN.md §6.4). */
-  initiativeMode: z.enum(['perGroup', 'perCreature']).default('perGroup'),
   /**
    * The DM's summon list (ADR 0043): creatures players may bring into play from their
    * phones. Name, type, size, AC and HP are cached so the table never looks the record up.
@@ -112,6 +110,12 @@ export const CombatantTemplate = z.object({
   ref: EntityRef,
   label: z.string().optional(),
   quantity: int.min(1).max(50).default(1),
+  /**
+   * A horde (ADR 0047): with quantity > 1, the creatures fight as one combatant with one token,
+   * one turn and their hit points pooled. Absent or off, each is its own combatant with its own
+   * initiative.
+   */
+  horde: z.boolean().optional(),
   role: CombatRole.default('enemy'),
   hpOverride: int.min(1).optional(),
   hidden: z.boolean().default(false),
@@ -211,6 +215,12 @@ export const Combatant = z.object({
   tokenId: z.string().optional(),
   /** Stat block for the panel; absent for PCs and custom combatants. */
   recordId: z.string().optional(),
+  /**
+   * A horde (ADR 0047): how many members it has and one member's hit points. Its HP are their
+   * pool; members still standing = HP left over one member's, rounded up, and its attack rolls
+   * damage once for each.
+   */
+  horde: z.object({ size: int.min(2), memberHp: int.min(1) }).optional(),
 });
 export type Combatant = z.infer<typeof Combatant>;
 
