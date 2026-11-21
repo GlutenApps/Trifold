@@ -83,6 +83,9 @@ async function main(): Promise<void> {
       runQuitBackup({ session: activeSession, logger }),
       new Promise((done) => setTimeout(done, 60_000)),
     ]);
+    // The window's bounds (saved as the close began) and any other settings write must land
+    // before Trifold quits; a write cut off mid-way leaves a temp file beside config.json.
+    await Promise.race([config.idle(), new Promise((done) => setTimeout(done, 5_000))]);
   };
 
   const windows = new WindowManager({
