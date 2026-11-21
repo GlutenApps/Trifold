@@ -56,6 +56,7 @@ An architecture decision record (ADR) is a short file about one choice that refi
 | [0048](0048-cr-follows-the-parts.md) | The CR scaler ticks every part, an extra attack too (each attack its own roll), and the CR the monster ends at follows what is ticked, blended by weight; quick scale keeps the number of attacks. |
 | [0049](0049-conditions-between-fights.md) | PC cards, NPCs and companions carry conditions between fights, set from their rows or a phone at any time; they go into and out of fights like HP, durations dropped; Long rest lowers Exhaustion a level. |
 | [0050](0050-area-shapes.md) | Area shapes on the map (`S`): the DM's cone, sphere, cube or line, squares at least half inside shaded, visual only; the TV and phones show it under the fog, not when its origin is fogged. |
+| [0051](0051-cr-scaler-tune-and-audit.md) | CR scaler after the fight-simulation audit: SRD values below CR 1, flat damage scales, odd numbers pulled toward typical on big steps, attacks follow the CR in quick scale too, legendary actions dropped below CR 10 and added past it (with an area attack), sharing the damage budget; Tune mode sets each part on its own with Balance. |
 
 ## Decision log
 

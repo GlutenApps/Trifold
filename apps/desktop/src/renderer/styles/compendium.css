@@ -3510,6 +3510,23 @@ input[type='range'].wide {
   padding: 0;
 }
 
+/* Tune mode (ADR 0051): a part, the CR it sits at, and its − and + at the row's end. */
+.cr-tune-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cr-tune-step {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.cr-tune .cr-scale-lines {
+  margin-left: 0;
+}
+
 .scaled-tag {
   white-space: nowrap;
 }

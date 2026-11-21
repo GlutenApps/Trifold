@@ -1,6 +1,6 @@
 # ADR 0048 · The CR scaler's CR follows what is ticked
 
-**Status:** accepted, 2026-11-20. Amends ADR 0038.
+**Status:** accepted, 2026-11-20. Amends ADR 0038. Point 5 replaced by ADR 0051 (attacks follow the CR in quick scale too).
 
 ## Context
 
