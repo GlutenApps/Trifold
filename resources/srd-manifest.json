@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "fetchedAt": "2026-11-15T01:11:48.875Z",
+  "fetchedAt": "2026-11-21T21:18:30.989Z",
   "apiBase": "https://api.open5e.com/v2",
-  "importerVersion": 3,
+  "importerVersion": 4,
   "documents": [
     {
       "key": "srd-2024",
@@ -19,7 +19,7 @@
       ],
       "attribution": "This work includes material taken from the System Reference Document 5.2 by Wizards of the Coast, available at https://dnd.wizards.com/resources/systems-reference-document. It is licensed under the Creative Commons Attribution 4.0.",
       "file": "srd-2024.jsonl",
-      "sha256": "378a78e3e856f009890a30bee3b7eaf7bfcf8dbe12246d8550394c5206f0ad70",
+      "sha256": "5bf18910ead6ea0e99f118962be1c970a12c4c33a111bb70b659a8f8912261c9",
       "counts": {
         "monster": 331,
         "spell": 339,

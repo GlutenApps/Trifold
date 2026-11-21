@@ -34,16 +34,25 @@ export interface TextAttack {
   toHit: number;
   reach?: string;
   range?: string;
-  average: number;
-  damage: string;
-  damageType: string;
+  /** The damage fields are absent for an attack that deals none (a grab, a charm). */
+  average?: number;
+  damage?: string;
+  damageType?: string;
   extraDamage: Array<{ damage: string; damageType: string }>;
   /** Character offset of the match, so callers can pair attacks with sentences. */
   index: number;
 }
 
+/**
+ * The 2024 header. SRD 5.2 writes it several ways: `+5`, `+4 to hit`, and
+ * `+5 (with Advantage if the target is Grappled)`.
+ */
 const ATTACK_2024 =
-  /(Melee|Ranged|Melee or Ranged) Attack Roll:\s*([+-]\d+),\s*(reach|range)\s*([^.]+?)\.\s*Hit:\s*(\d+)\s*(?:\(([^)]+)\))?\s*([A-Za-z]+) damage/gi;
+  /(Melee or Ranged|Melee|Ranged) Attack Roll:\s*([+-]\d+)(?:\s*to hit)?(?:\s*\([^)]*\))?,\s*/gi;
+/** `reach 5 ft.`, `range 120 feet.`, `reach 10 ft. or range 20/60 ft.`: up to the period that ends it. */
+const REACH_2024 = /^(reach|range)\s+(.{1,60}?)\.(?=\s+(?!or\b)|$)/i;
+/** The damage right after the reach, with or without `Hit:` (SRD 5.2 drops it in places). */
+const DAMAGE_2024 = /^\s*(?:Hit:\s*)?(\d+)\s*(?:\(([^)]+)\))?\s*([A-Za-z]+) damage/i;
 const ATTACK_2014 =
   /(Melee|Ranged|Melee or Ranged) (Weapon|Spell) Attack:\s*([+-]\d+) to hit,\s*(reach|range)\s*([^,]+),\s*([^.]+)\.\s*Hit:\s*(\d+)\s*(?:\(([^)]+)\))?\s*([A-Za-z]+) damage/gi;
 const EXTRA_DAMAGE = /plus\s*(\d+)\s*\(([^)]+)\)\s*([A-Za-z]+) damage/gi;
@@ -67,19 +76,27 @@ function sentenceAfter(text: string, from: number): string {
 export function findAttacksInText(text: string): TextAttack[] {
   const out: TextAttack[] = [];
   for (const m of text.matchAll(ATTACK_2024)) {
-    if (!m[1] || !m[2] || !m[3] || !m[4] || !m[5] || !m[7]) continue;
-    const reachOrRange = m[4].trim().replace(/\.$/, '');
+    if (!m[1] || !m[2]) continue;
+    let at = m.index + m[0].length;
     const attack: TextAttack = {
       kind: m[1].toLowerCase(),
       toHit: Number(m[2]),
-      average: Number(m[5]),
-      damage: (m[6] ?? m[5]).replace(/\s+/g, ''),
-      damageType: m[7].toLowerCase(),
-      extraDamage: extraDamageIn(sentenceAfter(text, m.index + m[0].length - 1)),
+      extraDamage: [],
       index: m.index,
     };
-    if (m[3].toLowerCase() === 'reach') attack.reach = reachOrRange;
-    else attack.range = reachOrRange;
+    const where = REACH_2024.exec(text.slice(at));
+    if (where?.[1] && where[2]) {
+      if (where[1].toLowerCase() === 'reach') attack.reach = where[2].trim();
+      else attack.range = where[2].trim();
+      at += where[0].length;
+    }
+    const hit = DAMAGE_2024.exec(text.slice(at));
+    if (hit?.[1] && hit[3]) {
+      attack.average = Number(hit[1]);
+      attack.damage = (hit[2] ?? hit[1]).replace(/\s+/g, '');
+      attack.damageType = hit[3].toLowerCase();
+      attack.extraDamage = extraDamageIn(sentenceAfter(text, at + hit[0].length - 1));
+    }
     out.push(attack);
   }
   for (const m of text.matchAll(ATTACK_2014)) {

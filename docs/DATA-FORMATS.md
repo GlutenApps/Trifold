@@ -105,9 +105,11 @@ Dice expressions accepted everywhere: `NdM`, integers, `+`, `-`, parentheses and
 2024 stat blocks are formulaic; 2014 blocks use the older phrasing. Both parse (`packages/rules/src/statblock/attacks.ts`):
 
 ```
-2024 attack:
-/(Melee|Ranged|Melee or Ranged) Attack Roll:\s*([+-]\d+),\s*(reach|range)\s*([^.]+?)\.\s*Hit:\s*(\d+)\s*(?:\(([^)]+)\))?\s*([A-Za-z]+) damage/gi
-  → { kind, toHit, reach | range, average, damage (formula, or the average when there is none), damageType }
+2024 attack, read in three steps:
+header  /(Melee or Ranged|Melee|Ranged) Attack Roll:\s*([+-]\d+)(?:\s*to hit)?(?:\s*\([^)]*\))?,\s*/gi
+reach   /^(reach|range)\s+(.{1,60}?)\.(?=\s+(?!or\b)|$)/i
+damage  /^\s*(?:Hit:\s*)?(\d+)\s*(?:\(([^)]+)\))?\s*([A-Za-z]+) damage/i
+  → { kind, toHit, reach | range, average?, damage? (formula, or the average when there is none), damageType? }
 
 2014 attack:
 /(Melee|Ranged|Melee or Ranged) (Weapon|Spell) Attack:\s*([+-]\d+) to hit,\s*(reach|range)\s*([^,]+),\s*([^.]+)\.\s*Hit:\s*(\d+)\s*(?:\(([^)]+)\))?\s*([A-Za-z]+) damage/gi
@@ -118,6 +120,8 @@ Dice expressions accepted everywhere: `NdM`, integers, `+`, `-`, parentheses and
 2014 save:
 /DC\s*(\d+)\s*(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throw/gi
 ```
+
+SRD 5.2 writes the 2024 attack several ways, and all of them parse: without `Hit:` (`reach 5 ft. 1 Piercing damage`), with a note after the bonus (`+5 (with Advantage if the target is Grappled)`), as `+4 to hit`, with `feet` for `ft.`, and as `reach 10 ft. or range 20/60 ft.` (kept whole as the reach). An attack whose damage can't be read, such as one that only grapples, is still an attack: it keeps its to-hit and gets a button that rolls the d20 alone.
 
 A save is `halfOnSuccess` when the 400 characters after it contain `Success: Half damage`, `half as much damage on a success` or `half as much damage if it succeeds`.
 
