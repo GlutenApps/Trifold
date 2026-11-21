@@ -4,6 +4,33 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-11-20
+
+Table-testing feedback: one switch for the TV and phones, phones that show everything the TV does, hordes, and fixes.
+
+**What's different at the table.** **Open TV** is now **Go live** (`Ctrl+Shift+P`), and **Send to TV** is now **Set active scene** (Enter, double-click or ▶ in Scenes still do it). Nothing reaches the TV or the phones until you go live. You can set the opening scene first and go live when everyone is seated. Copies of a creature now roll their own initiative.
+
+### Added
+
+- **Go live** (ADR 0046): one switch for the TV and the phones. When you go live, the TV opens by itself on a second monitor; with only one monitor, no TV window opens and phones still see the table. Choose a display in Settings › Displays to always open the TV there, your own screen included. A monitor plugged in while you are live gets the TV. **End live** closes the TV and the phones wait.
+- **Set active scene** and **Clear active scene** replace Send to TV and Take off TV. A scene set before going live is marked **active** and waits; its music starts when it goes on air. The strip says "Not live · Next: …" until you go live.
+- **Phones show the TV's overlays**: the scene title, the round and the initiative strip along the top, and the timer and counters in the corner, each while its Overlays switch is on.
+- **Hordes** (ADR 0047): **Horde** (the party icon) on an encounter row of two or more compendium creatures makes them one combatant with one token, one turn and their hit points pooled. The row shows the CR their XP adds up to (four CR 1/8 bandits make a CR 1/2 horde); the encounter's difficulty stays the same. The tracker shows how many still stand, and each attack rolls its damage once per member standing, so a hurt horde hits softer.
+- **Scene music can be a single track**: Music on go-live lists playlists and tracks, with a **Loop** switch. A playlist starts with its own loop setting, and the scene's switch applies to that scene only.
+- **Phones show "Loading map…"** while a new map is on its way, and try again if it fails to load.
+
+### Changed
+
+- **Every creature rolls its own initiative**: copies of a creature no longer share one roll, and the per-group setting is gone. Make them a horde to have them act as one.
+- **The CR scaler's CR follows what's ticked** (ADR 0048): every part starts ticked, the extra attack too, and each attack is its own roll carrying its share of the damage. Untick anything and the CR the monster ends at drops to match; the Challenge line says which CR everything ticked would reach.
+- **Global search is faster**: about a third quicker per keystroke on large campaigns.
+
+### Fixed
+
+- **Switching a scene's background now reaches phones**; they kept showing the old picture.
+- **The Compendium's kind tabs fold into More** in a narrow panel again; inside a campaign they scrolled sideways instead.
+- **Phones follow End live at once** instead of waiting for the next change on the table.
+
 ## [0.4.2] - 2026-11-19
 
 The final brand, and updates that install themselves on Windows. This is the last version to install by hand: from here, an installed Windows copy with the update check on fetches each new version itself.
