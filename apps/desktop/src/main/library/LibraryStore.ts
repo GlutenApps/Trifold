@@ -78,15 +78,28 @@ export class LibraryStore {
     return this.settings;
   }
 
-  async updateSettings(patch: Partial<LibrarySettings>): Promise<LibrarySettings> {
-    const next = LibrarySettings.parse({
-      ...this.settings,
-      ...patch,
-      schemaVersion: LIBRARY_SCHEMA_VERSION,
+  /** Settings changes in the order they came, each starting from the one before. */
+  private settingsQueue: Promise<unknown> = Promise.resolve();
+
+  /**
+   * Applies a patch to the Library's settings and writes them. Changes run one at a time: two
+   * that overlapped (the console saving its layout while another setting changes) both started
+   * from the old settings, and the second write dropped the first change.
+   */
+  updateSettings(patch: Partial<LibrarySettings>): Promise<LibrarySettings> {
+    const run = this.settingsQueue.then(async () => {
+      const next = LibrarySettings.parse({
+        ...this.settings,
+        ...patch,
+        schemaVersion: LIBRARY_SCHEMA_VERSION,
+      });
+      await this.writeJson(LIBRARY_FILE, next);
+      this.settings = next;
+      return next;
     });
-    await this.writeJson(LIBRARY_FILE, next);
-    this.settings = next;
-    return next;
+    // A failed write fails only its own caller; the next change still runs.
+    this.settingsQueue = run.catch(() => undefined);
+    return run;
   }
 
   /** Resolves a Library-relative path and refuses anything that escapes the root. */
