@@ -60,7 +60,7 @@ The light theme's accent is the brand's slate rather than a darkened bone, so se
 
 ## The TV's palette
 
-The player window and the console's map canvas ignore the console theme. Their colours are fixed tokens in both themes: `--tv-*` for scene backdrops (dark, parchment, stone), the ink on each and the scrims behind overlays; `--token-*` for token faces and edges; `--fog-mist` and `--fog-hatch` for fog; `--ruler` and `--ruler-casing` for the measuring ruler.
+The player window and the console's map canvas ignore the console theme. Their colours are fixed tokens in both themes: `--tv-*` for scene backdrops (dark, parchment, stone), the ink on each and the scrims behind overlays; `--token-*` for token faces and edges; `--fog-mist` and `--fog-hatch` for fog; `--ruler` and `--ruler-casing` for the measuring ruler, and `--area-fill` for the squares an area shape covers.
 
 ## Type
 

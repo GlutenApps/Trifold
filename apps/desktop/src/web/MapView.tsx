@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ClientMap, ClientToken } from '@trifold/api';
 import type { FogShape } from '@trifold/schema';
-import { FogLayer, GridLines, RulerLayer } from '../renderer/features/presenter/MapLayer';
+import {
+  AreaLayer,
+  FogLayer,
+  GridLines,
+  RulerLayer,
+} from '../renderer/features/presenter/MapLayer';
 import { cellCentre, squaresBetween } from '../renderer/features/presenter/ruler';
 import { TokenDisc } from '../renderer/features/presenter/TokenDisc';
 
@@ -439,6 +444,15 @@ export function MapView({
             />
           )}
           {map.grid.visible && <GridLines width={map.width} height={map.height} grid={map.grid} />}
+          {map.area && view && (
+            <AreaLayer
+              width={map.width}
+              height={map.height}
+              grid={map.grid}
+              area={map.area}
+              zoom={view.scale}
+            />
+          )}
           {map.fog && (
             <FogLayer
               width={map.width}

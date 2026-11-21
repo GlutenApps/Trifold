@@ -239,7 +239,8 @@ export function installTableSync(): () => void {
         s.state.showSceneTitle !== prev.state.showSceneTitle ||
         s.state.combat !== prev.state.combat ||
         s.state.counters !== prev.state.counters ||
-        s.state.timer !== prev.state.timer
+        s.state.timer !== prev.state.timer ||
+        s.state.area !== prev.state.area
       ) {
         schedule();
       }

@@ -1,3 +1,4 @@
+import type { AreaOutline } from '../areaShapes';
 import type { FogShapeLike } from '../fog';
 
 /**
@@ -47,6 +48,13 @@ export interface TableToken {
 }
 
 /** The map scene live on the TV, or nothing. */
+/** An area shape (ADR 0050), as every screen draws it. */
+export interface TableArea {
+  label: string;
+  outline: AreaOutline;
+  squares: Array<{ x: number; y: number }>;
+}
+
 export interface TableScene {
   id: string;
   title: string;
@@ -58,6 +66,8 @@ export interface TableScene {
   grid: TableGrid;
   /** The fog when it is on; null when it is off or the scene has none. */
   fog: { enabled: true; shapes: FogShapeLike[] } | null;
+  /** The DM's area shape on this map (ADR 0050): outline, covered squares and reading. */
+  area?: TableArea;
   /** `mapImageKey(fog, image)`: which map image (picture and fog) goes with this state. */
   imageKey: string;
   tokenStyle: 'engraved' | 'flat' | 'twoTone' | 'plain';
@@ -243,6 +253,8 @@ export interface ClientMap {
   imageUrl?: string;
   grid: TableGrid;
   fog: FogShapeLike[] | null;
+  /** The DM's area shape (ADR 0050), drawn under the fog. */
+  area?: TableArea;
   tokenStyle: 'engraved' | 'flat' | 'twoTone' | 'plain';
   tokens: ClientToken[];
 }

@@ -261,6 +261,29 @@ describe('tableSnapshotFrom', () => {
     expect(tableSnapshotFrom(input({ liveScene: scene, presenter: live(scene) })).live).toBe(true);
   });
 
+  it('sends the DM’s area shape on the live map to phones, and not one from another map', () => {
+    const scene = map([]);
+    const area = {
+      sceneId: scene.id,
+      label: '15-ft cone',
+      outline: { kind: 'circle' as const, cx: 0, cy: 0, r: 1 },
+      squares: [{ x: 1, y: 2 }],
+    };
+    const on = tableSnapshotFrom(input({ liveScene: scene, presenter: { ...live(scene), area } }));
+    expect(on.scene!.area).toEqual({
+      label: '15-ft cone',
+      outline: area.outline,
+      squares: [{ x: 1, y: 2 }],
+    });
+    const elsewhere = tableSnapshotFrom(
+      input({
+        liveScene: scene,
+        presenter: { ...live(scene), area: { ...area, sceneId: 'other' } },
+      }),
+    );
+    expect(elsewhere.scene!.area).toBeUndefined();
+  });
+
   it('sends no map when the TV shows another scene', () => {
     const scene = map([]);
     const snap = tableSnapshotFrom(

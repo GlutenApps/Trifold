@@ -46,7 +46,14 @@ export interface SnapshotInput {
     Partial<
       Pick<
         PresenterState,
-        'breakScreen' | 'live' | 'overlays' | 'showSceneTitle' | 'combat' | 'counters' | 'timer'
+        | 'breakScreen'
+        | 'live'
+        | 'overlays'
+        | 'showSceneTitle'
+        | 'combat'
+        | 'counters'
+        | 'timer'
+        | 'area'
       >
     >;
   liveScene: Scene | null;
@@ -114,6 +121,16 @@ export function tableScene(input: SnapshotInput): TableSnapshot['scene'] {
       visible: grid.showToPlayers,
     },
     fog: fog ? { enabled: true, shapes: fog.shapes } : null,
+    // The DM's area shape on this map (ADR 0050); phones draw it under the fog, like the TV.
+    ...(presenter.area && presenter.area.sceneId === liveScene.id
+      ? {
+          area: {
+            label: presenter.area.label,
+            outline: presenter.area.outline,
+            squares: presenter.area.squares,
+          },
+        }
+      : {}),
     imageKey: mapImageKey(fog, liveScene.image?.displayPath),
     tokenStyle: input.campaign.tokenStyle,
     tokens: liveScene.tokens.map((t) => {

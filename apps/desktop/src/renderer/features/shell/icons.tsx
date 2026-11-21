@@ -97,6 +97,7 @@ export type IconName =
   | 'square'
   | 'polygon'
   | 'ruler'
+  | 'area'
   | 'imageOff'
   | 'tally'
   | 'lock'
@@ -244,6 +245,7 @@ const PATHS: Record<IconName, string> = {
   square: 'M5 5h14v14H5z',
   polygon: 'M5 8l6-4 9 3-3 6 2 6-8 1-7-5z',
   ruler: 'M3 16L16 3l5 5L8 21zM7 12l2 2M10 9l2 2M13 6l2 2',
+  area: 'M4 12l16-7v14zM4 12h0M14 7.6v8.8',
   imageOff: 'M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4M3 3l18 18',
 };
 

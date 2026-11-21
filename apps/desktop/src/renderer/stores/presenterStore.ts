@@ -7,6 +7,7 @@ import {
   type CombatSummary,
   type Handout,
   type LiveCounter,
+  type LiveArea,
   type LiveRuler,
   type LiveTimer,
   type LiveScene,
@@ -209,6 +210,8 @@ interface PresenterStore {
    * players may see it; pushes are coalesced to one per frame like a token drag.
    */
   setRuler(ruler: LiveRuler | null): void;
+  /** The area shape to show on the TV and phones, or null (ADR 0050); coalesced like the ruler. */
+  setArea(area: LiveArea | null): void;
   /** The player connector's join code on the TV (ADR 0043), or null to take it down. */
   setJoinCode(joinCode: PresenterState['joinCode']): void;
 }
@@ -449,6 +452,12 @@ export const usePresenterStore = create<PresenterStore>((set, get) => {
       const { state } = get();
       if (JSON.stringify(state.ruler ?? null) === JSON.stringify(ruler)) return;
       commitCoalesced({ ...state, ruler });
+    },
+
+    setArea(area) {
+      const { state } = get();
+      if (JSON.stringify(state.area ?? null) === JSON.stringify(area)) return;
+      commitCoalesced({ ...state, area });
     },
 
     setJoinCode(joinCode) {
