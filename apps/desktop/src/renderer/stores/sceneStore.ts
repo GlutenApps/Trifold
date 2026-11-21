@@ -69,9 +69,16 @@ export const useSceneStore = create<SceneState>((set, get) => ({
     if (scene.kind === 'folder') return;
     const slug = useCampaignStore.getState().current?.campaign.slug ?? '';
     const presenter = usePresenterStore.getState();
-    if (presenter.showScene(scene, slug) && scene.audio?.playlistId) {
-      // Scene-linked music (DESIGN.md §6.6): crossfade only when the playlist changes.
-      void useMusicStore.getState().playPlaylist(scene.audio.playlistId, { ifDifferent: true });
+    if (!presenter.showScene(scene, slug)) return;
+    // Scene-linked music (DESIGN.md §6.6): crossfade only when the playlist or track changes.
+    const audio = scene.audio;
+    const loop = audio?.loop !== undefined ? { loop: audio.loop } : {};
+    if (audio?.playlistId) {
+      void useMusicStore.getState().playPlaylist(audio.playlistId, { ifDifferent: true, ...loop });
+    } else if (audio?.trackId) {
+      void useMusicStore
+        .getState()
+        .playTrack(audio.trackId, null, { ifDifferent: true, loop: audio.loop ?? false });
     }
   },
 
