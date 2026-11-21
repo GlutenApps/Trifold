@@ -1670,3 +1670,10 @@ main.pc-center {
 .pc-tv-corner .tv-counter.at-max .tv-counter-value {
   color: var(--warn);
 }
+
+/* Move's Measure: a ruler on this phone only, over the map and under the tokens' labels. */
+.pc-measure {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}

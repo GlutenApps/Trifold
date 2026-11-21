@@ -344,6 +344,20 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
       await phone.mouse.move(cx + box.width * cells, cy, { steps: 4 });
       if (release) await phone.mouse.up();
     };
+    // Move's Measure: the same drag measures on this phone only, and moves nothing.
+    await tools.getByRole('button', { name: 'Move' }).click();
+    await phone.getByRole('button', { name: 'Measure', exact: true }).click();
+    await dragOnPhone(3);
+    await expect(phone.getByTestId('pc-measure').getByTestId('ruler-label')).toHaveText(
+      '3 squares · 15 ft',
+    );
+    await expect(phone.getByTestId('pc-measure-hint')).toContainText('Only you see this');
+    await expect(consoleBrannoc).not.toHaveClass(/player-moving/);
+    expect(await consoleLeft()).toBe(before);
+    // Closing Move ends Measure and its ruler; Move is the default next time.
+    await tools.getByRole('button', { name: 'Move' }).click();
+    await expect(phone.getByTestId('pc-measure')).toHaveCount(0);
+
     await dragOnPhone(2);
     // A move waits for Done: it opened the Move tool, and the console has not moved Brannoc.
     const done = phone.getByRole('button', { name: 'Done', exact: true });
