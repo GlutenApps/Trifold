@@ -278,6 +278,18 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     await innRow.press('Enter');
     await expect(phone.getByTestId('pc-token')).toHaveCount(2);
 
+    // Conditions work outside a fight too (ADR 0049): kept on the card till the next fight.
+    await tools.getByRole('button', { name: 'Conditions' }).click();
+    const blinded = phone.getByRole('button', { name: 'Blinded', exact: true });
+    await blinded.click();
+    await expect(blinded).toHaveAttribute('aria-pressed', 'true');
+    await expect(phone.getByTestId('pc-conditions-where')).toContainText('between fights');
+    await blinded.click();
+    await expect(blinded).toHaveAttribute('aria-pressed', 'false');
+    // Close the sheet, so the initiative box below it takes the taps.
+    await tools.getByRole('button', { name: /Conditions/ }).click();
+    await expect(phone.getByRole('dialog', { name: 'Conditions' })).toHaveCount(0);
+
     // The fight asks for Brannoc's initiative and the phone answers it once. He joins
     // the linked encounter because his token stands on the map (ADR 0044).
     await page.getByRole('tab', { name: 'VTT', exact: true }).click();

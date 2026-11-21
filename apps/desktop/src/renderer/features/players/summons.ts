@@ -1,6 +1,6 @@
 import { ulid } from 'ulid';
 import type { TableSummonEvent } from '@trifold/api';
-import { activeFog, freeCellsNear, summonExpired, summonLabels } from '@trifold/rules';
+import { carriedOut, activeFog, freeCellsNear, summonExpired, summonLabels } from '@trifold/rules';
 import type { Scene, Token } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
@@ -226,6 +226,32 @@ export function installSummonUpkeep(): () => void {
       }
     }
     if (s.finished && s.finished !== prev.finished) {
+      // A companion that stays keeps its HP and conditions on its token, as PCs keep theirs on
+      // their cards (ADR 0049); the others leave with the fight.
+      const fought = before?.combatants ?? [];
+      const staying = allSummons().filter(({ token }) => token.summon!.persistent);
+      const after = new Map(
+        staying.flatMap(({ token }) => {
+          const c = fought.find((x) => x.tokenId === token.id);
+          return c ? [[token.id, c] as const] : [];
+        }),
+      );
+      if (after.size) {
+        patchSummonTokens(new Set(after.keys()), (t) => {
+          const c = after.get(t.id);
+          return c && t.summon
+            ? {
+                ...t,
+                summon: {
+                  ...t.summon,
+                  hp: { ...c.hp },
+                  conditions: carriedOut(c.conditions),
+                  concentrationLost: false,
+                },
+              }
+            : t;
+        });
+      }
       removeTokens(
         new Set(
           allSummons()
