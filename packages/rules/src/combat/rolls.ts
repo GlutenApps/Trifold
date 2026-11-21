@@ -1,4 +1,12 @@
-import { doubleDice, formatTerms, parseDice, roll, type RollResult, type Rng } from '../dice';
+import {
+  doubleDice,
+  formatTerms,
+  parseDice,
+  roll,
+  timesDice,
+  type RollResult,
+  type Rng,
+} from '../dice';
 
 /** d20 tests, attacks and the roller's request syntax (DESIGN.md §6.4, §6.7). */
 
@@ -56,17 +64,24 @@ export function rollAttack(
   attack: AttackInput,
   mode: RollMode = 'normal',
   rng: Rng = Math.random,
+  /** How many times over the damage is rolled: a horde's members still standing (ADR 0047). */
+  copies = 1,
 ): AttackRollResult {
   const toHit = rollD20(attack.toHit ?? 0, mode, rng);
   const crit = attack.toHit !== undefined && toHit.natural === 20;
   const fumble = attack.toHit !== undefined && toHit.natural === 1;
   const result: AttackRollResult = { toHit, crit, fumble, extraDamage: [] };
+  const damageOf = (expression: string): string => {
+    if (!crit && copies <= 1) return expression;
+    const terms = timesDice(parseDice(expression), copies);
+    return formatTerms(crit ? doubleDice(terms) : terms);
+  };
   if (attack.damage) {
-    const expression = crit ? formatTerms(doubleDice(parseDice(attack.damage))) : attack.damage;
+    const expression = damageOf(attack.damage);
     result.damage = { ...roll(expression, rng), crit };
   }
   for (const extra of attack.extraDamage ?? []) {
-    const expression = crit ? formatTerms(doubleDice(parseDice(extra.damage))) : extra.damage;
+    const expression = damageOf(extra.damage);
     result.extraDamage.push({
       ...roll(expression, rng),
       ...(extra.damageType ? { damageType: extra.damageType } : {}),

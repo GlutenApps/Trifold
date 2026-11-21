@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ulid } from 'ulid';
 import type { Combatant, ConditionDuration, Scene, Token } from '@trifold/schema';
-import { CONDITION_NAMES, normalizeKey, TRACKER_ONLY_CONDITIONS } from '@trifold/rules';
+import {
+  CONDITION_NAMES,
+  hordeStanding,
+  normalizeKey,
+  TRACKER_ONLY_CONDITIONS,
+} from '@trifold/rules';
 import { registerHotkey } from '../../hotkeys';
 import { navigate } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
@@ -143,6 +148,15 @@ function CombatantRow({
       </span>
       <span className="name">
         {c.name}
+        {c.horde && (
+          <span
+            className="badge"
+            data-testid="horde-standing"
+            title="Members still standing: one attack a turn, rolling damage once for each (ADR 0047)"
+          >
+            {hordeStanding(c.hp.current, c.horde.memberHp, c.horde.size)}/{c.horde.size} standing
+          </span>
+        )}
         {c.hidden && <span className="badge">hidden</span>}
         {onMap && (
           <span className="badge" title="On the map in play">

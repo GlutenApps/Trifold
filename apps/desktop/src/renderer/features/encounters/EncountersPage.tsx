@@ -16,7 +16,8 @@ import { retargetScaled, scaleRows } from './quickScale';
 import { CreatureEditor } from '../compendium/CreatureEditor';
 import { editRow, retargetTokens, useCreatureEditStore } from './creatureEdits';
 import { retargetToNpc, templateTokenIds } from './templates';
-import { withParty } from './build';
+import { isHorde, withParty } from './build';
+import { hordeCr } from '@trifold/rules';
 
 /**
  * The Encounters major (DESIGN.md §6.4, ADR 0005): the encounter list and builder while no
@@ -63,9 +64,16 @@ function TemplateRow({
   const [editing, setEditing] = useState(false);
   const name = t.label || t.ref.name;
   const creature = t.ref.kind === 'record' || t.ref.kind === 'custom';
+  // A horde shows the CR its members' XP add up to (ADR 0047); its XP is theirs together.
+  const horde = isHorde(t);
+  const canHorde = t.ref.kind === 'record' && t.quantity > 1;
   const meta = [
     t.label ? t.ref.name : '',
-    t.cache && (t.cache.cr || t.cache.xp) ? `CR ${t.cache.cr} · ${t.cache.xp} XP` : '',
+    horde && t.cache
+      ? `Horde of ${t.quantity} · CR ${hordeCr(t.cache.xp, t.quantity)} · ${t.cache.xp * t.quantity} XP`
+      : t.cache && (t.cache.cr || t.cache.xp)
+        ? `CR ${t.cache.cr} · ${t.cache.xp} XP`
+        : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -129,6 +137,22 @@ function TemplateRow({
         <option value="neutral">neutral</option>
       </select>
       <span className="icon-toolbar state-toolbar" role="group" aria-label={`${name} actions`}>
+        {canHorde && (
+          <button
+            type="button"
+            className={`chrome-btn${horde ? ' on' : ''}`}
+            aria-label={horde ? `Fight ${name} as individuals` : `Fight ${name} as a horde`}
+            aria-pressed={horde}
+            title={
+              horde
+                ? 'A horde: one token, one turn and their hit points pooled; its attack rolls damage once for each member standing. Click for individuals'
+                : 'Individuals: each has its own token, turn and initiative. Click to make them a horde'
+            }
+            onClick={() => onChange({ horde: !horde })}
+          >
+            <Icon name="party" />
+          </button>
+        )}
         <button
           type="button"
           className={`chrome-btn${t.hidden ? ' on' : ''}`}
@@ -581,11 +605,7 @@ export function EncountersPage() {
     const saved = await saveEncounter(draft);
     if (!saved) return;
     // The party joins when the encounter names none of it (ADR 0044).
-    await begin(
-      withParty(saved, current.pcs, null),
-      current.pcs,
-      current.campaign.settings.initiativeMode,
-    );
+    await begin(withParty(saved, current.pcs, null), current.pcs);
     setDraft(null);
   };
 
@@ -701,13 +721,7 @@ export function EncountersPage() {
                         aria-label={`Start combat: ${e.name}`}
                         title={e.combatants.length === 0 ? 'Add combatants first' : 'Start combat'}
                         disabled={e.combatants.length === 0}
-                        onClick={() =>
-                          void begin(
-                            withParty(e, current.pcs, null),
-                            current.pcs,
-                            current.campaign.settings.initiativeMode,
-                          )
-                        }
+                        onClick={() => void begin(withParty(e, current.pcs, null), current.pcs)}
                       >
                         <Icon name="play" />
                       </button>

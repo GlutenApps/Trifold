@@ -5,7 +5,6 @@
     "preferredEdition": "2024",
     "settings": {
       "hpDisplayMode": "bloodied",
-      "initiativeMode": "perGroup",
       "tokenStyle": "engraved"
     }
   },

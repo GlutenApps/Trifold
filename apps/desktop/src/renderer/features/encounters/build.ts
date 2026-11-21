@@ -23,13 +23,12 @@ import type {
 /**
  * Builds the initial combatant list from an encounter (DESIGN.md §6.4 "Starting combat"): each
  * template becomes one combatant per unit of quantity, numbered, carrying its own token link
- * when one was placed (ADR 0005). PCs start from the HP on their card and named NPCs from their
+ * when one was placed (ADR 0005), or one combatant for a whole horde (ADR 0047). PCs start from the HP on their card and named NPCs from their
  * carried HP (ADR 0012); a record that cannot be found becomes a custom combatant built from
  * the template's cached values.
  */
 
 export interface BuildOptions {
-  initiativeMode: 'perGroup' | 'perCreature';
   rng?: Rng;
   /** The campaign's NPCs, for templates that point at one; they bring their own HP (ADR 0012). */
   npcs?: readonly NPC[];
@@ -272,6 +271,21 @@ export function combatantFromNpc(
 }
 
 /** The template as seen by its i-th creature: that creature's own token when one was placed. */
+/**
+ * One member's combatant made into a horde of `size` (ADR 0047): its hit points pooled, its
+ * masked name "Humanoid horde", and the member's HP kept so the tracker knows how many stand.
+ */
+export function asHorde(member: Combatant, size: number): Combatant {
+  const memberHp = Math.max(1, member.hp.max);
+  const max = memberHp * size;
+  return {
+    ...member,
+    maskedName: `${member.maskedName} horde`,
+    hp: { current: max, max, temp: 0 },
+    horde: { size, memberHp },
+  };
+}
+
 function forToken(template: CombatantTemplate, i: number): CombatantTemplate {
   const tokenId = template.tokenIds?.[i] ?? template.tokenId;
   const { tokenId: _shared, ...rest } = template;
@@ -279,8 +293,16 @@ function forToken(template: CombatantTemplate, i: number): CombatantTemplate {
 }
 
 /**
- * Expands templates into combatants. Creatures get their initiative rolled here (per group or
- * per creature); PCs start with null so the DM can enter what the players rolled.
+ * A row that fights as a horde (ADR 0047): a compendium creature, more than one of it, with Horde
+ * on. Custom rows and NPCs always fight as individuals.
+ */
+export function isHorde(template: CombatantTemplate): boolean {
+  return template.horde === true && template.quantity > 1 && template.ref.kind === 'record';
+}
+
+/**
+ * Expands templates into combatants. Every creature rolls its own initiative here, and a horde
+ * one for all its members; PCs start with null so the DM can enter what the players rolled.
  */
 export function buildCombatants(
   encounter: Encounter,
@@ -327,10 +349,18 @@ export function buildCombatants(
     if (record && record.kind === 'monster') {
       if (record.data.lair.length > 0) hasLair = true;
       const bonus = record.data.initiativeBonus ?? abilityModifier(record.data.abilities.dex);
-      const groupRoll =
-        options.initiativeMode === 'perGroup' ? rollInitiative(bonus, 'normal', rng) : null;
+      if (isHorde(template)) {
+        const one = combatantFromMonster(
+          record,
+          forToken(template, 0),
+          names[0] ?? `${template.label || ref.name} horde`,
+          rollInitiative(bonus, 'normal', rng),
+        );
+        combatants.push(asHorde(one, template.quantity));
+        continue;
+      }
       names.forEach((name, i) => {
-        const initiative = groupRoll ?? rollInitiative(bonus, 'normal', rng);
+        const initiative = rollInitiative(bonus, 'normal', rng);
         combatants.push(combatantFromMonster(record, forToken(template, i), name, initiative));
       });
     } else {
@@ -386,8 +416,13 @@ export function withParty(
  */
 export function creatureGroupNames(templates: readonly CombatantTemplate[]): Map<string, string[]> {
   const creatures = templates.filter((t) => t.ref.kind !== 'pc' && t.ref.kind !== 'npc');
+  // A horde is one name, "Bandit horde", numbered like any other when there are two.
   const names = groupNames(
-    creatures.map((t) => ({ base: t.label || t.ref.name, quantity: t.quantity })),
+    creatures.map((t) =>
+      isHorde(t)
+        ? { base: `${t.label || t.ref.name} horde`, quantity: 1 }
+        : { base: t.label || t.ref.name, quantity: t.quantity },
+    ),
   );
   return new Map(creatures.map((t, i) => [t.id, names[i]!]));
 }

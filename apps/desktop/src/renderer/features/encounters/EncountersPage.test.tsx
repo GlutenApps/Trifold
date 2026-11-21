@@ -39,7 +39,7 @@ function bundle(): CampaignBundle {
       slug: 'sunken-keep',
       name: 'Sunken Keep',
       preferredEdition: '2024',
-      settings: { initiativeMode: 'perGroup' },
+      settings: {},
       createdAt: now,
       updatedAt: now,
     },
@@ -119,6 +119,36 @@ describe('EncountersPage: named NPCs (ADR 0012)', () => {
     bandits.cache = { xp: 25, cr: '1/8', type: 'humanoid', hp: 11, ac: 12 };
     useCampaignStore.setState({ current: b });
     useCombatStore.setState({ encounterId: null, state: null, finished: null });
+  });
+
+  it('makes a group of compendium creatures a horde, showing the CR their XP adds up to', async () => {
+    const b = bundle();
+    b.encounters[0]!.combatants = [
+      {
+        id: 'g',
+        ref: {
+          kind: 'record',
+          ref: { recordId: 'r', sourceId: 'srd', key: 'bandit', edition: '2024' },
+          name: 'Bandit',
+        },
+        quantity: 4,
+        role: 'enemy',
+        hidden: false,
+        cache: { xp: 25, cr: '1/8', type: 'humanoid', hp: 11, ac: 12 },
+      },
+    ];
+    useCampaignStore.setState({ current: b });
+    render(<EncountersPage />);
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Bridge ambush' }));
+    const row = screen.getByTestId('template-row');
+    expect(row).toHaveTextContent('CR 1/8 · 25 XP');
+    await userEvent.click(screen.getByRole('button', { name: 'Fight Bandit as a horde' }));
+    // Four CR 1/8 bandits: 100 XP together, CR 1/2 (ADR 0047).
+    expect(screen.getByTestId('template-row')).toHaveTextContent('Horde of 4 · CR 1/2 · 100 XP');
+    expect(screen.getByRole('button', { name: 'Fight Bandit as individuals' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 
   it('splits one creature out of a group as an NPC, and offers NPCs not yet in it', async () => {
