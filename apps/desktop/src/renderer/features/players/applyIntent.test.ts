@@ -138,6 +138,29 @@ describe('applyTableIntent outside a fight', () => {
     });
   });
 
+  it('keeps conditions on the PC card and the NPC outside a fight (ADR 0049)', () => {
+    apply({ kind: 'addCondition', name: 'Poisoned' });
+    const saved = lastSaved<PCCard>(window.trifold.pcs.save as never);
+    expect(saved.conditions?.map((c) => c.name)).toEqual(['Poisoned']);
+    apply({ kind: 'addCondition', name: 'Exhaustion', level: 2 }, 'npc');
+    expect(lastSaved<NPC>(window.trifold.npcs.save as never).conditions).toMatchObject([
+      { name: 'Exhaustion', level: 2 },
+    ]);
+  });
+
+  it('removes a condition the PC card carries', () => {
+    useCampaignStore.setState({
+      current: {
+        campaign: { id: 'c', slug: 'g' },
+        pcs: [{ ...brannoc, conditions: [{ id: 'x', name: 'Prone', appliedRound: 0 }] }],
+        npcs: [],
+        scenes: [],
+      } as unknown as CampaignBundle,
+    });
+    apply({ kind: 'removeCondition', id: 'x' });
+    expect(lastSaved<PCCard>(window.trifold.pcs.save as never).conditions).toEqual([]);
+  });
+
   it('changes an NPC’s carried HP', () => {
     apply({ kind: 'hp', delta: 2 }, 'npc');
     expect(lastSaved<NPC>(window.trifold.npcs.save as never)).toMatchObject({

@@ -78,8 +78,12 @@ const creatureOf = (ref: Token['ref']): TableToken['creature'] =>
       ? { kind: 'npc', id: ref.npcId }
       : undefined;
 
-const conditionsOf = (f: Combatant | undefined) =>
-  (f?.conditions ?? []).map((c) => ({
+/** In a fight the combatant's conditions; outside one, those the card carries (ADR 0049). */
+const conditionsOf = (
+  f: Combatant | undefined,
+  carried: readonly { id: string; name: string; level?: number }[] = [],
+) =>
+  (f ? f.conditions : carried).map((c) => ({
     id: c.id,
     name: c.name,
     ...(c.level ? { level: c.level } : {}),
@@ -187,10 +191,10 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
         ? { current: f.hp.current, max: f.hp.max, temp: f.hp.temp }
         : { current: pc.currentHp ?? pc.maxHp, max: pc.maxHp, temp: pc.tempHp ?? 0 },
       ac: f?.ac ?? pc.ac,
-      conditions: conditionsOf(f),
+      conditions: conditionsOf(f, pc.conditions),
       inFight: !!f,
       needsInitiative: !!f && f.initiative === null,
-      editable: { hp: true, maxHp: true, ac: true, conditions: !!f },
+      editable: { hp: true, maxHp: true, ac: true, conditions: true },
     });
   }
   for (const npc of input.npcs) {
@@ -210,11 +214,11 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
           ? { current: npc.hp.current, max: npc.hp.max, temp: npc.hp.temp }
           : null,
       ac: f?.ac ?? null,
-      conditions: conditionsOf(f),
+      conditions: conditionsOf(f, npc.conditions),
       inFight: !!f,
       needsInitiative: !!f && f.initiative === null,
       // Outside a fight an NPC's max HP and AC come from its stat block.
-      editable: { hp: !!f || !!npc.hp, maxHp: !!f, ac: !!f, conditions: !!f },
+      editable: { hp: !!f || !!npc.hp, maxHp: !!f, ac: !!f, conditions: true },
     });
   }
   // Summons on the live map, there whether or not the TV is blacked out.
@@ -231,10 +235,10 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       claimable: false,
       hp: f ? { current: f.hp.current, max: f.hp.max, temp: f.hp.temp } : s.hp,
       ac: f?.ac ?? s.ac,
-      conditions: conditionsOf(f),
+      conditions: conditionsOf(f, s.conditions),
       inFight: !!f,
       needsInitiative: !!f && f.initiative === null,
-      editable: { hp: true, maxHp: true, ac: true, conditions: !!f },
+      editable: { hp: true, maxHp: true, ac: true, conditions: true },
       companionOf: s.ownerId,
       summon: {
         owner: { kind: s.ownerKind, id: s.ownerId },

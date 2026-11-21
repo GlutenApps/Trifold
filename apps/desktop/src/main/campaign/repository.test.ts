@@ -220,11 +220,22 @@ describe('what a fight leaves behind (ADR 0012)', () => {
       round: 3,
       turnIndex: 0,
       combatants: [
-        fighter(
-          'a',
-          { kind: 'pc', pcId: thora!.id, name: 'Thora' },
-          { current: 12, max: 30, temp: 2 },
-        ),
+        {
+          ...fighter(
+            'a',
+            { kind: 'pc', pcId: thora!.id, name: 'Thora' },
+            { current: 12, max: 30, temp: 2 },
+          ),
+          // Conditions carry out too, without durations that only count in a fight (ADR 0049).
+          conditions: [
+            {
+              id: 'fr',
+              name: 'Frightened',
+              duration: { kind: 'rounds', remaining: 2 },
+              appliedRound: 2,
+            },
+          ],
+        },
         fighter(
           'b',
           { kind: 'npc', npcId: grak.id, name: 'Grak' },
@@ -245,6 +256,7 @@ describe('what a fight leaves behind (ADR 0012)', () => {
     });
     const bundle = await repo.bundle();
     expect(bundle.pcs[0]).toMatchObject({ name: 'Thora', maxHp: 30, currentHp: 12, tempHp: 2 });
+    expect(bundle.pcs[0]!.conditions).toEqual([{ id: 'fr', name: 'Frightened', appliedRound: 0 }]);
     expect(bundle.npcs[0]).toMatchObject({
       name: 'Grak',
       isAlive: false,

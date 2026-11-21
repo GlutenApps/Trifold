@@ -1,5 +1,7 @@
 import type { TableIntentEvent } from '@trifold/api';
-import type { Combatant } from '@trifold/schema';
+import { withCondition, withoutCondition } from '@trifold/rules';
+import type { Combatant, ConditionInstance } from '@trifold/schema';
+import { ulid } from 'ulid';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { useSceneStore } from '../../stores/sceneStore';
@@ -9,8 +11,10 @@ import { useSceneStore } from '../../stores/sceneStore';
  * travels").
  * It goes through the same store actions a DM click uses, in the console's one thread, so player
  * and DM edits apply in order: in the loaded fight to the combatant (damage still asks for
- * concentration and death saves), outside it to the PC card or the NPC's carried HP. HP and temp
- * HP arrive as changes, so a DM's damage and a player's healing both count.
+ * concentration and death saves), outside it to the PC card, the NPC's carried HP or the
+ * companion's token. HP and temp HP arrive as changes, so a DM's damage and a player's healing
+ * both count. Conditions outside a fight go on the card too and come into the next fight
+ * (ADR 0049).
  */
 export function applyTableIntent(event: TableIntentEvent): void {
   const { creatureKind: kind, creatureId: id, intent } = event;
@@ -101,10 +105,19 @@ export function applyTableIntent(event: TableIntentEvent): void {
       case 'ac':
         void campaign.savePc({ ...pc, ac: intent.value });
         return;
+      case 'addCondition':
+      case 'removeCondition':
+        void campaign.savePc({ ...pc, conditions: changedConditions(pc.conditions, intent) });
+        return;
       default:
-        // Conditions and initiative only exist in a fight; main refuses them outside one.
+        // Initiative only exists in a fight; main refuses it outside one.
         return;
     }
+  }
+
+  if (npc && (intent.kind === 'addCondition' || intent.kind === 'removeCondition')) {
+    void campaign.saveNpc({ ...npc, conditions: changedConditions(npc.conditions, intent) });
+    return;
   }
 
   if (npc?.hp) {
@@ -169,8 +182,26 @@ function applyToSummonToken(tokenId: string, intent: TableIntentEvent['intent'])
     case 'ac':
       next = { ...summon, ac: intent.value };
       break;
+    case 'addCondition':
+    case 'removeCondition':
+      next = { ...summon, conditions: changedConditions(summon.conditions, intent) };
+      break;
     default:
       return;
   }
   scenes.patchTokenAnywhere(tokenId, { summon: next });
+}
+
+/** A condition list outside a fight, after a player adds or removes one (ADR 0049). */
+function changedConditions(
+  list: readonly ConditionInstance[] | undefined,
+  intent: Extract<TableIntentEvent['intent'], { kind: 'addCondition' | 'removeCondition' }>,
+): ConditionInstance[] {
+  if (intent.kind === 'removeCondition') return withoutCondition(list ?? [], intent.id);
+  return withCondition(list ?? [], {
+    id: ulid(),
+    name: intent.name,
+    ...(intent.level ? { level: intent.level } : {}),
+    appliedRound: 0,
+  });
 }

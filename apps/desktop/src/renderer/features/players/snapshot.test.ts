@@ -125,6 +125,22 @@ describe('tableSnapshotFrom', () => {
     });
   });
 
+  it('sends the conditions a PC card carries, changeable outside a fight (ADR 0049)', () => {
+    const snap = tableSnapshotFrom(
+      input({
+        pcs: [
+          pc('brannoc', {
+            conditions: [{ id: 'x', name: 'Exhaustion', level: 2, appliedRound: 0 }],
+          }),
+        ],
+      }),
+    );
+    expect(snap.creatures[0]).toMatchObject({
+      conditions: [{ id: 'x', name: 'Exhaustion', level: 2 }],
+      editable: { conditions: true },
+    });
+  });
+
   it('takes numbers and conditions from the loaded fight', () => {
     const fighter = Combatant.parse({
       id: 'k1',

@@ -355,9 +355,12 @@ export function HealthTool({ creature, send }: { creature: CreatureView; send: S
   );
 }
 
-/** Conditions: the 14 toggles and an Exhaustion stepper, during a fight. */
+/**
+ * Conditions: the 14 toggles and an Exhaustion stepper, at any time (ADR 0049): in a fight they
+ * go to the tracker, outside one to the character's card, and come into the next fight.
+ */
 export function ConditionsTool({ creature, send }: { creature: CreatureView; send: Send }) {
-  const note = <p className="pc-hint small">Conditions are tracked during fights.</p>;
+  const note = <p className="pc-hint small">Conditions can’t be changed here.</p>;
   if (!creature.editable.conditions) return note;
   const exhaustion = creature.conditions.find((c) => c.name === 'Exhaustion');
   const level = exhaustion?.level ?? (exhaustion ? 1 : 0);
@@ -396,7 +399,11 @@ export function ConditionsTool({ creature, send }: { creature: CreatureView; sen
           <Stepper label="exhaustion" value={level} onChange={setLevel} min={0} max={6} />
         </div>
       </div>
-      {note}
+      <p className="pc-hint small" data-testid="pc-conditions-where">
+        {creature.inFight
+          ? 'These are in the fight’s tracker.'
+          : 'Kept on your character between fights, and brought into the next one.'}
+      </p>
     </div>
   );
 }

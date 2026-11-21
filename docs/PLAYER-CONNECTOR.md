@@ -267,8 +267,8 @@ chosen in their target chips: the character first, then each companion in play.
 
 - **Health:** current, max and temp HP; an amount with − and + and **Damage**, **Heal** and
   **Temp**; tabs for max HP and AC with **Save** buttons, where those are editable.
-- **Conditions:** the 14 SRD conditions as toggles and an Exhaustion stepper. Outside a fight it
-  says "Conditions are tracked during fights."
+- **Conditions:** the 14 SRD conditions as toggles and an Exhaustion stepper, at any time
+  (ADR 0049). Outside a fight they go on the character's card and come into the next fight.
 - **Companions:** every companion in play, NPC companions and summons, each with Remove, which
   asks in the row first; and **Add a companion** (see [Summoning](#summoning)).
 - **Move:** "Drag the token, or tap where it should go." With Move open, a tap on the map sends
@@ -467,4 +467,3 @@ logged through `log.ts`. Tokens never reach the log.
 - Editing a character's name or portrait from the phone. A portrait would be an upload saved as
   the character's creature art, shrunk to 512 px like other art.
 - Changing the table server's port in Settings.
-- Conditions outside a fight, carried on PC cards and NPCs like HP.

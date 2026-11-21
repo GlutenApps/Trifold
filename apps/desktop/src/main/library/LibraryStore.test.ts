@@ -39,6 +39,19 @@ describe('LibraryStore.open', () => {
     expect(second.getSettings().playerDisplayId).toBe(7);
   });
 
+  it('keeps both of two settings changes made at the same time', async () => {
+    const root = join(dir, 'busy');
+    const store = await LibraryStore.open(root);
+    // Neither waits for the other, as when the console saves its layout while a setting changes.
+    await Promise.all([
+      store.updateSettings({ playerDisplayId: 7 }),
+      store.updateSettings({ theme: 'light' }),
+    ]);
+    expect(store.getSettings()).toMatchObject({ playerDisplayId: 7, theme: 'light' });
+    const reopened = await LibraryStore.open(root);
+    expect(reopened.getSettings()).toMatchObject({ playerDisplayId: 7, theme: 'light' });
+  });
+
   it('rejects a library.json from a newer app', async () => {
     const root = join(dir, 'newer');
     await LibraryStore.open(root);

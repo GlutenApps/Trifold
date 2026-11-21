@@ -191,7 +191,15 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         ctx.windows.openPlayer(WindowManager.pickDisplay(preferred));
       },
       async openForLive() {
-        const display = WindowManager.liveDisplay(ctx.session.store?.getSettings().playerDisplayId);
+        const preferred = ctx.session.store?.getSettings().playerDisplayId ?? null;
+        const display = WindowManager.liveDisplay(preferred);
+        // Say which display the TV went to, or why none, so a TV that did not open can be traced.
+        const count = WindowManager.listDisplays().length;
+        ctx.logger.info(
+          display
+            ? `going live: the TV opens on display ${display.id}${display.id === preferred ? ' (chosen in Settings)' : ''}`
+            : `going live: no TV window (${count} display${count === 1 ? '' : 's'}, ${preferred === null ? 'Automatic' : `display ${preferred} not attached`})`,
+        );
         if (display) ctx.windows.openPlayer(display);
         return display !== null;
       },

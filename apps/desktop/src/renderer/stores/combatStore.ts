@@ -931,7 +931,9 @@ export const useCombatStore = create<CombatStoreState>((set, get) => {
         const joined: Combatant = {
           ...c,
           initiative,
-          ...(summon ? { hp: { ...summon.hp }, ac: summon.ac } : {}),
+          ...(summon
+            ? { hp: { ...summon.hp }, ac: summon.ac, conditions: [...(summon.conditions ?? [])] }
+            : {}),
           tokenId: token.id,
         };
         insertCombatant(joined);
