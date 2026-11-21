@@ -60,7 +60,9 @@ describe('scaleDamageRoll', () => {
 
 describe('scaleCr', () => {
   it('scales every part up, with the same dice and the tag', () => {
-    const { monster, lines } = scaleCr(raider(), '5', ALL, 'Raider');
+    // Without an extra attack on offer (as quick scale does), every number moves to CR 5's.
+    const { monster, lines, cr } = scaleCr(raider(), '5', ALL, 'Raider', { offerAttacks: false });
+    expect(cr).toBe('5');
     expect(monster).toMatchObject({
       cr: '5',
       xp: 1800,
@@ -92,8 +94,10 @@ describe('scaleCr', () => {
     expect(lines[0]).toMatchObject({ from: '1 (200 XP)', to: '5 (1,800 XP)' });
   });
 
-  it('leaves out the parts the DM unticks', () => {
-    const { monster, lines } = scaleCr(raider(), '5', new Set<ScalePart>(['hp']));
+  it('leaves out the parts the DM unticks, and the CR drops with them', () => {
+    const { monster, lines, cr } = scaleCr(raider(), '5', new Set<ScalePart>(['hp']));
+    // Only hit points at CR 5's: 1 + 0.35 × 4 = 2.4, so CR 2.
+    expect(cr).toBe('2');
     expect(monster.ac?.value).toBe(13);
     expect(monster.actions[0]!.text).toContain('+4');
     expect(lines.map((l) => l.part)).toEqual(['cr', 'hp']);
@@ -123,20 +127,31 @@ describe('scaleCr', () => {
     expect(text).toMatch(/\d+ \(\d+d4\+3\) piercing/);
   });
 
-  it('offers one more attack at a big step up, and spreads the damage across them', () => {
-    const plain = scaleCr(raider(), '5', ALL, 'Raider');
-    expect(plain.attackOffer).toBe('add');
-    const more = scaleCr(raider(), '5', new Set<ScalePart>([...ALL, 'attacks']), 'Raider');
+  it('adds an attack at a big step up, each its own roll, and the CR follows it (ADR 0048)', () => {
+    const more = scaleCr(raider(), '5', ALL, 'Raider');
+    expect(more.attackOffer).toBe('add');
     expect(more.monster.actions[0]).toMatchObject({
       name: 'Multiattack',
       text: 'The raider makes two Spear attacks.',
     });
-    const avg = (text: string) => Number(/Hit: (\d+)/.exec(text)![1]);
-    expect(avg(more.monster.actions[1]!.text)).toBeLessThan(avg(plain.monster.actions[0]!.text));
     expect(more.lines.find((l) => l.part === 'attacks')).toMatchObject({
       from: 'one attack',
       to: 'two attacks',
     });
+    expect(more.cr).toBe('5');
+    // Each attack carries its share of CR 5's damage per round, so two attacks reach it.
+    const avg = (text: string) => Number(/Hit: (\d+)/.exec(text)![1]);
+    const full = scaleCr(raider(), '5', ALL, 'Raider', { offerAttacks: false });
+    const spear = avg(more.monster.actions[1]!.text);
+    expect(spear).toBeLessThan(avg(full.monster.actions[0]!.text));
+    // Leave the attack out and the spear keeps that share: less damage, so a lower CR.
+    const without = new Set(ALL);
+    without.delete('attacks');
+    const one = scaleCr(raider(), '5', without, 'Raider');
+    expect(avg(one.monster.actions[0]!.text)).toBe(spear);
+    expect(one.cr).toBe('4');
+    expect(one.monster).toMatchObject({ cr: '4', xp: 1100, scaled: { fromCr: '1', toCr: '4' } });
+    expect(one.lines[0]).toMatchObject({ to: '4 (1,100 XP)' });
     // A small step offers nothing.
     expect(scaleCr(raider(), '3', ALL).attackOffer).toBeNull();
   });

@@ -8,7 +8,9 @@ type Data = MonsterRecord['data'];
 /**
  * The CR scaler (DESIGN.md §6.2, Beta 8, ADR 0038), always on show at the top of the monster
  * editor's Challenge section: step the CR down or up (or pick one), see each change as old → new,
- * untick any part to leave it, and Apply to the form. Nothing is written until the editor's Save.
+ * untick any part to leave it, and Apply to the form. Every part starts ticked, an extra attack
+ * too, and the CR follows what is ticked (ADR 0048): untick one and the CR the monster ends at
+ * drops. Nothing is written until the editor's Save.
  * The name never changes; the stat block gets a Scaled tag. The editor remounts it (key = CR)
  * whenever the CR changes, so it always starts from the form's CR.
  */
@@ -33,16 +35,14 @@ export function CrScalePanel({
 }) {
   const [toCr, setToCr] = useState(data.cr);
   const [skipped, setSkipped] = useState<Set<ScalePart>>(new Set());
-  const [changeAttacks, setChangeAttacks] = useState(false);
 
-  const parts = useMemo(() => {
-    const on = new Set<ScalePart>(SCALE_PARTS.filter((p) => !skipped.has(p)));
-    if (changeAttacks) on.add('attacks');
-    return on;
-  }, [skipped, changeAttacks]);
+  const parts = useMemo(
+    () => new Set<ScalePart>(SCALE_PARTS.filter((p) => !skipped.has(p))),
+    [skipped],
+  );
   // Every line on offer (all parts), and the result of only the ticked ones.
   const offered = useMemo(
-    () => scaleCr(data, toCr, new Set<ScalePart>([...SCALE_PARTS, 'attacks']), name),
+    () => scaleCr(data, toCr, new Set<ScalePart>(SCALE_PARTS), name),
     [data, toCr, name],
   );
   const result = useMemo(() => scaleCr(data, toCr, parts, name), [data, toCr, parts, name]);
@@ -51,7 +51,7 @@ export function CrScalePanel({
   const at = CR_ORDER.indexOf(toCr as (typeof CR_ORDER)[number]);
   const pick = (cr: string) => {
     setToCr(cr);
-    setChangeAttacks(false);
+    setSkipped(new Set());
   };
   const step = (by: -1 | 1) => {
     // A CR off the list (hand-typed) steps from where it would sort: 0 down, 1 up.
@@ -67,9 +67,10 @@ export function CrScalePanel({
     if (line.part === 'attacks' && !offered.attackOffer) continue;
     byPart.set(line.part, [...(byPart.get(line.part) ?? []), line]);
   }
-  const crLine = offered.lines.find((l) => l.part === 'cr');
+  // The CR the ticked parts add up to, which drops below the target as parts are left out.
+  const crLine = result.lines.find((l) => l.part === 'cr');
+  const short = result.cr !== toCr;
   const toggle = (part: ScalePart, on: boolean) => {
-    if (part === 'attacks') return setChangeAttacks(on);
     setSkipped((s) => {
       const next = new Set(s);
       if (on) next.delete(part);
@@ -143,11 +144,17 @@ export function CrScalePanel({
           {crLine && (
             <p data-testid="cr-scale-cr">
               <strong>Challenge</strong> {crLine.from} → {crLine.to}
+              {short && (
+                <span className="muted small" data-testid="cr-scale-short">
+                  {' '}
+                  · CR {toCr} with everything ticked
+                </span>
+              )}
             </p>
           )}
           <ul className="books-list cr-scale-list">
             {[...byPart.entries()].map(([part, lines]) => {
-              const on = part === 'attacks' ? changeAttacks : !skipped.has(part);
+              const on = !skipped.has(part);
               return (
                 <li key={part}>
                   <label>
@@ -186,7 +193,7 @@ export function CrScalePanel({
               Keep CR {data.cr || '—'}
             </button>
             <button type="button" className="btn primary" onClick={() => onApply(result.monster)}>
-              Apply CR {toCr} to the form
+              Apply CR {result.cr} to the form
             </button>
           </div>
         </>

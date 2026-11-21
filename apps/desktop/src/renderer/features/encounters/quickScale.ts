@@ -168,7 +168,10 @@ export async function scaleRows(
       }
     }
     if (!saved) {
-      const data = scaleCr(record.data, toCr, new Set(SCALE_PARTS), record.displayName).monster;
+      // Quick scale keeps each creature's number of attacks (ADR 0048), so it lands on its CR.
+      const data = scaleCr(record.data, toCr, new Set(SCALE_PARTS), record.displayName, {
+        offerAttacks: false,
+      }).monster;
       if (inPlace) {
         saved = await io.save({ ...record, data });
       } else {
