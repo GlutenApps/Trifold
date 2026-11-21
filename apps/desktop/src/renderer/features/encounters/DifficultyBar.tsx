@@ -1,6 +1,7 @@
-import { CR_ORDER, difficultyBand, partyBudget } from '@trifold/rules';
+import { CR_ORDER, difficultyBand, impossibleXp, partyBudget } from '@trifold/rules';
 import type { CombatantTemplate } from '@trifold/schema';
 import { Icon } from '../shell/icons';
+import { templateXp } from './build';
 import { canQuickScale, crOf, enemyXp, stepAll, xpOf, type PendingCrs } from './quickScale';
 
 /**
@@ -9,7 +10,13 @@ import { canQuickScale, crOf, enemyXp, stepAll, xpOf, type PendingCrs } from './
  * opens a list of every compendium creature in the encounter with a CR picker beside it. The
  * band and the meter follow the picks as they change; Apply writes them.
  */
-const BAND_LABEL = { trivial: 'Trivial', low: 'Low', moderate: 'Moderate', high: 'High' } as const;
+const BAND_LABEL = {
+  trivial: 'Trivial',
+  low: 'Low',
+  moderate: 'Moderate',
+  high: 'High',
+  impossible: 'Impossible',
+} as const;
 
 const fmt = (n: number) => n.toLocaleString();
 
@@ -43,8 +50,10 @@ export function DifficultyBar({
   const changes = scalable.filter(
     (t) => pending[t.id] !== undefined && pending[t.id] !== t.cache?.cr,
   ).length;
-  // The meter runs to a quarter past High, so an encounter over budget still shows how far.
-  const top = budget.high * 1.25 || 1;
+  // The meter runs a little past Impossible (twice High, ADR 0052), so an encounter over budget
+  // still shows how far.
+  const impossible = impossibleXp(budget);
+  const top = impossible * 1.1 || 1;
   const pct = (n: number) => `${Math.min(100, (n / top) * 100)}%`;
 
   return (
@@ -62,12 +71,12 @@ export function DifficultyBar({
             <span
               className="difficulty-meter"
               role="img"
-              aria-label={`${fmt(xp)} XP against a budget of low ${fmt(budget.low)}, moderate ${fmt(budget.moderate)}, high ${fmt(budget.high)}`}
-              title={`2024 budget for this party: low ${fmt(budget.low)} · moderate ${fmt(budget.moderate)} · high ${fmt(budget.high)}`}
+              aria-label={`${fmt(xp)} XP against a budget of low ${fmt(budget.low)}, moderate ${fmt(budget.moderate)}, high ${fmt(budget.high)}; impossible from ${fmt(impossible)}`}
+              title={`2024 budget for this party: low ${fmt(budget.low)} · moderate ${fmt(budget.moderate)} · high ${fmt(budget.high)} · impossible from ${fmt(impossible)} (twice high)`}
             >
               <span className="difficulty-fill" style={{ width: pct(xp) }} />
-              {(['low', 'moderate', 'high'] as const).map((b) => (
-                <span key={b} className="difficulty-tick" style={{ left: pct(budget[b]) }} />
+              {[budget.low, budget.moderate, budget.high, impossible].map((n, i) => (
+                <span key={i} className="difficulty-tick" style={{ left: pct(n) }} />
               ))}
             </span>
           </>
@@ -153,7 +162,7 @@ export function DifficultyBar({
                     ))}
                   </select>
                   <span className="muted small quick-scale-xp">
-                    {fmt(xpOf(t, pending) * t.quantity)} XP
+                    {fmt(templateXp(t, cr, xpOf(t, pending)))} XP
                   </span>
                 </li>
               );

@@ -1,5 +1,6 @@
 import { CR_ORDER, scaleCr, SCALE_PARTS, xpForCr } from '@trifold/rules';
 import type { CombatantTemplate, CompendiumRecord, Encounter, NPC, Token } from '@trifold/schema';
+import { templateXp } from './build';
 import { recordTarget } from './creatureEdits';
 import { templateTokenIds, type RecordTarget } from './templates';
 
@@ -35,7 +36,7 @@ export function xpOf(t: CombatantTemplate, pending: PendingCrs): number {
 export function enemyXp(templates: readonly CombatantTemplate[], pending: PendingCrs): number {
   return templates
     .filter((t) => t.role === 'enemy')
-    .reduce((n, t) => n + xpOf(t, pending) * t.quantity, 0);
+    .reduce((n, t) => n + templateXp(t, crOf(t, pending), xpOf(t, pending)), 0);
 }
 
 /** Picks that actually change a row. */

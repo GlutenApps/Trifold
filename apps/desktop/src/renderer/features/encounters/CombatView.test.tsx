@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CampaignBundle } from '@trifold/api';
@@ -147,6 +147,48 @@ describe('CombatView', () => {
     expect(hp('Thora')).toBe(11);
     expect(hp('Zed')).toBe(16);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('asks how many horde members an area effect catches, and says what for (ADR 0052)', async () => {
+    render(<CombatView />);
+    act(() =>
+      useCombatStore.setState({
+        state: {
+          ...useCombatStore.getState().state!,
+          combatants: [
+            ...useCombatStore.getState().state!.combatants,
+            combatant('Rats', {
+              name: 'Rat horde',
+              hp: { current: 30, max: 30, temp: 0 },
+              horde: { size: 6, memberHp: 5 },
+            }),
+          ],
+        },
+        pendingDamage: [
+          {
+            id: 'p1',
+            sourceId: 'Thora',
+            sourceName: 'Thora',
+            featureName: 'Burning Hands',
+            label: 'Burning Hands',
+            parts: [{ amount: 12, type: 'fire' }],
+          },
+        ],
+      }),
+    );
+    const popup = screen.getByRole('dialog', { name: 'Thora — Burning Hands' });
+    expect(within(popup).queryByTestId('horde-caught')).not.toBeInTheDocument();
+    await userEvent.click(within(popup).getByRole('button', { name: 'Full damage to Rat horde' }));
+    const caught = within(popup).getByTestId('horde-caught');
+    expect(caught).toHaveTextContent('of 6 standing');
+    expect(caught).toHaveTextContent('each member inside it takes the damage, up to 5');
+    const field = within(popup).getByRole('spinbutton', {
+      name: 'Members of Rat horde in the area',
+    });
+    fireEvent.change(field, { target: { value: '4' } });
+    await userEvent.click(within(popup).getByRole('button', { name: 'Apply' }));
+    // 12 fire on four rats of 5 HP: 5 each, 20 in all.
+    expect(hp('Rats')).toBe(10);
   });
 
   it('starts a called save from the results and lets the DM set each PC', async () => {

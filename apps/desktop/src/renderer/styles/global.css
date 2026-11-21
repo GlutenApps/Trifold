@@ -36,6 +36,7 @@
   --accent: #c5beaf;
   --accent-contrast: #14181d;
   --danger: #e0685e;
+  --danger-contrast: #1f0e0c;
   --warn: #e0b252;
   /* The on-air tally: the TV is open and the players can see it. Not the danger red. */
   --tally: #d9453a;
@@ -140,6 +141,7 @@
   --accent: #1c2229;
   --accent-contrast: #f3f0e8;
   --danger: #c2483f;
+  --danger-contrast: #fff;
   --warn: #a87a18;
   --tally: #c2362c;
   --tally-contrast: #fff6f4;

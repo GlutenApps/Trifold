@@ -1,6 +1,6 @@
 # ADR 0047 · Individuals and hordes
 
-**Status:** accepted, 2026-11-20. Replaces the campaign's group initiative setting (DESIGN.md §6.4).
+**Status:** accepted, 2026-11-20. Replaces the campaign's group initiative setting (DESIGN.md §6.4). Points 4 and 5 replaced by ADR 0052 (attacks in groups of three, area damage per member, CR from the audit fit).
 
 ## Context
 

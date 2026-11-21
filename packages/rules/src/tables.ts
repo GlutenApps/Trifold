@@ -178,16 +178,24 @@ export function partyBudget(levels: number[]): Budget {
   return total;
 }
 
-export type DifficultyBand = 'trivial' | 'low' | 'moderate' | 'high';
+export type DifficultyBand = 'trivial' | 'low' | 'moderate' | 'high' | 'impossible';
+
+/**
+ * XP at and above which an encounter is Impossible (ADR 0052): twice the High budget, two hard
+ * fights at once. Trifold's own band, like `trivial`; the 2024 rules stop at High.
+ */
+export const impossibleXp = (budget: Budget): number => budget.high * 2;
 
 /**
  * Where an encounter's total XP falls against the party budget. Thresholds are strict: a total
  * exactly on `budget.low` is `low` and one on `budget.high` is `high`. `trivial`, below the low
- * budget, is Trifold's own band; the 2024 rules name only low, moderate and high.
+ * budget, and `impossible`, from twice the high budget, are Trifold's own bands; the 2024 rules
+ * name only low, moderate and high.
  */
 export function difficultyBand(totalXp: number, budget: Budget): DifficultyBand {
   if (totalXp < budget.low) return 'trivial';
   if (totalXp < budget.moderate) return 'low';
   if (totalXp < budget.high) return 'moderate';
+  if (budget.high > 0 && totalXp >= impossibleXp(budget)) return 'impossible';
   return 'high';
 }
