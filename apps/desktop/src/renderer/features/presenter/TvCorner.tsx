@@ -15,14 +15,17 @@ import { formatClock, remainingMs } from '@trifold/rules';
 export function TvCorner({
   timer,
   counters,
+  now = Date.now,
 }: {
   timer: LiveTimer | null;
   counters: readonly LiveCounter[];
+  /** The clock a running timer counts on: this window's, or a phone's view of the DM's. */
+  now?: () => number;
 }) {
   if (!timer && counters.length === 0) return null;
   return (
     <div className="tv-corner" data-testid="tv-corner">
-      {timer && <TvTimer timer={timer} />}
+      {timer && <TvTimer timer={timer} now={now} />}
       {counters.length > 0 && (
         <ul className="tv-counters" aria-label="Counters" data-testid="tv-counters">
           {counters.map((c) => (
@@ -40,15 +43,15 @@ export function TvCorner({
   );
 }
 
-function TvTimer({ timer }: { timer: LiveTimer }) {
+function TvTimer({ timer, now: clock }: { timer: LiveTimer; now: () => number }) {
   const running = timer.status === 'running';
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => clock());
   useEffect(() => {
     if (!running) return;
-    setNow(Date.now());
-    const id = window.setInterval(() => setNow(Date.now()), 250);
+    setNow(clock());
+    const id = window.setInterval(() => setNow(clock()), 250);
     return () => window.clearInterval(id);
-  }, [running, timer.endsAt]);
+  }, [running, timer.endsAt, clock]);
   const left = remainingMs(timer, running ? now : 0);
   const done = timer.status === 'done' || (running && left === 0);
   return (

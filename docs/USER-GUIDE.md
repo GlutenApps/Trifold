@@ -186,7 +186,7 @@ The device list shows who holds which character and whether they are online. **R
 
 ### What players see and change
 
-Phones show the map that is on the TV, every revealed part of it, with fogged areas blacked out; hidden tokens and anything under fog never reach a phone. A title card, an image scene or the break screen shows on the phones as on the TV; when nothing is on the TV, or during a blackout, the phones show nothing. Masked creatures appear by type, numbered as on the TV.
+Phones show the map that is on the TV, every revealed part of it, with fogged areas blacked out; hidden tokens and anything under fog never reach a phone. A title card, an image scene or the break screen shows on the phones as on the TV; when nothing is on the TV, or during a blackout, the phones show nothing, and until you go live they say they are waiting for you. The TV's overlays show on phones too, each while its switch in **Overlays** is on: the scene's name, the round and the initiative strip along the top (a narrow screen folds later turns into "+N"), and the timer and counters in the bottom-left corner, counting on your computer's clock. Masked creatures appear by type, numbered as on the TV.
 
 A player's change arrives in the tracker, the PC card and the TV as if you had made it, and the fight log names their device ("Sam's phone: Brannoc heals 5"). Damage and healing count as amounts, so your hit and their heal both land. Conditions can only be changed during a fight, where the tracker keeps them. When a fight is waiting for a player's initiative, their phone shows a box for it; once they submit, or you type it first, it goes.
 

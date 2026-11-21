@@ -1447,3 +1447,226 @@ main.pc-center {
 .pc-movebanner {
   pointer-events: none;
 }
+
+/* ---------- the TV's overlays (ADR 0046) ---------- */
+
+/* Phones show what the TV shows: the scene's name, the round and the initiative strip in a row
+   above the player's own banners, the timer and counters in the bottom-left corner. The TV's
+   own components draw them; these rules size them for a phone and take no touches, so the map
+   under them still pans and drags. */
+.pc-tv-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.pc-overlay-top > .pc-tv-top {
+  pointer-events: none;
+}
+
+.pc-tv-title,
+.pc-tv-round {
+  flex: none;
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--tv-scrim);
+  color: var(--tv-white);
+  font-size: 13px;
+}
+
+.pc-tv-round {
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-tv-top .initiative-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+}
+
+.pc-tv-top .initiative-strip {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 4px 6px;
+  background: var(--tv-scrim);
+  border-radius: 999px;
+}
+
+.pc-tv-top .chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  color: var(--tv-white);
+  white-space: nowrap;
+}
+
+.pc-tv-top .chip.folded {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+}
+
+.pc-tv-top .chip.chip-more {
+  justify-content: center;
+  opacity: 0.75;
+  border-color: var(--tv-glass);
+}
+
+.pc-tv-top .chip.role-enemy {
+  border-color: color-mix(in srgb, var(--enemy) 60%, transparent);
+}
+
+.pc-tv-top .chip.role-ally {
+  border-color: color-mix(in srgb, var(--ally) 60%, transparent);
+}
+
+.pc-tv-top .chip.active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+.pc-tv-top .chip.dead .chip-name {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.pc-tv-top .chip.bloodied .chip-name::after {
+  content: ' •';
+  color: var(--danger);
+}
+
+.pc-tv-top .hp-bar {
+  width: 36px;
+  height: 3px;
+  background: var(--tv-glass);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.pc-tv-top .hp-fill {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+
+.pc-tv-corner {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pc-tv-corner .tv-corner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.pc-tv-corner .tv-timer {
+  display: flex;
+  flex-direction: column;
+  min-width: 96px;
+  max-width: 50vw;
+  padding: 4px 10px 6px;
+  background: var(--tv-scrim);
+  color: var(--tv-white);
+  border-radius: 10px;
+}
+
+.pc-tv-corner .tv-timer-name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+}
+
+.pc-tv-corner .tv-timer-clock {
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-tv-corner .tv-timer-alert {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--danger);
+}
+
+.pc-tv-corner .tv-timer.status-paused .tv-timer-clock {
+  opacity: 0.6;
+}
+
+.pc-tv-corner .tv-timer.status-done {
+  box-shadow: inset 0 0 0 2px var(--danger);
+}
+
+.pc-tv-corner .tv-timer.status-done .tv-timer-clock {
+  color: var(--danger);
+}
+
+.pc-tv-corner .tv-counters {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pc-tv-corner .tv-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 50vw;
+  padding: 3px 10px;
+  background: var(--tv-scrim);
+  color: var(--tv-white);
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.pc-tv-corner .tv-counter-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-tv-corner .tv-counter-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-tv-corner .tv-counter-max {
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.pc-tv-corner .tv-counter.at-min .tv-counter-value,
+.pc-tv-corner .tv-counter.at-max .tv-counter-value {
+  color: var(--warn);
+}

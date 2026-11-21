@@ -136,6 +136,52 @@ export interface SummonRequest {
   persistent: boolean;
 }
 
+/** One chip of the TV's initiative strip, as the players see it (masked names, no hidden). */
+export interface TableInitiativeEntry {
+  id: string;
+  name: string;
+  role: 'ally' | 'enemy' | 'neutral';
+  isPc: boolean;
+  dead: boolean;
+  /** 0–1, PCs only, and only when the health-bar overlay is on. */
+  hpFraction?: number;
+  bloodied: boolean;
+}
+
+/** A counter on the TV (ADR 0019). */
+export interface TableCounter {
+  id: string;
+  name: string;
+  value: number;
+  max?: number;
+  bound: 'min' | 'max' | null;
+}
+
+/** The timer on the TV (ADR 0021); `endsAt` is on the DM's clock. */
+export interface TableTimer {
+  id: string;
+  name: string;
+  status: 'idle' | 'running' | 'paused' | 'done';
+  endsAt?: number;
+  leftMs: number;
+}
+
+/**
+ * What the TV shows over the scene (ADR 0046), the same for every device: each part only while
+ * its overlay switch is on, and nothing behind a blackout.
+ */
+export interface TableOverlays {
+  /** The scene's name over a map or image, when the TV shows it. */
+  sceneTitle?: string;
+  /** The initiative strip: whose turn it is and the order, as the TV shows it. */
+  initiative?: { round: number; activeId: string | null; entries: TableInitiativeEntry[] };
+  healthBars: boolean;
+  /** The round, while a fight is on and the round counter overlay is on. */
+  round?: number;
+  timer: TableTimer | null;
+  counters: TableCounter[];
+}
+
 export interface TableSnapshot {
   campaignId: string;
   campaignName: string;
@@ -147,6 +193,8 @@ export interface TableSnapshot {
   scene: TableScene | null;
   /** What the TV shows when it is not a map: a title card, an image or the break screen. */
   screen?: TableScreen | null;
+  /** What the TV shows over the scene; absent when not live or blacked out. */
+  overlays?: TableOverlays;
   creatures: TableCreature[];
   /** The DM's summon list. */
   summonOptions?: SummonOption[];
@@ -237,6 +285,8 @@ export interface ClientView {
   map: ClientMap | null;
   /** The TV's other screens, when no map is up (title, image, break). */
   screen?: ClientScreen | null;
+  /** The TV's overlays (scene title, initiative, round, timer, counters), as the TV shows them. */
+  overlays?: TableOverlays;
   /** The campaign's reclaim mode, so the picker knows to ask for a PIN or to wait. */
   reclaimMode: ReclaimMode;
   /** Summoning: what can be added, whether it may, and how many per character. */

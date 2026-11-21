@@ -4,6 +4,7 @@ import type { Connection } from './connection';
 import { AddCompanion } from './AddCompanion';
 import { MapView, type DragHandlers, type MovePlan } from './MapView';
 import { ScreenView } from './ScreenView';
+import { TvBottom, TvTop } from './TvOverlays';
 import { rulerLabel, squaresBetween } from '../renderer/features/presenter/ruler';
 import {
   CompanionsTool,
@@ -254,9 +255,14 @@ export function Playing({
   const initiative = ordered.filter((c) => c.needsInitiative);
   const phoneMove = tool === 'move' && layout === 'phonePortrait';
   const stop = (e: React.PointerEvent) => e.stopPropagation();
+  // The break screen covers everything on the TV, a live map included, so it does here too.
+  const onBreak = view.screen?.kind === 'break';
+  // What the TV shows over the scene (ADR 0046), under the break screen like on the TV.
+  const tv = view.overlays && !onBreak ? view.overlays : null;
   const overlay = (
     <>
       <div className="pc-overlay-top" onPointerDown={stop} onPointerUp={stop}>
+        {tv && <TvTop overlays={tv} />}
         {layout === 'phoneLandscape' && <div className="pc-pills">{header}</div>}
         {ordered
           .filter((c) => c.summon?.concentrationLost)
@@ -303,11 +309,10 @@ export function Playing({
           </div>
         )}
       </div>
+      {tv && <TvBottom overlays={tv} />}
     </>
   );
 
-  // The break screen covers everything on the TV, a live map included, so it does here too.
-  const onBreak = view.screen?.kind === 'break';
   const map =
     view.map && !onBreak ? (
       <MapView

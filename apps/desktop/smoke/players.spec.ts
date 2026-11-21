@@ -243,6 +243,8 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
       .toBeGreaterThan(0);
     // Once it is on screen, the phone's "Loading map" pill is gone.
     await expect(phone.getByTestId('pc-map-loading')).toHaveCount(0);
+    // The TV's scene title overlay shows on the phone too (ADR 0046).
+    await expect(phone.getByTestId('pc-tv-title')).toHaveText('The Wayside Lamp');
     await expect(pop.getByText('Smoke phone')).toBeVisible();
     await expect(pop.getByText('Brannoc Hale')).toBeVisible();
     // (The strip closes the pop-up.) End live hides the table on phones and Go live brings it back (ADR 0046).
@@ -280,11 +282,15 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     // the linked encounter because his token stands on the map (ADR 0044).
     await page.getByRole('tab', { name: 'VTT', exact: true }).click();
     await page.getByRole('button', { name: 'Start linked encounter' }).click();
-    const initiative = phone.getByLabel('Initiative');
+    const initiative = phone.getByRole('textbox', { name: 'Initiative' });
     await expect(initiative).toBeVisible({ timeout: 15_000 });
     await initiative.fill('15');
     await phone.getByRole('button', { name: 'Submit' }).click();
     await expect(initiative).toBeHidden();
+    // Phones show the TV's overlays (ADR 0046): the initiative strip, with Brannoc in it.
+    await expect(
+      phone.getByTestId('pc-tv-top').getByRole('list', { name: 'Initiative' }),
+    ).toContainText('Brannoc', { timeout: 15_000 });
 
     // Damage and a condition from the phone land in the tracker.
     await tools.getByRole('button', { name: 'Health' }).click();

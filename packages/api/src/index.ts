@@ -47,6 +47,7 @@ export type {
   ServerMessage,
   TableIntent,
   TableCreature,
+  TableOverlays,
   TableScene,
   TableSnapshot,
   TableToken,
