@@ -68,7 +68,8 @@ const MAJOR_TITLES: Record<AnyMajorKind, string> = {
   compendium: 'Compendium',
   encounters: 'Encounters',
   map: 'VTT',
-  table: 'Table',
+  // The player's view of the table has the GM's name for it, so both consoles read the same.
+  table: 'VTT',
   character: 'Character',
 };
 
