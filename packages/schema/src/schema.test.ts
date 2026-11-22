@@ -57,7 +57,7 @@ describe('LibrarySettings', () => {
 describe('PlayerShellLayout (docs/PLAYER-MODE.md)', () => {
   const layout = {
     stage: { groups: [{ tabs: ['table', 'character', 'web:01A'], active: 'table' }] },
-    dock: { sections: [{ tool: 'myCreature', open: true }, { tool: 'initiative' }] },
+    dock: { sections: [{ tool: 'inPlay', open: true }, { tool: 'initiative' }] },
   };
 
   it('takes the player kinds and web tabs, with the stage and dock defaults', () => {

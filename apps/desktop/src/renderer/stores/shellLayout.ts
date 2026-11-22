@@ -100,7 +100,7 @@ export const MINOR_TITLES: Record<ToolKind, string> = {
   quickNotes: 'Quick notes',
   counters: 'Counters',
   timers: 'Timers',
-  myCreature: 'My creature',
+  inPlay: 'In play',
   initiative: 'Initiative',
 };
 
@@ -199,7 +199,7 @@ function sections(open: MinorKind[]): ShellLayout['dock']['sections'] {
 }
 
 /** A fresh campaign: every major in one group, the dock wide with Scenes open. */
-/** A freshly joined campaign: every player major in one group, My creature and Initiative open. */
+/** A freshly joined campaign: every player major in one group, In play and Initiative open. */
 export function defaultPlayerLayout(): Layout {
   return {
     stage: {

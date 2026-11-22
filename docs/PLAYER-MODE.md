@@ -162,7 +162,7 @@ Build `features/joined/PlayerConsole.tsx` as a sibling of the GM console inside 
 | Stage | **Character**: the player's sheet | New (Part 3) |
 | Stage | **Compendium**: bundled SRD and the player's own sources and homebrew | `features/compendium`, with the campaign actions off |
 | Stage | **Web tabs**, such as a sheet kept in another tool | Existing web tabs (ADR 0011), Library-wide as today |
-| Dock | **My creature**: the player's character and its companions (chosen with the target chips): HP, conditions, companions, move, summon | `web/tools.tsx`, `AddCompanion.tsx` |
+| Dock | **In play**: the player's character and its companions (chosen with the target chips): HP, conditions, companions, move, summon | `web/tools.tsx`, `AddCompanion.tsx` |
 | Dock | **Initiative**: the order as the TV shows it, the player's turn marked, and the box to enter a roll | `InitiativeStrip` entries; `InitiativeCard` moved out of `Playing.tsx` |
 | Dock | **Quick notes**: private notes, saved in the joined campaign | The note editor, behind a notes source (below) |
 | Pop-up | **Dice**: rolls stay local | `features/dice` |
@@ -195,7 +195,7 @@ The strip shows "Your turn" or "You're next" with the creature's name when the p
 
 ### Layouts
 
-`MAJOR_KINDS` and `MINOR_KINDS` are schema enums stored in saved layouts. Add `PLAYER_MAJOR_KINDS` (`table`, `character`, `compendium`; the `table` tab is titled VTT, like the GM's) and `PLAYER_MINOR_KINDS` (`myCreature`, `initiative`, `quickNotes`), a `PlayerShellLayout` built from them, and `workspace.playerConsoles` keyed by joined campaign id, so neither role's layout can name the other's panels. All additive with defaults: no `library.json` version bump. `majors.tsx` and `minors.tsx` stay the registries and gain the player entries. Named layouts (Prep, Table, Combat) stay the GM's; the player console keeps one layout per joined campaign.
+`MAJOR_KINDS` and `MINOR_KINDS` are schema enums stored in saved layouts. Add `PLAYER_MAJOR_KINDS` (`table`, `character`, `compendium`; the `table` tab is titled VTT, like the GM's) and `PLAYER_MINOR_KINDS` (`inPlay`, `initiative`, `quickNotes`), a `PlayerShellLayout` built from them, and `workspace.playerConsoles` keyed by joined campaign id, so neither role's layout can name the other's panels. All additive with defaults: no `library.json` version bump. `majors.tsx` and `minors.tsx` stay the registries and gain the player entries. Named layouts (Prep, Table, Combat) stay the GM's; the player console keeps one layout per joined campaign.
 
 Player hotkeys register in `hotkeys.ts` like the rest, active only while a joined campaign is open. The GM's table hotkeys (blackout, next turn, go live and the others registered in `AppShell`) must do nothing there.
 
@@ -439,7 +439,7 @@ A new file kind, `character`, at version 1. Characters rank in memory in global 
 One feature per PR (`CLAUDE.md`), and each phase updates its own docs and ADR as it lands. After phase 5, the PDF import and the builder run in parallel.
 
 1. **Seams, no behaviour change.** The `TableClient` split in `web/connection.ts`; the picker taking the device's name and the initiative box exported; player kinds and the player layout in the schema with no UI; the feature flag (`TRIFOLD_PLAYER_MODE=1`, read through `app.getInfo`). All existing tests and the smoke test stay green and unchanged. Built.
-2. **Player mode on the LAN.** First, as PRs with no behaviour change: the shell's two roles (built), and the components both clients use moved to a shared folder. Then the service advertisement and table discovery; Join a campaign, the joined-campaign store and the Playing list; `LanClient` and `BridgeClient`; the `table` media host and image cache; the player console with Table, My creature, Initiative, Quick notes, Dice and Compendium; then the offline view, finding the table again, the failure messages and the sharing-backups warning. Its ADR and the ground rule 1 change. The flag comes off when this phase's acceptance passes.
+2. **Player mode on the LAN.** First, as PRs with no behaviour change: the shell's two roles (built), and the components both clients use moved to a shared folder. Then the service advertisement and table discovery; Join a campaign, the joined-campaign store and the Playing list; `LanClient` and `BridgeClient`; the `table` media host and image cache; the player console with Table, In play, Initiative, Quick notes, Dice and Compendium; then the offline view, finding the table again, the failure messages and the sharing-backups warning. Its ADR and the ground rule 1 change. The flag comes off when this phase's acceptance passes.
 3. **Table rolls.** The Table and Private switch, `roll` and `rolled`, table rolls in both roll logs. Its ADR.
 4. **Shared content and player packs.** The Shared with players list, the shared source in a joined campaign, sync on connect, Export for players and opening a pack. Its ADR, with the `DESIGN.md` §8 change.
 5. **Character foundation.** The sheet schema (marked by edition, linked records by key and name) and derived-number functions in `packages/rules/src/character/`, the Character tab, the Table numbers form, the `sheetUrl` migration, and the `sheetOffer` flow with Accept, Dismiss and auto-accept. Its ADR.
