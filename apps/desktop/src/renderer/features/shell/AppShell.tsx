@@ -23,6 +23,9 @@ import { useTimersStore } from '../../stores/timersStore';
 import { useQuickNotesStore } from '../../stores/quickNotesStore';
 import { useSearchStore } from '../../stores/searchStore';
 import { useShellStore } from '../../stores/shellStore';
+import { useJoinedStore } from '../../stores/joinedStore';
+import { PlayerStrip } from '../joined/PlayerStrip';
+import { PlayerTableProvider } from '../joined/PlayerTable';
 import { installTableSync } from '../../stores/tableStore';
 import { LibraryView } from '../library/LibraryView';
 import { useBackupEvents } from '../settings/useBackupEvents';
@@ -63,6 +66,8 @@ export function AppShell() {
   const hydrate = useShellStore((s) => s.hydrate);
   const space = useShellStore((s) => s.space);
   const campaignOpen = useCampaignStore((s) => !!s.current);
+  // A joined campaign's player console (docs/PLAYER-MODE.md): never beside a GM campaign.
+  const joined = useJoinedStore((s) => s.current);
 
   useEffect(() => {
     void load();
@@ -105,8 +110,13 @@ export function AppShell() {
     () =>
       useCampaignStore.subscribe((s, prev) => {
         if (s.current?.campaign.id === prev.current?.campaign.id) return;
-        if (s.current) useShellStore.getState().enterConsole(s.current.campaign.slug);
-        else useShellStore.getState().leaveCampaign();
+        if (s.current) {
+          // One console at a time: a campaign this Library runs takes a player console's place.
+          useJoinedStore.setState({ current: null });
+          useShellStore.getState().enterConsole(s.current.campaign.slug);
+        } else if (useShellStore.getState().role === 'gm') {
+          useShellStore.getState().leaveCampaign();
+        }
       }),
     [],
   );
@@ -220,42 +230,51 @@ export function AppShell() {
 
   useEffect(() => {
     const shell = () => useShellStore.getState();
+    /**
+     * A hotkey that is the GM's alone: it does nothing in a player console, where there is no TV,
+     * fight, music or scene list to act on (docs/PLAYER-MODE.md, "Layouts").
+     */
+    const gm =
+      (run: () => void): (() => void) =>
+      () => {
+        if (shell().role === 'gm') run();
+      };
     const cleanups = [
       registerHotkey({
         id: 'presenter.blackout',
         combo: 'Ctrl+Shift+B',
         description: 'Toggle blackout on the TV',
-        run: () => usePresenterStore.getState().toggleBlackout(),
+        run: gm(() => usePresenterStore.getState().toggleBlackout()),
       }),
       registerHotkey({
         id: 'presenter.clearScene',
         combo: 'Ctrl+Shift+X',
         description: 'Clear the active scene',
-        run: () => usePresenterStore.getState().clearScene(),
+        run: gm(() => usePresenterStore.getState().clearScene()),
       }),
       registerHotkey({
         id: 'presenter.undo',
         combo: 'Ctrl+Shift+Z',
         description: 'Undo the last scene change',
-        run: () => usePresenterStore.getState().undo(),
+        run: gm(() => usePresenterStore.getState().undo()),
       }),
       registerHotkey({
         id: 'player.toggle',
         combo: 'Ctrl+Shift+P',
         description: 'Go live, or end it',
-        run: () => void toggleLive(),
+        run: gm(() => void toggleLive()),
       }),
       registerHotkey({
         id: 'scene.selectPrevious',
         combo: 'Ctrl+Alt+ArrowUp',
         description: 'Select the previous scene on the TV tab (does not set it active)',
-        run: () => stepScene(-1),
+        run: gm(() => stepScene(-1)),
       }),
       registerHotkey({
         id: 'scene.selectNext',
         combo: 'Ctrl+Alt+ArrowDown',
         description: 'Select the next scene on the TV tab (does not set it active)',
-        run: () => stepScene(1),
+        run: gm(() => stepScene(1)),
       }),
       registerHotkey({
         id: 'nav.compendium',
@@ -288,7 +307,9 @@ export function AppShell() {
         combo: 'Ctrl+N',
         description: 'Quick note: jot something down without leaving your place',
         run: () => {
-          if (shell().space === 'console') useQuickNotesStore.getState().summon();
+          if (shell().space === 'console' && shell().role === 'gm') {
+            useQuickNotesStore.getState().summon();
+          }
         },
       }),
       registerHotkey({
@@ -296,7 +317,9 @@ export function AppShell() {
         combo: 'Ctrl+Alt+T',
         description: 'Timers: open the tool and focus the first timer',
         run: () => {
-          if (shell().space === 'console') useTimersStore.getState().summon();
+          if (shell().space === 'console' && shell().role === 'gm') {
+            useTimersStore.getState().summon();
+          }
         },
       }),
       registerHotkey({
@@ -304,7 +327,9 @@ export function AppShell() {
         combo: 'Ctrl+Alt+C',
         description: 'Counters: open the tool and focus the first counter',
         run: () => {
-          if (shell().space === 'console') useCountersStore.getState().summon();
+          if (shell().space === 'console' && shell().role === 'gm') {
+            useCountersStore.getState().summon();
+          }
         },
       }),
       registerHotkey({
@@ -329,49 +354,53 @@ export function AppShell() {
         id: 'music.playPause',
         combo: 'Ctrl+Alt+P',
         description: 'Play or pause music',
-        run: () => void useMusicStore.getState().togglePlay(),
+        run: gm(() => void useMusicStore.getState().togglePlay()),
       }),
       registerHotkey({
         id: 'music.next',
         combo: 'Ctrl+Alt+ArrowRight',
         description: 'Next track',
-        run: () => void useMusicStore.getState().next(),
+        run: gm(() => void useMusicStore.getState().next()),
       }),
       registerHotkey({
         id: 'music.previous',
         combo: 'Ctrl+Alt+ArrowLeft',
         description: 'Previous track',
-        run: () => void useMusicStore.getState().previous(),
+        run: gm(() => void useMusicStore.getState().previous()),
       }),
       registerHotkey({
         id: 'music.loop',
         combo: 'Ctrl+Alt+L',
         description: 'Cycle music loop: off, playlist, track',
-        run: () => void useMusicStore.getState().cycleLoop(),
+        run: gm(() => void useMusicStore.getState().cycleLoop()),
       }),
       registerHotkey({
         id: 'music.panic',
         combo: 'Ctrl+Alt+M',
         description: 'Panic mute all audio',
-        run: () => useMusicStore.getState().toggleMuted(),
+        run: gm(() => useMusicStore.getState().toggleMuted()),
       }),
       registerHotkey({
         id: 'tool.dice',
         combo: 'Ctrl+D',
         description: 'Dice',
-        run: () => shell().togglePop('dice'),
+        run: gm(() => shell().togglePop('dice')),
       }),
       registerHotkey({
         id: 'tool.music',
         combo: 'Ctrl+M',
         description: 'Music: transport, playlists, tracks',
-        run: () => shell().openTool('music'),
+        run: gm(() => shell().openTool('music')),
       }),
       registerHotkey({
         id: 'tool.tv',
         combo: 'Ctrl+T',
         description: 'VTT: the scene on the TV',
-        run: () => shell().openMajor('map', { avoid: 'encounters' }),
+        // The same key brings each console's own VTT tab forward.
+        run: () =>
+          shell().role === 'player'
+            ? shell().space === 'console' && shell().openMajor('table')
+            : shell().openMajor('map', { avoid: 'encounters' }),
       }),
       registerHotkey({
         id: 'tool.keys',
@@ -433,7 +462,21 @@ export function AppShell() {
           </span>
         </div>
       )}
-      {space === 'console' && campaignOpen ? (
+      {joined ? (
+        // The provider stays mounted while the player looks at the Library, so the table stays
+        // connected until the campaign is closed.
+        <PlayerTableProvider key={joined.campaignId} campaign={joined}>
+          {space === 'console' ? (
+            <main className="console">
+              <Stage />
+              <Dock />
+            </main>
+          ) : (
+            <LibraryView />
+          )}
+          <PlayerStrip />
+        </PlayerTableProvider>
+      ) : space === 'console' && campaignOpen ? (
         <main className="console">
           <Stage />
           <Dock />
@@ -441,7 +484,7 @@ export function AppShell() {
       ) : (
         <LibraryView />
       )}
-      {campaignOpen && <LiveStrip />}
+      {campaignOpen && !joined && <LiveStrip />}
       <Flyout />
       <Pop />
       <CloseCampaignPrompt />

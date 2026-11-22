@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { errorMessage } from '@trifold/schema';
 import type { FoundTableSummary, JoinedSummary, TablePeekResult } from '@trifold/api';
+import { useCampaignStore } from './campaignStore';
+import { useCombatStore } from './combatStore';
+import { usePresenterStore } from './presenterStore';
+import { useShellStore } from './shellStore';
 
 /**
  * Joined campaigns (docs/PLAYER-MODE.md): the campaigns this Library plays in, and the tables
@@ -10,6 +14,8 @@ import type { FoundTableSummary, JoinedSummary, TablePeekResult } from '@trifold
  */
 interface JoinedState {
   joined: JoinedSummary[];
+  /** The joined campaign whose player console is loaded; null when none is. */
+  current: JoinedSummary | null;
   tables: FoundTableSummary[];
   searching: boolean;
   error: string | null;
@@ -22,6 +28,13 @@ interface JoinedState {
   /** Joins the campaign at a table. Resolves to whether it worked. */
   join(table: FoundTableSummary, displayName: string): Promise<boolean>;
   leave(campaignId: string): Promise<void>;
+  /**
+   * Opens a joined campaign's player console, or goes back to it when it is the open one. A
+   * campaign this Library is running is closed first, unless something of it is live.
+   */
+  openCampaign(campaignId: string): Promise<void>;
+  /** Closes the player console; the connection to the table goes with it. */
+  closeCampaign(): void;
   clearError(): void;
 }
 
@@ -29,6 +42,7 @@ let stopListening: (() => void) | null = null;
 
 export const useJoinedStore = create<JoinedState>((set, get) => ({
   joined: [],
+  current: null,
   tables: [],
   searching: false,
   error: null,
@@ -92,7 +106,36 @@ export const useJoinedStore = create<JoinedState>((set, get) => ({
     }
   },
 
+  async openCampaign(campaignId) {
+    const shell = useShellStore.getState();
+    if (get().current?.campaignId === campaignId) {
+      shell.enterPlayerConsole(campaignId);
+      return;
+    }
+    const joined = get().joined.find((j) => j.campaignId === campaignId);
+    if (!joined) return;
+    const running = useCampaignStore.getState();
+    if (running.current) {
+      const presenter = usePresenterStore.getState().state;
+      const live = (!!presenter.scene && !presenter.blackout) || !!useCombatStore.getState().state;
+      if (live) {
+        set({ error: `Close ${running.current.campaign.name} first: it has something live.` });
+        return;
+      }
+      await running.close();
+    }
+    set({ current: joined, error: null });
+    shell.enterPlayerConsole(campaignId);
+  },
+
+  closeCampaign() {
+    if (!get().current) return;
+    set({ current: null });
+    useShellStore.getState().leaveCampaign();
+  },
+
   async leave(campaignId) {
+    if (get().current?.campaignId === campaignId) get().closeCampaign();
     try {
       await window.trifold.joined.leave(campaignId);
       await get().load();

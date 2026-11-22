@@ -446,6 +446,7 @@ section. The DM can edit any field of any creature at any time, and DM edits alw
 Trifold is the only writer, so data cannot be corrupted. These rules keep tokens from jumping and
 edits from being lost:
 
+- **One implementation of a move.** The plan, the lock's keep-alive and what ends a move are in `web/useMovePlan.ts`, which the phone page and the player console (`docs/PLAYER-MODE.md`) both use.
 - **Serial application.** Every intent, from the console and every device, is applied in the
   console's one thread, in order.
 - **Changes, not totals, for counters.** HP and temp HP damage and healing travel as changes

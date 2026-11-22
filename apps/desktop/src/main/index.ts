@@ -10,7 +10,7 @@ import { LibrarySession } from './library/session';
 import { createLogger, errorMessage } from './log';
 import { IconResources } from './icons';
 import { runDailyBackup, runQuitBackup } from './libraryOpen';
-import { installMediaHandler, registerMediaScheme } from './media';
+import { installMediaHandler, registerMediaScheme, type TablePictures } from './media';
 import { installApplicationMenu } from './menu';
 import phoneAudioHelper from './phoneAudio/helper.ps1?raw';
 import { PhoneAudioReceiver } from './phoneAudio/receiver';
@@ -67,7 +67,8 @@ async function main(): Promise<void> {
   });
   const activeSession = session;
   const icons = new IconResources(join(bundledDir, 'icons'), logger, () => session?.logDir ?? null);
-  installMediaHandler(activeSession, icons);
+  const tablePictures: TablePictures = { from: null };
+  installMediaHandler(activeSession, icons, tablePictures);
 
   // Closing the console (ADR 0015): flush the renderer's pending saves, hide, write the on-close
   // backup, then let the close through. Every later close attempt is let through at once.
@@ -202,7 +203,12 @@ async function main(): Promise<void> {
     logger,
     enabled: featureFlags(process.env).playerMode,
     onTables: (tables) => windows.sendToConsole(EVENT_CHANNELS.joinedTables, tables),
+    onLink: (event) => windows.sendToConsole(EVENT_CHANNELS.joinedLink, event),
+    onMessage: (event) => windows.sendToConsole(EVENT_CHANNELS.joinedMessage, event),
+    // Pictures from a GM's table are derived data: beside the app's settings, not in the Library.
+    cacheDir: join(app.getPath('userData'), 'table-cache'),
   });
+  tablePictures.from = (campaignId, path) => joined.picture(campaignId, path);
 
   registerIpc(
     createApi({

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ClientMessage, ClientView, ServerMessage } from '@trifold/api';
+import type { ClientMessage, ClientView, PlayerLink, ServerMessage } from '@trifold/api';
 import { syncClock } from './clock';
 
 /**
@@ -9,7 +9,11 @@ import { syncClock } from './clock';
  * below; the player console (docs/PLAYER-MODE.md) brings its own, through main.
  */
 
-export type Link = 'connecting' | 'open' | 'reconnecting' | 'stopped';
+/**
+ * The link's state. The last two are the player console's alone (docs/PLAYER-MODE.md): a table
+ * that is up with another campaign, and an address that is not one to connect to.
+ */
+export type Link = PlayerLink;
 
 export interface TableClientHandlers {
   onLink(link: Link): void;

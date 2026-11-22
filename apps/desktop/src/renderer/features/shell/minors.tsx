@@ -35,9 +35,10 @@ export function MinorBody({ kind }: { kind: ToolKind }) {
       return <CountersTool />;
     case 'timers':
       return <TimersTool />;
-    // The player console's own tools arrive with it (docs/PLAYER-MODE.md, phase 2).
+    // The player console's own tools are still to come (docs/PLAYER-MODE.md, phase 2); only seen
+    // with player mode switched on.
     case 'myCharacters':
     case 'initiative':
-      return null;
+      return <p className="muted panel-pending">Not built yet.</p>;
   }
 }

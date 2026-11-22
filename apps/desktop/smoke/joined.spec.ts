@@ -8,7 +8,8 @@ import { _electron as electron, expect, test, type Page } from '@playwright/test
  * Trifold with the sample campaign and Let players join on, and a player's Trifold, with its own
  * user data and Library and player mode switched on, that joins that table. The player joins by
  * the address the GM's Trifold shows, which works on any network; when the network also carries
- * the search (mDNS), the table is found by itself and the test says so.
+ * the search (mDNS), the table is found by itself and the test says so. The player then opens the
+ * campaign, picks a character and sees the GM's live map in the player console.
  */
 
 const { ELECTRON_RUN_AS_NODE: _dropped, ...env } = process.env;
@@ -64,6 +65,21 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(ipText.or(noLan)).toBeVisible({ timeout: 15_000 });
     test.skip(await noLan.isVisible(), 'this machine has no private LAN address');
     const url = (await ipText.textContent())!.trim();
+    await gmPage.keyboard.press('Escape');
+
+    // The GM goes live with a map, so there is a table to see (ADR 0046).
+    await gmPage.getByTestId('live-strip').getByRole('button', { name: 'Go live (tray)' }).click();
+    const sceneRow = gmPage.getByTestId('scene-row').filter({ hasText: 'The Wayside Lamp' });
+    const scenesButton = gmPage
+      .getByTestId('dock')
+      .getByRole('button', { name: 'Scenes tool', exact: true });
+    await expect(async () => {
+      if (!(await sceneRow.isVisible())) await scenesButton.click();
+      await expect(sceneRow).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
+    await sceneRow.click();
+    await sceneRow.press('Enter');
+    await expect(gmPage.getByTestId('live-status')).toHaveText('Live: The Wayside Lamp');
 
     // The player's Trifold: its own computer's worth of user data and Library.
     player = await launch(playerData, playerLibrary, { TRIFOLD_PLAYER_MODE: '1' });
@@ -125,8 +141,53 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     }
     expect(joined.deviceToken).toBeUndefined();
 
-    // Looking and joining claim nothing: the GM's table has seen no device.
-    await expect(pop.getByText(/Sam/)).toHaveCount(0);
+    // Opening it enters the player console: the GM's shell, the player's tabs, and the picker.
+    await card.getByRole('button', { name: 'Open The Lantern at Greyford' }).click();
+    await expect(page.getByTestId('joined-crumb')).toHaveText('The Lantern at Greyford');
+    await expect(page.getByRole('tab', { name: 'VTT', exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Sheets', exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Compendium', exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Encounters', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Campaign', exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('live-strip')).toHaveCount(0);
+    await expect(page.getByTestId('player-link')).toHaveText('At the table', { timeout: 20_000 });
+    const table = page.getByTestId('player-table');
+    await expect(table.getByRole('heading', { name: 'Pick your character' })).toBeVisible();
+
+    // Picking a character puts the player on the map the TV shows, with its picture from main.
+    await table.getByRole('button', { name: /Brannoc Hale/ }).click();
+    const mapImage = table.locator('.pc-map image, .pc-map img').first();
+    await expect(table.locator('.pc-map')).toBeVisible({ timeout: 15_000 });
+    await expect(mapImage).toBeAttached({ timeout: 15_000 });
+    const src = (await mapImage.getAttribute('href')) ?? (await mapImage.getAttribute('src')) ?? '';
+    expect(src).toMatch(/^trifold-media:\/\/table\//);
+    // The picture really loads: main fetched it from the GM's table.
+    expect(
+      await page.evaluate(async (u) => (await fetch(u)).headers.get('content-type'), src),
+    ).toBe('image/jpeg');
+
+    // The claim is kept in the Library, and the GM sees the player as a device.
+    await expect(async () => {
+      const now = JSON.parse(
+        await readFile(join(playerLibrary, 'joined', campaign.id, 'joined.json'), 'utf8'),
+      ) as { deviceToken?: string; lastLiveAt: string | null };
+      expect(now.deviceToken).toBeTruthy();
+      expect(now.lastLiveAt).not.toBeNull();
+    }).toPass({ timeout: 10_000 });
+    await gmPage.getByRole('button', { name: 'Player devices', exact: true }).click();
+    await expect(pop.getByText(/Sam/).first()).toBeVisible();
+    await gmPage.keyboard.press('Escape');
+
+    // Closing the campaign and opening it again lands straight on the character: no picking.
+    await page.getByRole('button', { name: 'Close campaign' }).click();
+    await expect(page.getByTestId('player-strip')).toHaveCount(0);
+    await card.getByRole('button', { name: 'Open The Lantern at Greyford' }).click();
+    await expect(table.locator('.pc-map')).toBeVisible({ timeout: 20_000 });
+    await expect(table.getByRole('heading', { name: 'Pick your character' })).toHaveCount(0);
+
+    // The Library is a click away, and the table stays connected behind it.
+    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await expect(page.getByTestId('player-link')).toHaveText('At the table');
 
     // Leaving takes the folder with it.
     await card.getByRole('button', { name: 'Leave The Lantern at Greyford…' }).click();

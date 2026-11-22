@@ -80,9 +80,46 @@ export function resolveMediaPath(rawUrl: string, session: LibrarySession): strin
   }
 }
 
-export function installMediaHandler(session: LibrarySession, icons: IconResources): void {
-  protocol.handle(MEDIA_SCHEME, (request) => {
+/**
+ * Pictures from a joined campaign's table (docs/PLAYER-MODE.md, "Pictures"), asked for as
+ * `trifold-media://table/<campaignId>/<the table's own path and query>`. The joined-campaign
+ * service fills this in once it exists; until then, and with player mode off, there are none.
+ */
+export interface TablePictures {
+  from:
+    | ((campaignId: string, path: string) => Promise<{ body: Uint8Array; type: string } | null>)
+    | null;
+}
+
+export function installMediaHandler(
+  session: LibrarySession,
+  icons: IconResources,
+  tablePictures: TablePictures = { from: null },
+): void {
+  protocol.handle(MEDIA_SCHEME, async (request) => {
     const url = new URL(request.url);
+    if (url.host === 'table') {
+      const m = /^\/([^/]+)(\/.*)$/.exec(url.pathname);
+      const picture =
+        m && tablePictures.from
+          ? await tablePictures
+              .from(decodeURIComponent(m[1]!), m[2]! + url.search)
+              .catch(() => null)
+          : null;
+      if (!picture) return new Response('not found', { status: 404 });
+      return new Response(Buffer.from(picture.body), {
+        status: 200,
+        headers: {
+          'Content-Type': picture.type,
+          'Access-Control-Allow-Origin': '*',
+          'X-Content-Type-Options': 'nosniff',
+          // A changed picture has a new path, so one that loaded never changes.
+          'Cache-Control': 'max-age=86400, immutable',
+          // An SVG glyph from another computer is shown as a picture and never runs anything.
+          'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
+        },
+      });
+    }
     if (url.host === 'library' && !session.store) {
       return new Response('no library', { status: 503 });
     }

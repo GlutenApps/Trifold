@@ -136,6 +136,9 @@ export function installBridgeMock(): TrifoldBridge {
         claimed: false,
       })),
       leave: vi.fn(async () => undefined),
+      open: vi.fn(async () => null),
+      close: vi.fn(async () => undefined),
+      send: vi.fn(async () => undefined),
     },
     table: {
       status: vi.fn(async () => TABLE_OFF),

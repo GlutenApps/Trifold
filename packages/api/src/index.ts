@@ -27,6 +27,8 @@ import type {
   Track,
 } from '@trifold/schema';
 import type {
+  ClientMessage,
+  ServerMessage,
   CreatureKind,
   ReclaimMode,
   TableIntent,
@@ -978,6 +980,15 @@ export interface TrifoldApi {
     }): Promise<JoinedSummary>;
     /** Leave campaign: removes the local shell, the player's notes in it included. */
     leave(campaignId: string): Promise<void>;
+    /**
+     * Opens a joined campaign: main looks for its table and stays connected until `close`. The
+     * link and the table's messages arrive as `joinedLink` and `joinedMessage` events. Null when
+     * the campaign is not joined.
+     */
+    open(campaignId: string): Promise<JoinedSummary | null>;
+    close(campaignId: string): Promise<void>;
+    /** A request to the open campaign's table, the same messages a phone sends. */
+    send(campaignId: string, message: ClientMessage): Promise<void>;
   };
   presenter: {
     /**
@@ -1368,7 +1379,7 @@ export const API_METHODS = {
     'setMovementLock',
     'setSummoning',
   ],
-  joined: ['list', 'startSearch', 'stopSearch', 'peek', 'join', 'leave'],
+  joined: ['list', 'startSearch', 'stopSearch', 'peek', 'join', 'leave', 'open', 'close', 'send'],
   sources: [
     'list',
     'chooseFile',
@@ -1497,6 +1508,13 @@ export interface FoundTableSummary {
   joined: boolean;
 }
 
+/**
+ * A player console's link to its GM's table. The first four are the phone page's; then a table
+ * that is up with another campaign, and an address that is not one to connect to.
+ */
+export type PlayerLink =
+  'connecting' | 'open' | 'reconnecting' | 'stopped' | 'otherCampaign' | 'refused';
+
 /** What a typed address turned out to be: a table, not a local address, or nothing answering. */
 export type TablePeekResult =
   { ok: true; table: FoundTableSummary } | { ok: false; reason: 'address' | 'noAnswer' };
@@ -1525,6 +1543,10 @@ export interface TrifoldEvents {
   tableSummon: TableSummonEvent;
   /** The tables found on the local network, while Join a campaign is searching. */
   joinedTables: FoundTableSummary[];
+  /** The open joined campaign's link to its table changed. */
+  joinedLink: { campaignId: string; link: PlayerLink };
+  /** The open joined campaign's table sent something (never the device token). */
+  joinedMessage: { campaignId: string; message: ServerMessage };
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -1542,6 +1564,8 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   tableToken: 'trifold:event:table-token',
   tableSummon: 'trifold:event:table-summon',
   joinedTables: 'trifold:event:joined-tables',
+  joinedLink: 'trifold:event:joined-link',
+  joinedMessage: 'trifold:event:joined-message',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */
