@@ -10,7 +10,7 @@ The DM decided the shape (Ian, 2026-11-22 and 2026-11-23): shared content lives 
 
 ## Decision
 
-**What is shared.** `CampaignSettings.shared` holds the GM's choices, empty until the GM turns something on in **Campaign › Shared with players**:
+**What is shared.** `CampaignSettings.shared` holds the GM's choices, empty until the GM turns something on in **Campaign › Shared sources** (named Shared with players at first; renamed by the DM, 2026-11-23). **Library › Compendium › Sources** shows the same choice for every campaign at once, under each imported source's Edit source:
 
 - `sourceIds`: imported sources the campaign uses. A shared source gives its spells, items, feats, species, backgrounds, classes, conditions and rules. Its creatures never pass.
 - `homebrewIds`: homebrew records, each shared from its page in the Compendium. A homebrew creature is not shared this way.

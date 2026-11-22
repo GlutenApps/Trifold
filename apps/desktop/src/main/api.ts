@@ -4,6 +4,7 @@ import { app, dialog, shell } from 'electron';
 import { reviewBooks, sourceOrder, type BookReview } from '@trifold/rules';
 import { TEXT_SIZE_ZOOM, type Source } from '@trifold/schema';
 import { reopenLibrary } from './libraryOpen';
+import type { SharingOverview } from '@trifold/api';
 import type { JoinedService } from './joined/service';
 import { EVENT_CHANNELS, featureFlags, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
@@ -81,6 +82,31 @@ export function createApi(ctx: ApiContext): TrifoldApi {
    * campaign's own creatures (ADR 0035), or the open joined campaign's shared content (ADR 0060).
    */
   const scopeSourceId = () => ctx.session.openCampaignSourceId() ?? ctx.joined.openSharedSourceId();
+  /** Shared sources and homebrew across every campaign (ADR 0060). */
+  const sharingOverview = async (): Promise<SharingOverview> => {
+    const bySource: Record<string, string[]> = {};
+    const homebrewByCampaign: Record<string, number> = {};
+    for (const { campaign } of (await ctx.session.campaigns?.allCampaigns()) ?? []) {
+      for (const id of campaign.settings.shared.sourceIds) {
+        (bySource[id] ??= []).push(campaign.id);
+      }
+      const homebrew = campaign.settings.shared.homebrewIds.length;
+      if (homebrew > 0) homebrewByCampaign[campaign.id] = homebrew;
+    }
+    return { bySource, homebrewByCampaign };
+  };
+
+  /** Whether a source's original file is kept, so Re-parse has something to read. */
+  const canReparse = async (source: Source): Promise<boolean> => {
+    const sources = ctx.session.sources;
+    if (source.kind !== 'xml' || !sources) return false;
+    try {
+      await stat(join(sources.dirFor(source.id), source.filePath ?? 'original.xml'));
+      return true;
+    } catch {
+      return false;
+    }
+  };
   let importing = false;
   // An imported file's books and clashes (ADR 0028), read once per import of it.
   const reviews = new Map<string, BookReview>();
@@ -367,7 +393,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           const bundled = s.kind === 'srd' || s.kind === 'homebrew' || s.kind === 'shared';
           out.push({
             ...s,
-            stale: !bundled && isStale(s),
+            // Only a file whose original is kept can be parsed again; one that came in with a
+            // campaign has none, so it is not offered, however old its parser.
+            stale: !bundled && isStale(s) && (await canReparse(s)),
             bundled,
             ...(bundled ? {} : { review: await reviewSource(s) }),
           });
@@ -477,6 +505,39 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         await sources.write(next);
         index.setSourceCampaigns(sourceId, next.campaignIds);
         return next;
+      },
+      async sharing() {
+        return sharingOverview();
+      },
+      async setShared(sourceId, campaignIds) {
+        const { sources, bundled } = ctx.session.require();
+        const source = bundled.has(sourceId) ? null : await sources.get(sourceId);
+        if (!source || !canLimitToCampaigns(source, false)) {
+          throw new Error('Only an imported source can be shared with players');
+        }
+        const repo = ctx.session.campaigns;
+        if (!repo) throw new Error('No Library is open');
+        const wanted = new Set(campaignIds);
+        for (const { slug, campaign } of await repo.allCampaigns()) {
+          const has = campaign.settings.shared.sourceIds.includes(sourceId);
+          // Only a campaign that shows the source may share it (ADR 0036, ADR 0060).
+          const sees = !source.campaignIds || source.campaignIds.includes(campaign.id);
+          const want = wanted.has(campaign.id) && sees;
+          if (has === want) continue;
+          await repo.updateCampaignOf(slug, (c) => ({
+            settings: {
+              ...c.settings,
+              shared: {
+                ...c.settings.shared,
+                sourceIds: want
+                  ? [...c.settings.shared.sourceIds, sourceId]
+                  : c.settings.shared.sourceIds.filter((id) => id !== sourceId),
+              },
+            },
+          }));
+        }
+        ctx.table.sharedChanged();
+        return sharingOverview();
       },
       async remove(sourceId) {
         const { sources, bundled, index } = ctx.session.require();

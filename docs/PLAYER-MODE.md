@@ -302,11 +302,11 @@ Daily backups pick up `joined/` with no change, since backups zip everything but
 
 A GM can give a campaign's players the content they need to build and play characters, and nothing that would spoil the game.
 
-Built (ADR 0060): the GM's choices in **Campaign › Shared with players** and on a homebrew record's page; the content read by `main/table/sharedContent.ts`; `shared {hash}` and `GET /shared` on the table server; the player's copy in `joined/<campaignId>/shared/` as a source of kind `shared`, shown only while that campaign is open, with "Shared by your GM" and no Edit. Sync sends the whole set when the hash differs, in place of the per-record difference described below. Still to come: player packs, a player's own copy standing in for a shared one, and the per-record warning.
+Built (ADR 0060): the GM's choices in **Campaign › Shared sources** and on a homebrew record's page; the content read by `main/table/sharedContent.ts`; `shared {hash}` and `GET /shared` on the table server; the player's copy in `joined/<campaignId>/shared/` as a source of kind `shared`, shown only while that campaign is open, with "Shared by your GM" and no Edit. Sync sends the whole set when the hash differs, in place of the per-record difference described below. Still to come: player packs, a player's own copy standing in for a shared one, and the per-record warning.
 
 ### What the GM shares
 
-In the campaign, a **Shared with players** list, off for everything until the GM turns it on:
+In the campaign, a **Shared sources** list, off for everything until the GM turns it on:
 
 - **Imported sources, by source.** Each source the campaign uses (ADR 0036) has a Share with players switch. Only player-facing kinds pass: spells, items, feats, species, backgrounds, classes, conditions and rules. Creatures never pass by source.
 - **Homebrew, by record.** A homebrew item can be as much a spoiler as a monster, so each homebrew record is shared on its own. Sharing one during a session is how a GM hands a player an item.
@@ -485,7 +485,7 @@ One feature per PR (`CLAUDE.md`), and each phase updates its own docs and ADR as
 1. **Seams, no behaviour change.** The `TableClient` split in `web/connection.ts`; the picker taking the device's name and the initiative box exported; player kinds and the player layout in the schema with no UI; the feature flag (`TRIFOLD_PLAYER_MODE=1`, read through `app.getInfo`). All existing tests and the smoke test stay green and unchanged. Built.
 2. **Player mode on the LAN.** First, as PRs with no behaviour change: the shell's two roles (built), and the components both clients use moved to a shared folder. Then the service advertisement and table discovery; Join a campaign, the joined-campaign store and the Playing list; `LanClient` and `BridgeClient`; the `table` media host and image cache; the player console with Table, My characters, Initiative, Quick notes, Dice and Compendium; then the offline view, finding the table again, the failure messages and the sharing-backups warning. Its ADR and the ground rule 1 change. The flag comes off when this phase's acceptance passes.
 3. **Table rolls.** The Table and Private switch, `roll` and `rolled`, table rolls in both roll logs. Its ADR.
-4. **Shared content and player packs.** The Shared with players list, the shared source in a joined campaign, sync on connect, Export for players and opening a pack. Its ADR, with the `DESIGN.md` §8 change.
+4. **Shared content and player packs.** The Shared sources list, the shared source in a joined campaign, sync on connect, Export for players and opening a pack. Its ADR, with the `DESIGN.md` §8 change.
 5. **Character foundation.** The sheet schema (marked by edition, linked records by key and name) and derived-number functions in `packages/rules/src/character/`, the Library's Characters page, the Sheets tab for the PC, the Table numbers form, the `sheetUrl` migration, and the `sheetOffer` flow with Accept, Dismiss and auto-accept. Its ADR.
 6. **PDF sheet import** (parallel with 7). Real exports first, then field mapping, the preview, manual matching and re-import.
 7. **Character builder, 2024** (parallel with 6). Its own short spec first, then the SRD 5.2.1 rules data, legacy options, the creation flow and the Level up flow.

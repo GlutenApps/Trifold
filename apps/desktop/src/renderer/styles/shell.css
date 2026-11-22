@@ -2612,6 +2612,27 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   color: var(--text-muted);
 }
 
+/* Edit source on Library › Compendium › Sources: its books, where it shows, and sharing. */
+.edit-source {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.edit-source-section h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.edit-source-section > p {
+  margin: 0 0 6px;
+}
+
 /* Table or Private, at the top of a player's Dice pop-up (ADR 0059). */
 .table-roll-switch {
   margin-bottom: 8px;

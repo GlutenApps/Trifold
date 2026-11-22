@@ -237,7 +237,8 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(mine).toContainText('table');
     // The total tumbles before it settles: read it once it has.
     const settled = '[data-testid="roll-reveal"][data-settled="true"]';
-    await expect(mine.locator(settled)).toBeVisible({ timeout: 10_000 });
+    // Settled and showing a number: a slow machine can show the placeholder for a moment first.
+    await expect(mine.locator(settled)).toHaveText(/^\d+$/, { timeout: 10_000 });
     const total = (await mine.locator(settled).textContent())!.trim();
     await gmPage
       .getByTestId('live-strip')
@@ -312,7 +313,7 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
       }),
     ).toBeAttached();
     await gmPage.getByRole('tab', { name: 'Campaign', exact: true }).first().click();
-    await gmPage.getByRole('tab', { name: /^Shared with players \(1\)/ }).click();
+    await gmPage.getByRole('tab', { name: /^Shared sources \(1\)/ }).click();
     await expect(gmPage.getByTestId('shared-now')).toContainText(
       'Players at your table have 1 record from you now.',
     );
