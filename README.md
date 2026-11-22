@@ -57,6 +57,7 @@ A few things worth knowing:
 - `pnpm i` also downloads Electron and the prebuilt SQLite module that matches it. If the app can't start or can't open its index, run `pnpm rebuild:native`.
 - Some editor terminals set `ELECTRON_RUN_AS_NODE=1`, which stops Electron from opening windows. `pnpm dev` and the smoke test clear it for you; clear it yourself before starting a packaged build from one of those terminals.
 - To start the app in development mode without a terminal, double-click `Trifold.cmd` (Windows) or `Trifold.command` (macOS) in the repo root.
+- To try player mode on one computer, start that first, then double-click `Trifold player.cmd` or `Trifold player.command`: a second copy of the app opens as a player, with its own Library in the git-ignored `.dev-player/` folder.
 - Keep your own compendium files out of the repo: name them `*.local.xml` or put them in `fixtures/local/`, both of which are ignored by git.
 
 ## Content and licensing

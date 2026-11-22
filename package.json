@@ -10,6 +10,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @trifold/desktop dev",
+    "dev:player": "pnpm --filter @trifold/desktop dev:player",
     "build": "pnpm --filter @trifold/desktop build",
     "test": "vitest run",
     "test:watch": "vitest",
