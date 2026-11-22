@@ -20,6 +20,7 @@ import { switchCampaign } from '../features/shell/campaignFlow';
 import type { IconName } from '../features/shell/icons';
 import { navigate, navKey, type NavTarget } from '../navigate';
 import { useCampaignStore } from './campaignStore';
+import { useJoinedStore } from './joinedStore';
 import { useShellStore } from './shellStore';
 
 /**
@@ -38,7 +39,34 @@ import { useShellStore } from './shellStore';
  * per search (`campaigns.bundles`) and dropped when the field is cleared or the space changes.
  * Picking a row opens that campaign, then lands on the item (`openResult`). The compendium and
  * web tabs belong to the console and are not searched there.
+ *
+ * A player console (docs/PLAYER-MODE.md) searches the same way over what the player has: their
+ * own notes in the joined campaign, by title and by text, the web tabs and the compendium. A
+ * note opens in Quick notes, which is where a player's notes live.
  */
+
+/** What the in-memory half searches: a campaign's items, or a player's notes with nothing else. */
+export type SearchSource = Pick<CampaignBundle, 'notes' | 'npcs' | 'pcs' | 'encounters' | 'scenes'>;
+
+/** A joined campaign's searchable items: the player's notes. Kept per list, so text is cached. */
+const playerSources = new WeakMap<readonly Note[], SearchSource>();
+function playerSource(notes: Note[]): SearchSource {
+  let source = playerSources.get(notes);
+  if (!source) {
+    source = { notes, npcs: [], pcs: [], encounters: [], scenes: [] };
+    playerSources.set(notes, source);
+  }
+  return source;
+}
+
+/** What the console searches in memory: the open campaign, or the open joined campaign's notes. */
+function consoleSource(): SearchSource | null {
+  const running = useCampaignStore.getState().current;
+  if (running) return running;
+  const joined = useJoinedStore.getState();
+  return joined.current ? playerSource(joined.notes) : null;
+}
+
 export type SearchGroup =
   | 'notes'
   | 'npcs'
@@ -149,7 +177,7 @@ const joinDetail = (parts: readonly (string | false | undefined | null)[]) =>
 /** Every name match in the open campaign and the shell, unordered across groups. */
 export function searchLocal(
   query: string,
-  bundle: CampaignBundle | null,
+  bundle: SearchSource | null,
   webTabs: readonly WebTab[],
 ): SearchResult[] {
   const out: SearchResult[] = [];
@@ -311,7 +339,7 @@ const mentionDetail = (count: number, where: string) =>
  * first snippet, opening at that occurrence where the panel can show it (a note's body, an
  * encounter's DM notes). Folders have no text.
  */
-export function searchMentions(query: string, bundle: CampaignBundle | null): SearchResult[] {
+export function searchMentions(query: string, bundle: SearchSource | null): SearchResult[] {
   const phrase = query.trim();
   if (!bundle || phrase.length < MENTION_MIN) return [];
   const out: SearchResult[] = [];
@@ -437,7 +465,7 @@ export const flattenGroups = (groups: readonly SearchGroupView[]): SearchResult[
   groups.flatMap((g) => g.results);
 
 /** Everything answered in memory: name matches, then text mentions. */
-function localResults(query: string, bundle: CampaignBundle | null): SearchResult[] {
+function localResults(query: string, bundle: SearchSource | null): SearchResult[] {
   return searchLocal(query, bundle, useShellStore.getState().webTabs).concat(
     searchMentions(query, bundle),
   );
@@ -555,7 +583,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
       return;
     }
     const bundle = useCampaignStore.getState().current;
-    const local = trimmed ? localResults(trimmed, bundle) : [];
+    const local = trimmed ? localResults(trimmed, consoleSource()) : [];
     if (timer) window.clearTimeout(timer);
     const mine = ++seq;
     if (!trimmed) {
@@ -681,5 +709,19 @@ useCampaignStore.subscribe((s, prev) => {
     useSearchStore.setState({
       local: localResults(trimmed, s.current),
     });
+  }
+});
+
+// The same for a player console: a saved note shows at once; another joined campaign starts clean.
+useJoinedStore.subscribe((s, prev) => {
+  if (inLibrary() || (s.current === prev.current && s.notes === prev.notes)) return;
+  const { query } = useSearchStore.getState();
+  if (s.current?.campaignId !== prev.current?.campaignId) {
+    if (query) useSearchStore.getState().clear();
+    return;
+  }
+  const trimmed = query.trim();
+  if (trimmed && s.current) {
+    useSearchStore.setState({ local: localResults(trimmed, playerSource(s.notes)) });
   }
 });

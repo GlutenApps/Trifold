@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { create } from 'zustand';
-import { webTabKey, type MinorKind, type TabKey } from '@trifold/schema';
+import { webTabKey } from '@trifold/schema';
 import { useCombatStore } from './stores/combatStore';
-import { landingGroup } from './stores/shellLayout';
+import { landingGroup, type StageKey, type ToolKind } from './stores/shellLayout';
 import { useShellStore } from './stores/shellStore';
 
 /**
@@ -44,8 +44,15 @@ export const useNavStore = create<NavState>(() => ({ pending: null }));
 
 let seq = 0;
 
-/** The stage tab or dock tool that shows a target. */
-export function homeOf(target: NavTarget): { tab: TabKey } | { tool: MinorKind } {
+/**
+ * The stage tab or dock tool that shows a target. A player console has no Campaign tab: its
+ * notes are the player's own and live in Quick notes.
+ */
+export function homeOf(
+  target: NavTarget,
+  role: 'gm' | 'player' = 'gm',
+): { tab: StageKey } | { tool: ToolKind } {
+  if (role === 'player' && target.type === 'note') return { tool: 'quickNotes' };
   switch (target.type) {
     case 'note':
     case 'folder':
@@ -73,11 +80,12 @@ export function navigate(target: NavTarget): void {
   if (shell.space !== 'console') return;
   shell.closePop();
   shell.closeFlyout();
-  const home = homeOf(target);
+  const home = homeOf(target, shell.role);
   if ('tool' in home) {
     shell.openTool(home.tool);
   } else {
-    const avoid: TabKey[] = ['map'];
+    // Away from the VTT, which is `map` in the GM's console and `table` in a player's.
+    const avoid: StageKey[] = ['map', 'table'];
     if (useCombatStore.getState().encounterId && home.tab !== 'encounters') {
       avoid.push('encounters');
     }

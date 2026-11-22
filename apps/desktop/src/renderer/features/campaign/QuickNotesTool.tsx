@@ -9,13 +9,13 @@ import {
   quickNoteTitle,
 } from '@trifold/rules';
 import { registerHotkey } from '../../hotkeys';
-import { navigate } from '../../navigate';
+import { landOn, navigate, navKey, useNavTarget } from '../../navigate';
 import { hk } from '../../platform';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useQuickNotesStore } from '../../stores/quickNotesStore';
 import { Icon } from '../shell/icons';
 import { NotePane } from './CampaignNotes';
-import { NoteEditor } from './NoteEditor';
+import { NoteEditor, type Highlight } from './NoteEditor';
 import { useNotesSource, type NotesSource } from './notesSource';
 
 /**
@@ -42,6 +42,8 @@ export function QuickNotesTool() {
   const { ownerId: campaignId, notes, quick } = source;
   const [openId, setOpenId] = useState<string | null>(null);
   const [find, setFind] = useState('');
+  /** The phrase a search result opened the note at. */
+  const [highlight, setHighlight] = useState<Highlight | null>(null);
   const pendingFocus = useQuickNotesStore((s) => s.pendingFocus);
 
   const shown = useMemo(() => {
@@ -56,6 +58,20 @@ export function QuickNotesTool() {
     if (pendingFocus) setOpenId(null);
   }, [pendingFocus]);
 
+  // Deep links (ADR 0017): in a player console a note's home is this tool, so a search result
+  // opens here, at its phrase when it carries one. The GM's notes land in the Notes panel.
+  useNavTarget('note', (target) => {
+    if (source.tree) return false;
+    if (quick.some((n) => n.id === target.id)) {
+      setOpenId(target.id);
+      setHighlight(
+        target.anchor ? { phrase: target.anchor.phrase, active: target.anchor.occurrence } : null,
+      );
+      landOn(navKey('note', target.id));
+    }
+    return true;
+  });
+
   if (!campaignId) return <p className="muted">Open a campaign first.</p>;
 
   if (open) {
@@ -64,9 +80,12 @@ export function QuickNotesTool() {
         <NotePane
           key={open.id}
           note={open}
-          highlight={null}
+          highlight={highlight}
           backLabel="Back to quick notes"
-          onBack={() => setOpenId(null)}
+          onBack={() => {
+            setOpenId(null);
+            setHighlight(null);
+          }}
           actions={source.tree ? <NoteActions note={open} notes={notes} /> : undefined}
         />
       </div>
@@ -99,7 +118,10 @@ export function QuickNotesTool() {
             role="listitem"
             className="quick-row"
             data-testid="quick-note-row"
-            onClick={() => setOpenId(n.id)}
+            onClick={() => {
+              setHighlight(null);
+              setOpenId(n.id);
+            }}
           >
             <Icon name="card" size={14} />
             <span className="quick-title">{n.title}</span>

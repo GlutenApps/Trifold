@@ -207,6 +207,15 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     const own = join(playerLibrary, 'joined', campaign.id);
     expect(await readdir(join(own, 'notes'))).toHaveLength(1);
 
+    // Search covers the player's own notes, and a found note opens in Quick notes.
+    await page.keyboard.press(`${mod}+f`);
+    await page.keyboard.type('ferryman');
+    await expect(page.getByTestId('pop').getByText('The ferryman lied')).toBeVisible();
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('note-pane').getByLabel('Title')).toHaveValue(
+      'The ferryman lied',
+    );
+
     // Dice from the strip: a roll stays on this computer, and a pinned one is kept the same way.
     // The strip's quick pool shows wherever the window has room for it.
     const width = (await page.evaluate('window.innerWidth')) as number;

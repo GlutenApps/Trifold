@@ -180,7 +180,9 @@ export function TopBar() {
       </div>
       {/* The middle column: the search stays centred on the window however wide the sides get. */}
       <div className="topbar-center">
-        {(inConsole || (space === 'library' && campaigns.length > 0)) && <GlobalSearch />}
+        {(inConsole ||
+          (joined && space === 'console') ||
+          (space === 'library' && campaigns.length > 0)) && <GlobalSearch />}
       </div>
       <div className="topbar-end">
         <UpdateTopBarButton />
