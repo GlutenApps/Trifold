@@ -46,13 +46,13 @@ describe('the player console in the shell', () => {
       campaignSlug: null,
     });
     expect(shell().layout).toEqual(defaultPlayerLayout());
-    expect(shell().layout.stage.groups[0]?.tabs).toEqual(['table', 'character', 'compendium']);
+    expect(shell().layout.stage.groups[0]?.tabs).toEqual(['table', 'sheets', 'compendium']);
   });
 
   it('keeps the dock to the player tools, in their order, through every change', () => {
     shell().enterPlayerConsole('01CAMPAIGN');
     shell().toggleSection('quickNotes');
-    shell().closeTab('character');
+    shell().closeTab('sheets');
     shell().moveTab('compendium', 1);
     expect(shell().layout.dock.sections.map((s) => s.tool)).toEqual([...PLAYER_MINOR_KINDS]);
     expect(shell().layout.dock.sections.find((s) => s.tool === 'quickNotes')?.open).toBe(true);
@@ -61,7 +61,7 @@ describe('the player console in the shell', () => {
 
   it('saves the player layout by joined campaign, without a tray, and leaves the GM consoles', () => {
     shell().enterPlayerConsole('01CAMPAIGN');
-    shell().closeTab('character');
+    shell().closeTab('sheets');
     shell().enterLibrary();
     const saved = shell().playerConsoles['01CAMPAIGN'];
     expect(saved?.stage.groups[0]?.tabs).toEqual(['table', 'compendium']);
@@ -77,10 +77,10 @@ describe('the player console in the shell', () => {
     shell().closeTab('compendium');
     shell().enterLibrary();
     shell().enterPlayerConsole('01CAMPAIGN');
-    expect(shell().layout.stage.groups[0]?.tabs).toEqual(['table', 'character']);
+    expect(shell().layout.stage.groups[0]?.tabs).toEqual(['table', 'sheets']);
     shell().leaveCampaign();
     shell().enterPlayerConsole('01CAMPAIGN');
-    expect(shell().layout.stage.groups[0]?.tabs).toEqual(['table', 'character']);
+    expect(shell().layout.stage.groups[0]?.tabs).toEqual(['table', 'sheets']);
     // Another joined campaign starts fresh.
     shell().enterPlayerConsole('01OTHER');
     expect(shell().layout).toEqual(defaultPlayerLayout());
@@ -96,7 +96,7 @@ describe('the player console in the shell', () => {
 
   it('never mixes the two: a GM console opened after a player one gets GM tabs and tools', () => {
     shell().enterPlayerConsole('01CAMPAIGN');
-    shell().closeTab('character');
+    shell().closeTab('sheets');
     shell().enterConsole('greyford');
     expect(shell()).toMatchObject({ role: 'gm', campaignSlug: 'greyford', joinedId: null });
     expect(shell().layout).toEqual(defaultLayout());

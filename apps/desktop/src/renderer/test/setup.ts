@@ -121,6 +121,22 @@ export function installBridgeMock(): TrifoldBridge {
       push: vi.fn(async () => undefined),
       get: vi.fn(async () => initialPresenterState),
     },
+    joined: {
+      list: vi.fn(async () => []),
+      startSearch: vi.fn(async () => []),
+      stopSearch: vi.fn(async () => undefined),
+      peek: vi.fn(async () => ({ ok: false as const, reason: 'noAnswer' as const })),
+      join: vi.fn(async (input) => ({
+        campaignId: input.campaignId,
+        campaignName: input.campaignName,
+        displayName: input.displayName,
+        characterId: null,
+        joinedAt: '2026-11-23T18:00:00.000Z',
+        lastLiveAt: null,
+        claimed: false,
+      })),
+      leave: vi.fn(async () => undefined),
+    },
     table: {
       status: vi.fn(async () => TABLE_OFF),
       start: vi.fn(async () => TABLE_OFF),

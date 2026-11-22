@@ -70,7 +70,7 @@ const MAJOR_TITLES: Record<AnyMajorKind, string> = {
   map: 'VTT',
   // The player's view of the table has the GM's name for it, so both consoles read the same.
   table: 'VTT',
-  character: 'Character',
+  sheets: 'Sheets',
 };
 
 /** A tab's label: a major's fixed title, or the web tab's own (ADR 0011). */
@@ -100,7 +100,7 @@ export const MINOR_TITLES: Record<ToolKind, string> = {
   quickNotes: 'Quick notes',
   counters: 'Counters',
   timers: 'Timers',
-  myCreature: 'My creature',
+  myCharacters: 'My characters',
   initiative: 'Initiative',
 };
 
@@ -199,7 +199,7 @@ function sections(open: MinorKind[]): ShellLayout['dock']['sections'] {
 }
 
 /** A fresh campaign: every major in one group, the dock wide with Scenes open. */
-/** A freshly joined campaign: every player major in one group, My creature and Initiative open. */
+/** A freshly joined campaign: every player major in one group, My characters and Initiative open. */
 export function defaultPlayerLayout(): Layout {
   return {
     stage: {

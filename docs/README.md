@@ -15,6 +15,7 @@ Welcome. Start with the user guide if you're running games with Trifold, or with
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | [Design](DESIGN.md)                          | What Trifold is for, how the app is put together, its data model and each module.               |
 | [Player connector](PLAYER-CONNECTOR.md)      | How players join from their phones over the local network, and what each screen does.          |
+| [Player mode](PLAYER-MODE.md)                | The plan for playing in a campaign from Trifold itself: what is built and what comes next.     |
 | [Deep links](DEEP-LINKS.md)                  | How one part of the app opens an item in another, as global search does.                       |
 | [UI guidelines](UI-GUIDELINES.md)            | Control sizes, the shared patterns for common actions, and how panels behave at narrow widths.  |
 | [Design tokens](TOKENS.md)                   | The colours, type and sizes behind the app's styles.                                             |

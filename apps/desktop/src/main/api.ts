@@ -4,6 +4,7 @@ import { app, dialog, shell } from 'electron';
 import { reviewBooks, sourceOrder, type BookReview } from '@trifold/rules';
 import { TEXT_SIZE_ZOOM, type Source } from '@trifold/schema';
 import { reopenLibrary } from './libraryOpen';
+import type { JoinedService } from './joined/service';
 import { EVENT_CHANNELS, featureFlags, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
 import { copyStatus } from './backupCopy';
@@ -40,6 +41,7 @@ export interface ApiContext {
   windows: WindowManager;
   presenter: PresenterHub;
   table: TableHub;
+  joined: JoinedService;
   logger: Logger;
   icons: IconResources;
   phoneAudio: PhoneAudioReceiver;
@@ -263,6 +265,17 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async isOpen() {
         return ctx.windows.isPlayerOpen();
       },
+    },
+
+    joined: {
+      list: () => ctx.joined.list(),
+      startSearch: () => ctx.joined.startSearch(),
+      async stopSearch() {
+        ctx.joined.stopSearch();
+      },
+      peek: (address) => ctx.joined.peek(address),
+      join: (input) => ctx.joined.join(input),
+      leave: (campaignId) => ctx.joined.leave(campaignId),
     },
 
     table: {

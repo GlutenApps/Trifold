@@ -5,6 +5,7 @@ export * from './source';
 export * from './record';
 export * from './compendium';
 export * from './campaign';
+export * from './joined';
 export * from '../migrations/index';
 export * from './icons';
 export * from './music';
