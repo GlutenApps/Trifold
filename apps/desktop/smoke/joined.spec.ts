@@ -251,12 +251,34 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await page.getByRole('button', { name: 'Library', exact: true }).click();
     await expect(page.getByTestId('player-link')).toHaveText('At the table');
 
+    // The GM's Trifold goes away: the player keeps the map and their character as they last
+    // saw them, to look at only.
+    await gm.close();
+    await card.getByRole('button', { name: 'Back to The Lantern at Greyford' }).click();
+    await expect(page.getByTestId('player-link')).not.toHaveText('At the table', {
+      timeout: 30_000,
+    });
+    await expect(table.getByText(/This is the map as you last saw it/)).toBeVisible();
+    await expect(table.locator('.pc-map')).toBeVisible();
+    const lastRow = page.getByTestId('my-characters').getByTestId('my-character');
+    await expect(lastRow).toContainText('Brannoc Hale');
+    await expect(lastRow.getByRole('button')).toHaveCount(0);
+    // After closing and opening the campaign it comes from main's cache, the picture included.
+    await page.getByRole('button', { name: 'Close campaign' }).click();
+    await card.getByRole('button', { name: 'Open The Lantern at Greyford' }).click();
+    await expect(table.getByText(/This is the map as you last saw it/)).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(mapImage).toBeAttached({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Library', exact: true }).click();
+
     // Leaving takes the folder with it.
     await card.getByRole('button', { name: 'Leave The Lantern at Greyford…' }).click();
     await card.getByRole('button', { name: 'Leave', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Playing' })).toHaveCount(0);
   } finally {
     await player?.close();
-    await gm.close();
+    // Already closed when the test got as far as the offline view.
+    await gm.close().catch(() => undefined);
   }
 });

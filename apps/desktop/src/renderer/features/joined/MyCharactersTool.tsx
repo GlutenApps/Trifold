@@ -6,7 +6,13 @@ import { HeldConditions } from '../campaign/HeldConditions';
 import { HpChip, HpEditor, type HpChange } from '../campaign/HpBetweenFights';
 import { Icon } from '../shell/icons';
 import { InlineConfirm } from '../shell/InlineConfirm';
-import { creatureKeyOf, linkText, usePlayerTable } from './PlayerTable';
+import {
+  creatureKeyOf,
+  lastSeenText,
+  linkSentence,
+  orderMine,
+  usePlayerTable,
+} from './PlayerTable';
 import '../../../web/web.css';
 
 /**
@@ -58,22 +64,14 @@ export function conditionIntents(
 }
 
 export function MyCharactersTool() {
-  const { conn, selected, select } = usePlayerTable();
+  const { conn, selected, select, last } = usePlayerTable();
   const view = conn.link === 'open' ? conn.view : null;
   const [hpOpen, setHpOpen] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
   // The PC first, each followed by its companions and summons.
-  const ordered = useMemo(() => {
-    const mine = view?.mine ?? [];
-    const out: CreatureView[] = [];
-    for (const pc of mine.filter((c) => !c.companionOf)) {
-      out.push(pc, ...mine.filter((c) => c.companionOf === pc.id));
-    }
-    for (const c of mine) if (!out.includes(c)) out.push(c);
-    return out;
-  }, [view?.mine]);
+  const ordered = useMemo(() => orderMine(view?.mine ?? []), [view?.mine]);
   const me = ordered[0];
 
   // Undo for Switch character lasts a few seconds (PLAYER-CONNECTOR.md, "Releasing").
@@ -100,13 +98,53 @@ export function MyCharactersTool() {
     </div>
   );
 
+  // Not at the table: the characters as the table last showed them, with nothing to change.
+  if (!view && last && last.view.mine.length > 0) {
+    return (
+      <div className="my-characters" data-testid="my-characters">
+        {undo}
+        <p className="muted small my-characters-empty" role="status">
+          {linkSentence(conn.link)} These are your characters as you last saw them,{' '}
+          {lastSeenText(last.at)}.
+        </p>
+        <ul className="my-characters-list" aria-label="My characters">
+          {orderMine(last.view.mine).map((c) => (
+            <li
+              key={creatureKeyOf(c)}
+              className="entity-row my-character"
+              data-testid="my-character"
+            >
+              <div className="row">
+                <strong className="my-character-last">{c.name}</strong>
+                <span className="muted small">
+                  {c.summon ? `${c.summon.type} · ` : ''}AC {c.ac ?? '—'}
+                </span>
+              </div>
+              <div className="status-line">
+                <span className="muted small">
+                  {c.hp ? `HP ${c.hp.current}/${c.hp.max}` : 'HP not tracked'}
+                </span>
+                {c.conditions.map((x) => (
+                  <span key={x.id} className="badge warn">
+                    {x.name}
+                    {x.level ? ` ${x.level}` : ''}
+                  </span>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
   if (!view || !me) {
     return (
       <div className="my-characters">
         {undo}
         <p className="muted small my-characters-empty" role="status">
           {!view
-            ? `${linkText(conn.link)}. Your characters show here when you are at the table.`
+            ? `${linkSentence(conn.link)} Your characters show here when you are at the table.`
             : 'Pick your character on the VTT tab.'}
         </p>
       </div>

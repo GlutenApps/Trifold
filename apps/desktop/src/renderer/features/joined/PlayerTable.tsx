@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { CreatureView, JoinedSummary } from '@trifold/api';
+import type { CreatureView, JoinedSummary, LastTableView } from '@trifold/api';
 import { useShellStore } from '../../stores/shellStore';
 import { useConnection, type Connection } from '../../../web/connection';
-import { createBridgeClient } from './bridgeClient';
+import { createBridgeClient, withTableUrls } from './bridgeClient';
 
 /**
  * The open joined campaign's table, for every panel of the player console
@@ -20,6 +20,12 @@ interface PlayerTable {
    */
   selected: string | null;
   select(key: string): void;
+  /**
+   * While the player is not at the table: what it last showed them and when, from this run of
+   * the app or from main's cache (docs/PLAYER-MODE.md, "Not live"). Read-only: nothing in it
+   * can be changed until the table is back. Null at the table, and when it was never seen.
+   */
+  last: LastTableView | null;
 }
 
 /** A creature's key in the player console: `pc:<id>`, `npc:<id>` or `summon:<token id>`. */
@@ -45,7 +51,30 @@ export function PlayerTableProvider({
       useShellStore.getState().showTool('initiative');
     }
   }, [rollWanted]);
-  const value = useMemo(() => ({ campaign, conn, selected, select }), [campaign, conn, selected]);
+  // What the table last showed: the newest view of this run, else what main kept from the last.
+  const [kept, setKept] = useState<LastTableView | null>(null);
+  const [seen, setSeen] = useState<LastTableView | null>(null);
+  const { campaignId } = campaign;
+  useEffect(() => {
+    let wanted = true;
+    void window.trifold.joined
+      .lastView(campaignId)
+      .then((last) => {
+        if (wanted && last) setKept({ view: withTableUrls(last.view, campaignId), at: last.at });
+      })
+      .catch(() => undefined);
+    return () => {
+      wanted = false;
+    };
+  }, [campaignId]);
+  useEffect(() => {
+    if (conn.view) setSeen({ view: conn.view, at: new Date().toISOString() });
+  }, [conn.view]);
+  const last = conn.link === 'open' ? null : (seen ?? kept);
+  const value = useMemo(
+    () => ({ campaign, conn, selected, select, last }),
+    [campaign, conn, selected, last],
+  );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
@@ -59,6 +88,30 @@ export function usePlayerTable(): PlayerTable {
   const table = useContext(Context);
   if (!table) throw new Error('usePlayerTable outside a player console');
   return table;
+}
+
+/** The link's state as a sentence, to lead into another: no full stop after an ellipsis. */
+export function linkSentence(link: Connection['link']): string {
+  const text = linkText(link);
+  return text.endsWith('…') ? text : `${text}.`;
+}
+
+/** When the table was last seen, as the offline view says it: a time today, else a date. */
+export function lastSeenText(at: string): string {
+  const when = new Date(at);
+  return new Date().toDateString() === when.toDateString()
+    ? `at ${when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+    : `on ${when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+}
+
+/** The player's creatures in row order: each character, then its companions and summons. */
+export function orderMine(mine: readonly CreatureView[]): CreatureView[] {
+  const out: CreatureView[] = [];
+  for (const pc of mine.filter((c) => !c.companionOf)) {
+    out.push(pc, ...mine.filter((c) => c.companionOf === pc.id));
+  }
+  for (const c of mine) if (!out.includes(c)) out.push(c);
+  return out;
 }
 
 /** What the link is doing, in the player's words. */

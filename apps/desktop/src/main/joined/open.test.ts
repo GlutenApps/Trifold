@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -237,14 +237,60 @@ describe('JoinedService: an open campaign', () => {
     expect(await service.picture('c2', '/t/tok/art')).toBeNull();
   });
 
+  const state = (name: string): ServerMessage => ({
+    type: 'state',
+    campaignName: 'Greyford',
+    live: true,
+    mine: [{ kind: 'pc', id: 'p1', name }] as never,
+    picker: [],
+    map: null,
+    reclaimMode: 'open',
+  });
+
+  it('keeps what the table last showed, for the next time the table is not up', async () => {
+    const { service, net } = await setup();
+    expect(await service.lastView('c1')).toBeNull();
+    await service.open('c1');
+    net.all[0]!.receive(campaign);
+    net.all[0]!.receive(state('Brannoc'));
+    net.all[0]!.receive(state('Brannoc Hale'));
+    // At once from memory, then from the cache after the campaign closes.
+    expect((await service.lastView('c1'))?.view.mine[0]?.name).toBe('Brannoc Hale');
+    service.close('c1');
+    await service.settled();
+    const kept = JSON.parse(await readFile(join(cache, 'c1', 'last-view.json'), 'utf8')) as {
+      view: { type?: string };
+    };
+    expect(kept.view.type).toBeUndefined();
+
+    // A new run of the app, with the table down, still has it.
+    const again = await setup();
+    const last = await again.service.lastView('c1');
+    expect(last?.view.mine[0]?.name).toBe('Brannoc Hale');
+    expect(Number.isNaN(Date.parse(last!.at))).toBe(false);
+    expect(await again.service.lastView('c2')).toBeNull();
+    expect(await again.service.lastView('../c1')).toBeNull();
+  });
+
+  it('treats a damaged cache as nothing seen', async () => {
+    const { service } = await setup();
+    await mkdir(join(cache, 'c1'), { recursive: true });
+    for (const junk of ['{', 'null', '{"view":{"mine":"x"},"at":"2026-01-01T00:00:00.000Z"}']) {
+      await writeFile(join(cache, 'c1', 'last-view.json'), junk, 'utf8');
+      expect(await service.lastView('c1')).toBeNull();
+    }
+  });
+
   it('takes the picture cache with it when the campaign is left', async () => {
     const { service, net } = await setup();
     await service.open('c1');
     net.all[0]!.receive(campaign);
+    net.all[0]!.receive(state('Brannoc'));
     await service.picture('c1', '/t/tok/art');
     await service.leave('c1');
     expect(net.all[0]!.closed).toBe(true);
     expect(await service.picture('c1', '/t/tok/art')).toBeNull();
+    expect(await service.lastView('c1')).toBeNull();
     expect(await service.list()).toEqual([]);
   });
 });

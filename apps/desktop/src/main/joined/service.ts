@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type {
   ClientMessage,
   FoundTableSummary,
   JoinedSummary,
+  LastTableView,
   PlayerLink,
   ServerMessage,
   TablePeekResult,
@@ -76,6 +77,9 @@ const PICTURE_PATH =
   /^\/(map\/[^/?#]+\/[^/?#]+\.jpg|t\/[^/?#]+\/(art|glyph)|c\/(pc|npc|summon)\/[^/?#]+\/portrait|screen\/[^/?#]+\/image)(\?v=[0-9a-z]+)?$/;
 const PICTURE_MAX_BYTES = 16 * 1024 * 1024;
 const PICTURE_KEEP_MS = 30 * 24 * 60 * 60 * 1000;
+/** The newest view is written to the cache this long after it arrived, not once per message. */
+const VIEW_SAVE_MS = 2000;
+const VIEW_FILE = 'last-view.json';
 /** Failed attempts at one address before the next one is tried. */
 const TRIES_PER_ADDRESS = 2;
 
@@ -135,7 +139,8 @@ export class JoinedService {
 
   /** Resolves once every save asked for so far has been written (quitting, and tests). */
   async settled(): Promise<void> {
-    await this.writes;
+    this.flushView();
+    await Promise.all([this.writes, this.viewWrites]);
   }
 
   private store(): JoinedStore {
@@ -238,7 +243,7 @@ export class JoinedService {
   async leave(campaignId: string): Promise<void> {
     if (this.current?.campaignId === campaignId) this.close(campaignId);
     // Saves still waiting finish first, so none of them brings the folder back.
-    await this.writes;
+    await Promise.all([this.writes, this.viewWrites]);
     await this.store().leave(campaignId);
     this.joinedIds.delete(campaignId);
     if (this.opts.cacheDir && JoinedCampaignId.safeParse(campaignId).success) {
@@ -310,6 +315,7 @@ export class JoinedService {
     if (!current || current.campaignId !== campaignId) return;
     this.current = null;
     current.client?.stop();
+    this.flushView();
     this.syncDiscovery();
     this.opts.logger.info(`joined: closed campaign ${campaignId}`);
   }
@@ -379,6 +385,7 @@ export class JoinedService {
         if (this.current !== current || current.client !== client) return;
         // The token is the claim and stays in main; the console is told only that there is one.
         if (message.type === 'token') return;
+        if (message.type === 'state') this.rememberView(current.campaignId, message);
         this.opts.onMessage?.({ campaignId: current.campaignId, message });
       },
       onToken: (token) => {
@@ -416,6 +423,72 @@ export class JoinedService {
     const sameAsNow =
       current.endpoint && formatTableAddress(current.endpoint) === formatTableAddress(found);
     if (!current.client || !sameAsNow) this.connectTo(current, found);
+  }
+
+  // ---------- the last view, for the offline view ----------
+
+  /** The newest view not yet written to the cache. */
+  private pendingView: (LastTableView & { campaignId: string }) | null = null;
+  private viewTimer: ReturnType<typeof setTimeout> | null = null;
+  private viewWrites: Promise<unknown> = Promise.resolve();
+
+  private viewFile(campaignId: string): string | null {
+    if (!this.opts.cacheDir || !JoinedCampaignId.safeParse(campaignId).success) return null;
+    return join(this.opts.cacheDir, campaignId, VIEW_FILE);
+  }
+
+  /**
+   * Keeps what the table last showed this player (PLAYER-MODE.md, "Not live"), beside its
+   * pictures in the cache: derived data, outside the Library. It is the player's own view, as
+   * the table filtered it for them, and nothing more.
+   */
+  private rememberView(campaignId: string, message: ServerMessage & { type: 'state' }): void {
+    if (!this.viewFile(campaignId)) return;
+    const { type: _type, ...view } = message;
+    this.pendingView = { campaignId, view, at: new Date().toISOString() };
+    if (!this.viewTimer) {
+      this.viewTimer = setTimeout(() => this.flushView(), VIEW_SAVE_MS);
+      this.viewTimer.unref?.();
+    }
+  }
+
+  private flushView(): void {
+    if (this.viewTimer) clearTimeout(this.viewTimer);
+    this.viewTimer = null;
+    const pending = this.pendingView;
+    this.pendingView = null;
+    const file = pending && this.viewFile(pending.campaignId);
+    if (!pending || !file) return;
+    const { campaignId: _campaignId, ...last } = pending;
+    this.viewWrites = this.viewWrites
+      .then(async () => {
+        await mkdir(join(file, '..'), { recursive: true });
+        await writeFile(`${file}.tmp`, JSON.stringify(last), 'utf8');
+        await rename(`${file}.tmp`, file);
+      })
+      .catch((err: unknown) => {
+        this.opts.logger.warn(`joined: could not keep the last view: ${errorMessage(err)}`);
+      });
+  }
+
+  /** What a joined campaign's table last showed this player, and when; null when never seen. */
+  async lastView(campaignId: string): Promise<LastTableView | null> {
+    if (this.pendingView?.campaignId === campaignId) {
+      return { view: this.pendingView.view, at: this.pendingView.at };
+    }
+    const file = this.viewFile(campaignId);
+    if (!file) return null;
+    await this.viewWrites;
+    try {
+      const last = JSON.parse(await readFile(file, 'utf8')) as Partial<LastTableView> | null;
+      const view = last?.view;
+      // The file is this app's own, but a cache can be damaged: anything not a view is nothing.
+      if (!view || !Array.isArray(view.mine) || !Array.isArray(view.picker)) return null;
+      if (typeof last.at !== 'string' || Number.isNaN(Date.parse(last.at))) return null;
+      return { view, at: last.at };
+    } catch {
+      return null;
+    }
   }
 
   // ---------- pictures ----------
@@ -475,6 +548,7 @@ export class JoinedService {
     const dir = join(this.opts.cacheDir, campaignId);
     const now = Date.now();
     for (const name of await readdir(dir).catch(() => [] as string[])) {
+      if (name === VIEW_FILE) continue;
       const info = await stat(join(dir, name)).catch(() => null);
       if (info && now - info.mtimeMs > PICTURE_KEEP_MS) {
         await rm(join(dir, name), { force: true }).catch(() => undefined);
