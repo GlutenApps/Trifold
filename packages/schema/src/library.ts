@@ -159,6 +159,64 @@ export const ShellLayout = z.object({
 });
 export type ShellLayout = z.infer<typeof ShellLayout>;
 
+/**
+ * The player console (docs/PLAYER-MODE.md): the console a joined campaign opens, with its own
+ * stage tabs and dock tools. They are separate kinds with a separate layout, so neither role's
+ * saved layout can name the other's panels. Web tabs are shared; there is no tray to choose, the
+ * player's strip is fixed.
+ */
+export const PLAYER_MAJOR_KINDS = ['table', 'character', 'compendium'] as const;
+export const PlayerMajorKind = z.enum(PLAYER_MAJOR_KINDS);
+export type PlayerMajorKind = z.infer<typeof PlayerMajorKind>;
+
+/** Also the player dock's order: My creature, Initiative, Quick notes. */
+export const PLAYER_MINOR_KINDS = ['myCreature', 'initiative', 'quickNotes'] as const;
+export const PlayerMinorKind = z.enum(PLAYER_MINOR_KINDS);
+export type PlayerMinorKind = z.infer<typeof PlayerMinorKind>;
+
+/** A player stage tab: a player major, or a web tab by key. */
+export type PlayerTabKey = PlayerMajorKind | WebTabKey;
+export const PlayerTabKey = z.union([
+  PlayerMajorKind,
+  z.string().regex(/^web:.+/),
+]) as unknown as z.ZodType<PlayerTabKey>;
+
+export function isPlayerMajorKind(key: string): key is PlayerMajorKind {
+  return (PLAYER_MAJOR_KINDS as readonly string[]).includes(key);
+}
+
+export const PlayerStageGroup = z.object({
+  tabs: z.array(PlayerTabKey).default([]),
+  active: PlayerTabKey.nullable().default(null),
+});
+export type PlayerStageGroup = z.infer<typeof PlayerStageGroup>;
+
+export const PlayerStageState = z.object({
+  groups: z.array(PlayerStageGroup).min(1).max(2),
+  split: z.number().min(0.2).max(0.8).default(0.5),
+  maximized: z.number().int().min(0).max(1).nullable().default(null),
+});
+export type PlayerStageState = z.infer<typeof PlayerStageState>;
+
+export const PlayerDockSection = z.object({
+  tool: PlayerMinorKind,
+  open: z.boolean().default(false),
+});
+export type PlayerDockSection = z.infer<typeof PlayerDockSection>;
+
+export const PlayerDockState = z.object({
+  state: DockMode.default('wide'),
+  width: z.number().min(200).max(800).default(400),
+  sections: z.array(PlayerDockSection).default([]),
+});
+export type PlayerDockState = z.infer<typeof PlayerDockState>;
+
+export const PlayerShellLayout = z.object({
+  stage: PlayerStageState,
+  dock: PlayerDockState,
+});
+export type PlayerShellLayout = z.infer<typeof PlayerShellLayout>;
+
 export const WorkspacePreset = z.object({
   name: z.string().min(1),
   layout: ShellLayout,
@@ -173,6 +231,11 @@ export const WorkspaceSettings = z.object({
   consoles: z.record(z.string(), ShellLayout).default({}),
   /** The DM's saved web tabs (ADR 0011), Library-wide like the layouts. */
   webTabs: z.array(WebTab).default([]),
+  /**
+   * Each joined campaign's player console as it was left, by the GM's campaign id
+   * (docs/PLAYER-MODE.md). Additive with a default; no schema bump.
+   */
+  playerConsoles: z.record(z.string(), PlayerShellLayout).default({}),
 });
 export type WorkspaceSettings = z.infer<typeof WorkspaceSettings>;
 

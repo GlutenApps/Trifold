@@ -157,8 +157,12 @@ function persist(get: () => ShellState): void {
       const { presets, consoles, layout, campaignSlug, webTabs } = get();
       const next = { ...consoles };
       if (campaignSlug) next[campaignSlug] = layout;
+      // The player consoles' layouts are not this store's (docs/PLAYER-MODE.md): a save of the
+      // GM's chrome hands them back as the Library has them.
+      const playerConsoles =
+        useAppStore.getState().library?.settings?.workspace.playerConsoles ?? {};
       return useAppStore.getState().updateSettings({
-        workspace: { presets, seeded: true, consoles: next, webTabs },
+        workspace: { presets, seeded: true, consoles: next, webTabs, playerConsoles },
       });
     },
     500,

@@ -469,9 +469,9 @@ export function Playing({
 
 /**
  * The initiative box (PLAYER-CONNECTOR.md, "Initiative"): one number, then it goes. Floats over
- * the top of the map.
+ * the top of the map here; the player console puts it in its Initiative tool (PLAYER-MODE.md).
  */
-function InitiativeCard({
+export function InitiativeCard({
   creature,
   onSubmit,
 }: {
