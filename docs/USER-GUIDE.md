@@ -262,7 +262,7 @@ A web tab is a page you choose, shown inside the stage. In a group's `+` menu pi
 
 ## Settings
 
-Settings is one page of sections, most used first; the links at the top jump to each.
+Settings is one page of sections, most used first.
 
 - **Table display** picks the screen the TV opens on. Screens are numbered from left to right, with the monitor's name when Windows or macOS gives one. **Identify** shows each screen's number on it for a few seconds, and **Refresh displays** picks up one you just plugged in. **Automatic** uses a screen that is not the primary; with one screen, only players' phones show the table.
 - **Appearance**: **Theme** (dark or light, saved with the Library) and **Text size** (Small to Extra large), which zooms the whole console on this computer. The TV is never zoomed.

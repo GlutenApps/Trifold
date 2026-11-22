@@ -60,7 +60,7 @@ export function SampleCampaignRow() {
   return (
     <SettingRow
       label="Sample campaign"
-      hint="A short adventure that shows every part of Trifold. Every Library gets it once; delete it from Campaigns whenever you like."
+      hint="A short adventure that shows every part of Trifold."
       status={
         <>
           <p className="small" data-testid="sample-campaign-status">
