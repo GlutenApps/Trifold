@@ -4,9 +4,8 @@ import { ulid } from 'ulid';
 import {
   webTabKey,
   type DockMode,
-  type MinorKind,
+  type PlayerShellLayout,
   type ShellLayout,
-  type TabKey,
   type TrayItem,
   type WebTab,
   type WebTabIcon,
@@ -20,7 +19,9 @@ import {
   closeTab,
   cloneLayout,
   defaultLayout,
+  defaultPlayerLayout,
   fitLayout,
+  fromPlayerLayout,
   groupOf,
   matchesPreset,
   moveTab,
@@ -39,7 +40,13 @@ import {
   STARTER_PRESETS,
   toggleMaximize,
   toggleSection,
+  toPlayerLayout,
+  ROLE_TOOLS,
   type Fit,
+  type Layout,
+  type ShellRole,
+  type StageKey,
+  type ToolKind,
 } from './shellLayout';
 
 /**
@@ -50,6 +57,11 @@ import {
  * `library.json` through `persist`, one write per settle; the store is hydrated once per
  * Library path. The layout math itself lives in shellLayout.ts; this store only applies it,
  * keeps the result and saves it. Features change the shell through these actions only.
+ *
+ * One console is loaded at a time, in one of two roles (docs/PLAYER-MODE.md): the GM's, for a
+ * campaign this Library runs, or the player's, for one it joined. The role decides which tabs and
+ * tools the layout may hold and where it is saved (`consoles` by slug, `playerConsoles` by the
+ * joined campaign's id). Named layouts are the GM's.
  */
 export type Space = 'library' | 'console';
 /** Tools that pop up from their own button rather than living in the dock (ADR 0009), plus the
@@ -62,20 +74,26 @@ interface ShellState {
   libraryPage: LibraryPage;
   /** Slug of the campaign whose console is loaded; null in the Library with nothing open. */
   campaignSlug: string | null;
-  layout: ShellLayout;
+  /** Whose console is loaded. `gm` in the Library too, where no console is. */
+  role: ShellRole;
+  /** The joined campaign whose player console is loaded, by the GM's campaign id; else null. */
+  joinedId: string | null;
+  layout: Layout;
   /** Which stage group has keyboard focus (N/P, Ctrl+K act on it where it matters). */
   focusedGroup: 0 | 1;
   presets: WorkspacePreset[];
   consoles: Record<string, ShellLayout>;
+  /** Each joined campaign's player console as it was left, by the GM's campaign id. */
+  playerConsoles: Record<string, PlayerShellLayout>;
   /** The Library's saved web tabs (ADR 0011); a layout names them by `web:<id>`. */
   webTabs: WebTab[];
   /** A minor shown as a flyout while the dock shows icons only (ADR 0009). One at a time. */
-  flyout: MinorKind | null;
+  flyout: ToolKind | null;
   /** A tool popped up from its own button (ADR 0009): Dice from the strip, Hotkeys and Layouts
    *  from the top bar. One at a time; not part of a layout. */
   pop: PopKind | null;
   /** A tab being dragged across the stage. */
-  draggingTab: TabKey | null;
+  draggingTab: StageKey | null;
   /** Set when closing a campaign needs the stop-sharing warning. */
   closePrompt: boolean;
   /** Window width: what fits side by side is worked out from it (fitLayout, ADR 0014). */
@@ -93,26 +111,30 @@ interface ShellState {
 
   hydrate(libraryPath: string, settings: WorkspaceSettings | undefined): void;
   enterConsole(slug: string): void;
+  /** Loads the player console of a joined campaign. No GM campaign is open beside it. */
+  enterPlayerConsole(joinedId: string): void;
   enterLibrary(page?: LibraryPage): void;
   setLibraryPage(page: LibraryPage): void;
   leaveCampaign(): void;
   /** Drops the saved console layout of a deleted campaign. */
   forgetConsole(slug: string): void;
+  /** Drops the saved player console of a campaign the player left. */
+  forgetPlayerConsole(joinedId: string): void;
   setClosePrompt(open: boolean): void;
 
-  openMajor(kind: TabKey, opts?: { group?: 0 | 1; avoid?: TabKey }): void;
-  closeTab(kind: TabKey): void;
-  moveTab(kind: TabKey, group: 0 | 1, index?: number): void;
-  reorderTab(kind: TabKey, index: number): void;
-  splitRight(kind: TabKey): void;
+  openMajor(kind: StageKey, opts?: { group?: 0 | 1; avoid?: StageKey }): void;
+  closeTab(kind: StageKey): void;
+  moveTab(kind: StageKey, group: 0 | 1, index?: number): void;
+  reorderTab(kind: StageKey, index: number): void;
+  splitRight(kind: StageKey): void;
   setSplit(split: number): void;
   toggleMaximize(group?: number): void;
   focusGroup(group: 0 | 1): void;
-  setDraggingTab(kind: TabKey | null): void;
+  setDraggingTab(kind: StageKey | null): void;
 
   /** Saves a web tab and opens it in `group` (default the focused one). Returns its key.
    *  A blank title means "follow the page title". */
-  addWebTab(tab: { url: string; title?: string; icon?: WebTabIcon }, group?: 0 | 1): TabKey;
+  addWebTab(tab: { url: string; title?: string; icon?: WebTabIcon }, group?: 0 | 1): StageKey;
   updateWebTab(id: string, patch: Partial<Omit<WebTab, 'id'>>): void;
   /** Forgets a web tab: closes it here and drops it from every saved layout. */
   removeWebTab(id: string): void;
@@ -121,11 +143,11 @@ interface ShellState {
   /** Opens a dock the DM collapsed to icons, at the width it had before. */
   openDock(): void;
   setDockWidth(px: number): void;
-  toggleSection(tool: MinorKind): void;
+  toggleSection(tool: ToolKind): void;
   /** Brings a tool forward: a section when the dock shows them, otherwise a flyout. */
-  openTool(tool: MinorKind): void;
+  openTool(tool: ToolKind): void;
   /** Like openTool, but never closes a flyout that is already showing the tool. */
-  showTool(tool: MinorKind): void;
+  showTool(tool: ToolKind): void;
   closeFlyout(): void;
   /** Opens a pop-up from its button, or closes it when it is the one showing. */
   togglePop(kind: PopKind): void;
@@ -154,19 +176,40 @@ function persist(get: () => ShellState): void {
   scheduleSave(
     'shell',
     () => {
-      const { presets, consoles, layout, campaignSlug, webTabs } = get();
-      const next = { ...consoles };
-      if (campaignSlug) next[campaignSlug] = layout;
-      // The player consoles' layouts are not this store's (docs/PLAYER-MODE.md): a save of the
-      // GM's chrome hands them back as the Library has them.
-      const playerConsoles =
-        useAppStore.getState().library?.settings?.workspace.playerConsoles ?? {};
+      const { presets, webTabs } = get();
+      const { consoles, playerConsoles } = withLoaded(get());
       return useAppStore.getState().updateSettings({
-        workspace: { presets, seeded: true, consoles: next, webTabs, playerConsoles },
+        workspace: { presets, seeded: true, consoles, webTabs, playerConsoles },
       });
     },
     500,
   );
+}
+
+/**
+ * The saved consoles with the loaded one's layout written into its own map: the GM's by campaign
+ * slug, the player's by joined campaign id (without a tray, which a player console has none of).
+ */
+function withLoaded(
+  state: Pick<
+    ShellState,
+    'role' | 'campaignSlug' | 'joinedId' | 'layout' | 'consoles' | 'playerConsoles'
+  >,
+): Pick<ShellState, 'consoles' | 'playerConsoles'> {
+  const { role, campaignSlug, joinedId, layout, consoles, playerConsoles } = state;
+  if (role === 'player') {
+    return {
+      consoles,
+      playerConsoles: joinedId
+        ? { ...playerConsoles, [joinedId]: toPlayerLayout(layout) }
+        : playerConsoles,
+    };
+  }
+  return {
+    // A GM console's layout holds GM kinds only: it came from `consoles`, a preset or the default.
+    consoles: campaignSlug ? { ...consoles, [campaignSlug]: layout as ShellLayout } : consoles,
+    playerConsoles,
+  };
 }
 
 /**
@@ -197,11 +240,13 @@ function uniqueName(name: string, presets: WorkspacePreset[], skip = -1): string
 }
 
 export const useShellStore = create<ShellState>((set, get) => {
-  const change = (layout: ShellLayout) => {
+  const change = (layout: Layout) => {
     if (layout === get().layout) return;
     set({ layout });
     persist(get);
   };
+  /** The loaded console's dock tools, in the dock's order. */
+  const tools = () => ROLE_TOOLS[get().role];
   const dockShowsSections = () => {
     const s = get().effectiveDock();
     return s === 'wide' || s === 'narrow';
@@ -211,10 +256,13 @@ export const useShellStore = create<ShellState>((set, get) => {
     space: 'library',
     libraryPage: 'campaigns',
     campaignSlug: null,
+    role: 'gm',
+    joinedId: null,
     layout: defaultLayout(),
     focusedGroup: 0,
     presets: [],
     consoles: {},
+    playerConsoles: {},
     webTabs: [],
     flyout: null,
     pop: null,
@@ -251,17 +299,22 @@ export const useShellStore = create<ShellState>((set, get) => {
           ? (settings?.presets ?? [])
           : STARTER_PRESETS.map((p) => ({ name: p.name, layout: cloneLayout(p.layout) })),
         consoles: settings?.consoles ?? {},
+        playerConsoles: settings?.playerConsoles ?? {},
         webTabs: settings?.webTabs ?? [],
       });
       if (!seeded) persist(get);
     },
 
     enterConsole(slug) {
-      const { campaignSlug, layout, consoles, webTabs } = get();
+      const { role, campaignSlug, layout, consoles, webTabs } = get();
       // Coming back from the Library to the same campaign keeps the console exactly as it was.
-      const saved = campaignSlug === slug ? layout : consoles[slug];
+      const saved = role === 'gm' && campaignSlug === slug ? layout : consoles[slug];
       set({
+        // A player console that was loaded keeps its layout before this one takes its place.
+        ...withLoaded(get()),
         space: 'console',
+        role: 'gm',
+        joinedId: null,
         campaignSlug: slug,
         layout: saved ? pruneTabs(normalize(cloneLayout(saved)), webTabs) : defaultLayout(),
         focusedGroup: 0,
@@ -271,13 +324,37 @@ export const useShellStore = create<ShellState>((set, get) => {
       });
     },
 
+    enterPlayerConsole(joinedId) {
+      const state = get();
+      const playerTools = ROLE_TOOLS.player;
+      // Coming back from the Library to the same joined campaign keeps the console as it was.
+      const same = state.role === 'player' && state.joinedId === joinedId;
+      const saved = state.playerConsoles[joinedId];
+      const layout = same
+        ? state.layout
+        : saved
+          ? pruneTabs(normalize(fromPlayerLayout(saved), playerTools), state.webTabs, playerTools)
+          : defaultPlayerLayout();
+      set({
+        ...withLoaded(state),
+        space: 'console',
+        role: 'player',
+        joinedId,
+        campaignSlug: null,
+        layout,
+        focusedGroup: 0,
+        flyout: null,
+        pop: null,
+        closePrompt: false,
+      });
+    },
+
     enterLibrary(page) {
-      const { campaignSlug, layout, consoles } = get();
       set({
         space: 'library',
         flyout: null,
         pop: null,
-        consoles: campaignSlug ? { ...consoles, [campaignSlug]: layout } : consoles,
+        ...withLoaded(get()),
         ...(page ? { libraryPage: page } : {}),
       });
     },
@@ -287,12 +364,14 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     leaveCampaign() {
-      const { campaignSlug, layout, consoles } = get();
-      const next = campaignSlug ? { ...consoles, [campaignSlug]: layout } : consoles;
       set({
+        ...withLoaded(get()),
         space: 'library',
         campaignSlug: null,
-        consoles: next,
+        role: 'gm',
+        joinedId: null,
+        // A player console's layout never stays loaded as the GM's.
+        ...(get().role === 'player' ? { layout: defaultLayout() } : {}),
         flyout: null,
         pop: null,
         closePrompt: false,
@@ -306,6 +385,26 @@ export const useShellStore = create<ShellState>((set, get) => {
       const next = { ...consoles };
       delete next[slug];
       set({ consoles: next, ...(campaignSlug === slug ? { campaignSlug: null } : {}) });
+      persist(get);
+    },
+
+    forgetPlayerConsole(joinedId) {
+      const { playerConsoles, joinedId: loaded, role } = get();
+      const isLoaded = role === 'player' && loaded === joinedId;
+      if (!(joinedId in playerConsoles) && !isLoaded) return;
+      const next = { ...playerConsoles };
+      delete next[joinedId];
+      set({
+        playerConsoles: next,
+        ...(isLoaded
+          ? {
+              joinedId: null,
+              role: 'gm' as const,
+              layout: defaultLayout(),
+              space: 'library' as const,
+            }
+          : {}),
+      });
       persist(get);
     },
 
@@ -331,22 +430,22 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     closeTab(kind) {
-      change(closeTab(get().layout, kind));
+      change(closeTab(get().layout, kind, tools()));
       if (get().focusedGroup >= get().layout.stage.groups.length) set({ focusedGroup: 0 });
     },
 
     moveTab(kind, group, index) {
-      change(moveTab(get().layout, kind, group, index));
+      change(moveTab(get().layout, kind, group, index, tools()));
       set({ focusedGroup: group });
     },
 
     reorderTab(kind, index) {
-      change(reorderTab(get().layout, kind, index));
+      change(reorderTab(get().layout, kind, index, tools()));
     },
 
     splitRight(kind) {
       if (!get().fit().canSplit) return;
-      change(splitRight(get().layout, kind));
+      change(splitRight(get().layout, kind, tools()));
       set({ focusedGroup: 1 });
     },
 
@@ -393,12 +492,19 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     removeWebTab(id) {
-      const { webTabs, presets, consoles, layout } = get();
+      const { webTabs, presets, consoles, playerConsoles, layout } = get();
       const remaining = webTabs.filter((t) => t.id !== id);
       if (remaining.length === webTabs.length) return;
+      const playerTools = ROLE_TOOLS.player;
       set({
         webTabs: remaining,
-        layout: pruneTabs(layout, remaining),
+        layout: pruneTabs(layout, remaining, tools()),
+        playerConsoles: Object.fromEntries(
+          Object.entries(playerConsoles).map(([joined, l]) => [
+            joined,
+            toPlayerLayout(pruneTabs(fromPlayerLayout(l), remaining, playerTools)),
+          ]),
+        ),
         presets: presets.map((p) => ({ ...p, layout: pruneTabs(p.layout, remaining) })),
         consoles: Object.fromEntries(
           Object.entries(consoles).map(([slug, l]) => [slug, pruneTabs(l, remaining)]),
@@ -423,12 +529,12 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     toggleSection(tool) {
-      change(toggleSection(get().layout, tool));
+      change(toggleSection(get().layout, tool, tools()));
     },
 
     openTool(tool) {
       if (dockShowsSections()) {
-        change(setSection(get().layout, tool, true));
+        change(setSection(get().layout, tool, true, tools()));
         set({ flyout: null });
       } else {
         set({ flyout: get().flyout === tool ? null : tool });
@@ -437,7 +543,7 @@ export const useShellStore = create<ShellState>((set, get) => {
 
     showTool(tool) {
       if (dockShowsSections()) {
-        change(setSection(get().layout, tool, true));
+        change(setSection(get().layout, tool, true, tools()));
         set({ flyout: null });
       } else if (get().flyout !== tool) {
         set({ flyout: tool });
@@ -483,26 +589,29 @@ export const useShellStore = create<ShellState>((set, get) => {
 
     applyLayout(index) {
       const preset = get().presets[index];
-      if (!preset || get().space !== 'console') return;
+      // Named layouts are the GM's: they name GM tabs and tools.
+      if (!preset || get().space !== 'console' || get().role !== 'gm') return;
       change(applyPreset(preset.layout, get().webTabs));
       set({ focusedGroup: 0, flyout: null });
     },
 
     savePreset(name) {
       const presets = get().presets;
+      if (get().role !== 'gm') return;
       set({
         presets: presets.concat({
           name: uniqueName(name, presets),
-          layout: cloneLayout(get().layout),
+          layout: cloneLayout(get().layout as ShellLayout),
         }),
       });
       persist(get);
     },
 
     updatePreset(index) {
+      if (get().role !== 'gm') return;
       set({
         presets: get().presets.map((p, i) =>
-          i === index ? { ...p, layout: cloneLayout(get().layout) } : p,
+          i === index ? { ...p, layout: cloneLayout(get().layout as ShellLayout) } : p,
         ),
       });
       persist(get);
@@ -541,7 +650,8 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     currentPresetIndex() {
-      const { layout, presets } = get();
+      const { layout, presets, role } = get();
+      if (role !== 'gm') return -1;
       return presets.findIndex((p) => matchesPreset(layout, p.layout));
     },
   };

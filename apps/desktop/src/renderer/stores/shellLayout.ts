@@ -6,8 +6,14 @@ import {
   TRAY_SECTIONS,
   type TrayItem,
   MINOR_KINDS,
+  PLAYER_MAJOR_KINDS,
+  PLAYER_MINOR_KINDS,
   type DockMode,
   type MajorKind,
+  type PlayerMajorKind,
+  type PlayerMinorKind,
+  type PlayerShellLayout,
+  type PlayerTabKey,
   type TabKey,
   type WebTab,
   isWebTabKey,
@@ -23,36 +29,79 @@ import {
  * group behind when another exists.
  */
 
-const MAJOR_TITLES: Record<MajorKind, string> = {
+/**
+ * The shell serves two consoles (docs/PLAYER-MODE.md): the GM's, for a campaign this Library
+ * runs, and the player's, for one it joined. They share the stage, the dock and everything here;
+ * each has its own tabs and tools, and its own saved layouts in the schema, so a saved layout of
+ * one role can never name the other's panels. In memory one layout type covers both.
+ */
+export type ShellRole = 'gm' | 'player';
+/** A stage tab of either console: a major, or a web tab by key. */
+export type StageKey = TabKey | PlayerTabKey;
+export type AnyMajorKind = MajorKind | PlayerMajorKind;
+/** A dock tool of either console. */
+export type ToolKind = MinorKind | PlayerMinorKind;
+
+/** The layout the shell works on. A `ShellLayout` is one; a player's gets an empty tray. */
+export interface Layout {
+  stage: {
+    groups: Array<{ tabs: StageKey[]; active: StageKey | null }>;
+    split: number;
+    maximized: number | null;
+  };
+  dock: { state: DockMode; width: number; sections: Array<{ tool: ToolKind; open: boolean }> };
+  tray: TrayItem[];
+}
+
+/** Each console's majors, and its dock tools in the dock's fixed order. */
+export const ROLE_MAJORS: Record<ShellRole, readonly AnyMajorKind[]> = {
+  gm: MAJOR_KINDS,
+  player: PLAYER_MAJOR_KINDS,
+};
+export const ROLE_TOOLS: Record<ShellRole, readonly ToolKind[]> = {
+  gm: MINOR_KINDS,
+  player: PLAYER_MINOR_KINDS,
+};
+
+const MAJOR_TITLES: Record<AnyMajorKind, string> = {
   campaign: 'Campaign',
   compendium: 'Compendium',
   encounters: 'Encounters',
   map: 'VTT',
+  // The player's view of the table has the GM's name for it, so both consoles read the same.
+  table: 'VTT',
+  character: 'Character',
 };
 
 /** A tab's label: a major's fixed title, or the web tab's own (ADR 0011). */
-export function tabTitle(kind: TabKey, webTabs: readonly WebTab[]): string {
+export function tabTitle(kind: StageKey, webTabs: readonly WebTab[]): string {
   if (!isWebTabKey(kind)) return MAJOR_TITLES[kind];
   const id = webTabId(kind);
   return webTabs.find((t) => t.id === id)?.title ?? 'Web tab';
 }
 
 /** Drops web tabs the Library no longer has (a layout saved before one was removed). */
-export function pruneTabs(layout: ShellLayout, webTabs: readonly WebTab[]): ShellLayout {
+export function pruneTabs<L extends Layout>(
+  layout: L,
+  webTabs: readonly WebTab[],
+  tools: readonly ToolKind[] = MINOR_KINDS,
+): L {
   const ids = new Set(webTabs.map((t) => t.id));
-  const keep = (k: TabKey) => !isWebTabKey(k) || ids.has(webTabId(k));
+  const keep = (k: StageKey) => !isWebTabKey(k) || ids.has(webTabId(k));
   if (layout.stage.groups.every((g) => g.tabs.every(keep))) return layout;
   const next = cloneLayout(layout);
   for (const g of next.stage.groups) g.tabs = g.tabs.filter(keep);
-  return normalize(next);
+  return normalize(next, tools);
 }
 
-export const MINOR_TITLES: Record<MinorKind, string> = {
+export const MINOR_TITLES: Record<ToolKind, string> = {
   music: 'Music',
   scenes: 'Scenes',
   quickNotes: 'Quick notes',
   counters: 'Counters',
   timers: 'Timers',
+  myCreature: 'My creature',
+  initiative: 'Initiative',
 };
 
 /**
@@ -104,7 +153,7 @@ export interface Fit {
  * stack. Nothing here changes the saved layout, so widening the window restores it exactly.
  * `dockExpanded` is the DM choosing the dock over a second panel.
  */
-export function fitLayout(layout: ShellLayout, viewportWidth: number, dockExpanded = false): Fit {
+export function fitLayout(layout: Layout, viewportWidth: number, dockExpanded = false): Fit {
   const room = Math.max(0, viewportWidth - STAGE_PADDING);
   const saved = layout.stage.groups.length;
   const want = layout.stage.maximized !== null ? 1 : saved;
@@ -150,6 +199,37 @@ function sections(open: MinorKind[]): ShellLayout['dock']['sections'] {
 }
 
 /** A fresh campaign: every major in one group, the dock wide with Scenes open. */
+/** A freshly joined campaign: every player major in one group, My creature and Initiative open. */
+export function defaultPlayerLayout(): Layout {
+  return {
+    stage: {
+      groups: [{ tabs: [...PLAYER_MAJOR_KINDS], active: 'table' }],
+      split: 0.5,
+      maximized: null,
+    },
+    dock: {
+      state: 'wide',
+      width: 400,
+      sections: PLAYER_MINOR_KINDS.map((tool) => ({ tool, open: tool !== 'quickNotes' })),
+    },
+    tray: [],
+  };
+}
+
+/** A saved player layout as the shell works on it. */
+export function fromPlayerLayout(layout: PlayerShellLayout): Layout {
+  return cloneLayout<Layout>({ ...layout, tray: [] });
+}
+
+/**
+ * The shell's layout as a player console saves it: no tray. Only for a layout the player
+ * console made, which holds player kinds and web tabs alone.
+ */
+export function toPlayerLayout(layout: Layout): PlayerShellLayout {
+  const { stage, dock } = cloneLayout(layout);
+  return { stage, dock } as PlayerShellLayout;
+}
+
 export function defaultLayout(): ShellLayout {
   return {
     stage: {
@@ -210,7 +290,7 @@ export const STARTER_PRESETS: WorkspacePreset[] = [
   },
 ];
 
-export function cloneLayout(layout: ShellLayout): ShellLayout {
+export function cloneLayout<L extends Layout>(layout: L): L {
   return {
     stage: {
       groups: layout.stage.groups.map((g) => ({ tabs: [...g.tabs], active: g.active })),
@@ -223,16 +303,16 @@ export function cloneLayout(layout: ShellLayout): ShellLayout {
       sections: layout.dock.sections.map((s) => ({ ...s })),
     },
     tray: [...(layout.tray ?? DEFAULT_TRAY)],
-  };
+  } as L;
 }
 
 /** Which group holds a tab, or null when it is closed. */
-export function groupOf(layout: ShellLayout, kind: TabKey): number | null {
+export function groupOf(layout: Layout, kind: StageKey): number | null {
   const i = layout.stage.groups.findIndex((g) => g.tabs.includes(kind));
   return i < 0 ? null : i;
 }
 
-export function isOpen(layout: ShellLayout, kind: TabKey): boolean {
+export function isOpen(layout: Layout, kind: StageKey): boolean {
   return groupOf(layout, kind) !== null;
 }
 
@@ -243,9 +323,9 @@ export function isOpen(layout: ShellLayout, kind: TabKey): boolean {
  * both do, `fallback` (the focused group).
  */
 export function landingGroup(
-  layout: ShellLayout,
-  kind: TabKey,
-  avoid: readonly TabKey[],
+  layout: Layout,
+  kind: StageKey,
+  avoid: readonly StageKey[],
   fallback: 0 | 1,
 ): 0 | 1 {
   const at = groupOf(layout, kind);
@@ -263,7 +343,10 @@ export function landingGroup(
  * Drops empty groups (keeping one), fixes actives, clamps maximized, and makes sure every minor
  * appears exactly once in the dock, in the fixed order.
  */
-export function normalize(layout: ShellLayout): ShellLayout {
+export function normalize<L extends Layout>(
+  layout: L,
+  tools: readonly ToolKind[] = MINOR_KINDS,
+): L {
   const next = cloneLayout(layout);
   let groups = next.stage.groups.filter((g) => g.tabs.length > 0);
   if (groups.length === 0) groups = [{ tabs: [], active: null }];
@@ -274,8 +357,9 @@ export function normalize(layout: ShellLayout): ShellLayout {
   if (next.stage.maximized !== null && next.stage.maximized >= next.stage.groups.length) {
     next.stage.maximized = null;
   }
-  // The dock's order is fixed (MINOR_KINDS), so a layout saved in an older order takes it too.
-  next.dock.sections = MINOR_KINDS.map((tool) => ({
+  // The dock's order is fixed (the role's tools), so a layout saved in an older order takes it
+  // too.
+  next.dock.sections = tools.map((tool) => ({
     tool,
     open: next.dock.sections.find((s) => s.tool === tool)?.open ?? false,
   }));
@@ -287,7 +371,7 @@ export function normalize(layout: ShellLayout): ShellLayout {
 }
 
 /** Whether the tray holds an item. */
-export function inTray(layout: ShellLayout, item: TrayItem): boolean {
+export function inTray(layout: Layout, item: TrayItem): boolean {
   return layout.tray.includes(item);
 }
 
@@ -296,7 +380,7 @@ export function inTray(layout: ShellLayout, item: TrayItem): boolean {
  * chooser disables the box and says why. The list's order does not matter: the strip draws the
  * built-in sections, then timers, then counters, each in its tool's order.
  */
-export function setTrayItem(layout: ShellLayout, item: TrayItem, on: boolean): ShellLayout {
+export function setTrayItem<L extends Layout>(layout: L, item: TrayItem, on: boolean): L {
   const has = layout.tray.includes(item);
   if (has === on) return layout;
   if (on && layout.tray.length >= TRAY_MAX) return layout;
@@ -309,7 +393,7 @@ export function setTrayItem(layout: ShellLayout, item: TrayItem, on: boolean): S
  * Drops timers and counters a campaign does not have (a layout made in another campaign, or one
  * deleted). `keep` answers for timer and counter items; the built-in sections always stay.
  */
-export function pruneTray(layout: ShellLayout, keep: (item: TrayItem) => boolean): ShellLayout {
+export function pruneTray<L extends Layout>(layout: L, keep: (item: TrayItem) => boolean): L {
   const builtIn = (t: TrayItem) => (TRAY_SECTIONS as readonly string[]).includes(t);
   const tray = layout.tray.filter((t) => builtIn(t) || keep(t));
   if (tray.length === layout.tray.length) return layout;
@@ -319,7 +403,7 @@ export function pruneTray(layout: ShellLayout, keep: (item: TrayItem) => boolean
 }
 
 /** Makes `kind` the active tab of its group, opening it in `group` (default the first) if closed. */
-export function openMajor(layout: ShellLayout, kind: TabKey, group?: number): ShellLayout {
+export function openMajor<L extends Layout>(layout: L, kind: StageKey, group?: number): L {
   const next = cloneLayout(layout);
   const at = groupOf(next, kind);
   if (at !== null) {
@@ -334,7 +418,11 @@ export function openMajor(layout: ShellLayout, kind: TabKey, group?: number): Sh
 }
 
 /** Closes a tab; its state lives on in the feature's store. A group that empties is dropped. */
-export function closeTab(layout: ShellLayout, kind: TabKey): ShellLayout {
+export function closeTab<L extends Layout>(
+  layout: L,
+  kind: StageKey,
+  tools: readonly ToolKind[] = MINOR_KINDS,
+): L {
   const next = cloneLayout(layout);
   for (const g of next.stage.groups) {
     const i = g.tabs.indexOf(kind);
@@ -342,16 +430,17 @@ export function closeTab(layout: ShellLayout, kind: TabKey): ShellLayout {
     g.tabs.splice(i, 1);
     if (g.active === kind) g.active = g.tabs[Math.min(i, g.tabs.length - 1)] ?? null;
   }
-  return normalize(next);
+  return normalize(next, tools);
 }
 
 /** Moves a tab to another group, creating the second group when needed. Never duplicates. */
-export function moveTab(
-  layout: ShellLayout,
-  kind: TabKey,
+export function moveTab<L extends Layout>(
+  layout: L,
+  kind: StageKey,
   toGroup: 0 | 1,
   index?: number,
-): ShellLayout {
+  tools: readonly ToolKind[] = MINOR_KINDS,
+): L {
   const next = cloneLayout(layout);
   const from = groupOf(next, kind);
   if (from !== null) {
@@ -365,28 +454,37 @@ export function moveTab(
     index === undefined ? target.tabs.length : Math.max(0, Math.min(index, target.tabs.length));
   target.tabs.splice(at, 0, kind);
   target.active = kind;
-  return normalize(next);
+  return normalize(next, tools);
 }
 
 /** Gives a tab its own group on the right (the ⧉ button). No-op when it is already alone there. */
-export function splitRight(layout: ShellLayout, kind: TabKey): ShellLayout {
+export function splitRight<L extends Layout>(
+  layout: L,
+  kind: StageKey,
+  tools: readonly ToolKind[] = MINOR_KINDS,
+): L {
   const at = groupOf(layout, kind);
   if (at === null) return layout;
   if (at === 1 && layout.stage.groups[1]!.tabs.length === 1) return layout;
-  if (layout.stage.groups.length === 1) return moveTab(layout, kind, 1);
+  if (layout.stage.groups.length === 1) return moveTab(layout, kind, 1, undefined, tools);
   // Two groups already: moving into group 1 is the closest meaning.
-  return at === 1 ? layout : moveTab(layout, kind, 1);
+  return at === 1 ? layout : moveTab(layout, kind, 1, undefined, tools);
 }
 
 /** Reorders a tab within its group. */
-export function reorderTab(layout: ShellLayout, kind: TabKey, index: number): ShellLayout {
+export function reorderTab<L extends Layout>(
+  layout: L,
+  kind: StageKey,
+  index: number,
+  tools: readonly ToolKind[] = MINOR_KINDS,
+): L {
   const at = groupOf(layout, kind);
   if (at === null) return layout;
-  return moveTab(layout, kind, at as 0 | 1, index);
+  return moveTab(layout, kind, at as 0 | 1, index, tools);
 }
 
 /** Sets the divider; `min`/`max` come from fitLayout so neither group drops under the floor. */
-export function setSplit(layout: ShellLayout, split: number, min = 0.2, max = 0.8): ShellLayout {
+export function setSplit<L extends Layout>(layout: L, split: number, min = 0.2, max = 0.8): L {
   const next = cloneLayout(layout);
   const lo = Math.max(0.2, min);
   const hi = Math.min(0.8, max);
@@ -394,14 +492,14 @@ export function setSplit(layout: ShellLayout, split: number, min = 0.2, max = 0.
   return next;
 }
 
-export function toggleMaximize(layout: ShellLayout, group: number): ShellLayout {
+export function toggleMaximize<L extends Layout>(layout: L, group: number): L {
   const next = cloneLayout(layout);
   const g = Math.min(group, next.stage.groups.length - 1);
   next.stage.maximized = next.stage.maximized === g ? null : g;
   return next;
 }
 
-export function setDockMode(layout: ShellLayout, state: DockMode): ShellLayout {
+export function setDockMode<L extends Layout>(layout: L, state: DockMode): L {
   const next = cloneLayout(layout);
   next.dock.state = state;
   if (state === 'wide' || state === 'narrow') next.dock.width = DOCK_WIDTH[state];
@@ -412,7 +510,7 @@ export function setDockMode(layout: ShellLayout, state: DockMode): ShellLayout {
  * Opens a dock collapsed to icons at the width it had before, so a wide (or dragged) dock comes
  * back as it was. Collapsing keeps the width for this.
  */
-export function expandDockFromIcons(layout: ShellLayout): ShellLayout {
+export function expandDockFromIcons<L extends Layout>(layout: L): L {
   const next = cloneLayout(layout);
   const width = Math.min(DOCK_MAX, Math.max(DOCK_MIN, next.dock.width));
   next.dock.width = width;
@@ -424,7 +522,7 @@ export function expandDockFromIcons(layout: ShellLayout): ShellLayout {
  * A dragged dock edge snaps at the narrow and wide presets and collapses to icons well below
  * the floor. `max` keeps the panels at their floor (fitLayout's dockMax).
  */
-export function setDockWidth(layout: ShellLayout, width: number, max = DOCK_MAX): ShellLayout {
+export function setDockWidth<L extends Layout>(layout: L, width: number, max = DOCK_MAX): L {
   const next = cloneLayout(layout);
   if (width < DOCK_MIN - 80) {
     next.dock.state = 'icons';
@@ -442,16 +540,25 @@ export function setDockWidth(layout: ShellLayout, width: number, max = DOCK_MAX)
   return next;
 }
 
-export function setSection(layout: ShellLayout, tool: MinorKind, open: boolean): ShellLayout {
+export function setSection<L extends Layout>(
+  layout: L,
+  tool: ToolKind,
+  open: boolean,
+  tools: readonly ToolKind[] = MINOR_KINDS,
+): L {
   const next = cloneLayout(layout);
   const s = next.dock.sections.find((x) => x.tool === tool);
   if (s) s.open = open;
-  return normalize(next);
+  return normalize(next, tools);
 }
 
-export function toggleSection(layout: ShellLayout, tool: MinorKind): ShellLayout {
+export function toggleSection<L extends Layout>(
+  layout: L,
+  tool: ToolKind,
+  tools: readonly ToolKind[] = MINOR_KINDS,
+): L {
   const s = layout.dock.sections.find((x) => x.tool === tool);
-  return setSection(layout, tool, !(s?.open ?? false));
+  return setSection(layout, tool, !(s?.open ?? false), tools);
 }
 
 /**
@@ -459,17 +566,25 @@ export function toggleSection(layout: ShellLayout, tool: MinorKind): ShellLayout
  * open in their groups; every other tab closes (its state lives on in the feature's store).
  * Web tabs the Library no longer has are dropped. The dock takes the layout's state and flags.
  */
-export function applyPreset(preset: ShellLayout, webTabs: readonly WebTab[] = []): ShellLayout {
-  return pruneTabs(normalize(cloneLayout(preset)), webTabs);
+export function applyPreset<L extends Layout>(
+  preset: L,
+  webTabs: readonly WebTab[] = [],
+  tools: readonly ToolKind[] = MINOR_KINDS,
+): L {
+  return pruneTabs(normalize(cloneLayout(preset), tools), webTabs, tools);
 }
 
 /**
  * Whether the screen still matches a layout's intent: tabs, actives, maximize, the divider, the
  * dock's state and width, and flags.
  */
-export function matchesPreset(current: ShellLayout, preset: ShellLayout): boolean {
-  const a = normalize(current);
-  const b = normalize(preset);
+export function matchesPreset(
+  current: Layout,
+  preset: Layout,
+  tools: readonly ToolKind[] = MINOR_KINDS,
+): boolean {
+  const a = normalize(current, tools);
+  const b = normalize(preset, tools);
   if (a.stage.groups.length !== b.stage.groups.length) return false;
   for (let i = 0; i < a.stage.groups.length; i++) {
     const ga = a.stage.groups[i]!;
@@ -484,20 +599,20 @@ export function matchesPreset(current: ShellLayout, preset: ShellLayout): boolea
   // what the DM chose: a dock collapsed to icons by hand is a different layout.
   if (a.dock.state !== b.dock.state) return false;
   if (a.dock.state !== 'icons' && Math.abs(a.dock.width - b.dock.width) > 8) return false;
-  const open = (l: ShellLayout) => l.dock.sections.filter((s) => s.open).map((s) => s.tool);
+  const open = (l: Layout) => l.dock.sections.filter((s) => s.open).map((s) => s.tool);
   const oa = open(a);
   const ob = open(b);
   if (oa.length !== ob.length || oa.some((t, i) => ob[i] !== t)) return false;
   // The tray's built-in sections are part of a layout's look; its timers and counters belong to
   // one campaign, so a layout used in another still matches without them (ADR 0023).
-  const sectionsOf = (l: ShellLayout) => TRAY_SECTIONS.filter((t) => l.tray.includes(t));
+  const sectionsOf = (l: Layout) => TRAY_SECTIONS.filter((t) => l.tray.includes(t));
   const ta = sectionsOf(a);
   const tb = sectionsOf(b);
   return ta.length === tb.length && ta.every((t, i) => tb[i] === t);
 }
 
 /** A short "Map / Campaign ⧉ Combat · dock narrow" line for the layouts list. */
-export function describeLayout(layout: ShellLayout, webTabs: readonly WebTab[] = []): string {
+export function describeLayout(layout: Layout, webTabs: readonly WebTab[] = []): string {
   const groups = layout.stage.groups
     .map((g) => g.tabs.map((t) => tabTitle(t, webTabs)).join(' / '))
     .join(' ⧉ ');

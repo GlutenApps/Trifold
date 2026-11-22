@@ -9,16 +9,19 @@ import {
 } from 'react';
 import {
   isWebTabKey,
-  MAJOR_KINDS,
   normalizeWebUrl,
   webTabId,
   webTabKey,
-  type StageGroup,
-  type TabKey,
   type WebTab,
   type WebTabIcon,
 } from '@trifold/schema';
-import { fitSplit, tabTitle } from '../../stores/shellLayout';
+import {
+  fitSplit,
+  ROLE_MAJORS,
+  tabTitle,
+  type Layout,
+  type StageKey,
+} from '../../stores/shellLayout';
 import { useFit, useShellStore } from '../../stores/shellStore';
 import { useAppStore } from '../../stores/appStore';
 import { useCombatStore } from '../../stores/combatStore';
@@ -38,13 +41,13 @@ import { useTableStore } from '../../stores/tableStore';
  */
 
 /** The web tab behind a stage key, or null when the Library no longer has it. */
-function webTabOf(kind: TabKey, webTabs: readonly WebTab[]): WebTab | null {
+function webTabOf(kind: StageKey, webTabs: readonly WebTab[]): WebTab | null {
   if (!isWebTabKey(kind)) return null;
   const id = webTabId(kind);
   return webTabs.find((t) => t.id === id) ?? null;
 }
 
-function tabIcon(kind: TabKey, webTabs: readonly WebTab[]): IconName {
+function tabIcon(kind: StageKey, webTabs: readonly WebTab[]): IconName {
   return isWebTabKey(kind) ? (webTabOf(kind, webTabs)?.icon ?? 'globe') : MAJOR_ICON[kind];
 }
 
@@ -83,7 +86,9 @@ export function Stage() {
   const shownGroup = Math.min(focusedGroup, groups.length - 1);
   const allTabs = groups.flatMap((g) => g.tabs);
   const open = new Set(groups.flatMap((g) => g.tabs));
-  const parked = MAJOR_KINDS.filter((k) => !open.has(k));
+  // The loaded console's own majors (the GM's or the player's) stay mounted while closed.
+  const majors = ROLE_MAJORS[useShellStore((s) => s.role)];
+  const parked = majors.filter((k) => !open.has(k));
 
   const dragDivider = (e: ReactPointerEvent<HTMLDivElement>) => {
     const rect = stageRef.current?.getBoundingClientRect();
@@ -133,7 +138,7 @@ export function Stage() {
     return null;
   };
 
-  const beginTabDrag = (kind: TabKey) => (e: ReactPointerEvent<HTMLElement>) => {
+  const beginTabDrag = (kind: StageKey) => (e: ReactPointerEvent<HTMLElement>) => {
     // Folded, the strip mixes both groups, so dragging could not say where a tab belongs.
     if (e.button !== 0 || folded) return;
     const startX = e.clientX;
@@ -270,11 +275,11 @@ function TabStrip({
   onTabPointerDown,
 }: {
   group: number;
-  data: StageGroup;
+  data: Layout['stage']['groups'][number];
   /** Two groups shown as one stack: every tab, no maximize (ADR 0014). */
   stacked?: boolean;
   dropIndex: number | null;
-  onTabPointerDown: (kind: TabKey) => (e: ReactPointerEvent<HTMLElement>) => void;
+  onTabPointerDown: (kind: StageKey) => (e: ReactPointerEvent<HTMLElement>) => void;
 }) {
   const layout = useShellStore((s) => s.layout);
   const webTabs = useShellStore((s) => s.webTabs);
@@ -320,10 +325,10 @@ function TabStrip({
     return () => document.removeEventListener('mousedown', onDown);
   }, [menu]);
 
-  const isLive = (kind: TabKey) =>
+  const isLive = (kind: StageKey) =>
     (kind === 'encounters' && combatLive) ||
     (kind === 'map' && !!liveSceneId && liveSceneId === selectedSceneId);
-  const keepsLabel = (kind: TabKey) => kind === data.active || isLive(kind);
+  const keepsLabel = (kind: StageKey) => kind === data.active || isLive(kind);
 
   // Too many tabs: labels drop from the others first, then the rest fold into ⋯. Long labels
   // can overflow before the estimate says so, so a measured overflow also counts (`tight`);
@@ -348,9 +353,10 @@ function TabStrip({
     : data.tabs;
   const folded = data.tabs.filter((t) => !shown.includes(t));
   // A major open in either group is not offered again; dragging its tab moves it.
-  const isOpen = (k: TabKey) => layout.stage.groups.some((g) => g.tabs.includes(k));
-  const addable: TabKey[] = [
-    ...MAJOR_KINDS.filter((k) => !isOpen(k)),
+  const isOpen = (k: StageKey) => layout.stage.groups.some((g) => g.tabs.includes(k));
+  const majors = ROLE_MAJORS[useShellStore((s) => s.role)];
+  const addable: StageKey[] = [
+    ...majors.filter((k) => !isOpen(k)),
     ...webTabs.map((t) => webTabKey(t.id)).filter((k) => !isOpen(k)),
   ];
   const submitNewTab = () => {
@@ -360,7 +366,7 @@ function TabStrip({
     setNewTab({ title: '', url: '', icon: 'globe' });
     addWebTab({ url, title: newTab.title, icon: newTab.icon }, group as 0 | 1);
   };
-  const onNewTabKey = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+  const onNewStageKey = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') submitNewTab();
     if (e.key === 'Escape') setMenu(null);
   };
@@ -504,7 +510,7 @@ function TabStrip({
                 autoFocus
                 value={newTab.title}
                 onChange={(e) => setNewTab({ ...newTab, title: e.target.value })}
-                onKeyDown={onNewTabKey}
+                onKeyDown={onNewStageKey}
               />
               <input
                 type="text"
@@ -513,7 +519,7 @@ function TabStrip({
                 spellCheck={false}
                 value={newTab.url}
                 onChange={(e) => setNewTab({ ...newTab, url: e.target.value })}
-                onKeyDown={onNewTabKey}
+                onKeyDown={onNewStageKey}
               />
               <div className="row">
                 <WebTabIconPicker

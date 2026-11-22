@@ -148,7 +148,7 @@ The player console has the GM console's shape and is filled from the per-device 
 
 Build `features/joined/PlayerConsole.tsx` as a sibling of the GM console inside `AppShell`, with its own Zustand store (`joinedStore`) holding the open joined campaign, the link state and the latest view. While a joined campaign is open, `useCampaignStore.current` stays null and the combat, presenter, scene, counters and timers stores stay empty. That is what makes the acceptance check "the player console never loads GM campaign data" true by construction.
 
-- `Stage` and `Dock` are reused once they take their tab and tool registries and their layout from props or context instead of importing the GM's. That refactor reaches into `shellStore.ts` and `shellLayout.ts`, whose types are the GM's kinds, so it is done at the start of phase 2, as its own PR with no behaviour change, when the player console is there to show what the seam has to carry.
+- `Stage`, `Dock` and the rest of the chrome are the GM's own components. The shell store loads one console at a time in one of two roles, `gm` or `player` (`shellStore.ts`, `shellLayout.ts`): the role decides which tabs and tools a layout may hold and where it is saved. `majors.tsx` and `minors.tsx` stay the registries and carry both consoles' kinds; Compendium and Quick notes are the same kind in both. Built.
 - The strip is a new, fixed `PlayerStrip` (connection status, round, "Your turn" or "You're next", Dice). `LiveStrip` and the tray's choosable sections (ADR 0023) are the GM's and are not reused.
 - `TopBar` shows the campaign name and the way back to the Library; global search covers the player's notes, characters and the compendium.
 
@@ -156,17 +156,17 @@ Build `features/joined/PlayerConsole.tsx` as a sibling of the GM console inside 
 
 | Where | Panel | Built from |
 | --- | --- | --- |
-| Stage | **Table**: the map, or the TV's title, image or break screen, with its overlays | `web/MapView.tsx`, `ScreenView.tsx`, `TvOverlays.tsx` |
+| Stage | **VTT**: the map, or the TV's title, image or break screen, with its overlays | `web/MapView.tsx`, `ScreenView.tsx`, `TvOverlays.tsx` |
 | Stage | **Character**: the player's sheet | New (Part 3) |
 | Stage | **Compendium**: bundled SRD and the player's own sources and homebrew | `features/compendium`, with the campaign actions off |
 | Stage | **Web tabs**, such as a sheet kept in another tool | Existing web tabs (ADR 0011), Library-wide as today |
-| Dock | **My creature**: HP, conditions, companions, move, summon | `web/tools.tsx`, `AddCompanion.tsx` |
+| Dock | **My creature**: the player's character and its companions (chosen with the target chips): HP, conditions, companions, move, summon | `web/tools.tsx`, `AddCompanion.tsx` |
 | Dock | **Initiative**: the order as the TV shows it, the player's turn marked, and the box to enter a roll | `InitiativeStrip` entries; `InitiativeCard` moved out of `Playing.tsx` |
 | Dock | **Quick notes**: private notes, saved in the joined campaign | The note editor, behind a notes source (below) |
 | Pop-up | **Dice**: rolls stay local | `features/dice` |
 | Strip | Connection status, round, "Your turn" or "You're next" | New `PlayerStrip` |
 
-When the player holds no creature, the Table tab shows the claim picker (`web/Picker.tsx`) in place of the map. Not in the player console: Campaign (party, NPCs, GM notes), Encounters, VTT controls, Scenes, Music, and editing counters or timers (their overlays still show on the Table tab).
+When the player holds no creature, the VTT tab shows the claim picker (`web/Picker.tsx`) in place of the map. Not in the player console: Campaign (party, NPCs, GM notes), Encounters, VTT controls, Scenes, Music, and editing counters or timers (their overlays still show on the VTT tab).
 
 Reuse notes, from the code:
 
@@ -193,13 +193,13 @@ The strip shows "Your turn" or "You're next" with the creature's name when the p
 
 ### Layouts
 
-`MAJOR_KINDS` and `MINOR_KINDS` are schema enums stored in saved layouts. Add `PLAYER_MAJOR_KINDS` (`table`, `character`, `compendium`) and `PLAYER_MINOR_KINDS` (`myCreature`, `initiative`, `quickNotes`), a `PlayerShellLayout` built from them, and `workspace.playerConsoles` keyed by joined campaign id, so neither role's layout can name the other's panels. All additive with defaults: no `library.json` version bump. `majors.tsx` and `minors.tsx` stay the registries and gain the player entries. Named layouts (Prep, Table, Combat) stay the GM's; the player console keeps one layout per joined campaign.
+`MAJOR_KINDS` and `MINOR_KINDS` are schema enums stored in saved layouts. Add `PLAYER_MAJOR_KINDS` (`table`, `character`, `compendium`; the `table` tab is titled VTT, like the GM's) and `PLAYER_MINOR_KINDS` (`myCreature`, `initiative`, `quickNotes`), a `PlayerShellLayout` built from them, and `workspace.playerConsoles` keyed by joined campaign id, so neither role's layout can name the other's panels. All additive with defaults: no `library.json` version bump. `majors.tsx` and `minors.tsx` stay the registries and gain the player entries. Named layouts (Prep, Table, Combat) stay the GM's; the player console keeps one layout per joined campaign.
 
 Player hotkeys register in `hotkeys.ts` like the rest, active only while a joined campaign is open. The GM's table hotkeys (blackout, next turn, go live and the others registered in `AppShell`) must do nothing there.
 
 ### The map
 
-Use `MapView` inside the Table panel. It already renders `ClientMap` with the fogged image, borrows the console's `TokenDisc` and ruler, and handles drags through the movement messages. Check it from the 480 px panel floor up: it was built for a phone page, and anything that reads the window's size has to read the panel's. The GM's `MapLayer` is not touched.
+Use `MapView` inside the VTT panel. It already renders `ClientMap` with the fogged image, borrows the console's `TokenDisc` and ruler, and handles drags through the movement messages. Check it from the 480 px panel floor up: it was built for a phone page, and anything that reads the window's size has to read the panel's. The GM's `MapLayer` is not touched.
 
 ### Actions
 
@@ -315,6 +315,18 @@ A character built with shared content keeps working when it is unlinked or the c
 - Rejoining, or importing the player's own copy of the source, resolves the links again by name.
 
 So a sheet stores, for each linked record, its key, source name and display name, never the record's text.
+
+## Party notes
+
+Players asked for notes the whole party shares, beside each player's own (Ian, 2026-11-23). To be built after the player console; this is the shape.
+
+- **They live with the GM.** Party notes are ordinary notes in the GM's campaign, in a Party notes folder found by its role (as Quick notes is, ADR 0018), so they are backed up and exported with the campaign and there is one copy. The GM reads and edits them like any note.
+- **Players read and write them over the table connection.** A device that holds a character gets the folder's notes; adding or saving one is a request the console applies, like an intent. Nothing else in the GM's notes tree is sent.
+- **One writer at a time per note.** A save carries the version the player opened; if someone saved meanwhile, the save is refused and the player sees both texts and chooses. No live co-editing.
+- **Offline, read-only.** The last copy is cached in the joined campaign; new party notes wait for the table. A player's own notes work offline as before.
+- **In the player console:** Quick notes gains a switch, Mine or Party; a Notes view on the stage lists both.
+
+Open: whether a player may delete a party note they did not write (assumed no; the GM can).
 
 ## Table rolls
 
@@ -433,8 +445,8 @@ A new file kind, `character`, at version 1. Characters rank in memory in global 
 One feature per PR (`CLAUDE.md`), and each phase updates its own docs and ADR as it lands. After phase 5, the PDF import and the builder run in parallel.
 
 1. **Seams, no behaviour change.** The `TableClient` split in `web/connection.ts`; the picker taking the device's name and the initiative box exported; player kinds and the player layout in the schema with no UI; the feature flag (`TRIFOLD_PLAYER_MODE=1`, read through `app.getInfo`). All existing tests and the smoke test stay green and unchanged. Built.
-2. **Player mode on the LAN.** First, as PRs with no behaviour change: `Stage` and `Dock` taking their registries, and the components both clients use moved to a shared folder. Then the service advertisement and table discovery; Join a campaign, the joined-campaign store and the Playing list; `LanClient` and `BridgeClient`; the `table` media host and image cache; the player console with Table, My creature, Initiative, Quick notes, Dice and Compendium; then the offline view, finding the table again, the failure messages and the sharing-backups warning. Its ADR and the ground rule 1 change. The flag comes off when this phase's acceptance passes.
-3. **Table rolls.** The Table and Private switch, `roll` and `rolled`, table rolls in both roll logs. Its ADR.
+2. **Player mode on the LAN.** First, as PRs with no behaviour change: the shell's two roles (built), and the components both clients use moved to a shared folder. Then the service advertisement and table discovery; Join a campaign, the joined-campaign store and the Playing list; `LanClient` and `BridgeClient`; the `table` media host and image cache; the player console with Table, My creature, Initiative, Quick notes, Dice and Compendium; then the offline view, finding the table again, the failure messages and the sharing-backups warning. Its ADR and the ground rule 1 change. The flag comes off when this phase's acceptance passes.
+3. **Table rolls and party notes**, one PR each. Table rolls: the Table and Private switch, `roll` and `rolled`, table rolls in both roll logs, and its ADR. Party notes: the Party notes folder, sending and saving it over the table connection with the version check, and the Mine or Party switch.
 4. **Shared content and player packs.** The Shared with players list, the shared source in a joined campaign, sync on connect, Export for players and opening a pack. Its ADR, with the `DESIGN.md` §8 change.
 5. **Character foundation.** The sheet schema (marked by edition, linked records by key and name) and derived-number functions in `packages/rules/src/character/`, the Character tab, the Table numbers form, the `sheetUrl` migration, and the `sheetOffer` flow with Accept, Dismiss and auto-accept. Its ADR.
 6. **PDF sheet import** (parallel with 7). Real exports first, then field mapping, the preview, manual matching and re-import.
