@@ -12,7 +12,7 @@ This is how a commit on `main` becomes the installers people download. Pushing a
 
 Each platform builds for its own architecture, because the SQLite module is fetched prebuilt for the machine doing the build. There's no universal macOS build.
 
-Every package holds the app, the SRD snapshot and the icon set under `resources/`, and the font licences under `resources/licenses/`. The About page shows the attribution. The Windows installer shows the MIT licence from `apps/desktop/build/license.txt`, which is a copy of the root `LICENSE`; keep the two identical.
+Every package holds the app, the SRD snapshot and the icon set under `resources/`, and the font licences under `resources/licenses/`. The About page shows the attribution. The Windows installer shows `apps/desktop/build/license.txt`: a short copyright and GPL notice followed by the root `LICENSE` (the GNU GPL v3) word for word; when either changes, keep the copy in step. Settings › About shows the same notice and the full text (ADR 0056).
 
 The builds aren't code-signed on either platform yet. The README explains how to get past SmartScreen and Gatekeeper.
 

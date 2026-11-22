@@ -4,7 +4,7 @@ Source for the sample campaign that ships with Trifold (ADR 0016). A one-session
 four level-3 characters (2024 rules, about 3–4 hours) written to touch every part of the app.
 
 The text is our own and every creature is an SRD 5.2.1 record (`srd-2024`). **The maps are
-2-Minute Tabletop's, under CC BY-NC 4.0**, not the repo's MIT licence: see
+2-Minute Tabletop's, under CC BY-NC 4.0**, not the repo's GPL licence: see
 [images/CREDITS.md](images/CREDITS.md). They are here for pre-1.0 testing and must be replaced,
 or licensed with the author's permission, before any release that is not free.
 

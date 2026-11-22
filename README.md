@@ -61,6 +61,6 @@ A few things worth knowing:
 
 ## Content and licensing
 
-Trifold's code is MIT licensed ([LICENSE](LICENSE)). The app includes only System Reference Document content (CC BY 4.0), icons from game-icons.net (CC BY 3.0), the Outfit and IBM Plex Mono fonts (SIL OFL), this project's own text, and the sample campaign's maps by 2-Minute Tabletop (CC BY-NC 4.0, non-commercial and not covered by the MIT licence; see `samples/greyford/images/CREDITS.md`). The About page shows the full attribution.
+Trifold is free software, copyright © 2026 Ian duPont, licensed under the GNU General Public License version 3 or (at your option) any later version ([LICENSE](LICENSE)). Versions 0.3.0 to 0.4.5 were released under the MIT License. The Trifold name and logo are not covered by the licence: see [TRADEMARK.md](TRADEMARK.md). Contributions are welcome under the terms in [CONTRIBUTING.md](CONTRIBUTING.md). The app includes only System Reference Document content (CC BY 4.0), icons from game-icons.net (CC BY 3.0), the Outfit and IBM Plex Mono fonts (SIL OFL), this project's own text, and the sample campaign's maps by 2-Minute Tabletop (CC BY-NC 4.0, non-commercial and not covered by the GPL; see `samples/greyford/images/CREDITS.md`). The About page shows the full attribution.
 
 Anything you import stays in your Library and is never sent anywhere.

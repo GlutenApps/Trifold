@@ -114,6 +114,15 @@ describe('SettingsPage', () => {
     );
   });
 
+  it('shows the GPL notice and its full text in About (ADR 0056)', () => {
+    render(<SettingsPage />);
+    const licence = screen.getByTestId('app-licence');
+    expect(licence).toHaveTextContent('copyright © 2026 Ian duPont');
+    expect(licence).toHaveTextContent('GNU General Public License');
+    expect(licence).toHaveTextContent('ABSOLUTELY NO WARRANTY');
+    expect(licence.querySelector('pre')?.textContent).toContain('Version 3, 29 June 2007');
+  });
+
   it('opens the logs folder', async () => {
     render(<SettingsPage />);
     await userEvent.click(screen.getByRole('button', { name: 'Open logs folder' }));
