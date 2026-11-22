@@ -36,6 +36,17 @@ export const CampaignSettings = z.object({
       }),
     )
     .default([]),
+  /**
+   * Shared with players (ADR 0060): the imported sources and the homebrew records whose
+   * player-facing content this campaign's players are given. Off for everything until the GM
+   * turns it on. Creatures never pass this way; the companion list above is how one does.
+   */
+  shared: z
+    .object({
+      sourceIds: z.array(z.string()).default([]),
+      homebrewIds: z.array(z.string()).default([]),
+    })
+    .prefault({}),
 });
 export type CampaignSettings = z.infer<typeof CampaignSettings>;
 export type SummonableEntry = CampaignSettings['summonable'][number];

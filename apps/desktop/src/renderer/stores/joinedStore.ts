@@ -29,6 +29,8 @@ interface JoinedState {
    */
   notes: Note[];
   pins: PinnedRoll[];
+  /** How many records the open joined campaign's GM shares with it (ADR 0060). */
+  sharedRecords: number;
   tables: FoundTableSummary[];
   searching: boolean;
   error: string | null;
@@ -70,6 +72,7 @@ export const useJoinedStore = create<JoinedState>((set, get) => ({
   current: null,
   notes: [],
   pins: [],
+  sharedRecords: 0,
   tables: [],
   searching: false,
   error: null,
@@ -151,7 +154,7 @@ export const useJoinedStore = create<JoinedState>((set, get) => ({
       }
       await running.close();
     }
-    set({ current: joined, notes: [], pins: [], error: null });
+    set({ current: joined, notes: [], pins: [], sharedRecords: 0, error: null });
     shell.enterPlayerConsole(campaignId);
     try {
       const [notes, pins] = await Promise.all([
@@ -166,7 +169,7 @@ export const useJoinedStore = create<JoinedState>((set, get) => ({
 
   closeCampaign() {
     if (!get().current) return;
-    set({ current: null, notes: [], pins: [] });
+    set({ current: null, notes: [], pins: [], sharedRecords: 0 });
     useShellStore.getState().leaveCampaign();
   },
 

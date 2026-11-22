@@ -1,3 +1,4 @@
+import { JoinedStore } from '../joined/store';
 import { join } from 'node:path';
 import type { LibraryInfo } from '@trifold/api';
 import { INDEX_VERSION, IndexDb } from '../index/IndexDb';
@@ -77,6 +78,7 @@ export class LibrarySession {
         this.store,
         this.homebrew,
         () => this.allCreatureFolders(),
+        new JoinedStore(this.store),
       );
       this.music = new MusicRepository(this.store, this.logger);
       this.backups = new BackupService(this.store, this.logger, this.backupOptions);

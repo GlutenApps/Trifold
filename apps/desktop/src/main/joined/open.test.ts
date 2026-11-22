@@ -63,6 +63,10 @@ describe('JoinedService: an open campaign', () => {
     now: 1,
   };
 
+  const shared: string[] = [];
+  let sharedAnswer: { hash: string; records: unknown[] } | null = null;
+  const fetchShared = vi.fn(async (_url: string, _token: string) => sharedAnswer);
+
   async function setup(options: { enabled?: boolean; fetched?: Uint8Array | null } = {}) {
     const store = await LibraryStore.open(root);
     await new JoinedStore(store).join({
@@ -91,6 +95,8 @@ describe('JoinedService: an open campaign', () => {
       },
       open: net.open,
       fetchPicture,
+      fetchShared,
+      onShared: (campaignId, records) => void shared.push(`${campaignId}:${records}`),
     });
     made.push(service);
     const file = async () =>
@@ -109,6 +115,9 @@ describe('JoinedService: an open campaign', () => {
     found = [];
     links.length = 0;
     messages.length = 0;
+    shared.length = 0;
+    sharedAnswer = null;
+    fetchShared.mockClear();
     discovery.start.mockClear();
     discovery.stop.mockClear();
   });
@@ -281,6 +290,75 @@ describe('JoinedService: an open campaign', () => {
       ok: false,
       reason: 'noAnswer',
     });
+  });
+
+  it('fetches what the campaign shares when the table names a hash it does not hold', async () => {
+    const { service, net } = await setup();
+    const store = new JoinedStore(await LibraryStore.open(root));
+    await service.open('c1');
+    net.all[0]!.receive(campaign);
+    net.all[0]!.receive({ type: 'token', token: 'secret', campaignId: 'c1' });
+    sharedAnswer = {
+      hash: 'h1',
+      records: [
+        {
+          schemaVersion: 1,
+          id: 'shared:c1:ward',
+          kind: 'feat',
+          key: 'ward',
+          name: 'Ward',
+          displayName: 'Ward',
+          sourceId: 'shared:c1',
+          edition: '2024',
+          data: { text: 'Text.' },
+        },
+        // Not this campaign's to send: dropped before anything is kept.
+        { id: 'hb-mine', sourceId: 'homebrew', kind: 'spell' },
+      ],
+    };
+    net.all[0]!.receive({ type: 'shared', hash: 'h1' });
+    await service.settled();
+    // The token proves the device; the content comes from the table's own address.
+    expect(fetchShared).toHaveBeenCalledWith('http://192.168.1.23:8130/shared', 'secret');
+    expect(await store.sharedHash('c1')).toBe('h1');
+    expect((await store.sharedRecords('shared:c1')).map((r) => r.id)).toEqual(['shared:c1:ward']);
+    // Told once on opening, with nothing held yet, and again with what arrived.
+    expect(shared).toEqual(['c1:0', 'c1:1']);
+    expect(service.openSharedSourceId()).toBe('shared:c1');
+    // The console is not sent it: the compendium reads the source like any other.
+    expect(messages.map((m) => m.type)).toEqual(['campaign']);
+
+    // The same hash again fetches nothing.
+    net.all[0]!.receive({ type: 'shared', hash: 'h1' });
+    await service.settled();
+    expect(fetchShared).toHaveBeenCalledOnce();
+
+    // The GM unshares everything: the copy goes, with no fetch.
+    net.all[0]!.receive({ type: 'shared', hash: '' });
+    await service.settled();
+    expect(await store.sharedHash('c1')).toBe('');
+    expect(fetchShared).toHaveBeenCalledOnce();
+    expect(shared).toEqual(['c1:0', 'c1:1', 'c1:0']);
+
+    service.close('c1');
+    expect(service.openSharedSourceId()).toBeNull();
+  });
+
+  it('keeps what it has when the table will not hand the content over', async () => {
+    const { service, net } = await setup();
+    const store = new JoinedStore(await LibraryStore.open(root));
+    await service.open('c1');
+    net.all[0]!.receive(campaign);
+    // No token yet: nothing to prove the device with, so nothing is asked.
+    net.all[0]!.receive({ type: 'shared', hash: 'h1' });
+    await service.settled();
+    expect(fetchShared).not.toHaveBeenCalled();
+    net.all[0]!.receive({ type: 'token', token: 'secret', campaignId: 'c1' });
+    net.all[0]!.receive({ type: 'shared', hash: 'h1' });
+    await service.settled();
+    expect(fetchShared).toHaveBeenCalledOnce();
+    expect(await store.sharedHash('c1')).toBe('');
+    expect(shared).toEqual(['c1:0']);
   });
 
   it('keeps what the table last showed, for the next time the table is not up', async () => {

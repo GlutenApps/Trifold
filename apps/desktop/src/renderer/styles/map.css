@@ -819,6 +819,42 @@
 }
 
 /* Campaign › Summons (ADR 0043, Phase 4). */
+/* Campaign › Shared with players (ADR 0060). */
+.shared-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.shared-tab h2,
+.shared-tab p {
+  margin: 0;
+}
+
+.shared-tab h2 {
+  margin-top: 8px;
+}
+
+.shared-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shared-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--control-h);
+  padding: 2px 0;
+  border-top: 1px solid var(--border);
+}
+
+.shared-row:first-child {
+  border-top: 0;
+}
+
 .summons-tab {
   display: flex;
   flex-direction: column;

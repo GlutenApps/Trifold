@@ -161,7 +161,8 @@ describe('buildSearch', () => {
 describe('campaign creatures in every query (ADR 0035)', () => {
   it('shows only the open campaign’s creatures and never groups them with Library records', () => {
     const q = buildSearch({ kind: 'monster', campaignSourceId: 'campaign:greyford' });
-    expect(q.sql).toContain("(s.kind != 'campaign' OR r.source_id = ?)");
+    // A joined campaign's shared content (ADR 0060) is scoped the same way, by the same parameter.
+    expect(q.sql).toContain("(s.kind NOT IN ('campaign', 'shared') OR r.source_id = ?)");
     expect(q.sql).toContain(
       "CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key",
     );

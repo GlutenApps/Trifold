@@ -177,6 +177,7 @@ a connection dot.
 | `grabbed`, `dragEnded {reason}` | A drag may go on, or ended without moving |
 | `closed` | The DM stopped the server or closed the campaign |
 | `rolled {roll}` | A roll made at the table, to every device holding a creature (ADR 0059). The phone page ignores it |
+| `shared {hash}` | What the campaign shares with its players now (ADR 0060), to every known device. A player's Trifold holding another hash fetches `GET /shared` with its device token as a bearer token. The phone page ignores it |
 
 Main hands the console three kinds of event: `tableIntent` (a checked edit), token events
 (preview, preview end, move) and summon events (spawn, dismiss, keep).

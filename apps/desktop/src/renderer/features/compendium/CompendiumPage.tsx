@@ -4,6 +4,7 @@ import type { RecordKind } from '@trifold/schema';
 import { landOn, navKey, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCompendiumStore } from '../../stores/compendiumStore';
+import { useJoinedStore } from '../../stores/joinedStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { itemTypeName, shortSourceName } from './formatting';
 import { CreatureEditor } from './CreatureEditor';
@@ -78,6 +79,8 @@ export function CompendiumPage() {
   const addToLibrary = useCompendiumStore((s) => s.addToLibrary);
   const sources = useSourcesStore((s) => s.sources);
   const loadSources = useSourcesStore((s) => s.load);
+  // In a player console: how much the campaign's GM shares (ADR 0060); 0 anywhere else.
+  const sharedRecords = useJoinedStore((s) => (s.current ? s.sharedRecords : 0));
   // The open campaign's preferred edition heads each collapsed row; a change re-runs the search.
   const preferredEdition = useCampaignStore((s) => s.current?.campaign.preferredEdition);
 
@@ -150,6 +153,14 @@ export function CompendiumPage() {
         }}
       />
 
+      {sharedRecords > 0 && (
+        <p className="muted small shared-status" role="status" data-testid="shared-status">
+          Your GM shares {sharedRecords.toLocaleString()}{' '}
+          {sharedRecords === 1 ? 'record' : 'records'} with this campaign. Pick “
+          {sources.find((s) => s.kind === 'shared')?.name ?? 'Shared'}” under sources to see only
+          those.
+        </p>
+      )}
       <div className="row filters">
         <input
           type="text"

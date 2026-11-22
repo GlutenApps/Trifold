@@ -1,3 +1,5 @@
+import { syncIndex } from './index/sync';
+import { loadShared, NOTHING_SHARED } from './table/sharedContent';
 import { app, net, screen } from 'electron';
 import { join } from 'node:path';
 import { EVENT_CHANNELS, featureFlags } from '@trifold/api';
@@ -194,6 +196,21 @@ async function main(): Promise<void> {
     onToken: (event) => windows.sendToConsole(EVENT_CHANNELS.tableToken, event),
     onSummon: (event) => windows.sendToConsole(EVENT_CHANNELS.tableSummon, event),
     onRoll: (roll) => windows.sendToConsole(EVENT_CHANNELS.tableRoll, roll),
+    // What the open campaign shares with its players (ADR 0060), read from the Library's files.
+    shared: async (heldNpcIds) => {
+      const view = activeSession.openCampaignView();
+      const { campaigns, homebrew } = activeSession;
+      if (!view || !campaigns || !homebrew) return NOTHING_SHARED;
+      const { catalog, index } = activeSession.require();
+      const bundle = await campaigns.bundle();
+      return loadShared(
+        { catalog, index, homebrew },
+        bundle.campaign,
+        view,
+        bundle.npcs,
+        heldNpcIds,
+      );
+    },
     ...(smokePort ? { ports: [smokePort] } : {}),
   });
 
@@ -206,6 +223,13 @@ async function main(): Promise<void> {
     onTables: (tables) => windows.sendToConsole(EVENT_CHANNELS.joinedTables, tables),
     onLink: (event) => windows.sendToConsole(EVENT_CHANNELS.joinedLink, event),
     onMessage: (event) => windows.sendToConsole(EVENT_CHANNELS.joinedMessage, event),
+    // A joined campaign's shared content changed on disk: the index follows the files.
+    onShared: async (campaignId, records) => {
+      const { index, catalog, store } = activeSession.require();
+      await syncIndex(index, catalog, store, logger);
+      // After the index, so a search the console runs on hearing this finds the records.
+      windows.sendToConsole(EVENT_CHANNELS.joinedShared, { campaignId, records });
+    },
     // Pictures from a GM's table are derived data: beside the app's settings, not in the Library.
     cacheDir: join(app.getPath('userData'), 'table-cache'),
   });

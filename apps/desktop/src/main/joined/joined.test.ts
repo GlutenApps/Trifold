@@ -12,7 +12,7 @@ import {
   type LanLink,
   type LanSocket,
 } from './lanClient';
-import { JoinedStore } from './store';
+import { cleanShared, JoinedStore, sharedSourceId } from './store';
 
 describe('parseTableAddress', () => {
   it('reads what a GM’s Trifold shows, and what joined.json keeps', () => {
@@ -223,6 +223,73 @@ describe('JoinedStore', () => {
     expect(await joined.pinnedRolls('c1')).toMatchObject([{ id: pin.id, name: 'Greatsword' }]);
     await joined.removePinnedRoll('c1', pin.id);
     expect(await joined.pinnedRolls('c1')).toEqual([]);
+  });
+
+  const sharedRecord = (id: string, extra: object = {}) => ({
+    schemaVersion: 1,
+    id: `shared:c1:${id}`,
+    kind: 'feat',
+    key: id,
+    name: id,
+    displayName: id,
+    sourceId: 'shared:c1',
+    edition: '2024',
+    tags: [],
+    data: { text: 'Text.' },
+    sharedFrom: { sourceName: 'A book', nonSrd: true },
+    ...extra,
+  });
+
+  it('keeps what a GM shared as one read-only source in the joined campaign', async () => {
+    await joined.join({ campaignId: 'c1', campaignName: 'Greyford', displayName: '', now: T });
+    expect(await joined.sharedHash('c1')).toBe('');
+    expect(await joined.sharedSources()).toEqual([]);
+
+    const records = cleanShared('c1', [sharedRecord('ward'), sharedRecord('veil')]);
+    const source = await joined.writeShared('c1', { hash: 'h1', records });
+    expect(source).toMatchObject({
+      id: sharedSourceId('c1'),
+      kind: 'shared',
+      name: 'Shared in Greyford',
+      fileHash: 'h1',
+      campaignIds: ['c1'],
+      license: { nonSrd: true },
+      recordCounts: { feat: 2 },
+    });
+    expect((await readdir(join(root, 'joined', 'c1', 'shared'))).sort()).toEqual([
+      'records.jsonl',
+      'source.json',
+    ]);
+    expect(await joined.sharedHash('c1')).toBe('h1');
+    expect((await joined.sharedSources()).map((s) => s.id)).toEqual(['shared:c1']);
+    expect((await joined.sharedRecords('shared:c1')).map((r) => r.key)).toEqual(['ward', 'veil']);
+    // Another campaign's source, or anything that is not one, reads as nothing.
+    expect(await joined.sharedRecords('shared:c2')).toEqual([]);
+    expect(await joined.sharedRecords('shared:../c1')).toEqual([]);
+    expect(await joined.sharedRecords('homebrew')).toEqual([]);
+
+    await joined.removeShared('c1');
+    expect(await joined.sharedHash('c1')).toBe('');
+    expect(await joined.sharedSources()).toEqual([]);
+    await expect(joined.writeShared('nope', { hash: 'h', records })).rejects.toThrow('not joined');
+  });
+
+  it('keeps only records that belong under the campaign’s own shared source', () => {
+    const kept = cleanShared('c1', [
+      sharedRecord('ward'),
+      // The same id twice is one record.
+      sharedRecord('ward', { name: 'again' }),
+      // Aimed at the player's own homebrew, or at another campaign's shared source.
+      sharedRecord('x', { id: 'hb-mine', sourceId: 'homebrew' }),
+      sharedRecord('y', { sourceId: 'shared:c2' }),
+      sharedRecord('z', { id: 'shared:c2:z' }),
+      // Not a record at all.
+      { id: 'shared:c1:junk', sourceId: 'shared:c1' },
+      'text',
+      null,
+    ]);
+    expect(kept.map((r) => r.id)).toEqual(['shared:c1:ward']);
+    expect(kept[0]!.name).toBe('ward');
   });
 
   it('writes nothing into a campaign that was left, and refuses ids that are not plain names', async () => {

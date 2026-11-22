@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { CreatureView, JoinedSummary, LastTableView } from '@trifold/api';
+import { useCompendiumStore } from '../../stores/compendiumStore';
+import { useJoinedStore } from '../../stores/joinedStore';
 import { useShellStore } from '../../stores/shellStore';
+import { useSourcesStore } from '../../stores/sourcesStore';
 import { logTableRoll, useTableRollStore } from '../../stores/tableRollStore';
 import { useConnection, type Connection } from '../../../web/connection';
 import { createBridgeClient, withTableUrls } from './bridgeClient';
@@ -44,6 +47,7 @@ export function PlayerTableProvider({
   const client = useMemo(() => createBridgeClient(campaign.campaignId), [campaign.campaignId]);
   // Rolls made at the table land in this console's roll log, the player's own among them.
   const conn = useConnection(client, { onRolled: logTableRoll });
+  const { campaignId } = campaign;
   const [selected, select] = useState<string | null>(null);
   // The tracker is waiting for one of the player's creatures to roll initiative: the Initiative
   // tool comes forward, as a section or a flyout, so the box to enter it is never out of sight.
@@ -65,10 +69,23 @@ export function PlayerTableProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canRollAtTable, client]);
 
+  // What the GM shares arrived, changed or went (ADR 0060): the compendium's list, its source
+  // filter and its counts are read again, so the player sees it without doing anything.
+  useEffect(
+    () =>
+      window.trifold.on('joinedShared', (event) => {
+        if (event.campaignId !== campaignId) return;
+        useJoinedStore.setState({ sharedRecords: event.records });
+        void useSourcesStore.getState().load();
+        void useCompendiumStore.getState().search();
+        void useCompendiumStore.getState().loadFacets();
+      }),
+    [campaignId],
+  );
+
   // What the table last showed: the newest view of this run, else what main kept from the last.
   const [kept, setKept] = useState<LastTableView | null>(null);
   const [seen, setSeen] = useState<LastTableView | null>(null);
-  const { campaignId } = campaign;
   useEffect(() => {
     let wanted = true;
     void window.trifold.joined
