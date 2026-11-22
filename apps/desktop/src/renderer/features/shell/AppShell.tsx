@@ -474,6 +474,8 @@ export function AppShell() {
             <LibraryView />
           )}
           <PlayerStrip />
+          {/* A dock tool opened from the collapsed dock reads the table too, so it sits inside. */}
+          <Flyout />
         </PlayerTableProvider>
       ) : space === 'console' && campaignOpen ? (
         <main className="console">
@@ -484,7 +486,7 @@ export function AppShell() {
         <LibraryView />
       )}
       {campaignOpen && !joined && <LiveStrip />}
-      <Flyout />
+      {!joined && <Flyout />}
       <Pop />
       <CloseCampaignPrompt />
     </div>
