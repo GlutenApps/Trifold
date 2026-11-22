@@ -316,6 +316,11 @@ const RecordHeader = z.object({
   edition: Edition,
   tags: z.array(z.string()).default([]),
   basedOn: z.object({ recordId: z.string(), sourceId: z.string() }).optional(),
+  /**
+   * Set on a record a GM shared with a joined campaign's players (ADR 0060): the name of the
+   * source it came from in the GM's Library, and that source's non-SRD flag.
+   */
+  sharedFrom: z.object({ sourceName: z.string(), nonSrd: z.boolean() }).optional(),
 });
 
 export const MonsterRecord = RecordHeader.extend({ kind: z.literal('monster'), data: MonsterData });

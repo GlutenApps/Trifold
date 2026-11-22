@@ -6,9 +6,10 @@ export const SOURCE_SCHEMA_VERSION = 1;
 
 /**
  * `campaign`: a campaign's own creatures (ADR 0035), one virtual source per campaign, shown only
- * while that campaign is open.
+ * while that campaign is open. `shared`: what a GM shared with a joined campaign's players
+ * (ADR 0060), one read-only source per joined campaign, shown only while it is open.
  */
-export const SourceKind = z.enum(['srd', 'xml', 'open5e', 'homebrew', 'campaign']);
+export const SourceKind = z.enum(['srd', 'xml', 'open5e', 'homebrew', 'campaign', 'shared']);
 export type SourceKind = z.infer<typeof SourceKind>;
 
 export const SourceLicense = z.object({

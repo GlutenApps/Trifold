@@ -29,6 +29,11 @@ export const RecordBase = z.object({
   edition: Edition,
   tags: z.array(z.string()).default([]),
   basedOn: z.object({ recordId: z.string(), sourceId: z.string() }).optional(),
+  /**
+   * Set on a record a GM shared with a joined campaign's players (ADR 0060): the name of the
+   * source it came from in the GM's Library, and that source's non-SRD flag.
+   */
+  sharedFrom: z.object({ sourceName: z.string(), nonSrd: z.boolean() }).optional(),
   data: z.record(z.string(), z.unknown()),
 });
 export type RecordBase = z.infer<typeof RecordBase>;
