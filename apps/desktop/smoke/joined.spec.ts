@@ -197,7 +197,7 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
 
     // Dice from the strip: a roll stays on this computer, and a pinned one is kept the same way.
     // The strip's quick pool shows wherever the window has room for it.
-    const width = await page.evaluate(() => window.innerWidth);
+    const width = (await page.evaluate('window.innerWidth')) as number;
     if (width > 800) {
       await expect(page.getByTestId('player-strip').getByTestId('dice-pool-compact')).toBeVisible();
     }
