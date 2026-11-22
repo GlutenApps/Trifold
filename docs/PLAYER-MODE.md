@@ -236,6 +236,8 @@ The player's Trifold speaks the phone's protocol to the GM's table server. The o
 
 ### TableClient
 
+Built in main, without the bridge or any UI: `main/joined/store.ts` (the joined-campaign files) and `main/joined/lanClient.ts` (the connection, and reading a typed address). `LanClient` also refuses a table that is up with another campaign without sending it anything, and a `.local` name that resolved to an address outside the local network.
+
 `web/connection.ts` is a React hook around one WebSocket with tokens in `localStorage`. Split it into a `TableClient` interface with two implementations, and have `useConnection` take a client:
 
 - **WebSocketClient:** today's behaviour for phones, unchanged.
