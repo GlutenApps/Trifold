@@ -274,6 +274,45 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     }).toPass({ timeout: 10_000 });
     await page.keyboard.press('Escape');
 
+    // Shared content (ADR 0060): the GM makes a homebrew item and shares it from its page; the
+    // player's Trifold fetches it and shows it in this campaign's compendium, to read only.
+    await gmPage.evaluate(`(async () => {
+      const [hit] = await window.trifold.compendium.suggest('Lantern', { limit: 20 });
+      const copy = await window.trifold.homebrew.draft(hit.id);
+      await window.trifold.homebrew.save({ ...copy, name: 'Greyford Lantern', displayName: 'Greyford Lantern' });
+    })()`);
+    await gmPage.keyboard.press(`${mod}+f`);
+    await gmPage.keyboard.type('Greyford Lantern');
+    await expect(gmPage.getByTestId('pop').getByText('Greyford Lantern').first()).toBeVisible({
+      timeout: 10_000,
+    });
+    await gmPage.keyboard.press('Enter');
+    await gmPage.getByRole('button', { name: 'Share with players' }).click();
+    await expect(gmPage.getByRole('button', { name: 'Share with players' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(async () => {
+      const text = await readFile(join(own, 'shared', 'records.jsonl'), 'utf8');
+      expect(text).toContain('Greyford Lantern');
+    }).toPass({ timeout: 15_000 });
+    await page.keyboard.press(`${mod}+f`);
+    await page.keyboard.type('Greyford Lantern');
+    await expect(page.getByTestId('pop').getByText('Greyford Lantern').first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('shared-badge')).toContainText('Shared by your GM');
+    await expect(page.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
+    // Unshared, it leaves the player's Library at once.
+    await gmPage.getByRole('button', { name: 'Share with players' }).click();
+    await expect(async () => {
+      expect(await readdir(own)).not.toContain('shared');
+    }).toPass({ timeout: 15_000 });
+    // Back to each console's VTT tab for what follows.
+    await gmPage.keyboard.press(`${mod}+t`);
+    await page.keyboard.press(`${mod}+t`);
+
     // The claim is kept in the Library, and the GM sees the player as a device.
     await expect(async () => {
       const now = JSON.parse(

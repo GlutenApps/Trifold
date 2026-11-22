@@ -101,6 +101,10 @@ Trifold Library/
   joined/
     <campaignId>/              a campaign this Library plays in (ADR 0058), named by the GM's campaign id
       joined.json              its name, the player's name, addresses that worked, the claim, the linked character
+      notes/<id>.json          the player's own quick notes
+      pinnedRolls/<id>.json    rolls the player pinned
+      shared/                  what the GM shared with the campaign's players (ADR 0060): source.json and
+                               records.jsonl, a read-only source shown only in this campaign
   templates/
     notes/<id>.json            note templates, shared by every campaign
   music/

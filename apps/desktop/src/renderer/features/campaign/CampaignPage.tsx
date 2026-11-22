@@ -12,6 +12,7 @@ import { useArtStore } from '../../stores/artStore';
 import { Icon } from '../shell/icons';
 import { CampaignNotes } from './CampaignNotes';
 import { SessionsTab } from './SessionsTab';
+import { SharedTab, sharedOf } from '../players/SharedTab';
 import { SummonsTab } from '../players/SummonsTab';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { useSourcesStore } from '../../stores/sourcesStore';
@@ -65,7 +66,7 @@ export function statBlockHome(sourceId: string, sourceNames: ReadonlyMap<string,
  * between fights with Long rest and Restore (ADR 0012). The Notes sub-tab lives in
  * CampaignNotes.tsx (ADR 0010).
  */
-type CampaignTab = 'party' | 'npcs' | 'summons' | 'notes' | 'sessions';
+type CampaignTab = 'party' | 'npcs' | 'summons' | 'shared' | 'notes' | 'sessions';
 
 /** What the Party and NPCs tabs show: their list, a form in its place, or the copy picker. */
 type TabView<T> =
@@ -639,6 +640,13 @@ export function CampaignPage() {
         ['party', `Party (${current.pcs.length})`],
         ['npcs', `NPCs (${current.npcs.length})`],
         ['summons', `Companions (${(current.campaign.settings.summonable ?? []).length})`],
+        [
+          'shared',
+          `Shared with players (${
+            sharedOf(current.campaign.settings).sourceIds.length +
+            sharedOf(current.campaign.settings).homebrewIds.length
+          })`,
+        ],
         ['notes', `Notes (${current.notes.filter((n) => n.kind !== 'folder').length})`],
         ['sessions', `Sessions (${current.sessions.length})`],
       ]
@@ -709,6 +717,7 @@ export function CampaignPage() {
           {tab === 'party' && <PartyTab />}
           {tab === 'npcs' && <NpcsTab />}
           {tab === 'summons' && <SummonsTab />}
+          {tab === 'shared' && <SharedTab />}
           {tab === 'notes' && <CampaignNotes notes={current.notes} />}
           {tab === 'sessions' && <SessionsTab />}
         </>

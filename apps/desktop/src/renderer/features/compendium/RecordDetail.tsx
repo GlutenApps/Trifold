@@ -6,12 +6,13 @@ import { RollReveal, useRollReveal } from '../dice/RollReveal';
 import { Icon } from '../shell/icons';
 import { compendiumActions, logDiceRoll } from './compendiumRolls';
 import { itemTypeName } from './formatting';
-import { isCampaignSource, isOwnRecord } from './homebrew';
+import { isCampaignSource, isOwnRecord, isSharedRecord } from './homebrew';
 import { MarkdownView } from './MarkdownView';
 import { diffRecords, type DiffLine } from './recordDiff';
 import { StatBlock } from './StatBlock';
 import { ReplaceInCampaign } from './ReplaceInCampaign';
 import { UsedBy } from './UsedBy';
+import { ShareToggle } from '../players/SharedTab';
 import { SummonableToggle } from '../players/SummonableToggle';
 
 /**
@@ -473,10 +474,22 @@ export function RecordDetail({
               {record.sourcePage !== undefined ? ` p. ${record.sourcePage}` : ''}
             </span>
           )}
+        {/* What a GM shared with a joined campaign (ADR 0060): to read, never to edit or copy. */}
+        {isSharedRecord(record) && (
+          <span
+            className="badge"
+            data-testid="shared-badge"
+            title="Your GM shared this with the campaign’s players. It shows only in this campaign and cannot be edited or copied."
+          >
+            Shared by your GM
+            {record.sharedFrom ? ` · ${record.sharedFrom.sourceName}` : ''}
+          </span>
+        )}
         <span className="spacer" />
         <SummonableToggle record={record} />
+        <ShareToggle record={record} />
         {/* SRD rules are read, not copied: house rules belong in notes (ADR 0041). */}
-        {homebrew && !isOwnRecord(record) && record.kind !== 'rule' && (
+        {homebrew && !isOwnRecord(record) && !isSharedRecord(record) && record.kind !== 'rule' && (
           <button
             type="button"
             className="btn"

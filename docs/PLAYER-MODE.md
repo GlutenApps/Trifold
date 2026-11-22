@@ -302,6 +302,8 @@ Daily backups pick up `joined/` with no change, since backups zip everything but
 
 A GM can give a campaign's players the content they need to build and play characters, and nothing that would spoil the game.
 
+Built (ADR 0060): the GM's choices in **Campaign › Shared with players** and on a homebrew record's page; the content read by `main/table/sharedContent.ts`; `shared {hash}` and `GET /shared` on the table server; the player's copy in `joined/<campaignId>/shared/` as a source of kind `shared`, shown only while that campaign is open, with "Shared by your GM" and no Edit. Sync sends the whole set when the hash differs, in place of the per-record difference described below. Still to come: player packs, a player's own copy standing in for a shared one, and the per-record warning.
+
 ### What the GM shares
 
 In the campaign, a **Shared with players** list, off for everything until the GM turns it on:

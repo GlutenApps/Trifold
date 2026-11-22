@@ -16,6 +16,10 @@ export const isCampaignSource = (sourceId: string) => sourceId.startsWith('campa
  * The DM's own records, which can be edited and deleted: the Library's homebrew and the open
  * campaign's creatures (ADR 0035). Records from the SRD or an imported file never change.
  */
+/** A record a GM shared with a joined campaign's players (ADR 0060): read-only here. */
+export const isSharedRecord = (record: Pick<CompendiumRecord, 'sourceId'>) =>
+  record.sourceId.startsWith('shared:');
+
 export const isOwnRecord = (record: Pick<CompendiumRecord, 'sourceId'>) =>
   record.sourceId === HOMEBREW_SOURCE_ID || isCampaignSource(record.sourceId);
 
