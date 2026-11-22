@@ -185,7 +185,7 @@ Reuse notes, from the code:
 
 ### My characters and Sheets
 
-Built so far, behind the flag: My characters with its rows (HP and conditions through the GM's own `HpChip`, `HpEditor` and `HeldConditions`, sent as intents), selection shared with the VTT tab, removing a companion, Add a companion and Switch character with its Undo; and the Initiative tool (the box to enter a roll, which brings the tool forward and puts an alert pip on it, the order while the TV shows it, and Your turn or You're next either way). Still to come: Open sheet and the pencil (with Sheets, Part 3), Link a character and New character, and the console-scale pass on Add a companion's list, which still uses the phone page's sizes.
+Built so far, behind the flag: My characters with its rows (HP and conditions through the GM's own `HpChip`, `HpEditor` and `HeldConditions`, sent as intents), selection shared with the VTT tab, removing a companion, Add a companion and Switch character with its Undo; and the Initiative tool (the box to enter a roll, which brings the tool forward and puts an alert pip on it, the order while the TV shows it, and Your turn or You're next either way). Still to come: Open sheet and the pencil (with Sheets, Part 3), Link a character and New character. The console-scale pass is done: inside a console panel the picker, Add a companion and the initiative box take the console's sizes from the `.pc-host` rules at the end of `web/web.css`.
 
 The two work as Scenes and the VTT tab do in the GM's console (ADR 0008): the dock tool is the quick view that acts at a high level, and the stage tab shows the selected one in full (Ian, 2026-11-23).
 

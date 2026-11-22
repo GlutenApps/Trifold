@@ -1689,3 +1689,145 @@ main.pc-center {
   inset: 0;
   pointer-events: none;
 }
+
+/* ---------- console scale ----------
+   A console panel (.pc-host) hosts the picker, Add a companion and the initiative box at the
+   console's sizes (docs/UI-GUIDELINES.md): 13 px text, 30 px controls from --touch above, the
+   console's control radius, and tighter rows. The phone page keeps everything above as it is. */
+.pc-host .pc-btn {
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  font-size: 13px;
+}
+
+.pc-host .pc-btn.small {
+  padding: 0 8px;
+}
+
+.pc-host .pc-field,
+.pc-host .pc-hint,
+.pc-host .pc-optrow,
+.pc-host .pc-check {
+  font-size: 13px;
+}
+
+.pc-host .pc-hint.small {
+  font-size: 12px;
+}
+
+.pc-host .pc-hint.center {
+  padding: 8px;
+}
+
+.pc-host .pc-field input,
+.pc-host .pc-amount,
+.pc-host .pc-search {
+  padding: 0 8px;
+  border-radius: var(--radius-control);
+  font-size: 13px;
+}
+
+.pc-host .pc-tag {
+  min-height: 20px;
+  font-size: 12px;
+}
+
+.pc-host .pc-lead {
+  font-size: 14px;
+}
+
+/* The picker: a list of rows at the panel's reading width, not cards across the whole stage. */
+.pc-host .pc-scroll {
+  padding: 12px;
+}
+
+.pc-host .pc-title {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.pc-host .pc-pick-list {
+  gap: 6px;
+  margin-bottom: 16px;
+  max-width: 720px;
+}
+
+.pc-host .pc-pick {
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 10px;
+}
+
+.pc-host .pc-pick-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* The portrait's size is set on the element for the phone; a console row takes a smaller one. */
+.pc-host .pc-pick .pc-portrait {
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 11px;
+}
+
+/* Add a companion and its options. */
+.pc-host .pc-tool-health,
+.pc-host .pc-tool-conditions,
+.pc-host .pc-tool-companions {
+  gap: 8px;
+}
+
+.pc-host .pc-tool-title {
+  align-items: center;
+  font-size: 13px;
+}
+
+.pc-host .pc-round.bare {
+  margin-left: -6px;
+}
+
+.pc-host .pc-addrow {
+  gap: 6px;
+  padding: 4px 4px 4px 8px;
+  border-radius: var(--radius-control);
+}
+
+.pc-host .pc-comp-name {
+  font-size: 13px;
+}
+
+.pc-host .pc-segment {
+  padding: 2px;
+  border-radius: var(--radius-control);
+}
+
+.pc-host .pc-segment button {
+  min-height: 24px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.pc-host .pc-stepper.small .pc-step {
+  border-radius: var(--radius-control);
+  font-size: 16px;
+}
+
+.pc-host .pc-stepper.small .pc-step-value {
+  min-width: 36px;
+  border-radius: var(--radius-control);
+  font-size: 13px;
+}
+
+.pc-host .pc-stepper.small .pc-step-value.wide {
+  min-width: 110px;
+  font-size: 13px;
+}
+
+.pc-host .pc-check {
+  gap: 8px;
+}
+
+.pc-host .pc-check input {
+  width: 16px;
+  height: 16px;
+}
