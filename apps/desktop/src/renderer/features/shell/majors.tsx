@@ -17,7 +17,7 @@ export const MAJOR_ICON: Record<AnyMajorKind, IconName> = {
   encounters: 'encounters',
   map: 'tv',
   table: 'map',
-  character: 'card',
+  sheets: 'card',
 };
 
 /** Major kind → the feature that fills its tab. Titles live with the layout math. */
@@ -34,7 +34,7 @@ export function MajorBody({ kind }: { kind: AnyMajorKind }) {
     // The player console's own pages arrive with it (docs/PLAYER-MODE.md, phase 2). Nothing
     // loads a player console until then, so these are never drawn.
     case 'table':
-    case 'character':
+    case 'sheets':
       return null;
   }
 }

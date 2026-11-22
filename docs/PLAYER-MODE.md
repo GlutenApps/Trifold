@@ -68,7 +68,7 @@ These revise `DESIGN.md` §1.2:
 
 ### Scope and release safety
 
-Ground rule 7 applies: none of this is in M1. Phases land on `main` one PR at a time and releases are cut from `main`, so everything a user could see (Join a campaign, the Playing list, the Character tab) stays behind one flag, off in packaged builds, until phase 2's acceptance passes. The repo has no flag mechanism yet; add a minimal one in phase 1 (a constant in `packages/api` read by main and renderer, with an environment override for dev and smoke runs).
+Ground rule 7 applies: none of this is in M1. Phases land on `main` one PR at a time and releases are cut from `main`, so everything a user could see (Join a campaign, the Playing list, the Sheets tab) stays behind one flag, off in packaged builds, until phase 2's acceptance passes. The repo has no flag mechanism yet; add a minimal one in phase 1 (a constant in `packages/api` read by main and renderer, with an environment override for dev and smoke runs).
 
 ---
 
@@ -159,10 +159,10 @@ Build `features/joined/PlayerConsole.tsx` as a sibling of the GM console inside 
 | Where | Panel | Built from |
 | --- | --- | --- |
 | Stage | **VTT**: the map, or the TV's title, image or break screen, with its overlays | `web/MapView.tsx`, `ScreenView.tsx`, `TvOverlays.tsx` |
-| Stage | **Character**: the player's sheet | New (Part 3) |
+| Stage | **Sheets**: the full page of whichever of the player's creatures is selected: the PC's sheet, a companion's or summon's stat block, a pinned form | New (below, and Part 3) |
 | Stage | **Compendium**: bundled SRD and the player's own sources and homebrew | `features/compendium`, with the campaign actions off |
 | Stage | **Web tabs**, such as a sheet kept in another tool | Existing web tabs (ADR 0011), Library-wide as today |
-| Dock | **In play**: the player's character and its companions (chosen with the target chips): HP, conditions, companions, move, summon | `web/tools.tsx`, `AddCompanion.tsx` |
+| Dock | **My characters**: a row for the player's PC and each companion and summon, with HP and conditions changed in the row; move, and add a companion | New, on the pattern of the GM's party rows (ADR 0055) |
 | Dock | **Initiative**: the order as the TV shows it, the player's turn marked, and the box to enter a roll | `InitiativeStrip` entries; `InitiativeCard` moved out of `Playing.tsx` |
 | Dock | **Quick notes**: private notes, saved in the joined campaign | The note editor, behind a notes source (below) |
 | Pop-up | **Dice**: rolls stay local | `features/dice` |
@@ -177,6 +177,29 @@ Reuse notes, from the code:
 - **Quick notes.** `QuickNotesTool` files into the GM's notes tree through `useCampaignStore`. Give it a notes source (save, list, the Quick Notes folder) that the GM console backs with the campaign store and the player console with `joined/<id>/notes/`.
 - **Dice.** The roller is reused; pinned rolls are per campaign today, so in the player console they save to `joined/<id>/pinnedRolls/`.
 - **Compendium.** `CompendiumPage` applies the open campaign's sources. In the player console it shows what the Library shows for "All campaigns" and hides Edit in campaign, Used by and Replace.
+
+### My characters and Sheets
+
+The two work as Scenes and the VTT tab do in the GM's console (ADR 0008): the dock tool is the quick view that acts at a high level, and the stage tab shows the selected one in full (Ian, 2026-11-23).
+
+**My characters** (dock) lists what the player has at this table: their PC first, then each companion and summon.
+
+- Each row has a status line built like the GM's party rows (ADR 0055): HP is a button that opens the inline Damage / Heal / Temp HP editor, and conditions add from a plus. These are the same intents a phone sends. The phone page keeps its own tools.
+- A click selects a row. The Sheets tab shows the selection if it is open, and does not come forward by itself, so changing HP mid-fight never puts a sheet over the map. **Open sheet** on the row, a double-click or Enter brings Sheets forward.
+- The PC's row has a pencil that opens its sheet in Sheets, editing. Companions and summons have none: their stat blocks are the GM's.
+- **Add a companion** and the move controls live here.
+- With no character linked: **Link a character** (one from the Library) and **New character** (which starts one in the Library and opens it in Sheets).
+- While the table is not up, the linked PC is still listed, without the live controls.
+
+**Sheets** (stage) shows the selected creature in full, with a switcher along its top that mirrors the dock's rows:
+
+- **The PC:** the sheet (Part 3). **Edit** is on the sheet itself; the dock's pencil is a shortcut to it.
+- **A companion or summon:** its stat block, read-only, with its live HP and conditions above. A stat block shows only when the player's Trifold has the creature: bundled SRD creatures always, the GM's own through shared content (Part 2). Until then it shows the name, type, AC and HP the table sends.
+- **Forms:** stat blocks the player pins from their compendium, for a wild shape or any other transformation, and flips to when they change. Reference only at first: the token and HP are untouched, which fits the 2024 rules, where the druid keeps their own hit points and gains temp HP. A separate HP pool for 2014 forms is left for later.
+
+The HP and conditions shown on a sheet are the same live controls as the row's, reading the table's numbers while connected, never a second copy.
+
+Order of building: My characters with its rows, and Sheets for the PC, first; companion stat blocks when shared content lands; forms after.
 
 ### Your turn and you're next
 
@@ -195,7 +218,7 @@ The strip shows "Your turn" or "You're next" with the creature's name when the p
 
 ### Layouts
 
-`MAJOR_KINDS` and `MINOR_KINDS` are schema enums stored in saved layouts. Add `PLAYER_MAJOR_KINDS` (`table`, `character`, `compendium`; the `table` tab is titled VTT, like the GM's) and `PLAYER_MINOR_KINDS` (`inPlay`, `initiative`, `quickNotes`), a `PlayerShellLayout` built from them, and `workspace.playerConsoles` keyed by joined campaign id, so neither role's layout can name the other's panels. All additive with defaults: no `library.json` version bump. `majors.tsx` and `minors.tsx` stay the registries and gain the player entries. Named layouts (Prep, Table, Combat) stay the GM's; the player console keeps one layout per joined campaign.
+`MAJOR_KINDS` and `MINOR_KINDS` are schema enums stored in saved layouts. Add `PLAYER_MAJOR_KINDS` (`table`, `sheets`, `compendium`; the `table` tab is titled VTT, like the GM's) and `PLAYER_MINOR_KINDS` (`myCharacters`, `initiative`, `quickNotes`), a `PlayerShellLayout` built from them, and `workspace.playerConsoles` keyed by joined campaign id, so neither role's layout can name the other's panels. All additive with defaults: no `library.json` version bump. `majors.tsx` and `minors.tsx` stay the registries and gain the player entries. Named layouts (Prep, Table, Combat) stay the GM's; the player console keeps one layout per joined campaign.
 
 Player hotkeys register in `hotkeys.ts` like the rest, active only while a joined campaign is open. The GM's table hotkeys (blackout, next turn, go live and the others registered in `AppShell`) must do nothing there.
 
@@ -341,6 +364,12 @@ Later, not in this plan: a dedicated place in both consoles to show table rolls;
 
 The player owns the character sheet; the GM's console owns table state. Three ways in share one sheet model, and the builder is a parallel track, not a later one.
 
+## Where characters live and are edited
+
+Characters belong to the Library, not to a campaign: one character can be linked from several joined campaigns. The Library gets a **Characters** page, where a character is made, opened, exported and deleted. Inside a joined campaign a character can be started or edited too (My characters, Sheets); it is the same file either way.
+
+A player can edit a character at any time, connected or not. Edits are saved to the character's file at once. When a linked character's table numbers have changed since the GM last took them, the next connection to that GM's table sends the offer (see Sheet updates), so a level-up done at home reaches the table when the player next sits down.
+
 ## Who owns what
 
 | Data | Owner | Lives in |
@@ -354,7 +383,7 @@ The GM's console stays the only writer of PC files (PLAYER-CONNECTOR.md, Stored 
 ## Sheet updates
 
 1. A joined campaign links one of the player's characters to the PC they claimed.
-2. When the linked sheet's table numbers change (a level-up, a new item), the player's Trifold sends a new client message, `sheetOffer`, with the new numbers. It follows the existing message naming (one camel-case word, like `keepSummon`), gets a Zod schema in the hub, and fits the 16 KiB cap. The hub checks it like an intent: the device holds that PC, and every number is in the range the PC card allows.
+2. When the linked sheet's table numbers change (a level-up, a new item), the player's Trifold sends a new client message, `sheetOffer`, with the new numbers: at once when connected, otherwise at the next connection. `joined.json` keeps the numbers the GM last accepted or dismissed, so the same offer is not sent twice. It follows the existing message naming (one camel-case word, like `keepSummon`), gets a Zod schema in the hub, and fits the 16 KiB cap. The hub checks it like an intent: the device holds that PC, and every number is in the range the PC card allows.
 3. The GM sees what changed (level 4 → 5, max HP 31 → 38) in the Player devices pop-up, with the same dot other requests put on the Player devices button, the VTT tab and the strip's VTT section, and chooses Accept or Dismiss. Accept goes to the console as an event and the console applies it to the PC card through its store, like any intent. The player gets `sheetAnswer {accepted}`.
 4. A per-campaign setting, **Accept sheet updates automatically**, skips the prompt. Default off. It lives in `players.json` beside the reclaim mode and the summoning mode, since main enforces it and the Player devices pop-up already reads those from the hub's status. Additive, no bump.
 
@@ -376,7 +405,7 @@ On the GM side, rename the PC card's `dndBeyondUrl` to `sheetUrl`. Nothing reads
 
 ## Way 3: the Trifold sheet and builder
 
-**The sheet** is a full player-facing sheet on the Character tab. Every derived number (AC, saves, skills, attack bonuses, spell save DC) is computed, with an optional manual override shown as overridden. Features and spells link to compendium records; custom entries are allowed.
+**The sheet** is a full player-facing sheet on the Sheets tab. Every derived number (AC, saves, skills, attack bonuses, spell save DC) is computed, with an optional manual override shown as overridden. Features and spells link to compendium records; custom entries are allowed.
 
 **The builder** is a guided flow that writes a sheet: species, class, background, ability scores (standard array, point buy, or rolled), equipment, spells, review. A **Level up** flow handles HP, new features, subclass, ASI or feat, and spells.
 
@@ -439,10 +468,10 @@ A new file kind, `character`, at version 1. Characters rank in memory in global 
 One feature per PR (`CLAUDE.md`), and each phase updates its own docs and ADR as it lands. After phase 5, the PDF import and the builder run in parallel.
 
 1. **Seams, no behaviour change.** The `TableClient` split in `web/connection.ts`; the picker taking the device's name and the initiative box exported; player kinds and the player layout in the schema with no UI; the feature flag (`TRIFOLD_PLAYER_MODE=1`, read through `app.getInfo`). All existing tests and the smoke test stay green and unchanged. Built.
-2. **Player mode on the LAN.** First, as PRs with no behaviour change: the shell's two roles (built), and the components both clients use moved to a shared folder. Then the service advertisement and table discovery; Join a campaign, the joined-campaign store and the Playing list; `LanClient` and `BridgeClient`; the `table` media host and image cache; the player console with Table, In play, Initiative, Quick notes, Dice and Compendium; then the offline view, finding the table again, the failure messages and the sharing-backups warning. Its ADR and the ground rule 1 change. The flag comes off when this phase's acceptance passes.
+2. **Player mode on the LAN.** First, as PRs with no behaviour change: the shell's two roles (built), and the components both clients use moved to a shared folder. Then the service advertisement and table discovery; Join a campaign, the joined-campaign store and the Playing list; `LanClient` and `BridgeClient`; the `table` media host and image cache; the player console with Table, My characters, Initiative, Quick notes, Dice and Compendium; then the offline view, finding the table again, the failure messages and the sharing-backups warning. Its ADR and the ground rule 1 change. The flag comes off when this phase's acceptance passes.
 3. **Table rolls.** The Table and Private switch, `roll` and `rolled`, table rolls in both roll logs. Its ADR.
 4. **Shared content and player packs.** The Shared with players list, the shared source in a joined campaign, sync on connect, Export for players and opening a pack. Its ADR, with the `DESIGN.md` §8 change.
-5. **Character foundation.** The sheet schema (marked by edition, linked records by key and name) and derived-number functions in `packages/rules/src/character/`, the Character tab, the Table numbers form, the `sheetUrl` migration, and the `sheetOffer` flow with Accept, Dismiss and auto-accept. Its ADR.
+5. **Character foundation.** The sheet schema (marked by edition, linked records by key and name) and derived-number functions in `packages/rules/src/character/`, the Library's Characters page, the Sheets tab for the PC, the Table numbers form, the `sheetUrl` migration, and the `sheetOffer` flow with Accept, Dismiss and auto-accept. Its ADR.
 6. **PDF sheet import** (parallel with 7). Real exports first, then field mapping, the preview, manual matching and re-import.
 7. **Character builder, 2024** (parallel with 6). Its own short spec first, then the SRD 5.2.1 rules data, legacy options, the creation flow and the Level up flow.
 8. **Character builder, 2014.** The SRD 5.1 rules data and the 2014 branches of both flows.

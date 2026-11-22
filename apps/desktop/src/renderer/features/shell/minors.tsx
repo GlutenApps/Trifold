@@ -18,7 +18,7 @@ export const MINOR_ICON: Record<ToolKind, IconName> = {
   quickNotes: 'quill',
   counters: 'tally',
   timers: 'stopwatch',
-  inPlay: 'party',
+  myCharacters: 'party',
   initiative: 'combat',
 };
 
@@ -36,7 +36,7 @@ export function MinorBody({ kind }: { kind: ToolKind }) {
     case 'timers':
       return <TimersTool />;
     // The player console's own tools arrive with it (docs/PLAYER-MODE.md, phase 2).
-    case 'inPlay':
+    case 'myCharacters':
     case 'initiative':
       return null;
   }

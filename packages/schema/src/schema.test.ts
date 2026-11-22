@@ -56,13 +56,13 @@ describe('LibrarySettings', () => {
 
 describe('PlayerShellLayout (docs/PLAYER-MODE.md)', () => {
   const layout = {
-    stage: { groups: [{ tabs: ['table', 'character', 'web:01A'], active: 'table' }] },
-    dock: { sections: [{ tool: 'inPlay', open: true }, { tool: 'initiative' }] },
+    stage: { groups: [{ tabs: ['table', 'sheets', 'web:01A'], active: 'table' }] },
+    dock: { sections: [{ tool: 'myCharacters', open: true }, { tool: 'initiative' }] },
   };
 
   it('takes the player kinds and web tabs, with the stage and dock defaults', () => {
     const parsed = PlayerShellLayout.parse(layout);
-    expect(parsed.stage.groups[0]?.tabs).toEqual(['table', 'character', 'web:01A']);
+    expect(parsed.stage.groups[0]?.tabs).toEqual(['table', 'sheets', 'web:01A']);
     expect(parsed.stage.split).toBe(0.5);
     expect(parsed.dock.state).toBe('wide');
     expect(parsed.dock.sections[1]).toEqual({ tool: 'initiative', open: false });

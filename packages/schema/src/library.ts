@@ -165,12 +165,12 @@ export type ShellLayout = z.infer<typeof ShellLayout>;
  * saved layout can name the other's panels. Web tabs are shared; there is no tray to choose, the
  * player's strip is fixed.
  */
-export const PLAYER_MAJOR_KINDS = ['table', 'character', 'compendium'] as const;
+export const PLAYER_MAJOR_KINDS = ['table', 'sheets', 'compendium'] as const;
 export const PlayerMajorKind = z.enum(PLAYER_MAJOR_KINDS);
 export type PlayerMajorKind = z.infer<typeof PlayerMajorKind>;
 
-/** Also the player dock's order: In play, Initiative, Quick notes. */
-export const PLAYER_MINOR_KINDS = ['inPlay', 'initiative', 'quickNotes'] as const;
+/** Also the player dock's order: My characters, Initiative, Quick notes. */
+export const PLAYER_MINOR_KINDS = ['myCharacters', 'initiative', 'quickNotes'] as const;
 export const PlayerMinorKind = z.enum(PLAYER_MINOR_KINDS);
 export type PlayerMinorKind = z.infer<typeof PlayerMinorKind>;
 
