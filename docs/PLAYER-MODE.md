@@ -135,7 +135,7 @@ Each line shows only when it applies, and the warning is absent when neither doe
 
 ### Opening a joined campaign
 
-Built, behind the flag: Open on a Playing card loads the player console in the shell's player role, main keeps the connection (trying where the search finds the table, then the addresses that worked), and the VTT tab shows the picker, then the map or the TV's screen with its overlays, moving one's own tokens, and the box to enter initiative. The strip shows the link, the round and Your turn or You're next. The table's pictures come through `trifold-media://table/…` from main's cache in the app's user-data folder. `smoke/joined.spec.ts` runs it with two copies of the app. Still to come in the console: My characters, Initiative, Quick notes, Dice, the offline view's cached state, and global search.
+Built, behind the flag: Open on a Playing card loads the player console in the shell's player role, main keeps the connection (trying where the search finds the table, then the addresses that worked), and the VTT tab shows the picker, then the map or the TV's screen with its overlays, moving one's own tokens, and the box to enter initiative. The strip shows the link, the round and Your turn or You're next. The table's pictures come through `trifold-media://table/…` from main's cache in the app's user-data folder. `smoke/joined.spec.ts` runs it with two copies of the app. Still to come in the console: Quick notes, Dice, the offline view's cached state, and global search.
 
 Opening a Playing campaign shows the player console at once and connects in the background.
 
@@ -184,6 +184,8 @@ Reuse notes, from the code:
 - **Compendium.** `CompendiumPage` applies the open campaign's sources. In the player console it shows what the Library shows for "All campaigns" and hides Edit in campaign, Used by and Replace.
 
 ### My characters and Sheets
+
+Built so far, behind the flag: My characters with its rows (HP and conditions through the GM's own `HpChip`, `HpEditor` and `HeldConditions`, sent as intents), selection shared with the VTT tab, removing a companion, Add a companion and Switch character with its Undo; and the Initiative tool (the box to enter a roll, which brings the tool forward and puts an alert pip on it, the order while the TV shows it, and Your turn or You're next either way). Still to come: Open sheet and the pencil (with Sheets, Part 3), Link a character and New character, and the console-scale pass on Add a companion's list, which still uses the phone page's sizes.
 
 The two work as Scenes and the VTT tab do in the GM's console (ADR 0008): the dock tool is the quick view that acts at a high level, and the stage tab shows the selected one in full (Ian, 2026-11-23).
 

@@ -2,12 +2,11 @@ import type { ClientView } from '@trifold/api';
 import type { Connection } from '../../../web/connection';
 import { MapView } from '../../../web/MapView';
 import { Picker } from '../../../web/Picker';
-import { InitiativeCard } from '../../../web/Playing';
 import { ScreenView } from '../../../web/ScreenView';
 import { TvBottom, TvTop } from '../../../web/TvOverlays';
 import { useMovePlan } from '../../../web/useMovePlan';
 import { rulerLabel } from '../presenter/ruler';
-import { linkText, usePlayerTable } from './PlayerTable';
+import { creatureKeyOf, linkText, usePlayerTable } from './PlayerTable';
 import '../../../web/web.css';
 
 /**
@@ -49,9 +48,21 @@ export function TablePage() {
 
 /** The table while the player holds a character: the map or screen, and moving their tokens. */
 function Table({ view, conn }: { view: ClientView; conn: Connection }) {
-  const { plan, drag, cancelMove, confirmMove, planSquares } = useMovePlan({ view, conn });
-  // PCs first: the token the map centres on and selects is the player's own character's.
-  const me = view.mine.find((c) => !c.companionOf && c.kind !== 'summon') ?? view.mine[0]!;
+  const { selected, select } = usePlayerTable();
+  const { plan, drag, cancelMove, confirmMove, planSquares } = useMovePlan({
+    view,
+    conn,
+    // Moving a token selects its creature, as picking its row in My characters does.
+    onBegin: (tokenId) => {
+      const hit = view.mine.find((c) => c.tokenId === tokenId);
+      if (hit) select(creatureKeyOf(hit));
+    },
+  });
+  // The map frames the creature picked in My characters; until one is, the player's character.
+  const me =
+    view.mine.find((c) => creatureKeyOf(c) === selected) ??
+    view.mine.find((c) => !c.companionOf && c.kind !== 'summon') ??
+    view.mine[0]!;
   const moving = plan ? view.mine.find((c) => c.tokenId === plan.tokenId) : undefined;
   const onBreak = view.screen?.kind === 'break';
   const tv = view.overlays && !onBreak ? view.overlays : null;
@@ -61,22 +72,6 @@ function Table({ view, conn }: { view: ClientView; conn: Connection }) {
     <>
       <div className="pc-overlay-top" onPointerDown={stop} onPointerUp={stop}>
         {tv && <TvTop overlays={tv} />}
-        {view.mine
-          .filter((c) => c.needsInitiative)
-          .map((c) => (
-            <InitiativeCard
-              key={`${c.kind}:${c.id}`}
-              creature={c}
-              onSubmit={(value) =>
-                conn.send({
-                  type: 'intent',
-                  creatureKind: c.kind,
-                  creatureId: c.id,
-                  intent: { kind: 'initiative', value },
-                })
-              }
-            />
-          ))}
         {me.movementLocked && me.tokenId && !plan && (
           <div className="pc-movebanner locked" role="status">
             Movement locked by the DM
@@ -110,7 +105,10 @@ function Table({ view, conn }: { view: ClientView; conn: Connection }) {
       <MapView
         map={view.map}
         selectedTokenId={me.tokenId ?? null}
-        onSelectToken={() => undefined}
+        onSelectToken={(tokenId) => {
+          const hit = view.mine.find((c) => c.tokenId === tokenId);
+          if (hit) select(creatureKeyOf(hit));
+        }}
         drag={drag}
         centerOn={me.tokenId ?? null}
         overlay={overlay}

@@ -1269,6 +1269,89 @@ body.resizing {
   gap: 8px;
 }
 
+/* My characters and Initiative (docs/PLAYER-MODE.md): the player console's dock tools. */
+.my-characters,
+.initiative-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.my-characters-list,
+.initiative-order {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.my-character:first-child {
+  border-top: 0;
+}
+
+.my-character.selected {
+  box-shadow: inset 2px 0 0 var(--accent);
+  padding-left: 8px;
+}
+
+.my-character-name {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-character-name:hover,
+.my-character-name:focus-visible {
+  text-decoration: underline;
+}
+
+.my-characters-empty,
+.initiative-empty {
+  margin: 0;
+}
+
+.initiative-turn {
+  margin: 0;
+}
+
+.initiative-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-top: 1px solid var(--border);
+}
+
+.initiative-entry:first-child {
+  border-top: 0;
+}
+
+.initiative-entry.active {
+  background: var(--bg-active);
+}
+
+.initiative-entry.dead .initiative-name {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.initiative-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .panel-pending {
   margin: 0;
   padding: 16px;

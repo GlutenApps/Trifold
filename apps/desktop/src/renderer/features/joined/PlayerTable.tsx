@@ -1,5 +1,6 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import type { JoinedSummary } from '@trifold/api';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { CreatureView, JoinedSummary } from '@trifold/api';
+import { useShellStore } from '../../stores/shellStore';
 import { useConnection, type Connection } from '../../../web/connection';
 import { createBridgeClient } from './bridgeClient';
 
@@ -13,7 +14,16 @@ import { createBridgeClient } from './bridgeClient';
 interface PlayerTable {
   campaign: JoinedSummary;
   conn: Connection;
+  /**
+   * The creature picked in My characters, as `kind:id`: the VTT tab frames its token and Sheets
+   * shows it. Null until the player picks one; then the player's own character stands in.
+   */
+  selected: string | null;
+  select(key: string): void;
 }
+
+/** A creature's key in the player console: `pc:<id>`, `npc:<id>` or `summon:<token id>`. */
+export const creatureKeyOf = (c: Pick<CreatureView, 'kind' | 'id'>) => `${c.kind}:${c.id}`;
 
 const Context = createContext<PlayerTable | null>(null);
 
@@ -26,8 +36,22 @@ export function PlayerTableProvider({
 }) {
   const client = useMemo(() => createBridgeClient(campaign.campaignId), [campaign.campaignId]);
   const conn = useConnection(client);
-  const value = useMemo(() => ({ campaign, conn }), [campaign, conn]);
+  const [selected, select] = useState<string | null>(null);
+  // The tracker is waiting for one of the player's creatures to roll initiative: the Initiative
+  // tool comes forward, as a section or a flyout, so the box to enter it is never out of sight.
+  const rollWanted = conn.link === 'open' && !!conn.view?.mine.some((c) => c.needsInitiative);
+  useEffect(() => {
+    if (rollWanted && useShellStore.getState().role === 'player') {
+      useShellStore.getState().showTool('initiative');
+    }
+  }, [rollWanted]);
+  const value = useMemo(() => ({ campaign, conn, selected, select }), [campaign, conn, selected]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
+}
+
+/** The player console's table when there is one: for shell chrome that serves both consoles. */
+export function usePlayerTableIfAny(): PlayerTable | null {
+  return useContext(Context);
 }
 
 /** The player console's table. Only for components inside a player console. */

@@ -6,6 +6,7 @@ import { MINOR_TITLES, type ToolKind } from '../../stores/shellLayout';
 import { useFit, useShellStore } from '../../stores/shellStore';
 import { Icon } from './icons';
 import { MINOR_ICON, MinorBody } from './minors';
+import { usePlayerTableIfAny } from '../joined/PlayerTable';
 
 /**
  * The dock (ADR 0004, dock): minors as toggled sections on the right. Wide 400, narrow 360 or
@@ -178,7 +179,10 @@ function useLivePips(): Set<ToolKind> {
   const timing = useTimersStore((s) =>
     Object.values(s.runs).some((r) => r.status === 'running' || r.status === 'done'),
   );
+  // The player console: Initiative while the tracker waits for a roll or it is the player's turn.
+  const mine = usePlayerTableIfAny()?.conn.view?.mine ?? [];
   const pips = new Set<ToolKind>();
+  if (mine.some((c) => c.needsInitiative || c.turn === 'now')) pips.add('initiative');
   if (timing) pips.add('timers');
   if (sceneLive) pips.add('scenes');
   if (playing) pips.add('music');
@@ -214,5 +218,10 @@ function SectionSummary({ tool, collapsed }: { tool: ToolKind; collapsed: boolea
 /** Which tools' pips are alerts: Timers while a timer has run out and is not reset (ADR 0021). */
 function useAlertPips(): Set<ToolKind> {
   const timeUp = useTimersStore((s) => Object.values(s.runs).some((r) => r.status === 'done'));
-  return new Set<ToolKind>(timeUp ? ['timers'] : []);
+  // A roll the tracker is waiting for is the player's to act on now.
+  const rollWanted = !!usePlayerTableIfAny()?.conn.view?.mine.some((c) => c.needsInitiative);
+  return new Set<ToolKind>([
+    ...(timeUp ? (['timers'] as const) : []),
+    ...(rollWanted ? (['initiative'] as const) : []),
+  ]);
 }
