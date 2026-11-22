@@ -280,6 +280,12 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
       timeout: 30_000,
     });
     await expect(table.getByText(/This is the map as you last saw it/)).toBeVisible();
+    // Change address is offered while away, and refuses anything off the local network.
+    await table.getByRole('button', { name: 'Change address' }).click();
+    await table.getByRole('textbox', { name: 'Your GM’s table address' }).fill('example.com');
+    await table.getByRole('button', { name: 'Connect' }).click();
+    await expect(table.getByRole('alert')).toContainText('not an address on your local network');
+    await table.getByRole('button', { name: 'Cancel' }).click();
     await expect(table.locator('.pc-map')).toBeVisible();
     const lastRow = page.getByTestId('my-characters').getByTestId('my-character');
     await expect(lastRow).toContainText('Brannoc Hale');

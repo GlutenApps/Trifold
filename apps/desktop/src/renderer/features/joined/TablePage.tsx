@@ -6,6 +6,7 @@ import { ScreenView } from '../../../web/ScreenView';
 import { TvBottom, TvTop } from '../../../web/TvOverlays';
 import { useMovePlan } from '../../../web/useMovePlan';
 import { rulerLabel } from '../presenter/ruler';
+import { ChangeAddress } from './ChangeAddress';
 import { creatureKeyOf, lastSeenText, linkSentence, linkText, usePlayerTable } from './PlayerTable';
 import '../../../web/web.css';
 
@@ -32,6 +33,8 @@ export function TablePage() {
           </button>
         </div>
       )}
+      {/* Not at the table, and not because it is running another campaign: the search may be blocked. */}
+      {conn.link !== 'open' && conn.link !== 'otherCampaign' && <ChangeAddress />}
       {conn.link !== 'open' && last && lastMap ? (
         <MapView
           map={lastMap}
