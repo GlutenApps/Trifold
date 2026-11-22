@@ -3,11 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JoinedSummary } from '@trifold/api';
 import type { Note, PinnedRoll } from '@trifold/schema';
+import { homeOf, useNavStore } from '../../navigate';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useJoinedStore } from '../../stores/joinedStore';
 import { usePinnedRollsStore } from '../../stores/pinnedRollsStore';
 import { useRollLogStore } from '../../stores/rollLogStore';
+import { useSearchStore } from '../../stores/searchStore';
 import { useShellStore } from '../../stores/shellStore';
 import { QuickNotesTool } from '../campaign/QuickNotesTool';
 import { DiceRoller } from '../dice/DiceRoller';
@@ -190,5 +192,54 @@ describe('Dice in a player console', () => {
     render(<DiceRoller />);
     expect(screen.getByTestId('pinned-roll')).toHaveTextContent('Stealth');
     expect(screen.getByRole('button', { name: 'Pin 2d6+1' })).toBeEnabled();
+  });
+});
+
+describe('Search in a player console', () => {
+  const groups = () =>
+    useSearchStore
+      .getState()
+      .groups()
+      .map((g) => [g.label, g.results.map((r) => r.title)]);
+
+  beforeEach(() => {
+    useSearchStore.getState().clear();
+    useNavStore.setState({ pending: null });
+  });
+
+  it('finds the player’s notes by title and by text, and nothing of a GM’s campaign', async () => {
+    await open([{ ...older, body: 'He **owes** the harbourmaster.' }, newer]);
+    useSearchStore.getState().setQuery('ferryman');
+    expect(groups()).toEqual([['Notes', ['The ferryman']]]);
+    useSearchStore.getState().setQuery('owes');
+    expect(groups()).toEqual([
+      ['Notes', ['Owes us a favour']],
+      ['Mentioned in', ['The ferryman']],
+    ]);
+
+    // A note saved while the list is open shows at once.
+    await useJoinedStore.getState().captureNote('Who owes whom', '');
+    expect(groups()[0]).toEqual(['Notes', ['Owes us a favour', 'Who owes whom']]);
+
+    // Closing the campaign starts clean.
+    useJoinedStore.getState().closeCampaign();
+    expect(useSearchStore.getState().query).toBe('');
+  });
+
+  it('opens a found note in Quick notes, at the phrase', async () => {
+    await open([{ ...older, body: 'He owes the harbourmaster.' }]);
+    expect(homeOf({ type: 'note', id: 'a' }, 'player')).toEqual({ tool: 'quickNotes' });
+    expect(homeOf({ type: 'note', id: 'a' })).toEqual({ tab: 'campaign' });
+    expect(homeOf({ type: 'record', id: 'r' }, 'player')).toEqual({ tab: 'compendium' });
+
+    render(<QuickNotesTool />);
+    useSearchStore.getState().setQuery('harbourmaster');
+    expect(useSearchStore.getState().activate()).toBe(true);
+    const pane = await screen.findByTestId('note-pane');
+    expect(within(pane).getByLabelText('Title')).toHaveValue('The ferryman');
+    await waitFor(() => expect(useNavStore.getState().pending).toBeNull());
+    expect(
+      useShellStore.getState().layout.dock.sections.find((s) => s.tool === 'quickNotes')?.open,
+    ).toBe(true);
   });
 });

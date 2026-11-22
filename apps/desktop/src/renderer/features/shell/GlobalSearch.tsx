@@ -48,6 +48,7 @@ export const SearchField = forwardRef<HTMLInputElement, { autoFocus?: boolean }>
     const openPop = useShellStore((s) => s.openPop);
     const closePop = useShellStore((s) => s.closePop);
     const library = useShellStore((s) => s.space === 'library');
+    const what = useShellStore((s) => searchWhat(s.role));
     const { active } = useResults();
 
     const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -79,7 +80,7 @@ export const SearchField = forwardRef<HTMLInputElement, { autoFocus?: boolean }>
           ref={ref}
           type="search"
           role="combobox"
-          aria-label={library ? 'Search every campaign' : 'Search the campaign and compendium'}
+          aria-label={library ? 'Search every campaign' : what}
           aria-expanded={open}
           aria-controls={RESULTS_ID}
           aria-autocomplete="list"
@@ -117,6 +118,10 @@ export const SearchField = forwardRef<HTMLInputElement, { autoFocus?: boolean }>
 );
 
 /** The field in the top bar, or the button that opens it in a narrow window. */
+/** What the console's field searches, as its name: a player has notes and no campaign to search. */
+const searchWhat = (role: 'gm' | 'player') =>
+  role === 'player' ? 'Search your notes and the compendium' : 'Search the campaign and compendium';
+
 export function GlobalSearch() {
   const compact = useShellStore((s) => s.viewportWidth < SEARCH_COMPACT_BELOW);
   const open = useShellStore((s) => s.pop === 'search');
@@ -124,6 +129,7 @@ export function GlobalSearch() {
   const togglePop = useShellStore((s) => s.togglePop);
   const summoned = useSearchStore((s) => s.summoned);
   const library = useShellStore((s) => s.space === 'library');
+  const what = useShellStore((s) => searchWhat(s.role));
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Ctrl+F: focus the field, or open the pop-up that holds it.
@@ -149,7 +155,7 @@ export function GlobalSearch() {
         aria-haspopup="dialog"
         aria-expanded={open}
         data-pop="search"
-        title={`${library ? 'Search every campaign' : 'Search the campaign and compendium'} (${hk('Ctrl+F')})`}
+        title={`${library ? 'Search every campaign' : what} (${hk('Ctrl+F')})`}
         onClick={() => togglePop('search')}
       >
         <Icon name="search" />
@@ -173,6 +179,7 @@ export function SearchResults({ withField }: { withField: boolean }) {
   const setExpanded = useSearchStore((s) => s.setExpanded);
   const closePop = useShellStore((s) => s.closePop);
   const library = useShellStore((s) => s.space === 'library');
+  const player = useShellStore((s) => s.role === 'player');
   const { groups, active } = useResults();
   /** Buttons in the list keep the cursor in the field, so the arrows still move. */
   const keepFocus = (e: { preventDefault(): void }) => e.preventDefault();
@@ -284,7 +291,9 @@ export function SearchResults({ withField }: { withField: boolean }) {
           <p className="muted search-status">
             {library
               ? 'Type a name or a phrase: notes, NPCs, the party, encounters and scenes in every campaign, and the text inside your notes.'
-              : 'Type a name or a phrase: notes, NPCs, encounters, scenes, creatures, spells, and the text inside your notes.'}
+              : player
+                ? 'Type a name or a phrase: your notes, creatures, spells, items, and the text inside your notes.'
+                : 'Type a name or a phrase: notes, NPCs, encounters, scenes, creatures, spells, and the text inside your notes.'}
           </p>
         )}
       </div>
