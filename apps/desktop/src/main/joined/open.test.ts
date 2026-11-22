@@ -54,6 +54,8 @@ describe('JoinedService: an open campaign', () => {
   const links: PlayerLink[] = [];
   const messages: ServerMessage[] = [];
   const discovery = { start: vi.fn(), stop: vi.fn(), list: () => found };
+  /** Every service a test made, so its saves are finished before its folders are removed. */
+  const made: JoinedService[] = [];
   const campaign: ServerMessage = {
     type: 'campaign',
     campaignId: 'c1',
@@ -90,6 +92,7 @@ describe('JoinedService: an open campaign', () => {
       open: net.open,
       fetchPicture,
     });
+    made.push(service);
     const file = async () =>
       JSON.parse(await readFile(join(root, 'joined', 'c1', 'joined.json'), 'utf8')) as {
         deviceToken?: string;
@@ -110,8 +113,14 @@ describe('JoinedService: an open campaign', () => {
     discovery.stop.mockClear();
   });
   afterEach(async () => {
-    await rm(root, { recursive: true, force: true });
-    await rm(cache, { recursive: true, force: true });
+    // A connection saves in the background: a save still landing would leave the folder
+    // half-written as it is removed.
+    for (const service of made.splice(0)) {
+      service.stop();
+      await service.settled();
+    }
+    await rm(root, { recursive: true, force: true, maxRetries: 3 });
+    await rm(cache, { recursive: true, force: true, maxRetries: 3 });
   });
 
   it('connects to the address that worked, and keeps every save of the connection', async () => {

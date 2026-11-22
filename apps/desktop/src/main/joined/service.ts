@@ -133,6 +133,11 @@ export class JoinedService {
     });
   }
 
+  /** Resolves once every save asked for so far has been written (quitting, and tests). */
+  async settled(): Promise<void> {
+    await this.writes;
+  }
+
   private store(): JoinedStore {
     const store = this.opts.session.store;
     if (!store) throw new Error('No Library is open');
