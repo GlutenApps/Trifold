@@ -4,9 +4,25 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-11-21
+
+Table-testing fixes for 0.4.5, HP and conditions between fights, and a new licence: Trifold is now free software under the GNU GPL.
+
+### Added
+
+- **HP and conditions between fights** (ADR 0055): each PC, and each NPC with a stat block, shows its HP and conditions on a second line in the Campaign tab. Press the HP to change it without a fight: **Damage** (temp HP first), **Heal**, **Temp HP** or **Set**; Enter is Damage, Shift+Enter is Heal. A **+** opens the list of conditions. Story NPCs without a stat block show none, and the condition dropdown that sat on every row is gone.
+- **Area shapes from a creature** (ADR 0050): start a shape on a token and it comes from that creature. A sphere becomes an **emanation** around the creature's space; a cone, cube or line starts at the edge of its space, facing where you drag. The ruler and fog tools work over tokens too.
+- **Open-source libraries** in Settings › About lists the licence of every library Trifold includes, and installs carry the same file in their licenses folder.
+
 ### Changed
 
 - **Licence** (ADR 0056): Trifold is now free software under the GNU General Public License, version 3 or later, copyright © 2026 Ian duPont. The installer and Settings › About show the notice and the full text. Versions 0.3.0 to 0.4.5 stay under the MIT License. The name and logo are reserved ([TRADEMARK.md](TRADEMARK.md)), and contributors sign a CLA ([CONTRIBUTING.md](CONTRIBUTING.md)).
+- **Settings** (ADR 0054): each section is a card across the page with its icon and title in a header, every setting has one short line on what it does, and the jump links are gone.
+- **Edit on an encounter creature** (ADR 0035): a creature you made (homebrew or this campaign's) opens as it is, so Save updates it; a pre-made one opens as a copy named after the creature ("Goblin"), never "Copy of Goblin".
+
+### Fixed
+
+- **A cube's or line's origin dot** sits in the middle of the face it grows from, not on a corner.
 
 ## [0.4.5] - 2026-11-21
 
