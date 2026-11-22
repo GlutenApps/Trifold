@@ -296,6 +296,13 @@ export const LibrarySettings = z.object({
       }),
     )
     .default([]),
+  /**
+   * Duplicates the GM settled (ADR 0063): `kind|key` → the copy that answers, as
+   * `sourceId|bookKey|edition`. A chosen copy answers before homebrew and starred books, for that
+   * record only. A copy that no longer exists leaves the record to the usual order. Additive with
+   * a default; no schema bump.
+   */
+  duplicateChoices: z.record(z.string(), z.string()).default({}),
   /** Bundled sources (srd-2024, srd-2014) the user switched off; other sources carry their own flag. */
   disabledSourceIds: z.array(z.string()).default([]),
   backups: z

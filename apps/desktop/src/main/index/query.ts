@@ -158,11 +158,13 @@ export function buildFtsMatch(text: string | undefined): string | null {
 }
 
 /**
- * Which copy of a record answers when it is in several places (ADR 0061): homebrew first, then
- * a starred book, then the rest in the default source order (imported files, then the 2024 SRD,
- * then the legacy one). `starred` and `book_off` are kept on each record by `applyBookSettings`.
+ * Which copy of a record answers when it is in several places: the copy the GM chose for that
+ * record (ADR 0063), then homebrew, then a starred book (ADR 0061), then imported files, then the
+ * 2024 SRD, then the legacy one, each group in the default source order. The groups are decided
+ * here by kind, so a file imported since the last sync already ranks above the SRD. `chosen`, `starred` and
+ * `book_off` are kept on each record by `applyBookSettings` and `applyChoices`.
  */
-export const PRIORITY = `(CASE WHEN s.kind = 'homebrew' THEN 0 WHEN r.starred = 1 THEN 1 ELSE 2 END) * 100000000 + s.priority`;
+export const PRIORITY = `(CASE WHEN r.chosen = 1 THEN 0 WHEN s.kind = 'homebrew' THEN 1 WHEN r.starred = 1 THEN 2 WHEN s.kind != 'srd' THEN 3 WHEN s.id = 'srd-2024' THEN 4 ELSE 5 END) * 100000000 + s.priority`;
 
 /**
  * A filter on books (ADR 0061): named books by key, and an imported file's unnamed records by

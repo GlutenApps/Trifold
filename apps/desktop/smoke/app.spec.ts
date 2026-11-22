@@ -133,6 +133,22 @@ test('console, Library, import, search, stat block and player window all work en
       book51.getByRole('button', { name: 'Star System Reference Document 5.1' }),
     ).toHaveAttribute('aria-pressed', 'false');
     expect(await abolethEdition()).toBe('2024');
+    // Duplicates (ADR 0063): the Aboleth is in both of the file's books and in the SRD. The
+    // Duplicates tab lists it; choosing the legacy book's copy makes that copy lead, and
+    // Automatic hands it back to the usual order.
+    await console_.getByRole('tab', { name: 'Duplicates' }).click();
+    await console_.getByRole('searchbox', { name: 'Search duplicates' }).fill('Aboleth');
+    const abolethDup = console_.getByTestId('duplicate-row').filter({ hasText: 'Aboleth' });
+    await expect(abolethDup).toHaveCount(1);
+    await abolethDup
+      .getByRole('radio', {
+        name: /^System Reference Document 5\.1 \(compendium-sample\) · legacy/,
+      })
+      .click();
+    await expect.poll(abolethEdition).toBe('2014');
+    await abolethDup.getByRole('radio', { name: 'Automatic' }).click();
+    await expect.poll(abolethEdition).toBe('2024');
+    await console_.getByRole('tab', { name: 'Books' }).click();
     await book51.getByRole('button', { name: 'Browse System Reference Document 5.1' }).click();
     await expect(console_.getByTestId('book-chip')).toContainText(
       'Book: System Reference Document 5.1',

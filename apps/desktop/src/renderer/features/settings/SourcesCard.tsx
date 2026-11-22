@@ -8,6 +8,7 @@ import { Icon } from '../shell/icons';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { BooksPanel, clashLine } from './BooksPanel';
 import { BooksView } from './BooksView';
+import { DuplicatesView } from './DuplicatesView';
 import { CampaignsPanel, campaignsLine } from './CampaignsPanel';
 import { homebrewSharedLine, SharePanel, sharedLine } from './SharePanel';
 
@@ -233,7 +234,7 @@ export function SourcesCard({
   /** Opens the compendium limited to one book (ADR 0061). */
   onBrowse?(book: BookSummary): void;
 } = {}) {
-  const [tab, setTab] = useState<'books' | 'files'>('books');
+  const [tab, setTab] = useState<'books' | 'files' | 'duplicates'>('books');
   // What a GM shared with a joined campaign (ADR 0060) is not this Library's to manage.
   const all = useSourcesStore((s) => s.sources);
   const sources = useMemo(() => all.filter((s) => s.kind !== 'shared'), [all]);
@@ -357,8 +358,19 @@ export function SourcesCard({
         >
           Files ({ranked.length})
         </button>
+        <button
+          type="button"
+          role="tab"
+          className={`subtab${tab === 'duplicates' ? ' active' : ''}`}
+          aria-selected={tab === 'duplicates'}
+          onClick={() => setTab('duplicates')}
+        >
+          Duplicates
+        </button>
       </div>
-      {tab === 'books' ? (
+      {tab === 'duplicates' ? (
+        <DuplicatesView />
+      ) : tab === 'books' ? (
         <BooksView
           files={files}
           onBrowse={onBrowse}

@@ -23,5 +23,5 @@ With books as the unit (ADR 0061), a GM with a large compendium still needs to s
 
 ## Next
 
-- The Duplicates tool.
+- The Duplicates tool: built, ADR 0063.
 - Per-file sharing and "shows in" under Files › Edit source remain for now; collections are the way to do both by book.

@@ -581,6 +581,42 @@ export interface BookSummary {
   off: boolean;
 }
 
+/** One copy of a record that is in more than one place (ADR 0063). */
+export interface DuplicateCopy {
+  recordId: string;
+  /** `copyKey`: the file, the book and the edition. */
+  copy: string;
+  sourceName: string;
+  /** The book's name, or '' when the record names none. */
+  book: string;
+  edition: string;
+  homebrew: boolean;
+  starred: boolean;
+}
+
+/** A record that is in more than one place, and which copy answers (ADR 0063). */
+export interface DuplicateGroup {
+  /** `kind|key`. */
+  group: string;
+  kind: RecordKind;
+  name: string;
+  /** Every copy, the one that answers first. */
+  copies: DuplicateCopy[];
+  /** The copy the GM chose, or null when the usual order decides. */
+  chosen: string | null;
+  /** Why the first copy answers. */
+  reason: 'chosen' | 'homebrew' | 'starred' | 'order';
+}
+
+export interface DuplicateQuery {
+  kind?: RecordKind;
+  text?: string;
+  /** Every group, only those the GM settled, or only those left to the usual order. */
+  show?: 'all' | 'settled' | 'unsettled';
+  offset?: number;
+  limit?: number;
+}
+
 /** Shared sources across the Library (ADR 0060), for Library › Compendium › Sources. */
 export interface SharingOverview {
   /** Imported source id → the ids of the campaigns that share it with their players. */
@@ -1009,6 +1045,14 @@ export interface TrifoldApi {
     ): Promise<TableStatus>;
     /** Player summoning's mode and cap per character. */
     setSummoning(summoning: { mode: SummonMode; cap: number }): Promise<TableStatus>;
+  };
+  /** Records in more than one place (ADR 0063). */
+  duplicates: {
+    /**
+     * Records in more than one place, with the copy that answers first. A copy is chosen through
+     * the Library's `duplicateChoices` setting, which marks the index when it is saved.
+     */
+    list(query?: DuplicateQuery): Promise<{ total: number; groups: DuplicateGroup[] }>;
   };
   /** Books across the imported files (ADR 0061). */
   books: {
@@ -1500,6 +1544,7 @@ export const API_METHODS = {
     'removePinnedRoll',
   ],
   books: ['list', 'update', 'setRules', 'shareCollection'],
+  duplicates: ['list'],
   sources: [
     'list',
     'chooseFile',

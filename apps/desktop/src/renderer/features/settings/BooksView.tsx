@@ -163,10 +163,26 @@ export function BooksView({
   const reparse = files.filter((f) => f.stale).length;
   const warned = files.filter((f) => f.warnings.length > 0).length;
   const inTwo = all.filter((b) => b.files.length > 1).length;
+  // Records in more than one place that the GM has not settled (ADR 0063).
+  const [unsettled, setUnsettled] = useState(0);
+  useEffect(() => {
+    let stale = false;
+    void window.trifold.duplicates
+      .list({ show: 'unsettled', limit: 1 })
+      .then((r) => {
+        if (!stale) setUnsettled(r.total);
+      })
+      .catch(() => undefined);
+    return () => {
+      stale = true;
+    };
+  }, [books]);
   const attention = [
     reparse && `${reparse} ${reparse === 1 ? 'file' : 'files'} can be re-parsed (Files tab)`,
     warned && `${warned} ${warned === 1 ? 'file has' : 'files have'} import warnings (Files tab)`,
     inTwo && `${inTwo} ${inTwo === 1 ? 'book is' : 'books are'} in more than one file`,
+    unsettled &&
+      `${unsettled.toLocaleString()} ${unsettled === 1 ? 'record is' : 'records are'} in more than one place (Duplicates tab)`,
   ].filter(Boolean);
 
   return (

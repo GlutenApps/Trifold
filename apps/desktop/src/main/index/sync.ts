@@ -6,6 +6,19 @@ import { sourceOrder } from '@trifold/rules';
 import { campaignsColumn, INDEX_VERSION, type IndexDb } from './IndexDb';
 
 /**
+ * Marks the records of starred books, books that are off (ADR 0061) and chosen copies (ADR 0063)
+ * from the Library's settings. Rows written by `replaceSource` start unmarked, so every path
+ * that writes a source's rows calls this after: a sync, an import, a re-parse.
+ */
+export function markLibraryChoices(
+  index: Pick<IndexDb, 'applyBookSettings' | 'applyChoices'>,
+  store: Pick<LibraryStore, 'getSettings'>,
+): void {
+  index.applyBookSettings(store.getSettings().books);
+  index.applyChoices(store.getSettings().duplicateChoices);
+}
+
+/**
  * Brings the derived index in line with the files (DATA-FORMATS.md §5.6): every source whose
  * hash or enabled flag differs from the index row is re-read from its records; index rows for
  * sources no longer present are dropped. Cheap when nothing changed.
@@ -54,7 +67,7 @@ export async function syncIndex(
   // Source order (ADR 0027) is now the default order only: starred books rank above it
   // (ADR 0061), and the saved drag order is no longer read.
   index.applySourceOrder(sourceOrder(available, []));
-  index.applyBookSettings(store.getSettings().books);
+  markLibraryChoices(index, store);
 
   if (store.getSettings().indexVersion !== INDEX_VERSION) {
     await store.updateSettings({ indexVersion: INDEX_VERSION });

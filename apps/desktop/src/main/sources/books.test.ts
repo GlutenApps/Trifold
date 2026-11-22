@@ -95,8 +95,11 @@ describe('book SQL (ADR 0061)', () => {
     });
   });
 
-  it('ranks homebrew, then starred books, then the source order, and leaves books that are off out', () => {
-    expect(PRIORITY).toContain("WHEN s.kind = 'homebrew' THEN 0 WHEN r.starred = 1 THEN 1 ELSE 2");
+  it('ranks a chosen copy, homebrew, starred books, then the source order, and leaves books that are off out', () => {
+    // A copy the GM chose for its record comes first (ADR 0063).
+    expect(PRIORITY).toContain(
+      "WHEN r.chosen = 1 THEN 0 WHEN s.kind = 'homebrew' THEN 1 WHEN r.starred = 1 THEN 2 WHEN s.kind != 'srd' THEN 3 WHEN s.id = 'srd-2024' THEN 4 ELSE 5",
+    );
     const search = buildSearch({ kind: 'monster', bookKeys: ['a book'] });
     expect(search.sql).toContain(`${PRIORITY} AS source_priority`);
     expect(search.sql).toContain('r.book_off = 0');
