@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaOutline, areaSquares, snapToCorner, type AreaShape } from './areaShapes';
+import { areaLabel, areaOutline, areaSquares, snapToCorner, type AreaShape } from './areaShapes';
 
 /** Area shapes (ADR 0050): squares count when at least half of them is inside. */
 const grid = { cellPx: 50, offsetX: 0, offsetY: 0 };
@@ -40,6 +40,36 @@ describe('area shapes', () => {
       // The corners of the starting face sit either side of it.
       expect(outline.kind === 'polygon' && outline.points[0]).not.toEqual({ x: 100, y: 100 });
     }
+  });
+
+  it('draws a sphere started on a creature as an Emanation from the edge of its space', () => {
+    // A Medium creature in cell (4, 4): centre (225, 225), half a square wide. A 10-ft emanation
+    // reaches two squares past its space, so it covers the 5 × 5 block around it, corners aside.
+    const from = { x: 225, y: 225, half: 25 };
+    const shape: AreaShape = { kind: 'sphere', origin: from, aim: from, sizeFt: 10, from };
+    expect(areaOutline(shape, grid)).toEqual({ kind: 'circle', cx: 225, cy: 225, r: 125 });
+    const cells = areaSquares(shape, grid, map);
+    expect(cells).toContainEqual({ x: 4, y: 4 });
+    expect(cells).toContainEqual({ x: 2, y: 4 });
+    expect(cells).toContainEqual({ x: 6, y: 4 });
+    expect(cells).not.toContainEqual({ x: 7, y: 4 });
+    expect(areaLabel('sphere', 10, true)).toBe('10-ft emanation');
+    expect(areaLabel('sphere', 10)).toBe('10-ft sphere');
+  });
+
+  it('starts a cone from a creature at the edge of its space, facing the aim', () => {
+    const from = { x: 225, y: 225, half: 25 };
+    const right = areaOutline(
+      { kind: 'cone', origin: from, aim: { x: 500, y: 225 }, sizeFt: 15, from },
+      grid,
+    );
+    expect(right.kind === 'polygon' && right.origin).toEqual({ x: 250, y: 225 });
+    // Aimed at a diagonal, it leaves from the space's corner.
+    const corner = areaOutline(
+      { kind: 'cone', origin: from, aim: { x: 500, y: 500 }, sizeFt: 15, from },
+      grid,
+    );
+    expect(corner.kind === 'polygon' && corner.origin).toEqual({ x: 250, y: 250 });
   });
 
   it('covers a 5-ft line one square wide along its length', () => {

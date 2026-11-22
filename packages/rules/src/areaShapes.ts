@@ -27,6 +27,12 @@ export interface AreaShape {
   aim: { x: number; y: number };
   /** Length (cone, line), side (cube) or radius (sphere), in feet. */
   sizeFt: number;
+  /**
+   * The creature the effect comes from, when the DM started it on a token: its space's centre and
+   * half its width, in map pixels. A sphere then becomes an Emanation around that space, and a
+   * cone, cube or line starts at the edge of the space, facing the aim (2024 rules).
+   */
+  from?: { x: number; y: number; half: number };
 }
 
 export interface AreaGrid {
@@ -46,6 +52,15 @@ export type AreaOutline =
 
 const PX_PER_FT = (grid: AreaGrid) => grid.cellPx / 5;
 
+/** Where a ray from a square space's centre along `d` crosses the space's edge. */
+function edgeOfSpace(
+  from: { x: number; y: number; half: number },
+  d: { x: number; y: number },
+): { x: number; y: number } {
+  const t = from.half / Math.max(Math.abs(d.x), Math.abs(d.y), 1e-6);
+  return { x: from.x + d.x * t, y: from.y + d.y * t };
+}
+
 /** The unit vector from the origin to the aim; straight right when they coincide. */
 function direction(shape: AreaShape): { x: number; y: number } {
   const dx = shape.aim.x - shape.origin.x;
@@ -60,9 +75,16 @@ function direction(shape: AreaShape): { x: number; y: number } {
  */
 export function areaOutline(shape: AreaShape, grid: AreaGrid): AreaOutline {
   const size = Math.max(0, shape.sizeFt) * PX_PER_FT(grid);
-  const o = shape.origin;
-  if (shape.kind === 'sphere') return { kind: 'circle', cx: o.x, cy: o.y, r: size };
-  const d = direction(shape);
+  const from = shape.from;
+  if (shape.kind === 'sphere') {
+    // Around a creature it is an Emanation: it reaches its size past the edge of the space.
+    return from
+      ? { kind: 'circle', cx: from.x, cy: from.y, r: size + from.half }
+      : { kind: 'circle', cx: shape.origin.x, cy: shape.origin.y, r: size };
+  }
+  const d = from ? direction({ ...shape, origin: from }) : direction(shape);
+  // From a creature, the point of origin is where the aim leaves its (square) space.
+  const o = from ? edgeOfSpace(from, d) : shape.origin;
   const n = { x: -d.y, y: d.x };
   const at = (along: number, across: number) => ({
     x: o.x + d.x * along + n.x * across,
@@ -152,6 +174,7 @@ export function snapToCorner(
 }
 
 /** "15-ft cone", "20-ft sphere": the shape's name for the map's reading. */
-export function areaLabel(kind: AreaKind, sizeFt: number): string {
-  return `${sizeFt}-ft ${kind}`;
+export function areaLabel(kind: AreaKind, sizeFt: number, fromCreature = false): string {
+  // A sphere around a creature is what the 2024 rules call an Emanation.
+  return `${sizeFt}-ft ${kind === 'sphere' && fromCreature ? 'emanation' : kind}`;
 }

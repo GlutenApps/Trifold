@@ -235,6 +235,8 @@ export function MapEditor({
   const [area, setArea] = useState<AreaShape | null>(null);
   /** True while the left button aims the shape. */
   const areaAiming = useRef(false);
+  /** The token the press that starts a shape landed on, if any. */
+  const areaToken = useRef<Token | null>(null);
   /** How far the token being dragged has moved, shown only during the drag. */
   const [tokenMeasure, setTokenMeasure] = useState<Measure | null>(null);
   const drag = useRef<{
@@ -658,8 +660,9 @@ export function MapEditor({
   };
 
   /**
-   * Area mode (ADR 0050): the left button sets the point of origin on the nearest grid corner and
-   * the drag aims the shape; right or middle pans.
+   * Area mode (ADR 0050): the left button sets the point of origin on the nearest grid corner, or
+   * on a token the creature the effect comes from, and the drag aims the shape; right or middle
+   * pans.
    */
   const onAreaDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     setMenu(null);
@@ -668,8 +671,17 @@ export function MapEditor({
       e.currentTarget.setPointerCapture?.(e.pointerId);
       return;
     }
-    const origin = snapToCorner(mapPoint(e), grid);
-    setArea({ ...areaTool, origin, aim: mapPoint(e) });
+    const token = areaToken.current;
+    areaToken.current = null;
+    if (token) {
+      // From a creature: its space's centre and half its width (ADR 0050).
+      const centre = cellCentre({ x: token.x, y: token.y }, grid, token.footprint);
+      const half = ((token.footprint ?? 1) * grid.cellPx) / 2;
+      setArea({ ...areaTool, origin: centre, aim: mapPoint(e), from: { ...centre, half } });
+    } else {
+      const origin = snapToCorner(mapPoint(e), grid);
+      setArea({ ...areaTool, origin, aim: mapPoint(e) });
+    }
     areaAiming.current = true;
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
@@ -728,6 +740,12 @@ export function MapEditor({
   };
 
   const onTokenDown = (e: ReactPointerEvent<HTMLDivElement>, token: Token) => {
+    // Drawing tools work over tokens: the press goes on to the map. In area mode it remembers the
+    // token, so the shape comes from that creature (ADR 0050).
+    if (mode === 'area' || mode === 'ruler' || mode === 'fog') {
+      areaToken.current = mode === 'area' && e.button === 0 ? token : null;
+      return;
+    }
     e.stopPropagation();
     if (e.button === 2) return;
     setMenu(null);
@@ -1207,7 +1225,7 @@ export function MapEditor({
   // ---------- area shapes on the TV and phones (ADR 0050) ----------
   const areaDrawn = area
     ? {
-        label: areaLabel(area.kind, area.sizeFt),
+        label: areaLabel(area.kind, area.sizeFt, area.from !== undefined),
         outline: areaOutline(area, grid),
         squares: areaSquares(area, grid, size),
       }
