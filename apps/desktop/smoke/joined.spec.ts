@@ -237,7 +237,8 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(mine).toContainText('table');
     // The total tumbles before it settles: read it once it has.
     const settled = '[data-testid="roll-reveal"][data-settled="true"]';
-    await expect(mine.locator(settled)).toBeVisible({ timeout: 10_000 });
+    // Settled and showing a number: a slow machine can show the placeholder for a moment first.
+    await expect(mine.locator(settled)).toHaveText(/^\d+$/, { timeout: 10_000 });
     const total = (await mine.locator(settled).textContent())!.trim();
     await gmPage
       .getByTestId('live-strip')
