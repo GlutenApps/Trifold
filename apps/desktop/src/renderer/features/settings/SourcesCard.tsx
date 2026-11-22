@@ -1,5 +1,5 @@
 import { InlineConfirm } from '../shell/InlineConfirm';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { CampaignSummary, SourceSummary } from '@trifold/api';
 import { moveInOrder, placeInOrder, sourceOrder } from '@trifold/rules';
@@ -235,7 +235,9 @@ function SourceRow({
 }
 
 export function SourcesCard() {
-  const sources = useSourcesStore((s) => s.sources);
+  // What a GM shared with a joined campaign (ADR 0060) is not this Library's to manage.
+  const all = useSourcesStore((s) => s.sources);
+  const sources = useMemo(() => all.filter((s) => s.kind !== 'shared'), [all]);
   const importing = useSourcesStore((s) => s.importing);
   const progress = useSourcesStore((s) => s.progress);
   const lastReport = useSourcesStore((s) => s.lastReport);

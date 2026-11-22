@@ -224,9 +224,11 @@ async function main(): Promise<void> {
     onLink: (event) => windows.sendToConsole(EVENT_CHANNELS.joinedLink, event),
     onMessage: (event) => windows.sendToConsole(EVENT_CHANNELS.joinedMessage, event),
     // A joined campaign's shared content changed on disk: the index follows the files.
-    onShared: async () => {
+    onShared: async (campaignId, records) => {
       const { index, catalog, store } = activeSession.require();
       await syncIndex(index, catalog, store, logger);
+      // After the index, so a search the console runs on hearing this finds the records.
+      windows.sendToConsole(EVENT_CHANNELS.joinedShared, { campaignId, records });
     },
     // Pictures from a GM's table are derived data: beside the app's settings, not in the Library.
     cacheDir: join(app.getPath('userData'), 'table-cache'),

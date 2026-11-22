@@ -303,12 +303,27 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     });
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('shared-badge')).toContainText('Shared by your GM');
+    // Both sides say so: the player's compendium counts what the GM shares and can filter by
+    // it, and the GM's tab says what players have now.
+    await expect(page.getByTestId('shared-status')).toContainText('Your GM shares 1 record');
+    await expect(
+      page.getByRole('combobox', { name: 'Source' }).getByRole('option', {
+        name: 'Shared in The Lantern at Greyford',
+      }),
+    ).toBeAttached();
+    await gmPage.getByRole('tab', { name: 'Campaign', exact: true }).first().click();
+    await gmPage.getByRole('tab', { name: /^Shared with players \(1\)/ }).click();
+    await expect(gmPage.getByTestId('shared-now')).toContainText(
+      'Players at your table have 1 record from you now.',
+    );
+    await gmPage.getByRole('tab', { name: 'Compendium', exact: true }).first().click();
     await expect(page.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
     // Unshared, it leaves the player's Library at once.
     await gmPage.getByRole('button', { name: 'Share with players' }).click();
     await expect(async () => {
       expect(await readdir(own)).not.toContain('shared');
     }).toPass({ timeout: 15_000 });
+    await expect(page.getByTestId('shared-status')).toHaveCount(0);
     // Back to each console's VTT tab for what follows.
     await gmPage.keyboard.press(`${mod}+t`);
     await page.keyboard.press(`${mod}+t`);

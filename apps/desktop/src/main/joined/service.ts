@@ -51,9 +51,10 @@ export interface JoinedServiceOptions {
   cacheDir?: string;
   /**
    * A joined campaign's shared content changed on disk (synced, unshared, or the campaign was
-   * left): the index is brought in line.
+   * left), or the campaign was opened: the index is brought in line, and the console is told
+   * how many records the campaign holds.
    */
-  onShared?(campaignId: string): void | Promise<void>;
+  onShared?(campaignId: string, records: number): void | Promise<void>;
   /** Tests replace the search, the socket and the fetches. */
   discovery?: (
     onChange: (tables: FoundTable[]) => void,
@@ -200,6 +201,7 @@ export class JoinedService {
       .then(async () => {
         const store = this.store();
         if ((await store.sharedHash(campaignId)) === hash) return;
+        let count = 0;
         if (!hash) {
           await store.removeShared(campaignId);
         } else {
@@ -209,9 +211,10 @@ export class JoinedService {
           if (!got) return;
           const records = cleanShared(campaignId, got.records);
           await store.writeShared(campaignId, { hash: got.hash, records });
+          count = records.length;
           this.opts.logger.info(`joined: shared content updated, ${records.length} records`);
         }
-        await this.opts.onShared?.(campaignId);
+        await this.opts.onShared?.(campaignId, count);
       })
       .catch((err: unknown) => {
         this.opts.logger.warn(`joined: shared content did not sync: ${errorMessage(err)}`);
@@ -322,7 +325,7 @@ export class JoinedService {
     await this.store().leave(campaignId);
     this.joinedIds.delete(campaignId);
     // Its shared content went with the folder: the index lets go of it too.
-    await this.opts.onShared?.(campaignId);
+    await this.opts.onShared?.(campaignId, 0);
     if (this.opts.cacheDir && JoinedCampaignId.safeParse(campaignId).success) {
       await rm(join(this.opts.cacheDir, campaignId), { recursive: true, force: true }).catch(
         () => undefined,
@@ -378,6 +381,12 @@ export class JoinedService {
       saved: joined.addresses.flatMap((a) => parseTableAddress(a) ?? []),
       token: joined.deviceToken,
     };
+    // What the campaign's GM shared last time is here before the table is found.
+    this.sharedSync = this.sharedSync
+      .then(async () =>
+        this.opts.onShared?.(campaignId, await this.store().sharedCount(campaignId)),
+      )
+      .catch(() => undefined);
     if (!this.opts.enabled) return summarize(joined);
     void this.trimPictures(campaignId);
     this.syncDiscovery();

@@ -281,6 +281,7 @@ export class TableHub {
       localUrl: on && this.localName ? tableUrl(this.localName, port) : null,
       devices,
       connections: this.clients.size,
+      sharedRecords: this.shared.records.length,
       anyConnected: this.anyConnected,
       startedAt: this.startedAt,
       error: this.error,
@@ -351,6 +352,8 @@ export class TableHub {
       .then((content) => {
         if (this.campaignId !== campaignId || content.hash === this.shared.hash) return;
         this.shared = content;
+        // The DM's Shared with players tab says how much players have now.
+        this.opts.onStatus(this.status());
         this.opts.logger.info(
           `table server: sharing ${content.records.length} records with players`,
         );

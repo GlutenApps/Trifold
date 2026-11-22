@@ -96,7 +96,7 @@ describe('JoinedService: an open campaign', () => {
       open: net.open,
       fetchPicture,
       fetchShared,
-      onShared: (campaignId) => void shared.push(campaignId),
+      onShared: (campaignId, records) => void shared.push(`${campaignId}:${records}`),
     });
     made.push(service);
     const file = async () =>
@@ -322,7 +322,8 @@ describe('JoinedService: an open campaign', () => {
     expect(fetchShared).toHaveBeenCalledWith('http://192.168.1.23:8130/shared', 'secret');
     expect(await store.sharedHash('c1')).toBe('h1');
     expect((await store.sharedRecords('shared:c1')).map((r) => r.id)).toEqual(['shared:c1:ward']);
-    expect(shared).toEqual(['c1']);
+    // Told once on opening, with nothing held yet, and again with what arrived.
+    expect(shared).toEqual(['c1:0', 'c1:1']);
     expect(service.openSharedSourceId()).toBe('shared:c1');
     // The console is not sent it: the compendium reads the source like any other.
     expect(messages.map((m) => m.type)).toEqual(['campaign']);
@@ -337,7 +338,7 @@ describe('JoinedService: an open campaign', () => {
     await service.settled();
     expect(await store.sharedHash('c1')).toBe('');
     expect(fetchShared).toHaveBeenCalledOnce();
-    expect(shared).toEqual(['c1', 'c1']);
+    expect(shared).toEqual(['c1:0', 'c1:1', 'c1:0']);
 
     service.close('c1');
     expect(service.openSharedSourceId()).toBeNull();
@@ -357,7 +358,7 @@ describe('JoinedService: an open campaign', () => {
     await service.settled();
     expect(fetchShared).toHaveBeenCalledOnce();
     expect(await store.sharedHash('c1')).toBe('');
-    expect(shared).toEqual([]);
+    expect(shared).toEqual(['c1:0']);
   });
 
   it('keeps what the table last showed, for the next time the table is not up', async () => {

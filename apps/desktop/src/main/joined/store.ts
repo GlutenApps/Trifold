@@ -247,6 +247,12 @@ export class JoinedStore {
     return (await this.sharedSource(campaignId))?.fileHash ?? '';
   }
 
+  /** How many shared records this Library holds for a campaign. */
+  async sharedCount(campaignId: string): Promise<number> {
+    const counts = (await this.sharedSource(campaignId))?.recordCounts ?? {};
+    return Object.values(counts).reduce((n: number, c) => n + (c ?? 0), 0);
+  }
+
   private async sharedSource(campaignId: string): Promise<Source | null> {
     try {
       return await this.store.readJson(

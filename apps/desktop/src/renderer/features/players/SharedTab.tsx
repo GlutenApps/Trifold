@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { SourceSummary } from '@trifold/api';
 import type { CampaignSettings, CompendiumRecord, RecordKind } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { tableOn, useTableStore } from '../../stores/tableStore';
 import { Icon } from '../shell/icons';
 
 /**
@@ -51,6 +52,7 @@ export const canShareRecord = (record: Pick<CompendiumRecord, 'sourceId' | 'kind
 export function SharedTab() {
   const campaign = useCampaignStore((s) => s.current?.campaign);
   const update = useCampaignStore((s) => s.update);
+  const status = useTableStore((s) => s.status);
   const [sources, setSources] = useState<SourceSummary[] | null>(null);
   const [homebrew, setHomebrew] = useState<Array<{ id: string; name: string | null }>>([]);
   const campaignId = campaign?.id;
@@ -109,6 +111,14 @@ export function SharedTab() {
         What this campaign’s players are given to build and play their characters. Their copies of
         Trifold receive it at the table, to read only, and only in this campaign. Nothing is shared
         until you turn it on, and the SRD is never sent: every Trifold has it.
+      </p>
+
+      <p className="shared-now" role="status" data-testid="shared-now">
+        {tableOn(status, campaign.id)
+          ? `Players at your table have ${(status?.sharedRecords ?? 0).toLocaleString()} ${
+              status?.sharedRecords === 1 ? 'record' : 'records'
+            } from you now. A change here reaches them in a moment.`
+          : 'Players receive this once you let them join and they are at the table.'}
       </p>
 
       <h2>Sources</h2>

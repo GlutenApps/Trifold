@@ -360,9 +360,11 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         if (!catalog) return [];
         const out = [];
         for (const s of await catalog.list()) {
-          // A campaign's creatures and a joined campaign's shared content are not the DM's to manage here.
-          if (s.kind === 'campaign' || s.kind === 'shared') continue;
-          const bundled = s.kind === 'srd' || s.kind === 'homebrew';
+          if (s.kind === 'campaign') continue;
+          // Shared content (ADR 0060) is listed only for the joined campaign that is open, so
+          // its compendium can filter by it. It is nobody's to manage: read-only, like the SRD.
+          if (s.kind === 'shared' && s.id !== ctx.joined.openSharedSourceId()) continue;
+          const bundled = s.kind === 'srd' || s.kind === 'homebrew' || s.kind === 'shared';
           out.push({
             ...s,
             stale: !bundled && isStale(s),

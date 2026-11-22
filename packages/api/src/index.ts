@@ -816,6 +816,8 @@ export interface TableStatus {
   devices: TableDeviceView[];
   /** Browsers connected now, claimed or not. */
   connections: number;
+  /** How many records the campaign shares with its players now (ADR 0060). */
+  sharedRecords?: number;
   /** Any browser has connected since Let players join; the firewall hint goes once one has. */
   anyConnected: boolean;
   startedAt: string | null;
@@ -1608,6 +1610,11 @@ export interface TrifoldEvents {
   joinedLink: { campaignId: string; link: PlayerLink };
   /** The open joined campaign's table sent something (never the device token). */
   joinedMessage: { campaignId: string; message: ServerMessage };
+  /**
+   * How many records a joined campaign's GM shares with it now (ADR 0060): sent when the
+   * campaign opens and whenever the shared content was synced, removed or left behind.
+   */
+  joinedShared: { campaignId: string; records: number };
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -1628,6 +1635,7 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   joinedTables: 'trifold:event:joined-tables',
   joinedLink: 'trifold:event:joined-link',
   joinedMessage: 'trifold:event:joined-message',
+  joinedShared: 'trifold:event:joined-shared',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */
