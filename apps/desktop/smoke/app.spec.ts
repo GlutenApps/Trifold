@@ -96,6 +96,50 @@ test('console, Library, import, search, stat block and player window all work en
     ).resolves.toBeTruthy();
     await libNav('Compendium').click();
     await console_.getByRole('button', { name: 'Sources', exact: true }).click();
+    // Books first (ADR 0061). Turning one off takes its records out
+    // of the compendium; Browse on the other shows only its records.
+    const bookRows = console_.getByTestId('book-row');
+    // Two named books, and the file's records that name none (classes carry no citation).
+    await expect(bookRows).toHaveCount(3);
+    await expect(bookRows.last()).toContainText('records that name no book');
+    const book51 = bookRows.filter({ hasText: 'System Reference Document 5.1' });
+    await book51.getByRole('button', { name: 'Star System Reference Document 5.1' }).click();
+    await expect(
+      book51.getByRole('button', { name: 'Star System Reference Document 5.1' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    const book521 = bookRows.filter({ hasText: 'System Reference Document 5.2.1' });
+    // The switch follows the saved setting, so it is clicked rather than checked.
+    const on521 = book521.getByRole('checkbox', { name: 'System Reference Document 5.2.1 on' });
+    await on521.click();
+    await expect(book521).toHaveClass(/off/);
+    await expect
+      .poll(async () => JSON.parse(await readFile(join(library, 'library.json'), 'utf8')).books)
+      .toMatchObject({
+        'system reference document 5 1': { starred: true },
+        'system reference document 5 2 1': { off: true },
+      });
+    await on521.click();
+    await expect(book521).not.toHaveClass(/off/);
+    // A starred book's copy answers first: starring the legacy book heads the Aboleth row with
+    // its legacy copy. Unstarred again, the 2024 copy leads, as the steps below expect.
+    const abolethEdition = () =>
+      console_.evaluate(async () => {
+        const found = await window.trifold.compendium.search({ kind: 'monster', text: 'aboleth' });
+        return found.rows.find((r) => r.displayName === 'Aboleth')?.edition;
+      });
+    expect(await abolethEdition()).toBe('2014');
+    await book51.getByRole('button', { name: 'Star System Reference Document 5.1' }).click();
+    await expect(
+      book51.getByRole('button', { name: 'Star System Reference Document 5.1' }),
+    ).toHaveAttribute('aria-pressed', 'false');
+    expect(await abolethEdition()).toBe('2024');
+    await book51.getByRole('button', { name: 'Browse System Reference Document 5.1' }).click();
+    await expect(console_.getByTestId('book-chip')).toContainText(
+      'Book: System Reference Document 5.1',
+    );
+    await console_.getByRole('button', { name: /^Show every book/ }).click();
+    await console_.getByRole('button', { name: 'Sources', exact: true }).click();
+    await console_.getByRole('tab', { name: /^Files/ }).click();
     const importedRow = console_.getByTestId('source-row').filter({ hasText: 'compendium-sample' });
     await expect(importedRow).toHaveCount(1);
 

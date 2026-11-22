@@ -51,8 +51,10 @@ export async function syncIndex(
     }
   }
 
-  // Source priority (ADR 0027): the DM's order, then any source it does not name.
-  index.applySourceOrder(sourceOrder(available, store.getSettings().sourcePriority));
+  // Source order (ADR 0027) is now the default order only: starred books rank above it
+  // (ADR 0061), and the saved drag order is no longer read.
+  index.applySourceOrder(sourceOrder(available, []));
+  index.applyBookSettings(store.getSettings().books);
 
   if (store.getSettings().indexVersion !== INDEX_VERSION) {
     await store.updateSettings({ indexVersion: INDEX_VERSION });

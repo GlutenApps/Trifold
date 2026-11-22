@@ -267,6 +267,18 @@ export const LibrarySettings = z.object({
    * default order (`sourceOrder` in @trifold/rules). Additive with a default; no schema bump.
    */
   sourcePriority: z.array(z.string()).default([]),
+  /**
+   * Books (ADR 0061), by `bookKey`: starred books answer first when a record is in several
+   * places (after homebrew), and a book that is off is left out of the compendium. Kept in the
+   * Library, so it holds whichever file a book came from, and through Re-parse. Only books that
+   * differ from the default are listed. Additive with a default; no schema bump.
+   */
+  books: z
+    .record(
+      z.string(),
+      z.object({ starred: z.boolean().default(false), off: z.boolean().default(false) }),
+    )
+    .default({}),
   /** Bundled sources (srd-2024, srd-2014) the user switched off; other sources carry their own flag. */
   disabledSourceIds: z.array(z.string()).default([]),
   backups: z

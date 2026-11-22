@@ -122,6 +122,11 @@ export function installBridgeMock(): TrifoldBridge {
       push: vi.fn(async () => undefined),
       get: vi.fn(async () => initialPresenterState),
     },
+    books: {
+      list: vi.fn(async () => []),
+      update: vi.fn(async () => []),
+      setRules: vi.fn(async () => []),
+    },
     joined: {
       list: vi.fn(async () => []),
       startSearch: vi.fn(async () => []),

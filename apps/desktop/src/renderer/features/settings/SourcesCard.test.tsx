@@ -28,7 +28,12 @@ const source = (id: string, name: string, kind: SourceSummary['kind'], edition =
 const names = () =>
   screen.getAllByTestId('source-row').map((r) => r.getAttribute('data-source-id'));
 
-describe('SourcesCard priority', () => {
+/** The Files tab: what was imported, and what ships with Trifold. */
+async function openFiles() {
+  await userEvent.click(await screen.findByRole('tab', { name: /^Files/ }));
+}
+
+describe('SourcesCard files (ADR 0061)', () => {
   beforeEach(() => {
     vi.mocked(window.trifold.sources.list).mockResolvedValue([
       source('srd-2014', 'SRD 5.1', 'srd', '2014'),
@@ -38,44 +43,19 @@ describe('SourcesCard priority', () => {
     useAppStore.setState({
       library: { ok: true, settings: defaultLibrarySettings(), index: { ok: true } } as never,
     });
-    vi.mocked(window.trifold.library.updateSettings).mockImplementation(async (patch) => ({
-      ...defaultLibrarySettings(),
-      ...patch,
-    }));
   });
 
-  it('lists sources in the default priority and saves a move', async () => {
-    const user = userEvent.setup();
+  it('opens on Books, and lists files in the default order with nothing to drag', async () => {
     render(<SourcesCard />);
+    expect(await screen.findByTestId('books-view')).toBeInTheDocument();
+    await openFiles();
     await waitFor(() => expect(names()).toEqual(['homebrew', 'srd-2024', 'srd-2014']));
-    expect(screen.getByTestId('priority-hint')).toHaveTextContent('The top source wins.');
+    expect(screen.getByTestId('files-hint')).toHaveTextContent('star books on the Books tab');
     expect(screen.getAllByTestId('source-row')[2]).toHaveTextContent(
       '1 monster, 2 species, 3 classes',
     );
     expect(screen.getAllByTestId('source-row')[0]).toHaveTextContent('your own');
-
-    const handle = screen.getByRole('button', { name: 'Reorder SRD 5.1, priority 3' });
-    handle.focus();
-    await user.keyboard('{ArrowUp}');
-    expect(window.trifold.library.updateSettings).toHaveBeenCalledWith({
-      sourcePriority: ['homebrew', 'srd-2014', 'srd-2024'],
-    });
-    await waitFor(() => expect(names()).toEqual(['homebrew', 'srd-2014', 'srd-2024']));
-  });
-
-  it('drags a source by its handle to a new place', async () => {
-    render(<SourcesCard />);
-    await waitFor(() => expect(names()).toEqual(['homebrew', 'srd-2024', 'srd-2014']));
-    const dataTransfer = { setData: vi.fn(), getData: vi.fn(), setDragImage: vi.fn() };
-    const handle = screen.getByRole('button', { name: 'Reorder SRD 5.1, priority 3' });
-    const [homebrew] = screen.getAllByTestId('source-row');
-    fireEvent.dragStart(handle, { dataTransfer });
-    // A row with no height reads as its lower half: the drop lands after Homebrew.
-    fireEvent.dragOver(homebrew!, { dataTransfer, clientY: 0 });
-    fireEvent.drop(homebrew!, { dataTransfer, clientY: 0 });
-    expect(window.trifold.library.updateSettings).toHaveBeenCalledWith({
-      sourcePriority: ['homebrew', 'srd-2014', 'srd-2024'],
-    });
+    expect(screen.queryByRole('button', { name: /^Reorder / })).toBeNull();
   });
 });
 
@@ -102,6 +82,7 @@ describe('SourcesCard 2024 books (ADR 0028)', () => {
     vi.mocked(window.trifold.sources.list).mockResolvedValue([mixed]);
     const user = userEvent.setup();
     render(<SourcesCard />);
+    await openFiles();
     expect(await screen.findByTestId('source-clash')).toHaveTextContent(
       '14 monsters and 3 spells appear twice in this file, and nothing marks which copy uses 2024 rules.',
     );
@@ -127,6 +108,7 @@ describe('SourcesCard 2024 books (ADR 0028)', () => {
     ]);
     const user = userEvent.setup();
     render(<SourcesCard />);
+    await openFiles();
     await user.click(await screen.findByRole('button', { name: 'Edit Mixed' }));
     expect(screen.queryByTestId('source-clash')).toBeNull();
     expect(screen.getByRole('group', { name: 'Books in Mixed' })).toBeInTheDocument();
@@ -159,6 +141,7 @@ describe('SourcesCard campaigns (ADR 0036)', () => {
   it('says where an imported file shows and changes it from its row', async () => {
     const user = userEvent.setup();
     render(<SourcesCard />);
+    await openFiles();
     await waitFor(() =>
       expect(screen.getByTestId('source-campaigns')).toHaveTextContent('Only Silt Springs'),
     );
@@ -209,6 +192,7 @@ describe('SourcesCard campaigns (ADR 0036)', () => {
     });
     const user = userEvent.setup();
     render(<SourcesCard />);
+    await openFiles();
     // Each row says what it is shared in, without opening anything.
     const row = (id: string) =>
       within(document.querySelector<HTMLElement>(`[data-source-id="${id}"]`)!);

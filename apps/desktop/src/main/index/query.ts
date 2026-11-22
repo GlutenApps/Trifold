@@ -1,5 +1,5 @@
 import type { CompendiumQuery, CompendiumRow } from '@trifold/api';
-import { crToNumber } from '@trifold/rules';
+import { bookKey, crToNumber, unnamedBookKey, unnamedBookSource } from '@trifold/rules';
 import type { CompendiumRecord } from '@trifold/schema';
 
 /**
@@ -24,6 +24,10 @@ export interface RecordColumns {
   level: number | null;
   type_code: string | null;
   rarity: string | null;
+  /** The book the record's Source line names (ADR 0061), as `bookKey`; '' when none. */
+  book_key: string;
+  /** That book's name as the file writes it; '' when none. */
+  book: string;
   json: string;
 }
 
@@ -50,6 +54,8 @@ export function recordColumns(record: CompendiumRecord): RecordColumns {
     level: null,
     type_code: null,
     rarity: null,
+    book_key: record.sourceBook ? bookKey(record.sourceBook) : '',
+    book: record.sourceBook ?? '',
     json: JSON.stringify(record),
   };
   switch (record.kind) {
@@ -151,6 +157,33 @@ export function buildFtsMatch(text: string | undefined): string | null {
   return terms.length > 0 ? terms.join(' ') : null;
 }
 
+/**
+ * Which copy of a record answers when it is in several places (ADR 0061): homebrew first, then
+ * a starred book, then the rest in the default source order (imported files, then the 2024 SRD,
+ * then the legacy one). `starred` and `book_off` are kept on each record by `applyBookSettings`.
+ */
+export const PRIORITY = `(CASE WHEN s.kind = 'homebrew' THEN 0 WHEN r.starred = 1 THEN 1 ELSE 2 END) * 100000000 + s.priority`;
+
+/**
+ * A filter on books (ADR 0061): named books by key, and an imported file's unnamed records by
+ * `unnamedBookKey`. Returns the SQL and its parameters, or null for no filter.
+ */
+export function bookFilter(
+  keys: readonly string[] | undefined,
+): { sql: string; params: string[] } | null {
+  if (!keys || keys.length === 0) return null;
+  const named = keys.filter((k) => !unnamedBookSource(k));
+  const files = keys.map(unnamedBookSource).filter((id): id is string => !!id);
+  const parts: string[] = [];
+  if (named.length) parts.push(`r.book_key IN (${named.map(() => '?').join(', ')})`);
+  if (files.length)
+    parts.push(`(r.book_key = '' AND r.source_id IN (${files.map(() => '?').join(', ')}))`);
+  return { sql: `(${parts.join(' OR ')})`, params: [...named, ...files] };
+}
+
+// Keeps the unnamed-book key's shape in one place for callers that build it from a source id.
+export { unnamedBookKey };
+
 export interface SearchSql {
   sql: string;
   countSql: string;
@@ -180,9 +213,14 @@ export function buildSearch(query: CompendiumQuery): SearchSql {
     where.push('records_fts MATCH ?');
     params.push(match);
   }
-  if (!query.includeDisabled) where.push('s.enabled = 1');
+  if (!query.includeDisabled) where.push('s.enabled = 1', 'r.book_off = 0');
   where.push(CAMPAIGN_FILTER);
   params.push(...campaignParams(query.campaignSourceId, query.campaignId));
+  const books = bookFilter(query.bookKeys);
+  if (books) {
+    where.push(books.sql);
+    params.push(...books.params);
+  }
   if (query.sourceIds && query.sourceIds.length > 0) {
     where.push(`r.source_id IN (${query.sourceIds.map(() => '?').join(', ')})`);
     params.push(...query.sourceIds);
@@ -229,7 +267,7 @@ export function buildSearch(query: CompendiumQuery): SearchSql {
   // edition and every version (source and edition) behind the row; the outer one
   // keeps rank 1. The `?` in the middle SELECT list binds first, before the WHERE params.
   const rank = match ? 'bm25(records_fts)' : '0';
-  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key, ${rank} AS rank ${from}`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, ${PRIORITY} AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key, ${rank} AS rank ${from}`;
   if (query.collapse === false) {
     const plainOrder = match
       ? 'ORDER BY rank, r.display_name COLLATE NOCASE, r.edition DESC'
@@ -376,7 +414,7 @@ export function buildSuggest(
 ): { sql: string; params: unknown[] } {
   const term = likeEscape(text.trim().toLowerCase());
   const tier = `CASE WHEN lower(r.display_name) = ? THEN 0 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 1 WHEN r.display_name LIKE ? ESCAPE '\\' THEN 2 ELSE 3 END`;
-  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key, ${tier} AS tier FROM records r JOIN sources s ON s.id = r.source_id WHERE s.enabled = 1 AND r.display_name LIKE ? ESCAPE '\\' AND ${CAMPAIGN_FILTER}`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, ${PRIORITY} AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key, ${tier} AS tier FROM records r JOIN sources s ON s.id = r.source_id WHERE s.enabled = 1 AND r.book_off = 0 AND r.display_name LIKE ? ESCAPE '\\' AND ${CAMPAIGN_FILTER}`;
   const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, group_key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, group_key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY kind, group_key) AS versions FROM (${base})`;
   return {
     sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ORDER BY tier, display_name COLLATE NOCASE, kind LIMIT ?`,
@@ -422,7 +460,7 @@ export function buildTextSearch(
   const match = buildPhraseMatch(text);
   if (!match) return null;
   const term = likeEscape(text.trim().toLowerCase());
-  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, s.priority AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key, snippet(records_fts, 2, char(1), char(2), '…', 12) AS snip, bm25(records_fts) AS rank FROM records r JOIN records_fts f ON f.id = r.id JOIN sources s ON s.id = r.source_id WHERE records_fts MATCH ? AND s.enabled = 1 AND r.display_name NOT LIKE ? ESCAPE '\\' AND ${CAMPAIGN_FILTER}`;
+  const base = `SELECT r.id, r.kind, r.key, r.name, r.display_name, r.source_id, s.name AS source_name, ${PRIORITY} AS source_priority, r.edition, r.cr, r.type, r.size, r.environment, r.is_npc, r.level, r.type_code, r.rarity, CASE WHEN s.kind = 'campaign' THEN r.source_id || char(31) || r.key ELSE r.key END AS group_key, snippet(records_fts, 2, char(1), char(2), '…', 12) AS snip, bm25(records_fts) AS rank FROM records r JOIN records_fts f ON f.id = r.id JOIN sources s ON s.id = r.source_id WHERE records_fts MATCH ? AND s.enabled = 1 AND r.book_off = 0 AND r.display_name NOT LIKE ? ESCAPE '\\' AND ${CAMPAIGN_FILTER}`;
   const ranked = `SELECT *, ROW_NUMBER() OVER (PARTITION BY kind, group_key ORDER BY source_priority, (edition = ?) DESC, edition DESC, source_name COLLATE NOCASE, id) AS rn, GROUP_CONCAT(edition) OVER (PARTITION BY kind, group_key) AS editions, GROUP_CONCAT(source_priority || char(31) || source_name || char(31) || edition, char(30)) OVER (PARTITION BY kind, group_key) AS versions FROM (${base})`;
   return {
     sql: `SELECT * FROM (${ranked}) WHERE rn = 1 ORDER BY rank, display_name COLLATE NOCASE LIMIT ?`,

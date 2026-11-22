@@ -561,6 +561,26 @@ export interface PhoneAudioStatus {
 // ---------- sources and compendium (DESIGN.md §6.1) ----------
 
 /** A source on disk plus whether its records predate the current importer. */
+/** A book across the imported files (ADR 0061): the unit Library › Compendium › Sources manages. */
+export interface BookSummary {
+  /** `bookKey(name)`, or `file:<sourceId>` for a file's records that name no book. */
+  key: string;
+  name: string;
+  /** The records of one file that name no book. */
+  unnamed: boolean;
+  /** Bracketed tags in the name, such as `Third Party`. */
+  tags: string[];
+  records: number;
+  counts: Partial<Record<RecordKind, number>>;
+  editions: { '2024': number; '2014': number; unknown: number };
+  /** The imported files that hold a copy, with how many of its records each holds. */
+  files: Array<{ id: string; name: string; records: number }>;
+  /** Starred books answer first, after homebrew. */
+  starred: boolean;
+  /** Left out of the compendium. */
+  off: boolean;
+}
+
 /** Shared sources across the Library (ADR 0060), for Library › Compendium › Sources. */
 export interface SharingOverview {
   /** Imported source id → the ids of the campaigns that share it with their players. */
@@ -625,6 +645,8 @@ export interface CompendiumQuery {
   kind: RecordKind;
   text?: string;
   sourceIds?: string[];
+  /** Only these books (ADR 0061), by `bookKey`, or `unnamedBookKey` for a file's unnamed records. */
+  bookKeys?: string[];
   edition?: 'all' | '2024' | '2014';
   crMin?: number;
   crMax?: number;
@@ -980,6 +1002,17 @@ export interface TrifoldApi {
     ): Promise<TableStatus>;
     /** Player summoning's mode and cap per character. */
     setSummoning(summoning: { mode: SummonMode; cap: number }): Promise<TableStatus>;
+  };
+  /** Books across the imported files (ADR 0061). */
+  books: {
+    list(): Promise<BookSummary[]>;
+    /** Stars or turns books on and off, kept in library.json; resolves to every book. */
+    update(keys: string[], patch: { starred?: boolean; off?: boolean }): Promise<BookSummary[]>;
+    /**
+     * Marks books as 2024 rules, or not, in every file that holds them (ADR 0028), re-reading
+     * each changed file. A file whose original is not kept is left as it is.
+     */
+    setRules(keys: string[], use2024: boolean): Promise<BookSummary[]>;
   };
   /**
    * Joined campaigns (docs/PLAYER-MODE.md): the campaigns this Library plays in. The search and
@@ -1454,6 +1487,7 @@ export const API_METHODS = {
     'savePinnedRoll',
     'removePinnedRoll',
   ],
+  books: ['list', 'update', 'setRules'],
   sources: [
     'list',
     'chooseFile',

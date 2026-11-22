@@ -1,15 +1,13 @@
 import { InlineConfirm } from '../shell/InlineConfirm';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { KeyboardEvent } from 'react';
-import type { CampaignSummary, SharingOverview, SourceSummary } from '@trifold/api';
-import { moveInOrder, placeInOrder, sourceOrder } from '@trifold/rules';
-import { useTreeDnd, type TreeDnd } from '../../treeDnd';
-import { useAppStore } from '../../stores/appStore';
+import { useEffect, useMemo, useState } from 'react';
+import type { BookSummary, CampaignSummary, SharingOverview, SourceSummary } from '@trifold/api';
+import { sourceOrder } from '@trifold/rules';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { Icon } from '../shell/icons';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { BooksPanel, clashLine } from './BooksPanel';
+import { BooksView } from './BooksView';
 import { CampaignsPanel, campaignsLine } from './CampaignsPanel';
 import { homebrewSharedLine, SharePanel, sharedLine } from './SharePanel';
 
@@ -33,29 +31,18 @@ function counts(source: SourceSummary): string {
   return entries.map(([k, n]) => `${n} ${plural(k, n ?? 0)}`).join(', ');
 }
 
-type Ordered = SourceSummary & { parentId: null; order: number; createdAt: string };
-const flat = () => false;
-
 function SourceRow({
   source,
-  rank,
-  dnd,
-  onStep,
   campaigns,
   sharing,
   onShare,
 }: {
-  source: Ordered;
+  source: SourceSummary;
   /** What every campaign shares with its players (ADR 0060); null until read. */
   sharing: SharingOverview | null;
   onShare(sourceId: string, campaignIds: string[]): void;
   /** Every campaign in the Library, for the campaigns a source shows in (ADR 0036). */
   campaigns: readonly CampaignSummary[];
-  /** 1 is the highest priority (ADR 0027). */
-  rank: number;
-  dnd: TreeDnd<Ordered>;
-  /** The keyboard's way to reorder: arrow keys on the focused handle. */
-  onStep(step: -1 | 1): void;
 }) {
   const setEnabled = useSourcesStore((s) => s.setEnabled);
   const remove = useSourcesStore((s) => s.remove);
@@ -73,42 +60,10 @@ function SourceRow({
     if (await setCampaigns(source.id, ids)) void useCompendiumStore.getState().search();
   };
   const clash = clashLine(source);
-  const rowRef = useRef<HTMLDivElement>(null);
-  // The handle starts the drag; the whole row takes the drop.
-  const { draggable, onDragStart, onDragEnd, ...dropProps } = dnd.rowProps(source);
-  const onHandleKey = (e: KeyboardEvent<HTMLButtonElement>) => {
-    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
-    e.preventDefault();
-    onStep(e.key === 'ArrowUp' ? -1 : 1);
-  };
 
   return (
-    <div
-      ref={rowRef}
-      className={`source-row${dnd.rowClass(source)}`}
-      data-testid="source-row"
-      data-source-id={source.id}
-      {...dropProps}
-    >
+    <div className="source-row" data-testid="source-row" data-source-id={source.id}>
       <div className="row">
-        <button
-          type="button"
-          className="chrome-btn xs drag-handle"
-          aria-label={`Reorder ${source.name}, priority ${rank}`}
-          title="Drag to change priority (or focus it and press the arrow keys)"
-          draggable={draggable}
-          onDragStart={(e) => {
-            onDragStart(e);
-            if (rowRef.current) e.dataTransfer.setDragImage(rowRef.current, 16, 16);
-          }}
-          onDragEnd={onDragEnd}
-          onKeyDown={onHandleKey}
-        >
-          <Icon name="grip" />
-        </button>
-        <span className="source-rank" aria-hidden="true">
-          {rank}
-        </span>
         <label>
           <input
             type="checkbox"
@@ -272,7 +227,13 @@ function SourceRow({
   );
 }
 
-export function SourcesCard() {
+export function SourcesCard({
+  onBrowse = () => undefined,
+}: {
+  /** Opens the compendium limited to one book (ADR 0061). */
+  onBrowse?(book: BookSummary): void;
+} = {}) {
+  const [tab, setTab] = useState<'books' | 'files'>('books');
   // What a GM shared with a joined campaign (ADR 0060) is not this Library's to manage.
   const all = useSourcesStore((s) => s.sources);
   const sources = useMemo(() => all.filter((s) => s.kind !== 'shared'), [all]);
@@ -283,14 +244,11 @@ export function SourcesCard() {
   const load = useSourcesStore((s) => s.load);
   const setProgress = useSourcesStore((s) => s.setProgress);
   const clearError = useSourcesStore((s) => s.clearError);
-  const library = useAppStore((s) => s.library);
-  const updateSettings = useAppStore((s) => s.updateSettings);
-  const saved = library?.settings?.sourcePriority;
-  const order = sourceOrder(sources, saved ?? []);
-  const ranked: Ordered[] = [...sources]
-    .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
-    .map((s, i) => ({ ...s, parentId: null, order: i, createdAt: s.importedAt }));
-  const listRef = useRef<HTMLDivElement>(null);
+  // The default order (ADR 0027): homebrew, imported files, then the SRD, 2024 first. Which copy
+  // of a record answers is now set by starring books (ADR 0061), not by this list.
+  const order = sourceOrder(sources, []);
+  const ranked = [...sources].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  const files = ranked.filter((s) => !s.bundled && s.kind !== 'homebrew');
   // What every campaign shares with its players (ADR 0060), so each row can say and change it.
   const [sharing, setSharing] = useState<SharingOverview | null>(null);
   useEffect(() => {
@@ -326,23 +284,6 @@ export function SourcesCard() {
       live = false;
     };
   }, []);
-  const save = async (next: string[]) => {
-    await updateSettings({ sourcePriority: next });
-    // The list and the open record may now answer from another source.
-    void useCompendiumStore.getState().search();
-  };
-  const dnd = useTreeDnd<Ordered>({
-    items: ranked,
-    isFolder: flat,
-    onMove: (id, _parentId, index) => void save(placeInOrder(order, id, index)),
-  });
-  const step = async (id: string, by: -1 | 1) => {
-    await save(moveInOrder(order, id, by));
-    // The row moved in the DOM; keep the keyboard on its handle.
-    requestAnimationFrame(() =>
-      listRef.current?.querySelector<HTMLElement>(`[data-source-id="${id}"] .drag-handle`)?.focus(),
-    );
-  };
   useEffect(() => {
     void load();
     return window.trifold.on('importProgress', setProgress);
@@ -397,38 +338,47 @@ export function SourcesCard() {
           {reportLine}
         </p>
       )}
-      <h2 className="mt">Priority order</h2>
-      {sources.length === 0 ? (
+      <div className="subtablist sources-tabs" role="tablist" aria-label="Sources">
+        <button
+          type="button"
+          role="tab"
+          className={`subtab${tab === 'books' ? ' active' : ''}`}
+          aria-selected={tab === 'books'}
+          onClick={() => setTab('books')}
+        >
+          Books
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={`subtab${tab === 'files' ? ' active' : ''}`}
+          aria-selected={tab === 'files'}
+          onClick={() => setTab('files')}
+        >
+          Files ({ranked.length})
+        </button>
+      </div>
+      {tab === 'books' ? (
+        <BooksView files={files} onBrowse={onBrowse} />
+      ) : sources.length === 0 ? (
         <p className="muted">No sources yet.</p>
       ) : (
         <>
-          <div className="priority-notice" data-testid="priority-hint">
-            <p>
-              <strong>The top source wins.</strong> When a record is in more than one source, the
-              compendium shows the version from the source highest in this list and marks the row
-              with a <strong>+</strong>. The other versions are still on the record.
-            </p>
-            <p className="muted">Drag a source by its handle to change its place.</p>
-          </div>
-          <div ref={listRef} className={`source-list${dnd.containerClass}`} {...dnd.containerProps}>
-            <p className="source-list-end muted small" aria-hidden="true">
-              Highest priority
-            </p>
-            {ranked.map((s, i) => (
+          <p className="muted small" data-testid="files-hint">
+            What you imported, and what ships with Trifold. Re-parse, warnings, which campaigns see
+            a file, sharing and removal live here; to choose which copy of a record is shown, star
+            books on the Books tab.
+          </p>
+          <div className="source-list">
+            {ranked.map((s) => (
               <SourceRow
                 key={s.id}
                 source={s}
-                rank={i + 1}
-                dnd={dnd}
-                onStep={(by) => void step(s.id, by)}
                 campaigns={campaigns}
                 sharing={sharing}
                 onShare={(id, ids) => void share(id, ids)}
               />
             ))}
-            <p className="source-list-end muted small" aria-hidden="true">
-              Lowest priority
-            </p>
           </div>
         </>
       )}

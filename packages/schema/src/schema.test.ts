@@ -27,6 +27,7 @@ describe('LibrarySettings', () => {
       playerDisplayId: null,
       checkForUpdates: false,
       edition2024Books: [],
+      books: {},
       disabledSourceIds: [],
       sourcePriority: [],
       backups: { enabled: true, keepDays: 14 },
