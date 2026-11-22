@@ -73,11 +73,11 @@ export function UpdatesSection() {
   const ready = installs && download.state === 'ready';
 
   return (
-    <SettingsSection id="updates" title="Updates" nav={UPDATES_NAV_KEY}>
+    <SettingsSection id="updates" icon="refresh" title="Updates" nav={UPDATES_NAV_KEY}>
       <SettingRow
         label="Check for new versions"
         htmlFor="updates-enabled"
-        hint={`When Trifold starts, and once a day while it stays open, it asks its public release list whether a newer version is out. ${whatItDoes(status.mode)}`}
+        hint="At start and once a day. It sends only its version number, never your games."
       >
         <input
           id="updates-enabled"

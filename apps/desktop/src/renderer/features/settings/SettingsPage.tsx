@@ -6,7 +6,7 @@ import { BrandLockup } from '../shell/Brand';
 import { Icon } from '../shell/icons';
 import { BackupsSection } from './BackupsSection';
 import { SampleCampaignRow } from './SampleCampaignRow';
-import { SettingRow, SettingsJump, SettingsSection } from './SettingsLayout';
+import { SettingRow, SettingsSection } from './SettingsLayout';
 import { UpdatesSection } from './Updates';
 
 /**
@@ -17,16 +17,6 @@ import { UpdatesSection } from './Updates';
  * Compendium, music under the Music tool and the table server under the VTT tab, where they are
  * used; Rebuild index is here as a repair (ADR 0026), since the index keeps itself in step.
  */
-
-const SECTIONS = [
-  { id: 'display', title: 'Table display' },
-  { id: 'appearance', title: 'Appearance' },
-  { id: 'backups', title: 'Backups' },
-  { id: 'updates', title: 'Updates' },
-  { id: 'library', title: 'Library' },
-  { id: 'troubleshooting', title: 'Troubleshooting' },
-  { id: 'about', title: 'About' },
-] as const;
 
 const TEXT_SIZES: Array<{ value: TextSize; label: string }> = [
   { value: 'small', label: 'Small' },
@@ -45,11 +35,8 @@ function DisplaySection({ hasLibrary }: { hasLibrary: boolean }) {
   const ordered = [...displays].sort((a, b) => a.number - b.number);
 
   return (
-    <SettingsSection id="display" title="Table display">
-      <SettingRow
-        label="TV screen"
-        hint="When you go live, the TV opens full screen on this screen. Identify shows each screen's number on it."
-      >
+    <SettingsSection id="display" icon="tv" title="Table display">
+      <SettingRow label="TV screen" hint="Where the TV opens when you go live.">
         <div className="settings-choices" role="radiogroup" aria-label="TV screen">
           {ordered.map((d) => (
             <label key={d.id}>
@@ -125,7 +112,7 @@ function AppearanceSection({ hasLibrary }: { hasLibrary: boolean }) {
   };
 
   return (
-    <SettingsSection id="appearance" title="Appearance">
+    <SettingsSection id="appearance" icon="eye" title="Appearance">
       <SettingRow label="Theme" htmlFor="settings-theme" hint="Saved with this Library.">
         <select
           id="settings-theme"
@@ -142,7 +129,7 @@ function AppearanceSection({ hasLibrary }: { hasLibrary: boolean }) {
       <SettingRow
         label="Text size"
         htmlFor="settings-text-size"
-        hint="Makes everything in this window bigger or smaller. The TV is not affected. Saved on this computer."
+        hint="Zooms this window on this computer; the TV is not affected."
       >
         <select
           id="settings-text-size"
@@ -190,10 +177,10 @@ function LibrarySection({ hasLibrary }: { hasLibrary: boolean }) {
   };
 
   return (
-    <SettingsSection id="library" title="Library">
+    <SettingsSection id="library" icon="library" title="Library">
       <SettingRow
         label="Library folder"
-        hint="Everything Trifold keeps (campaigns, the compendium, images and backups) is in this folder."
+        hint="Where everything Trifold keeps is stored."
         status={
           <p className="small">
             <code className="settings-path">{library?.path ?? '…'}</code>
@@ -276,7 +263,7 @@ function RebuildIndex({ disabled }: { disabled: boolean }) {
   return (
     <SettingRow
       label="Search index"
-      hint="How the compendium and search find records quickly. Trifold keeps it up to date on its own; rebuild it only if a record you know is there does not show up."
+      hint="Rebuild it only if search misses a record you know is there."
       status={
         <>
           <p className="small" data-testid="index-status">
@@ -304,11 +291,11 @@ function TroubleshootingSection() {
   const library = useAppStore((s) => s.library);
   const [error, setError] = useState<string | null>(null);
   return (
-    <SettingsSection id="troubleshooting" title="Troubleshooting">
+    <SettingsSection id="troubleshooting" icon="help" title="Troubleshooting">
       <RebuildIndex disabled={!library?.index.ok} />
       <SettingRow
         label="Logs"
-        hint="What Trifold did and any errors, one file a day. Attach the latest when you report a problem."
+        hint="One file a day; attach the newest to a bug report."
         status={
           error ? (
             <p className="warn-text small" role="status">
@@ -366,7 +353,7 @@ function AboutSection() {
   };
 
   return (
-    <SettingsSection id="about" title="About">
+    <SettingsSection id="about" icon="star" title="About">
       <div className="about-lockup">
         <BrandLockup layout="horizontal" height={40} />
       </div>
@@ -450,7 +437,6 @@ export function SettingsPage() {
 
   return (
     <div className="settings-page">
-      <SettingsJump sections={SECTIONS} />
       <DisplaySection hasLibrary={hasLibrary} />
       <AppearanceSection hasLibrary={hasLibrary} />
       <BackupsSection />
