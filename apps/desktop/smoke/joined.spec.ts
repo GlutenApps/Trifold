@@ -312,7 +312,7 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
       }),
     ).toBeAttached();
     await gmPage.getByRole('tab', { name: 'Campaign', exact: true }).first().click();
-    await gmPage.getByRole('tab', { name: /^Shared with players \(1\)/ }).click();
+    await gmPage.getByRole('tab', { name: /^Shared sources \(1\)/ }).click();
     await expect(gmPage.getByTestId('shared-now')).toContainText(
       'Players at your table have 1 record from you now.',
     );

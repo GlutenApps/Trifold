@@ -6,7 +6,7 @@ import { tableOn, useTableStore } from '../../stores/tableStore';
 import { Icon } from '../shell/icons';
 
 /**
- * Campaign › Shared with players (ADR 0060; docs/PLAYER-MODE.md, "Shared content"): what this
+ * Campaign › Shared sources (ADR 0060; docs/PLAYER-MODE.md, "Shared content"): what this
  * campaign's players are given to build and play their characters. Nothing is shared until the
  * GM turns it on here.
  *
@@ -174,7 +174,8 @@ export function SharedTab() {
       <h2>Homebrew</h2>
       <p className="muted small">
         Shared one record at a time, since a homebrew item can be as much a spoiler as a monster.
-        Turn a record on from its page in the Compendium.
+        Turn a record on from its page in the Compendium. Library › Compendium › Sources shows what
+        every campaign shares.
       </p>
       {homebrew.length === 0 ? (
         <p className="muted">No homebrew is shared.</p>

@@ -37,7 +37,16 @@ export function clashLine(source: SourceSummary): string | null {
   return `${list} ${total === 1 ? 'appears' : 'appear'} twice in this file, and nothing marks which copy uses 2024 rules.`;
 }
 
-export function BooksPanel({ source, onClose }: { source: SourceSummary; onClose(): void }) {
+export function BooksPanel({
+  source,
+  onClose,
+  embedded = false,
+}: {
+  source: SourceSummary;
+  onClose(): void;
+  /** Inside Edit source: a section with its own heading, which stays open after Apply. */
+  embedded?: boolean;
+}) {
   const books = source.review?.books ?? [];
   const importing = useSourcesStore((s) => s.importing);
   const apply = useSourcesStore((s) => s.setEdition2024Books);
@@ -49,6 +58,11 @@ export function BooksPanel({ source, onClose }: { source: SourceSummary; onClose
   useEffect(() => {
     panelRef.current?.querySelector<HTMLElement>('input, button')?.focus();
   }, []);
+  // Applied in place: what is ticked now is the new starting point.
+  const initialKey = initial.join('\n');
+  useEffect(() => {
+    setChecked(new Set(initialKey ? initialKey.split('\n') : []));
+  }, [initialKey]);
   const [checked, setChecked] = useState<Set<string>>(() => new Set(initial));
   const changed = checked.size !== initial.length || initial.some((name) => !checked.has(name));
 
@@ -62,15 +76,15 @@ export function BooksPanel({ source, onClose }: { source: SourceSummary; onClose
 
   const save = async () => {
     const names = books.filter((b) => checked.has(b.name)).map((b) => b.name);
-    if (await apply(source.id, names)) onClose();
+    if ((await apply(source.id, names)) && !embedded) onClose();
   };
 
   return (
     <div
       ref={panelRef}
-      className="books-panel"
+      className={embedded ? 'edit-source-section' : 'books-panel'}
       role="group"
-      aria-label={`2024 books in ${source.name}`}
+      aria-label={`Books in ${source.name}`}
       data-testid="books-panel"
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
@@ -79,22 +93,27 @@ export function BooksPanel({ source, onClose }: { source: SourceSummary; onClose
         }
       }}
     >
-      <div className="books-panel-head">
-        <strong>Which of these books use 2024 rules?</strong>
-        <span className="spacer" />
-        <button
-          type="button"
-          className="chrome-btn xs"
-          aria-label="Close 2024 books"
-          title="Close"
-          onClick={onClose}
-        >
-          <Icon name="close" />
-        </button>
-      </div>
+      {embedded ? (
+        <h3>Books</h3>
+      ) : (
+        <div className="books-panel-head">
+          <strong>Which of these books use 2024 rules?</strong>
+          <span className="spacer" />
+          <button
+            type="button"
+            className="chrome-btn xs"
+            aria-label="Close 2024 books"
+            title="Close"
+            onClick={onClose}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+      )}
       <p className="muted small">
-        Records from a ticked book are labelled 2024 rules; the rest are legacy. Records the file
-        already tags as 2024 stay that way.
+        {books.length} {books.length === 1 ? 'book' : 'books'} in this file. Tick the ones that use
+        2024 rules: their records are labelled 2024, the rest legacy. Records the file already tags
+        as 2024 stay that way.
       </p>
       {books.length === 0 ? (
         <p className="muted">This file doesn’t name any books on its records’ Source lines.</p>
@@ -118,9 +137,20 @@ export function BooksPanel({ source, onClose }: { source: SourceSummary; onClose
         </ul>
       )}
       <div className="books-panel-foot">
-        <button type="button" className="btn" onClick={onClose}>
-          Cancel
-        </button>
+        {embedded ? (
+          <button
+            type="button"
+            className="btn"
+            disabled={!changed}
+            onClick={() => setChecked(new Set(initial))}
+          >
+            Undo changes
+          </button>
+        ) : (
+          <button type="button" className="btn" onClick={onClose}>
+            Cancel
+          </button>
+        )}
         <button
           type="button"
           className="btn primary"

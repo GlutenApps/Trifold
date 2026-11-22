@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SourceSummary } from '@trifold/api';
@@ -105,9 +105,10 @@ describe('SourcesCard 2024 books (ADR 0028)', () => {
     expect(await screen.findByTestId('source-clash')).toHaveTextContent(
       '14 monsters and 3 spells appear twice in this file, and nothing marks which copy uses 2024 rules.',
     );
-    await user.click(screen.getByRole('button', { name: 'Choose 2024 books…' }));
-    const panel = screen.getByTestId('books-panel');
-    expect(panel).toHaveTextContent('Which of these books use 2024 rules?');
+    // The clash's own button opens Edit source, where the books are.
+    await user.click(screen.getByRole('button', { name: 'Edit source…' }));
+    const panel = screen.getByRole('group', { name: 'Books in Mixed' });
+    expect(panel).toHaveTextContent('Tick the ones that use 2024 rules');
     expect(panel).toHaveTextContent('212 records');
     const apply = screen.getByRole('button', { name: 'Apply' });
     expect(apply).toBeDisabled();
@@ -116,20 +117,21 @@ describe('SourcesCard 2024 books (ADR 0028)', () => {
     expect(window.trifold.sources.setEdition2024Books).toHaveBeenCalledWith('x1', [
       'Gloomwood Bestiary, Revised',
     ]);
-    await waitFor(() => expect(screen.queryByTestId('books-panel')).toBeNull());
+    // Edit source stays open after Apply, for the next change.
+    expect(screen.getByTestId('edit-source')).toBeInTheDocument();
   });
 
-  it('shows no warning without a clash, but the checklist stays one icon away', async () => {
+  it('shows no warning without a clash, but the books stay one click away in Edit source', async () => {
     vi.mocked(window.trifold.sources.list).mockResolvedValue([
       { ...mixed, review: { ...mixed.review!, duplicates: {} } },
     ]);
     const user = userEvent.setup();
     render(<SourcesCard />);
-    await user.click(await screen.findByRole('button', { name: '2024 books in Mixed' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit Mixed' }));
     expect(screen.queryByTestId('source-clash')).toBeNull();
-    expect(screen.getByTestId('books-panel')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Books in Mixed' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
-    expect(screen.queryByTestId('books-panel')).toBeNull();
+    expect(screen.queryByTestId('edit-source')).toBeNull();
   });
 });
 
@@ -160,17 +162,16 @@ describe('SourcesCard campaigns (ADR 0036)', () => {
     await waitFor(() =>
       expect(screen.getByTestId('source-campaigns')).toHaveTextContent('Only Silt Springs'),
     );
-    // The SRD always shows; only an imported file has the control.
-    expect(screen.queryByRole('button', { name: 'Campaigns for SRD 5.2' })).toBeNull();
+    // The SRD always shows; only an imported file has Edit source.
+    expect(screen.queryByRole('button', { name: 'Edit SRD 5.2' })).toBeNull();
 
-    await user.click(
-      screen.getByRole('button', { name: 'Campaigns for Silt Springs (campaign file)' }),
-    );
+    await user.click(screen.getByRole('button', { name: 'Edit Silt Springs (campaign file)' }));
     const panel = screen.getByTestId('campaigns-panel');
+    const shows = within(panel);
     // The last ticked campaign stays ticked: a limited source always shows somewhere.
-    expect(screen.getByRole('checkbox', { name: 'Silt Springs' })).toBeDisabled();
+    expect(shows.getByRole('checkbox', { name: 'Silt Springs' })).toBeDisabled();
 
-    await user.click(screen.getByRole('checkbox', { name: 'Greyford' }));
+    await user.click(shows.getByRole('checkbox', { name: 'Greyford' }));
     expect(window.trifold.sources.setCampaigns).toHaveBeenLastCalledWith('file', ['C1', 'C2']);
     await waitFor(() =>
       expect(screen.getByTestId('source-campaigns')).toHaveTextContent(
@@ -183,9 +184,54 @@ describe('SourcesCard campaigns (ADR 0036)', () => {
     await waitFor(() =>
       expect(screen.getByTestId('source-campaigns')).toHaveTextContent('Every campaign'),
     );
-    expect(screen.queryByRole('checkbox', { name: 'Greyford' })).toBeNull();
+    expect(shows.queryByRole('checkbox', { name: 'Greyford' })).toBeNull();
 
     fireEvent.keyDown(panel, { key: 'Escape' });
-    expect(screen.queryByTestId('campaigns-panel')).toBeNull();
+    expect(screen.queryByTestId('edit-source')).toBeNull();
+  });
+
+  it('shows and changes which campaigns share a source with their players (ADR 0060)', async () => {
+    vi.mocked(window.trifold.sources.list).mockResolvedValue([
+      {
+        ...source('book', 'Gloomwood Bestiary', 'xml'),
+        campaignIds: null,
+        license: { attribution: null, nonSrd: true },
+      },
+      source('homebrew', 'Homebrew', 'homebrew'),
+    ]);
+    vi.mocked(window.trifold.sources.sharing).mockResolvedValue({
+      bySource: { book: ['C2'] },
+      homebrewByCampaign: { C1: 3 },
+    });
+    vi.mocked(window.trifold.sources.setShared).mockResolvedValue({
+      bySource: { book: ['C2', 'C1'] },
+      homebrewByCampaign: { C1: 3 },
+    });
+    const user = userEvent.setup();
+    render(<SourcesCard />);
+    // Each row says what it is shared in, without opening anything.
+    const row = (id: string) =>
+      within(document.querySelector<HTMLElement>(`[data-source-id="${id}"]`)!);
+    await waitFor(() =>
+      expect(row('book').getByTestId('source-shared')).toHaveTextContent(
+        'Shared with players in Greyford',
+      ),
+    );
+    expect(row('homebrew').getByTestId('source-shared')).toHaveTextContent(
+      'Shared with players: 3 in Silt Springs',
+    );
+    await user.click(screen.getByRole('button', { name: 'Edit Gloomwood Bestiary' }));
+    const share = within(
+      screen.getByRole('region', { name: 'Share Gloomwood Bestiary with players' }),
+    );
+    expect(share.getByRole('checkbox', { name: 'Greyford' })).toBeChecked();
+    expect(share.getByRole('note')).toHaveTextContent('marked as user content');
+    await user.click(share.getByRole('checkbox', { name: 'Silt Springs' }));
+    expect(window.trifold.sources.setShared).toHaveBeenCalledWith('book', ['C2', 'C1']);
+    await waitFor(() =>
+      expect(row('book').getByTestId('source-shared')).toHaveTextContent(
+        'Shared with players in Silt Springs, Greyford',
+      ),
+    );
   });
 });

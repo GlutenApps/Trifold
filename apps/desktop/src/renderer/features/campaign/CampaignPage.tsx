@@ -642,7 +642,7 @@ export function CampaignPage() {
         ['summons', `Companions (${(current.campaign.settings.summonable ?? []).length})`],
         [
           'shared',
-          `Shared with players (${
+          `Shared sources (${
             sharedOf(current.campaign.settings).sourceIds.length +
             sharedOf(current.campaign.settings).homebrewIds.length
           })`,

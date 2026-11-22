@@ -1,7 +1,7 @@
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import type { CampaignSummary, SourceSummary } from '@trifold/api';
+import type { CampaignSummary, SharingOverview, SourceSummary } from '@trifold/api';
 import { moveInOrder, placeInOrder, sourceOrder } from '@trifold/rules';
 import { useTreeDnd, type TreeDnd } from '../../treeDnd';
 import { useAppStore } from '../../stores/appStore';
@@ -11,6 +11,7 @@ import { Icon } from '../shell/icons';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { BooksPanel, clashLine } from './BooksPanel';
 import { CampaignsPanel, campaignsLine } from './CampaignsPanel';
+import { homebrewSharedLine, SharePanel, sharedLine } from './SharePanel';
 
 /**
  * The Sources card, shown under Library › Compendium › Sources (DESIGN.md §6.1): every bundled
@@ -41,8 +42,13 @@ function SourceRow({
   dnd,
   onStep,
   campaigns,
+  sharing,
+  onShare,
 }: {
   source: Ordered;
+  /** What every campaign shares with its players (ADR 0060); null until read. */
+  sharing: SharingOverview | null;
+  onShare(sourceId: string, campaignIds: string[]): void;
   /** Every campaign in the Library, for the campaigns a source shows in (ADR 0036). */
   campaigns: readonly CampaignSummary[];
   /** 1 is the highest priority (ADR 0027). */
@@ -57,8 +63,7 @@ function SourceRow({
   const importing = useSourcesStore((s) => s.importing);
   const [showWarnings, setShowWarnings] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [showBooks, setShowBooks] = useState(false);
-  const [showCampaigns, setShowCampaigns] = useState(false);
+  const [editing, setEditing] = useState(false);
   const setCampaigns = useSourcesStore((s) => s.setCampaigns);
   const openCampaignId = useCampaignStore((s) => s.current?.campaign.id ?? null);
   // Only an imported file can be limited to some campaigns (ADR 0036).
@@ -152,36 +157,28 @@ function SourceRow({
               <button
                 type="button"
                 className={`chrome-btn xs${showWarnings ? ' on' : ''}`}
-                title={showWarnings ? 'Hide warnings' : 'Show warnings'}
+                title={
+                  showWarnings
+                    ? 'Hide the import warnings'
+                    : `${source.warnings.length} import ${source.warnings.length === 1 ? 'warning' : 'warnings'}: show`
+                }
                 aria-label={`Warnings for ${source.name}`}
                 aria-pressed={showWarnings}
                 onClick={() => setShowWarnings((v) => !v)}
               >
-                <Icon name="eye" />
+                <Icon name="warning" />
               </button>
             )}
             {limitable && (
               <button
                 type="button"
-                className={`chrome-btn xs${showCampaigns ? ' on' : ''}`}
-                title="Choose the campaigns it shows in"
-                aria-label={`Campaigns for ${source.name}`}
-                aria-pressed={showCampaigns}
-                onClick={() => setShowCampaigns((v) => !v)}
+                className={`chrome-btn xs${editing ? ' on' : ''}`}
+                title="Edit source: its books and rules, the campaigns it shows in, and sharing"
+                aria-label={`Edit ${source.name}`}
+                aria-pressed={editing}
+                onClick={() => setEditing((v) => !v)}
               >
-                <Icon name="campaign" />
-              </button>
-            )}
-            {source.review && (
-              <button
-                type="button"
-                className={`chrome-btn xs${showBooks ? ' on' : ''}`}
-                title="Choose which books use 2024 rules"
-                aria-label={`2024 books in ${source.name}`}
-                aria-pressed={showBooks}
-                onClick={() => setShowBooks((v) => !v)}
-              >
-                <Icon name="tome" />
+                <Icon name="pencil" />
               </button>
             )}
             {!source.bundled && (
@@ -205,30 +202,71 @@ function SourceRow({
         {limitable && (
           <span data-testid="source-campaigns"> · {campaignsLine(source, campaigns)}</span>
         )}
+        {limitable && sharedLine(source, campaigns, sharing) && (
+          <span data-testid="source-shared"> · {sharedLine(source, campaigns, sharing)}</span>
+        )}
+        {source.kind === 'homebrew' && homebrewSharedLine(campaigns, sharing) && (
+          <span data-testid="source-shared"> · {homebrewSharedLine(campaigns, sharing)}</span>
+        )}
       </p>
-      {showCampaigns && (
-        <CampaignsPanel
-          source={source}
-          campaigns={campaigns}
-          openCampaignId={openCampaignId}
-          onChange={(ids) => void changeCampaigns(ids)}
-          onClose={() => setShowCampaigns(false)}
-        />
+      {editing && (
+        <div
+          className="edit-source"
+          role="group"
+          aria-label={`Edit ${source.name}`}
+          data-testid="edit-source"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              setEditing(false);
+            }
+          }}
+        >
+          <div className="books-panel-head">
+            <strong>Edit {source.name}</strong>
+            <span className="spacer" />
+            <button
+              type="button"
+              className="chrome-btn xs"
+              aria-label="Close Edit source"
+              title="Close"
+              onClick={() => setEditing(false)}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
+          {source.review && (
+            <BooksPanel source={source} embedded onClose={() => setEditing(false)} />
+          )}
+          <CampaignsPanel
+            embedded
+            source={source}
+            campaigns={campaigns}
+            openCampaignId={openCampaignId}
+            onChange={(ids) => void changeCampaigns(ids)}
+            onClose={() => setEditing(false)}
+          />
+          <SharePanel
+            source={source}
+            campaigns={campaigns}
+            sharing={sharing}
+            onChange={(ids) => onShare(source.id, ids)}
+          />
+        </div>
       )}
-      {clash && !showBooks && (
+      {clash && !editing && (
         <p className="source-clash" data-testid="source-clash">
           <span>⚠ {clash}</span>
           <button
             type="button"
             className="btn small"
             disabled={importing}
-            onClick={() => setShowBooks(true)}
+            onClick={() => setEditing(true)}
           >
-            Choose 2024 books…
+            Edit source…
           </button>
         </p>
       )}
-      {showBooks && <BooksPanel source={source} onClose={() => setShowBooks(false)} />}
       {showWarnings && <pre className="source-text warnings">{source.warnings.join('\n')}</pre>}
     </div>
   );
@@ -253,6 +291,30 @@ export function SourcesCard() {
     .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
     .map((s, i) => ({ ...s, parentId: null, order: i, createdAt: s.importedAt }));
   const listRef = useRef<HTMLDivElement>(null);
+  // What every campaign shares with its players (ADR 0060), so each row can say and change it.
+  const [sharing, setSharing] = useState<SharingOverview | null>(null);
+  useEffect(() => {
+    let stale = false;
+    void window.trifold.sources
+      .sharing()
+      .then((overview) => {
+        if (!stale) setSharing(overview);
+      })
+      .catch(() => undefined);
+    return () => {
+      stale = true;
+    };
+  }, [sources]);
+  const share = async (sourceId: string, campaignIds: string[]) => {
+    try {
+      setSharing(await window.trifold.sources.setShared(sourceId, campaignIds));
+      // The open campaign's Shared sources tab, and what its table sends, follow its file.
+      const open = useCampaignStore.getState().current?.campaign.id;
+      if (open) await useCampaignStore.getState().load();
+    } catch (err) {
+      useSourcesStore.setState({ error: err instanceof Error ? err.message : String(err) });
+    }
+  };
   const [campaigns, setCampaignList] = useState<CampaignSummary[]>([]);
   useEffect(() => {
     let live = true;
@@ -360,6 +422,8 @@ export function SourcesCard() {
                 dnd={dnd}
                 onStep={(by) => void step(s.id, by)}
                 campaigns={campaigns}
+                sharing={sharing}
+                onShare={(id, ids) => void share(id, ids)}
               />
             ))}
             <p className="source-list-end muted small" aria-hidden="true">

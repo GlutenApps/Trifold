@@ -561,7 +561,19 @@ export interface PhoneAudioStatus {
 // ---------- sources and compendium (DESIGN.md §6.1) ----------
 
 /** A source on disk plus whether its records predate the current importer. */
+/** Shared sources across the Library (ADR 0060), for Library › Compendium › Sources. */
+export interface SharingOverview {
+  /** Imported source id → the ids of the campaigns that share it with their players. */
+  bySource: Record<string, string[]>;
+  /** Campaign id → how many homebrew records it shares. */
+  homebrewByCampaign: Record<string, number>;
+}
+
 export interface SourceSummary extends Source {
+  /**
+   * Imported with an older parser, and its original file is kept, so Re-parse can bring its
+   * records up to date. A file imported with a campaign keeps no original and is never stale.
+   */
   stale: boolean;
   /** Ships with the app (SRD); cannot be removed or re-parsed, only switched off. */
   bundled: boolean;
@@ -1056,6 +1068,17 @@ export interface TrifoldApi {
      */
     setCampaigns(sourceId: string, campaignIds: string[] | null): Promise<Source>;
     /**
+     * What every campaign shares with its players (ADR 0060), read from each campaign's file:
+     * for each imported source, the campaigns that share it, and how many homebrew records each
+     * campaign shares.
+     */
+    sharing(): Promise<SharingOverview>;
+    /**
+     * The campaigns that share an imported source with their players: each named campaign gains
+     * it, every other loses it. A campaign that does not show the source cannot share it.
+     */
+    setShared(sourceId: string, campaignIds: string[]): Promise<SharingOverview>;
+    /**
      * Deletes `sources/<id>/` (original.xml and records) and its index rows; refuses bundled
      * sources.
      */
@@ -1439,6 +1462,8 @@ export const API_METHODS = {
     'setEdition2024Books',
     'setEnabled',
     'setCampaigns',
+    'sharing',
+    'setShared',
     'remove',
     'rebuildIndex',
     'attribution',

@@ -22,7 +22,8 @@ import {
  * failed import (CLAUDE.md ground rule 5).
  */
 /** Bump when normalization changes in a way that makes existing records.jsonl files stale. */
-export const IMPORTER_VERSION = 4;
+// 5: a citation's page is split from its book when a tag or a second book follows it (§2.9).
+export const IMPORTER_VERSION = 5;
 
 export interface CompendiumImportOptions {
   sourceId: string;

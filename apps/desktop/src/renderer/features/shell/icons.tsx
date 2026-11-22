@@ -69,6 +69,7 @@ export type IconName =
   | 'link'
   | 'search'
   | 'help'
+  | 'warning'
   | 'template'
   | 'globe'
   | 'external'
@@ -193,6 +194,8 @@ const PATHS: Record<IconName, string> = {
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
   // A question mark in a circle: what this is, explained in place.
   help: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5v.7M12 17v.5',
+  // A triangle with an exclamation mark: something to look at, such as an import's warnings.
+  warning: 'M12 3.5L2.5 20h19zM12 10v4.5M12 17.2v.3',
   // A page with a folded corner and ruled lines: a note that starts filled in.
   template: 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 16h6',
   // A globe: the web tab's mark on the stage (ADR 0011).

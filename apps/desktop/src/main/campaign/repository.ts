@@ -383,6 +383,46 @@ export class CampaignRepository {
     return next;
   }
 
+  /** Every campaign's own file, by campaign id; unreadable ones are skipped. */
+  async allCampaigns(): Promise<Array<{ slug: string; campaign: Campaign }>> {
+    const out: Array<{ slug: string; campaign: Campaign }> = [];
+    for (const slug of await this.listDir('campaigns')) {
+      try {
+        const campaign = await this.store.readJson(
+          this.dir(slug, 'campaign.json'),
+          Campaign,
+          'campaign',
+        );
+        out.push({ slug, campaign });
+      } catch {
+        // A folder without a readable campaign.json is not a campaign.
+      }
+    }
+    return out;
+  }
+
+  /** Changes one campaign's own file, open or not. Resolves to the written campaign. */
+  async updateCampaignOf(
+    slug: string,
+    change: (campaign: Campaign) => Partial<Campaign>,
+  ): Promise<Campaign> {
+    const current = await this.store.readJson(
+      this.dir(slug, 'campaign.json'),
+      Campaign,
+      'campaign',
+    );
+    const next = Campaign.parse({
+      ...current,
+      ...change(current),
+      id: current.id,
+      slug: current.slug,
+      schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+      updatedAt: nowIso(),
+    });
+    await this.store.writeJson(this.dir(slug, 'campaign.json'), next);
+    return next;
+  }
+
   async touch(): Promise<void> {
     await this.updateCampaign({});
   }

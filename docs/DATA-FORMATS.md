@@ -151,13 +151,19 @@ Equipment packs: a top-level `<container>` with nested `<item>` entries, each wi
 
 ### 2.9 Source citations and `description`
 
-A monster's `description`, and the `text` of other kinds, usually ends with `Source: <Book Name> p. <N>` or `Source: <Book Name>, p. <N>` **(observed)**. The pattern
+A monster's `description`, and the `text` of other kinds, usually ends with `Source: <Book Name> p. <N>` or `Source: <Book Name>, p. <N>` **(observed)**. Also observed: a tag in brackets after the page that belongs to the book (`Source: <Book Name> p. <N> (Third Party)`), and a line naming several books, each but the last ending in a comma. The line is found with
 
 ```
-/^\s*Source:\s*(.+?)(?:,?\s*p(?:g|age)?\.?\s*(\d+[\w-]*))?\s*$/im
+/^\s*Source:\s*(.+?)\s*$/im
 ```
 
-fills `sourceBook` and `sourcePage`, and the line is removed from the displayed text. Monsters take the citation from `description`; spells, items and feats from their `text`; species and backgrounds from their traits' text. Classes carry no citation. Book names are data from the imported file and are never bundled.
+and, after a trailing comma or semicolon is dropped, its first citation is read with
+
+```
+/^(.+?)(?:,\s*|\s+)p(?:g|age)?\.?\s*(\d+)[\w-]*\s*(\([^)]*\))?/i
+```
+
+The book is the first group with the bracketed tag after it, so every page of a book is one book; the page is the second group. A line with no page is all book. Only the first book of several is kept. The line is removed from the displayed text. (Importer version 5; files read by earlier versions kept the page in the book's name when anything followed it.) Monsters take the citation from `description`; spells, items and feats from their `text`; species and backgrounds from their traits' text. Classes carry no citation. Book names are data from the imported file and are never bundled.
 
 ### 2.10 Edition tagging
 

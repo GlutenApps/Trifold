@@ -24,7 +24,10 @@ export function CampaignsPanel({
   openCampaignId,
   onChange,
   onClose,
+  embedded = false,
 }: {
+  /** Inside Edit source: a section with its own heading and no close button of its own. */
+  embedded?: boolean;
   source: SourceSummary;
   campaigns: readonly CampaignSummary[];
   /** The open campaign, ticked first when the source is limited. */
@@ -49,7 +52,7 @@ export function CampaignsPanel({
   return (
     <div
       ref={panelRef}
-      className="books-panel"
+      className={embedded ? 'edit-source-section' : 'books-panel'}
       role="group"
       aria-label={`Campaigns for ${source.name}`}
       data-testid="campaigns-panel"
@@ -60,19 +63,23 @@ export function CampaignsPanel({
         }
       }}
     >
-      <div className="books-panel-head">
-        <strong>Which campaigns show it?</strong>
-        <span className="spacer" />
-        <button
-          type="button"
-          className="chrome-btn xs"
-          aria-label="Close campaigns"
-          title="Close"
-          onClick={onClose}
-        >
-          <Icon name="close" />
-        </button>
-      </div>
+      {embedded ? (
+        <h3>Shows in</h3>
+      ) : (
+        <div className="books-panel-head">
+          <strong>Which campaigns show it?</strong>
+          <span className="spacer" />
+          <button
+            type="button"
+            className="chrome-btn xs"
+            aria-label="Close campaigns"
+            title="Close"
+            onClick={onClose}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+      )}
       <p className="muted small">
         Its records appear in the compendium, the encounter builder and search only while one of
         these campaigns is open. With no campaign open, every source shows.
