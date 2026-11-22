@@ -1,9 +1,8 @@
 import { useState, type PointerEvent as ReactPointerEvent } from 'react';
-import type { MinorKind } from '@trifold/schema';
 import { useMusicStore } from '../../stores/musicStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useTimersStore } from '../../stores/timersStore';
-import { MINOR_TITLES } from '../../stores/shellLayout';
+import { MINOR_TITLES, type ToolKind } from '../../stores/shellLayout';
 import { useFit, useShellStore } from '../../stores/shellStore';
 import { Icon } from './icons';
 import { MINOR_ICON, MinorBody } from './minors';
@@ -22,7 +21,7 @@ export function Dock() {
   const setDockMode = useShellStore((s) => s.setDockMode);
   const setDockWidth = useShellStore((s) => s.setDockWidth);
   const openDock = useShellStore((s) => s.openDock);
-  const [collapsed, setCollapsed] = useState<Set<MinorKind>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<ToolKind>>(new Set());
   const pips = useLivePips();
   const alerts = useAlertPips();
   const fit = useFit();
@@ -79,7 +78,7 @@ export function Dock() {
   };
 
   const open = dock.sections.filter((s) => s.open);
-  const toggleCollapsed = (tool: MinorKind) =>
+  const toggleCollapsed = (tool: ToolKind) =>
     setCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(tool)) next.delete(tool);
@@ -173,20 +172,20 @@ export function Dock() {
  * Which tools carry a live pip: Scenes while a scene is on, Music while playing, Timers while one
  * runs or has run out.
  */
-function useLivePips(): Set<MinorKind> {
+function useLivePips(): Set<ToolKind> {
   const sceneLive = usePresenterStore((s) => !!s.state.scene && !s.state.blackout);
   const playing = useMusicStore((s) => s.playing);
   const timing = useTimersStore((s) =>
     Object.values(s.runs).some((r) => r.status === 'running' || r.status === 'done'),
   );
-  const pips = new Set<MinorKind>();
+  const pips = new Set<ToolKind>();
   if (timing) pips.add('timers');
   if (sceneLive) pips.add('scenes');
   if (playing) pips.add('music');
   return pips;
 }
 
-function SectionSummary({ tool, collapsed }: { tool: MinorKind; collapsed: boolean }) {
+function SectionSummary({ tool, collapsed }: { tool: ToolKind; collapsed: boolean }) {
   const trackId = useMusicStore((s) => s.order[s.index] ?? null);
   const track = useMusicStore((s) => s.library?.tracks.find((t) => t.id === trackId)?.title);
   const playing = useMusicStore((s) => s.playing);
@@ -213,7 +212,7 @@ function SectionSummary({ tool, collapsed }: { tool: MinorKind; collapsed: boole
 }
 
 /** Which tools' pips are alerts: Timers while a timer has run out and is not reset (ADR 0021). */
-function useAlertPips(): Set<MinorKind> {
+function useAlertPips(): Set<ToolKind> {
   const timeUp = useTimersStore((s) => Object.values(s.runs).some((r) => r.status === 'done'));
-  return new Set<MinorKind>(timeUp ? ['timers'] : []);
+  return new Set<ToolKind>(timeUp ? ['timers'] : []);
 }
