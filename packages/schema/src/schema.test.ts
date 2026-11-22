@@ -28,6 +28,7 @@ describe('LibrarySettings', () => {
       checkForUpdates: false,
       edition2024Books: [],
       books: {},
+      collections: [],
       disabledSourceIds: [],
       sourcePriority: [],
       backups: { enabled: true, keepDays: 14 },

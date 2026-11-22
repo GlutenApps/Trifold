@@ -359,7 +359,13 @@ export function SourcesCard({
         </button>
       </div>
       {tab === 'books' ? (
-        <BooksView files={files} onBrowse={onBrowse} />
+        <BooksView
+          files={files}
+          onBrowse={onBrowse}
+          campaigns={campaigns}
+          sharing={sharing}
+          onShared={setSharing}
+        />
       ) : sources.length === 0 ? (
         <p className="muted">No sources yet.</p>
       ) : (

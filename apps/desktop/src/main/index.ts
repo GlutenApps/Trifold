@@ -209,6 +209,8 @@ async function main(): Promise<void> {
         view,
         bundle.npcs,
         heldNpcIds,
+        // Shared collections (ADR 0062) name their books in the Library's collections.
+        activeSession.store?.getSettings().collections ?? [],
       );
     },
     ...(smokePort ? { ports: [smokePort] } : {}),

@@ -126,6 +126,11 @@ export function installBridgeMock(): TrifoldBridge {
       list: vi.fn(async () => []),
       update: vi.fn(async () => []),
       setRules: vi.fn(async () => []),
+      shareCollection: vi.fn(async () => ({
+        bySource: {},
+        byCollection: {},
+        homebrewByCampaign: {},
+      })),
     },
     joined: {
       list: vi.fn(async () => []),
@@ -278,8 +283,8 @@ export function installBridgeMock(): TrifoldBridge {
       setEnabled: vi.fn(async () => {
         throw new Error('not mocked');
       }),
-      sharing: vi.fn(async () => ({ bySource: {}, homebrewByCampaign: {} })),
-      setShared: vi.fn(async () => ({ bySource: {}, homebrewByCampaign: {} })),
+      sharing: vi.fn(async () => ({ bySource: {}, byCollection: {}, homebrewByCampaign: {} })),
+      setShared: vi.fn(async () => ({ bySource: {}, byCollection: {}, homebrewByCampaign: {} })),
       setCampaigns: vi.fn(async () => {
         throw new Error('not mocked');
       }),

@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { SourceSummary } from '@trifold/api';
-import type { CampaignSettings, CompendiumRecord, RecordKind } from '@trifold/schema';
+import type {
+  CampaignSettings,
+  CompendiumRecord,
+  LibrarySettings,
+  RecordKind,
+} from '@trifold/schema';
+import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { tableOn, useTableStore } from '../../stores/tableStore';
 import { Icon } from '../shell/icons';
@@ -18,6 +24,8 @@ import { Icon } from '../shell/icons';
  * Players' copies of Trifold receive it when they are at the table, as a read-only source that
  * shows only in this campaign.
  */
+
+const NO_COLLECTIONS: LibrarySettings['collections'] = [];
 
 /** The kinds a shared source gives players (the table server's own list; ADR 0060). */
 const PLAYER_FACING: readonly RecordKind[] = [
@@ -38,7 +46,12 @@ const PLAYER_FACING: readonly RecordKind[] = [
 export function sharedOf(
   settings: Partial<Pick<CampaignSettings, 'shared'>>,
 ): CampaignSettings['shared'] {
-  return settings.shared ?? { sourceIds: [], homebrewIds: [] };
+  const shared = settings.shared;
+  return {
+    sourceIds: shared?.sourceIds ?? [],
+    homebrewIds: shared?.homebrewIds ?? [],
+    collectionIds: shared?.collectionIds ?? [],
+  };
 }
 
 /** How many of a source's records players would get. */
@@ -53,6 +66,7 @@ export function SharedTab() {
   const campaign = useCampaignStore((s) => s.current?.campaign);
   const update = useCampaignStore((s) => s.update);
   const status = useTableStore((s) => s.status);
+  const collections = useAppStore((s) => s.library?.settings?.collections ?? NO_COLLECTIONS);
   const [sources, setSources] = useState<SourceSummary[] | null>(null);
   const [homebrew, setHomebrew] = useState<Array<{ id: string; name: string | null }>>([]);
   const campaignId = campaign?.id;
@@ -91,6 +105,9 @@ export function SharedTab() {
 
   if (!campaign) return null;
   const shared = sharedOf(campaign.settings);
+  const usedCollections = collections
+    .filter((c) => c.campaignIds.includes(campaign.id))
+    .map((c) => c.name);
   const save = (next: CampaignSettings['shared']) =>
     update({ settings: { ...campaign.settings, shared: next } });
 
@@ -169,6 +186,46 @@ export function SharedTab() {
             read cannot be taken back.
           </span>
         </div>
+      )}
+
+      <h2>Collections</h2>
+      <p className="muted small">
+        A shared collection gives players the same records from each of its books. Make and fill
+        collections on Library › Compendium › Sources.
+      </p>
+      {collections.length === 0 ? (
+        <p className="muted">No collections yet.</p>
+      ) : (
+        <ul className="shared-list" aria-label="Collections shared with players">
+          {collections.map((c) => (
+            <li key={c.id} className="shared-row">
+              <label className="field inline grow">
+                <input
+                  type="checkbox"
+                  aria-label={`Share ${c.name} with players`}
+                  checked={shared.collectionIds.includes(c.id)}
+                  onChange={(e) =>
+                    void save({
+                      ...shared,
+                      collectionIds: e.target.checked
+                        ? [...shared.collectionIds, c.id]
+                        : shared.collectionIds.filter((id) => id !== c.id),
+                    })
+                  }
+                />
+                {c.name}
+              </label>
+              <span className="muted small">
+                {c.bookKeys.length} {c.bookKeys.length === 1 ? 'book' : 'books'}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {usedCollections.length > 0 && (
+        <p className="muted small" data-testid="campaign-books">
+          This campaign’s compendium shows only the books in {usedCollections.join(', ')}.
+        </p>
       )}
 
       <h2>Homebrew</h2>

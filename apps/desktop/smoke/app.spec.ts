@@ -342,6 +342,40 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(console_.getByRole('heading', { name: 'Smoke Campaign' })).toBeVisible();
     await expect(tab('Campaign')).toHaveAttribute('aria-selected', 'true');
     await expect(strip).toBeVisible();
+    // Collections (ADR 0062): a campaign that uses a collection sees only its books from the
+    // imported files, read through the real index; the SRD still answers. Then it is undone.
+    const usedBooks = await console_.evaluate(async (sourceId) => {
+      const open = (await window.trifold.campaigns.current())!.campaign.id;
+      const count = async (kind: 'monster' | 'spell', sources?: string[]) =>
+        (
+          await window.trifold.compendium.search({
+            kind,
+            ...(sources ? { sourceIds: sources } : {}),
+          })
+        ).total;
+      const before = await count('monster', [sourceId]);
+      const srdBefore = await count('spell', ['srd-2024']);
+      const settings = await window.trifold.library.updateSettings({
+        collections: [
+          {
+            id: 'K1',
+            name: 'Only 5.2.1',
+            bookKeys: ['system reference document 5 2 1'],
+            campaignIds: [open],
+          },
+        ],
+      });
+      const after = await count('monster', [sourceId]);
+      const srdAfter = await count('spell', ['srd-2024']);
+      await window.trifold.library.updateSettings({ collections: [] });
+      const restored = await count('monster', [sourceId]);
+      return { before, after, restored, srdBefore, srdAfter, saved: settings.collections.length };
+    }, report.sourceId);
+    expect(usedBooks.saved).toBe(1);
+    expect(usedBooks.after).toBeGreaterThan(0);
+    expect(usedBooks.after).toBeLessThan(usedBooks.before);
+    expect(usedBooks.restored).toBe(usedBooks.before);
+    expect(usedBooks.srdAfter).toBe(usedBooks.srdBefore);
     // Party: New PC card, the required three plus the optional sections, Save and add another
     // for the second card, then Save.
     const party = [

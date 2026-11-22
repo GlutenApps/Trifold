@@ -45,6 +45,8 @@ export const CampaignSettings = z.object({
     .object({
       sourceIds: z.array(z.string()).default([]),
       homebrewIds: z.array(z.string()).default([]),
+      /** Collections (ADR 0062) whose books' player-facing records are shared, by id. */
+      collectionIds: z.array(z.string()).default([]),
     })
     .prefault({}),
 });

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { BookSummary, SourceSummary } from '@trifold/api';
+import type { BookSummary, CampaignSummary, SharingOverview, SourceSummary } from '@trifold/api';
 import { errorMessage } from '@trifold/schema';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { Icon } from '../shell/icons';
+import { CollectionsSection, useCollections } from './CollectionsSection';
 
 /**
  * The Books tab of Library › Compendium › Sources (ADR 0061): every book across the imported
@@ -45,8 +46,16 @@ function contents(book: BookSummary): string {
 /** Whether a book is kept by the filters. */
 export function bookMatches(
   book: BookSummary,
-  filter: { text: string; show: Show; tag: string; fileId: string },
+  filter: {
+    text: string;
+    show: Show;
+    tag: string;
+    fileId: string;
+    /** The books of the collection picked, or null for every book. */
+    inCollection?: ReadonlySet<string> | null;
+  },
 ): boolean {
+  if (filter.inCollection && !filter.inCollection.has(book.key)) return false;
   const text = filter.text.trim().toLowerCase();
   if (text && !book.name.toLowerCase().includes(text)) return false;
   if (filter.show === 'starred' && !book.starred) return false;
@@ -60,12 +69,22 @@ export function bookMatches(
 export function BooksView({
   files,
   onBrowse,
+  campaigns = [],
+  sharing = null,
+  onShared = () => undefined,
 }: {
   /** The imported files, for the file filter and the attention bar. */
   files: readonly SourceSummary[];
   /** Opens the compendium filtered to one book. */
   onBrowse(book: BookSummary): void;
+  /** Every campaign, for the campaigns a collection is used by and shared in. */
+  campaigns?: readonly CampaignSummary[];
+  sharing?: SharingOverview | null;
+  onShared?(overview: SharingOverview): void;
 }) {
+  const { collections, save: saveCollections } = useCollections();
+  const [collectionId, setCollectionId] = useState('');
+  const picked = collections.find((c) => c.id === collectionId) ?? null;
   const [books, setBooks] = useState<BookSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -114,7 +133,22 @@ export function BooksView({
 
   const all = useMemo(() => books ?? [], [books]);
   const tags = useMemo(() => [...new Set(all.flatMap((b) => b.tags))].sort(), [all]);
-  const shown = all.filter((b) => bookMatches(b, { text, show, tag, fileId }));
+  const inCollection = useMemo(() => (picked ? new Set(picked.bookKeys) : null), [picked]);
+  const shown = all.filter((b) => bookMatches(b, { text, show, tag, fileId, inCollection }));
+  /** Adds the chosen books to a collection, or takes them out of the one picked. */
+  const file = (id: string, keys: string[], into: boolean) =>
+    void saveCollections(
+      collections.map((c) =>
+        c.id !== id
+          ? c
+          : {
+              ...c,
+              bookKeys: into
+                ? [...new Set([...c.bookKeys, ...keys])]
+                : c.bookKeys.filter((k) => !keys.includes(k)),
+            },
+      ),
+    );
   const chosen = [...selected].filter((k) => all.some((b) => b.key === k));
   const allShownChosen = shown.length > 0 && shown.every((b) => selected.has(b.key));
   const toggle = (key: string, on: boolean) =>
@@ -156,6 +190,15 @@ export function BooksView({
         </p>
       )}
 
+      <CollectionsSection
+        books={all}
+        campaigns={campaigns}
+        sharing={sharing}
+        onShared={onShared}
+        active={collectionId}
+        onPick={setCollectionId}
+      />
+
       <div className="row books-filters">
         <input
           type="search"
@@ -165,6 +208,20 @@ export function BooksView({
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+        {collections.length > 0 && (
+          <select
+            aria-label="Collection"
+            value={collectionId}
+            onChange={(e) => setCollectionId(e.target.value)}
+          >
+            <option value="">Every collection</option>
+            {collections.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
         <select aria-label="Show" value={show} onChange={(e) => setShow(e.target.value as Show)}>
           <option value="all">All books</option>
           <option value="starred">Starred</option>
@@ -260,6 +317,37 @@ export function BooksView({
               <option value="2024">2024 rules</option>
               <option value="legacy">Legacy rules</option>
             </select>
+            {collections.length > 0 && (
+              <select
+                aria-label="Add the selected books to a collection"
+                value=""
+                onChange={(e) => {
+                  if (!e.target.value) return;
+                  file(e.target.value, chosen, true);
+                  // Filed: the next action starts from a fresh selection.
+                  setSelected(new Set());
+                }}
+              >
+                <option value="">Add to…</option>
+                {collections.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {picked && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  file(picked.id, chosen, false);
+                  setSelected(new Set());
+                }}
+              >
+                Remove from {picked.name}
+              </button>
+            )}
             <button type="button" className="btn ghost" onClick={() => setSelected(new Set())}>
               Clear
             </button>

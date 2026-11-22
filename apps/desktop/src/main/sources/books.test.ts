@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { bookFilter, buildSearch, buildSuggest, buildTextSearch, PRIORITY } from '../index/query';
+import {
+  bookFilter,
+  buildSearch,
+  buildSuggest,
+  buildTextSearch,
+  campaignBooksFilter,
+  PRIORITY,
+} from '../index/query';
 import { listBooks, with2024Books, withBookSettings } from './books';
 
 const row = (
@@ -99,5 +106,25 @@ describe('book SQL (ADR 0061)', () => {
     );
     expect(buildSuggest('gob').sql).toContain('r.book_off = 0');
     expect(buildTextSearch('fire bolt')!.sql).toContain('r.book_off = 0');
+  });
+
+  it('limits imported files to the open campaign’s books, and leaves the SRD and homebrew alone', () => {
+    expect(campaignBooksFilter(null)).toBeNull();
+    expect(campaignBooksFilter(['a book'])).toEqual({
+      sql: "(s.kind NOT IN ('xml', 'open5e') OR (r.book_key IN (?)))",
+      params: ['a book'],
+    });
+    // Collections with no books: no imported records at all.
+    expect(campaignBooksFilter([])).toEqual({ sql: "s.kind NOT IN ('xml', 'open5e')", params: [] });
+    const search = buildSearch({ kind: 'spell', campaignBookKeys: ['a book'] });
+    expect(search.sql).toContain("s.kind NOT IN ('xml', 'open5e') OR");
+    expect(search.countParams).toContain('a book');
+    const suggest = buildSuggest('fire', 12, '2024', null, null, ['a book']);
+    expect(suggest.sql).toContain("s.kind NOT IN ('xml', 'open5e') OR");
+    // The book binds after the campaign's own parameters and before the limit.
+    expect(suggest.params.slice(-2)).toEqual(['a book', 12]);
+    expect(
+      buildTextSearch('fire bolt', 12, '2024', null, null, ['a book'])!.params.slice(-2),
+    ).toEqual(['a book', 12]);
   });
 });

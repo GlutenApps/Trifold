@@ -24,6 +24,7 @@ import type { TableHub } from './table/hub';
 import { canLimitToCampaigns } from './sources/campaignScope';
 import { importXmlSource, isStale, reimportSource } from './sources/importXml';
 import { listBooks, with2024Books, withBookSettings } from './sources/books';
+import { campaignBooks } from '@trifold/rules';
 import { systemPageUrl } from './systemPages';
 import { isWebUrl } from './webTabs';
 import type { SaveFlush } from './saveFlush';
@@ -86,15 +87,19 @@ export function createApi(ctx: ApiContext): TrifoldApi {
   /** Shared sources and homebrew across every campaign (ADR 0060). */
   const sharingOverview = async (): Promise<SharingOverview> => {
     const bySource: Record<string, string[]> = {};
+    const byCollection: Record<string, string[]> = {};
     const homebrewByCampaign: Record<string, number> = {};
     for (const { campaign } of (await ctx.session.campaigns?.allCampaigns()) ?? []) {
       for (const id of campaign.settings.shared.sourceIds) {
         (bySource[id] ??= []).push(campaign.id);
       }
+      for (const id of campaign.settings.shared.collectionIds) {
+        (byCollection[id] ??= []).push(campaign.id);
+      }
       const homebrew = campaign.settings.shared.homebrewIds.length;
       if (homebrew > 0) homebrewByCampaign[campaign.id] = homebrew;
     }
-    return { bySource, homebrewByCampaign };
+    return { bySource, byCollection, homebrewByCampaign };
   };
 
   /** Whether a source's original file is kept, so Re-parse has something to read. */
@@ -108,6 +113,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       return false;
     }
   };
+  /** The open campaign's books from the Library's collections (ADR 0062); null for every book. */
+  const openCampaignBooks = () =>
+    campaignBooks(ctx.session.store?.getSettings().collections ?? [], ctx.session.openCampaignId());
   let importing = false;
   // An imported file's books and clashes (ADR 0028), read once per import of it.
   const reviews = new Map<string, BookReview>();
@@ -605,6 +613,29 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     },
 
     books: {
+      async shareCollection(collectionId, campaignIds) {
+        const repo = ctx.session.campaigns;
+        if (!repo) throw new Error('No Library is open');
+        const wanted = new Set(campaignIds);
+        for (const { slug, campaign } of await repo.allCampaigns()) {
+          const has = campaign.settings.shared.collectionIds.includes(collectionId);
+          const want = wanted.has(campaign.id);
+          if (has === want) continue;
+          await repo.updateCampaignOf(slug, (c) => ({
+            settings: {
+              ...c.settings,
+              shared: {
+                ...c.settings.shared,
+                collectionIds: want
+                  ? [...c.settings.shared.collectionIds, collectionId]
+                  : c.settings.shared.collectionIds.filter((id) => id !== collectionId),
+              },
+            },
+          }));
+        }
+        ctx.table.sharedChanged();
+        return sharingOverview();
+      },
       async list() {
         const { index, store } = ctx.session.require();
         return listBooks(index, store.getSettings().books);
@@ -732,6 +763,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           ...query,
           campaignSourceId: scopeSourceId(),
           campaignId: ctx.session.openCampaignId(),
+          campaignBookKeys: openCampaignBooks(),
         });
       },
       async get(recordId) {
@@ -740,7 +772,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async findByKey(kind, key) {
         return ctx.session
           .require()
-          .index.findByKey(kind, key, false, ctx.session.openCampaignId());
+          .index.findByKey(kind, key, false, ctx.session.openCampaignId(), openCampaignBooks());
       },
       async facets(kind) {
         return ctx.session.require().index.facets(kind);
@@ -750,6 +782,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           ...opts,
           campaignSourceId: scopeSourceId(),
           campaignId: ctx.session.openCampaignId(),
+          campaignBookKeys: openCampaignBooks(),
         });
       },
       async searchText(text, opts) {
@@ -757,6 +790,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           ...opts,
           campaignSourceId: scopeSourceId(),
           campaignId: ctx.session.openCampaignId(),
+          campaignBookKeys: openCampaignBooks(),
         });
       },
     },

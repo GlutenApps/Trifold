@@ -77,7 +77,9 @@ describe('SharedTab', () => {
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Share Book S1 with players' }));
     expect(update).toHaveBeenCalledWith({
-      settings: expect.objectContaining({ shared: { sourceIds: ['S1'], homebrewIds: [] } }),
+      settings: expect.objectContaining({
+        shared: { sourceIds: ['S1'], homebrewIds: [], collectionIds: [] },
+      }),
     });
   });
 
@@ -94,7 +96,7 @@ describe('SharedTab', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Stop sharing Greyford Lantern' }));
     expect(update).toHaveBeenCalledWith({
       settings: expect.objectContaining({
-        shared: { sourceIds: ['S1'], homebrewIds: ['hb-gone'] },
+        shared: { sourceIds: ['S1'], homebrewIds: ['hb-gone'], collectionIds: [] },
       }),
     });
   });
@@ -108,7 +110,9 @@ describe('ShareToggle', () => {
     expect(button).toHaveAttribute('aria-pressed', 'false');
     await userEvent.click(button);
     expect(update).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ shared: { sourceIds: [], homebrewIds: ['hb-lantern'] } }),
+      settings: expect.objectContaining({
+        shared: { sourceIds: [], homebrewIds: ['hb-lantern'], collectionIds: [] },
+      }),
     });
 
     open({ homebrewIds: ['hb-lantern'] });
@@ -119,7 +123,9 @@ describe('ShareToggle', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Share with players' }));
     expect(update).toHaveBeenLastCalledWith({
-      settings: expect.objectContaining({ shared: { sourceIds: [], homebrewIds: [] } }),
+      settings: expect.objectContaining({
+        shared: { sourceIds: [], homebrewIds: [], collectionIds: [] },
+      }),
     });
   });
 

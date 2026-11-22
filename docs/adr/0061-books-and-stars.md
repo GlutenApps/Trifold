@@ -32,6 +32,6 @@ The DM decided (Ian, 2026-11-23): books are the main unit, files are secondary; 
 
 ## Next
 
-- **Collections:** named groups of books; a campaign shows and shares a collection.
+- **Collections:** built, ADR 0062.
 - **Duplicates:** every record in more than one place, which copy answers, and an override.
 - Sharing and "shows in" by book, replacing the per-file choices on Files.

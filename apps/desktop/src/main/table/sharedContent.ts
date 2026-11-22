@@ -9,6 +9,7 @@ import type {
 } from '@trifold/schema';
 import type { IndexDb } from '../index/IndexDb';
 import { sharedSourceId } from '../joined/store';
+import { booksInCollections, type BookCollection } from '@trifold/rules';
 import { sourceShowsIn, type CampaignView } from '../sources/campaignScope';
 import type { SourceCatalog } from '../sources/catalog';
 import type { HomebrewRepository } from '../sources/homebrew';
@@ -110,7 +111,7 @@ export function selectShared(input: SharedSelection): SharedContent {
 /** What the loader reads from: the open Library's sources, homebrew and index. */
 export interface SharedSources {
   catalog: SourceCatalog;
-  index: Pick<IndexDb, 'get'>;
+  index: Pick<IndexDb, 'get' | 'recordsOfBooks'>;
   homebrew: Pick<HomebrewRepository, 'list'>;
 }
 
@@ -124,6 +125,7 @@ export async function loadShared(
   view: CampaignView,
   npcs: ReadonlyArray<Pick<NPC, 'id' | 'companionOf' | 'recordRef'>>,
   heldNpcIds: ReadonlySet<string>,
+  collections: readonly BookCollection[] = [],
 ): Promise<SharedContent> {
   const shared = campaign.settings.shared;
   const all = await from.catalog.list();
@@ -137,6 +139,20 @@ export async function loadShared(
     if (source.kind !== 'xml' && source.kind !== 'open5e') continue;
     if (!sourceShowsIn(source, view)) continue;
     sources.push({ source, records: await from.catalog.readAllRecords(id) });
+  }
+
+  // A shared collection (ADR 0062) shares its books' records, grouped by the file they are in.
+  const bookKeys = booksInCollections(collections, shared.collectionIds ?? []);
+  const byFile = new Map<string, CompendiumRecord[]>();
+  for (const record of bookKeys.length ? from.index.recordsOfBooks(bookKeys) : []) {
+    const list = byFile.get(record.sourceId) ?? [];
+    list.push(record);
+    byFile.set(record.sourceId, list);
+  }
+  for (const [id, records] of byFile) {
+    const source = byId.get(id);
+    if (!source || !source.enabled || !sourceShowsIn(source, view)) continue;
+    sources.push({ source, records });
   }
 
   const ticked = new Set(shared.homebrewIds);

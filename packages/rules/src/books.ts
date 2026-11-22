@@ -42,3 +42,34 @@ export function bookTags(name: string): string[] {
   }
   return out;
 }
+
+/** A collection as the Library keeps it (ADR 0062). */
+export interface BookCollection {
+  id: string;
+  name: string;
+  bookKeys: readonly string[];
+  campaignIds: readonly string[];
+}
+
+/**
+ * The books a campaign uses (ADR 0062): every book in the collections that name it, or null
+ * when none does and the campaign shows every book.
+ */
+export function campaignBooks(
+  collections: readonly BookCollection[],
+  campaignId: string | null,
+): string[] | null {
+  if (!campaignId) return null;
+  const using = collections.filter((c) => c.campaignIds.includes(campaignId));
+  if (using.length === 0) return null;
+  return [...new Set(using.flatMap((c) => c.bookKeys))];
+}
+
+/** The books in some collections, by id; ids that name no collection add nothing. */
+export function booksInCollections(
+  collections: readonly BookCollection[],
+  ids: readonly string[],
+): string[] {
+  const wanted = new Set(ids);
+  return [...new Set(collections.filter((c) => wanted.has(c.id)).flatMap((c) => c.bookKeys))];
+}

@@ -184,10 +184,12 @@ describe('SourcesCard campaigns (ADR 0036)', () => {
     ]);
     vi.mocked(window.trifold.sources.sharing).mockResolvedValue({
       bySource: { book: ['C2'] },
+      byCollection: {},
       homebrewByCampaign: { C1: 3 },
     });
     vi.mocked(window.trifold.sources.setShared).mockResolvedValue({
       bySource: { book: ['C2', 'C1'] },
+      byCollection: {},
       homebrewByCampaign: { C1: 3 },
     });
     const user = userEvent.setup();
