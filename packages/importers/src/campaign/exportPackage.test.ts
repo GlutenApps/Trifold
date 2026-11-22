@@ -273,6 +273,68 @@ describe('prepareExport', () => {
     expect(out.pcs).toEqual([]);
     expect(out.scenes[0]).not.toHaveProperty('audio');
   });
+
+  it('leaves nothing pointing at a left-out PC', () => {
+    const all = parts();
+    const tokens = all.scenes[0]!.tokens;
+    const npcToken = tokens[0]!;
+    all.scenes[0]!.tokens = [
+      npcToken,
+      {
+        ...npcToken,
+        id: 'pc-tok',
+        ref: { kind: 'pc', pcId: 'PC1', name: 'Thora' },
+        label: 'Thora',
+      },
+      {
+        ...npcToken,
+        id: 'summon-tok',
+        ref: { kind: 'custom', name: 'Wolf' },
+        label: 'Wolf',
+        summon: {
+          ownerKind: 'pc',
+          ownerId: 'PC1',
+          spawnedBy: 'Sam',
+          type: 'Beast',
+          hp: { current: 11, max: 11, temp: 0 },
+          ac: 13,
+        },
+      } as (typeof tokens)[number],
+    ];
+    all.npcs[0]!.companionOf = 'PC1';
+    const options = { state: 'asIs', homebrew: true, layout: false } as const;
+
+    // With the party, all of it travels.
+    const withParty = prepareExport(all, { ...options, party: true });
+    expect(withParty.scenes[0]!.tokens.map((t) => t.id)).toEqual(['tok', 'pc-tok', 'summon-tok']);
+    expect(withParty.npcs[0]!.companionOf).toBe('PC1');
+    expect(withParty.encounters[0]!.combatants.map((c) => c.id)).toEqual(['t1', 't2']);
+
+    // Without it: no PC tokens, no PC's summons, no PCs in the encounter, no companion link.
+    const out = prepareExport(all, { ...options, party: false });
+    expect(out.scenes[0]!.tokens.map((t) => t.id)).toEqual(['tok']);
+    expect(out.npcs[0]).not.toHaveProperty('companionOf');
+    expect(out.npcs[0]!.name).toBe('Varis');
+    expect(out.encounters[0]!.combatants.map((c) => c.id)).toEqual(['t1']);
+    expect(JSON.stringify(out)).not.toContain('PC1');
+    // A fight with no PC in it goes on as it was.
+    expect(out.encounters[0]!.state?.round).toBe(3);
+
+    // A fight a PC is in cannot go on without them: it is put away, the encounter stays.
+    const fighting = parts();
+    fighting.encounters[0]!.state!.combatants.push({
+      ...fighting.encounters[0]!.state!.combatants[0]!,
+      id: 'cb2',
+      name: 'Thora',
+      ref: { kind: 'pc', pcId: 'PC1', name: 'Thora' },
+    });
+    const ended = prepareExport(fighting, { ...options, party: false });
+    expect(ended.encounters[0]!.state).toBeNull();
+    expect(ended.encounters[0]!.name).toBe('Bridge ambush');
+    expect(
+      prepareExport(fighting, { ...options, party: true }).encounters[0]!.state,
+    ).not.toBeNull();
+  });
 });
 
 describe('record references', () => {

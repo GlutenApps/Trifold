@@ -106,7 +106,10 @@ export function CampaignExportPanel({
           : 'Everything as it stands, including a fight in progress.'}
       </p>
       <div className="row">
-        <label className="field inline">
+        <label
+          className="field inline"
+          title="The PC cards, with their tokens on the maps and their places in encounters. Left out, those go too."
+        >
           <input
             type="checkbox"
             checked={options.party}
