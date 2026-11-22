@@ -318,17 +318,9 @@ A character built with shared content keeps working when it is unlinked or the c
 
 So a sheet stores, for each linked record, its key, source name and display name, never the record's text.
 
-## Party notes
+## Party notes: left out
 
-Players asked for notes the whole party shares, beside each player's own (Ian, 2026-11-23). To be built after the player console; this is the shape.
-
-- **They live with the GM.** Party notes are ordinary notes in the GM's campaign, in a Party notes folder found by its role (as Quick notes is, ADR 0018), so they are backed up and exported with the campaign and there is one copy. The GM reads and edits them like any note.
-- **Players read and write them over the table connection.** A device that holds a character gets the folder's notes; adding or saving one is a request the console applies, like an intent. Nothing else in the GM's notes tree is sent.
-- **One writer at a time per note.** A save carries the version the player opened; if someone saved meanwhile, the save is refused and the player sees both texts and chooses. No live co-editing.
-- **Offline, read-only.** The last copy is cached in the joined campaign; new party notes wait for the table. A player's own notes work offline as before.
-- **In the player console:** Quick notes gains a switch, Mine or Party; a Notes view on the stage lists both.
-
-Open: whether a player may delete a party note they did not write (assumed no; the GM can).
+Notes the whole party shares were considered and left out (Ian, 2026-11-23): players can use a shared document in a web tab for that. A player's notes are their own, local to the joined campaign, and nothing about notes crosses the table connection.
 
 ## Table rolls
 
@@ -448,7 +440,7 @@ One feature per PR (`CLAUDE.md`), and each phase updates its own docs and ADR as
 
 1. **Seams, no behaviour change.** The `TableClient` split in `web/connection.ts`; the picker taking the device's name and the initiative box exported; player kinds and the player layout in the schema with no UI; the feature flag (`TRIFOLD_PLAYER_MODE=1`, read through `app.getInfo`). All existing tests and the smoke test stay green and unchanged. Built.
 2. **Player mode on the LAN.** First, as PRs with no behaviour change: the shell's two roles (built), and the components both clients use moved to a shared folder. Then the service advertisement and table discovery; Join a campaign, the joined-campaign store and the Playing list; `LanClient` and `BridgeClient`; the `table` media host and image cache; the player console with Table, My creature, Initiative, Quick notes, Dice and Compendium; then the offline view, finding the table again, the failure messages and the sharing-backups warning. Its ADR and the ground rule 1 change. The flag comes off when this phase's acceptance passes.
-3. **Table rolls and party notes**, one PR each. Table rolls: the Table and Private switch, `roll` and `rolled`, table rolls in both roll logs, and its ADR. Party notes: the Party notes folder, sending and saving it over the table connection with the version check, and the Mine or Party switch.
+3. **Table rolls.** The Table and Private switch, `roll` and `rolled`, table rolls in both roll logs. Its ADR.
 4. **Shared content and player packs.** The Shared with players list, the shared source in a joined campaign, sync on connect, Export for players and opening a pack. Its ADR, with the `DESIGN.md` §8 change.
 5. **Character foundation.** The sheet schema (marked by edition, linked records by key and name) and derived-number functions in `packages/rules/src/character/`, the Character tab, the Table numbers form, the `sheetUrl` migration, and the `sheetOffer` flow with Accept, Dismiss and auto-accept. Its ADR.
 6. **PDF sheet import** (parallel with 7). Real exports first, then field mapping, the preview, manual matching and re-import.
