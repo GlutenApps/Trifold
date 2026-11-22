@@ -3,6 +3,8 @@ import { CountersTool } from '../counters/CountersTool';
 import { TimersTool } from '../timers/TimersTool';
 import { MusicTool } from '../music/MusicTool';
 import { ScenesTool } from '../presenter/ScenesTool';
+import { InitiativeTool } from '../joined/InitiativeTool';
+import { MyCharactersTool } from '../joined/MyCharactersTool';
 import type { ToolKind } from '../../stores/shellLayout';
 import type { IconName } from './icons';
 
@@ -35,10 +37,9 @@ export function MinorBody({ kind }: { kind: ToolKind }) {
       return <CountersTool />;
     case 'timers':
       return <TimersTool />;
-    // The player console's own tools are still to come (docs/PLAYER-MODE.md, phase 2); only seen
-    // with player mode switched on.
     case 'myCharacters':
+      return <MyCharactersTool />;
     case 'initiative':
-      return <p className="muted panel-pending">Not built yet.</p>;
+      return <InitiativeTool />;
   }
 }

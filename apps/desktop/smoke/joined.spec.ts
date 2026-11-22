@@ -166,6 +166,24 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
       await page.evaluate(async (u) => (await fetch(u)).headers.get('content-type'), src),
     ).toBe('image/jpeg');
 
+    // My characters: the player's row, built like the GM's party rows. Damage and a condition go
+    // to the GM's table as requests, and the row shows what the table says back.
+    const row = page
+      .getByTestId('my-characters')
+      .getByTestId('my-character')
+      .filter({ hasText: 'Brannoc Hale' });
+    const chip = row.getByRole('button', { name: "Change Brannoc Hale's HP" });
+    await expect(chip).toHaveText(/^HP \d+\/\d+$/);
+    const full = (await chip.textContent())!;
+    await chip.click();
+    await row.getByRole('spinbutton', { name: 'Amount for Brannoc Hale' }).fill('3');
+    await row.getByRole('button', { name: 'Damage', exact: true }).click();
+    await expect(chip).not.toHaveText(full, { timeout: 10_000 });
+    await row.getByRole('button', { name: 'Add a condition to Brannoc Hale' }).click();
+    await row.getByRole('menuitem', { name: 'Prone', exact: true }).click();
+    await expect(row.getByText('Prone')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('initiative-tool')).toContainText('No fight is running.');
+
     // The claim is kept in the Library, and the GM sees the player as a device.
     await expect(async () => {
       const now = JSON.parse(

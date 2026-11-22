@@ -64,11 +64,18 @@ export function HpEditor({
   name,
   hp,
   onApply,
+  onChange,
   onClose,
 }: {
   name: string;
   hp: HitPoints;
-  onApply(next: HitPoints): void;
+  /** The HP after the change, for a caller that owns the number (the DM's rows). */
+  onApply?(next: HitPoints): void;
+  /**
+   * The change itself, for a caller that asks someone else to make it: the player console sends
+   * it to the GM's table as a request (docs/PLAYER-MODE.md, "My characters and Sheets").
+   */
+  onChange?(change: HpChange, amount: number): void;
   onClose(): void;
 }) {
   const [amount, setAmount] = useState('');
@@ -78,7 +85,9 @@ export function HpEditor({
   const ready = amount.trim() !== '' && Number.isFinite(value) && value >= 0;
   const apply = (change: HpChange) => {
     if (!ready) return;
-    onApply(changeHp(hp, change, value));
+    const amountNow = Math.max(0, Math.floor(value));
+    onChange?.(change, amountNow);
+    onApply?.(changeHp(hp, change, amountNow));
     setAmount('');
     input.current?.focus();
   };
