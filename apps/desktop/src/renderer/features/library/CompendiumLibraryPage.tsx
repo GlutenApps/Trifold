@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
+import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { CompendiumPage } from '../compendium/CompendiumPage';
 import { SourcesCard } from '../settings/SourcesCard';
@@ -63,7 +64,16 @@ export function CompendiumLibraryPage() {
         </button>
       </div>
       {!sources && adding && <NewHomebrewPanel onClose={() => setAdding(false)} />}
-      {sources ? <SourcesCard /> : <CompendiumPage />}
+      {sources ? (
+        <SourcesCard
+          onBrowse={(book) => {
+            useCompendiumStore.getState().browseBook(book);
+            setView('browse');
+          }}
+        />
+      ) : (
+        <CompendiumPage />
+      )}
     </section>
   );
 }

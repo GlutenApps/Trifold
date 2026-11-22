@@ -23,6 +23,7 @@ import type { PresenterHub } from './presenter';
 import type { TableHub } from './table/hub';
 import { canLimitToCampaigns } from './sources/campaignScope';
 import { importXmlSource, isStale, reimportSource } from './sources/importXml';
+import { listBooks, with2024Books, withBookSettings } from './sources/books';
 import { systemPageUrl } from './systemPages';
 import { isWebUrl } from './webTabs';
 import type { SaveFlush } from './saveFlush';
@@ -600,6 +601,56 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         // A homebrew change may be a change to what players are shared.
         ctx.table.sharedChanged();
         return added;
+      },
+    },
+
+    books: {
+      async list() {
+        const { index, store } = ctx.session.require();
+        return listBooks(index, store.getSettings().books);
+      },
+      async update(keys, patch) {
+        const { index, store } = ctx.session.require();
+        const books = withBookSettings(store.getSettings().books, keys, patch);
+        await store.updateSettings({ books });
+        index.applyBookSettings(books);
+        return listBooks(index, books);
+      },
+      async setRules(keys, use2024) {
+        if (importing) throw new Error('An import is already running');
+        const { store, sources, index } = ctx.session.require();
+        const wanted = new Set(keys);
+        const affected = listBooks(index, store.getSettings().books).filter((b) =>
+          wanted.has(b.key),
+        );
+        // A file's unnamed records have no book to mark.
+        const named = affected.filter((b) => !b.unnamed);
+        const fileIds = [...new Set(named.flatMap((b) => b.files.map((f) => f.id)))];
+        importing = true;
+        try {
+          for (const id of fileIds) {
+            const source = await sources.get(id);
+            if (!source || !(await canReparse(source))) continue;
+            const names = named.filter((b) => b.files.some((f) => f.id === id)).map((b) => b.name);
+            const next = with2024Books(source.edition2024Books, names, use2024);
+            if (JSON.stringify(next) === JSON.stringify(source.edition2024Books)) continue;
+            await reimportSource(
+              {
+                store,
+                sources,
+                index,
+                logger: ctx.logger,
+                onProgress: (p) => ctx.windows.sendToConsole(EVENT_CHANNELS.importProgress, p),
+              },
+              id,
+              next,
+            );
+          }
+        } finally {
+          importing = false;
+        }
+        index.applyBookSettings(store.getSettings().books);
+        return listBooks(index, store.getSettings().books);
       },
     },
 

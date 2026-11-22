@@ -5,6 +5,7 @@ import { landOn, navKey, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useJoinedStore } from '../../stores/joinedStore';
+import { Icon } from '../shell/icons';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { itemTypeName, shortSourceName } from './formatting';
 import { CreatureEditor } from './CreatureEditor';
@@ -77,6 +78,8 @@ export function CompendiumPage() {
   const finishEdit = useCompendiumStore((s) => s.finishEdit);
   const removeHomebrew = useCompendiumStore((s) => s.removeHomebrew);
   const addToLibrary = useCompendiumStore((s) => s.addToLibrary);
+  const bookLabel = useCompendiumStore((s) => s.bookLabel);
+  const browseBook = useCompendiumStore((s) => s.browseBook);
   const sources = useSourcesStore((s) => s.sources);
   const loadSources = useSourcesStore((s) => s.load);
   // In a player console: how much the campaign's GM shares (ADR 0060); 0 anywhere else.
@@ -159,6 +162,20 @@ export function CompendiumPage() {
           {sharedRecords === 1 ? 'record' : 'records'} with this campaign. Pick “
           {sources.find((s) => s.kind === 'shared')?.name ?? 'Shared'}” under sources to see only
           those.
+        </p>
+      )}
+      {bookLabel && (
+        <p className="row book-chip" role="status" data-testid="book-chip">
+          <span className="badge on">Book: {bookLabel}</span>
+          <button
+            type="button"
+            className="chrome-btn xs"
+            aria-label={`Show every book, not only ${bookLabel}`}
+            title="Show every book"
+            onClick={() => browseBook(null)}
+          >
+            <Icon name="close" />
+          </button>
         </p>
       )}
       <div className="row filters">

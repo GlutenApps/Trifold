@@ -23,3 +23,4 @@ export * from './crScale';
 export * from './fog';
 export * from './table/index';
 export * from './areaShapes';
+export * from './books';

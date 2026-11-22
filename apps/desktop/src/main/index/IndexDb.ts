@@ -9,8 +9,10 @@ import type {
 } from '@trifold/api';
 import { CompendiumRecord, type RecordKind, type Source } from '@trifold/schema';
 import {
+  bookFilter,
   buildSearch,
   buildSuggest,
+  PRIORITY,
   buildTextSearch,
   indexText,
   recordColumns,
@@ -40,7 +42,7 @@ const SUGGEST_TIERS: Record<number, CompendiumSuggestion['tier']> = {
  * decides which sources need it from their file hash and enabled flag.
  */
 /** Bump when the derived table layout changes; the tables are dropped and rebuilt from files. */
-export const INDEX_VERSION = 4;
+export const INDEX_VERSION = 5;
 
 /** DATA-FORMATS.md §5.6. Every row is derived from `sources/<id>/records.jsonl`. */
 const SCHEMA = `
@@ -73,8 +75,15 @@ CREATE TABLE IF NOT EXISTS records (
   level INTEGER,
   type_code TEXT,
   rarity TEXT,
+  -- The book its Source line names (ADR 0061): bookKey(name), '' when none, and the name.
+  book_key TEXT NOT NULL DEFAULT '',
+  book TEXT NOT NULL DEFAULT '',
+  -- From library.json's books, set by applyBookSettings after every sync.
+  starred INTEGER NOT NULL DEFAULT 0,
+  book_off INTEGER NOT NULL DEFAULT 0,
   json TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS records_book ON records(book_key, source_id);
 CREATE INDEX IF NOT EXISTS records_kind_key ON records(kind, key);
 CREATE INDEX IF NOT EXISTS records_source ON records(source_id);
 CREATE INDEX IF NOT EXISTS records_kind_name ON records(kind, display_name COLLATE NOCASE);
@@ -152,8 +161,8 @@ export class IndexDb {
   /** Replaces every row of a source in one transaction. Returns the number of records written. */
   replaceSource(source: Source, records: Iterable<CompendiumRecord>): number {
     const insertRecord = this.db.prepare(
-      `INSERT INTO records (id, kind, key, name, display_name, source_id, edition, cr, cr_num, type, size, environment, is_npc, level, type_code, rarity, json)
-       VALUES (@id, @kind, @key, @name, @display_name, @source_id, @edition, @cr, @cr_num, @type, @size, @environment, @is_npc, @level, @type_code, @rarity, @json)`,
+      `INSERT INTO records (id, kind, key, name, display_name, source_id, edition, cr, cr_num, type, size, environment, is_npc, level, type_code, rarity, book_key, book, json)
+       VALUES (@id, @kind, @key, @name, @display_name, @source_id, @edition, @cr, @cr_num, @type, @size, @environment, @is_npc, @level, @type_code, @rarity, @book_key, @book, @json)`,
     );
     const insertFts = this.db.prepare('INSERT INTO records_fts (id, name, text) VALUES (?, ?, ?)');
     const upsertSource = this.db.prepare(
@@ -276,6 +285,49 @@ export class IndexDb {
   }
 
   /** Source priority (ADR 0027): `order[0]` answers first; sources not in it go last. */
+  /**
+   * Books (ADR 0061): marks each record of a starred book and of a book that is off, from
+   * library.json's `books`. Run after every sync, since replaced rows start unmarked.
+   */
+  applyBookSettings(books: Readonly<Record<string, { starred: boolean; off: boolean }>>): void {
+    const entries = Object.entries(books).filter(([, b]) => b.starred || b.off);
+    this.db.transaction(() => {
+      this.db.exec(
+        'UPDATE records SET starred = 0, book_off = 0 WHERE starred = 1 OR book_off = 1',
+      );
+      for (const [key, b] of entries) {
+        const filter = bookFilter([key]);
+        if (!filter) continue;
+        this.db
+          .prepare(`UPDATE records AS r SET starred = ?, book_off = ? WHERE ${filter.sql}`)
+          .run(b.starred ? 1 : 0, b.off ? 1 : 0, ...filter.params);
+      }
+    })();
+  }
+
+  /**
+   * Every book in the imported files (ADR 0061), counted by file, kind and edition: what the
+   * Books view lists. Records that name no book count as their file's unnamed book.
+   */
+  bookRows(): Array<{
+    book_key: string;
+    book: string;
+    source_id: string;
+    source_name: string;
+    kind: string;
+    edition: string;
+    n: number;
+  }> {
+    return this.db
+      .prepare(
+        `SELECT r.book_key, MIN(r.book) AS book, r.source_id, s.name AS source_name, r.kind, r.edition, COUNT(*) AS n
+         FROM records r JOIN sources s ON s.id = r.source_id
+         WHERE s.kind IN ('xml', 'open5e')
+         GROUP BY r.book_key, r.source_id, r.kind, r.edition`,
+      )
+      .all() as never;
+  }
+
   applySourceOrder(order: readonly string[]): void {
     const reset = this.db.prepare('UPDATE sources SET priority = 1000000');
     const set = this.db.prepare('UPDATE sources SET priority = ? WHERE id = ?');
@@ -299,7 +351,7 @@ export class IndexDb {
     const limit = campaignId
       ? ' AND (s.campaigns IS NULL OR EXISTS (SELECT 1 FROM json_each(s.campaigns) WHERE value = ?))'
       : '';
-    const sql = `SELECT r.json FROM records r JOIN sources s ON s.id = r.source_id WHERE r.kind = ? AND r.key = ? AND s.kind != 'campaign'${includeDisabled ? '' : ' AND s.enabled = 1'}${limit} ORDER BY s.priority, r.edition DESC, r.id`;
+    const sql = `SELECT r.json FROM records r JOIN sources s ON s.id = r.source_id WHERE r.kind = ? AND r.key = ? AND s.kind != 'campaign'${includeDisabled ? '' : ' AND s.enabled = 1 AND r.book_off = 0'}${limit} ORDER BY ${PRIORITY}, r.edition DESC, r.id`;
     const params = campaignId ? [kind, key, campaignId] : [kind, key];
     const rows = this.db.prepare(sql).all(...params) as Array<{ json: string }>;
     const out: CompendiumRecord[] = [];

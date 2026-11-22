@@ -14,6 +14,13 @@ import { useCampaignStore } from './campaignStore';
  */
 export type Filters = Omit<CompendiumQuery, 'kind' | 'limit' | 'offset'>;
 
+/** A new kind's filters: the edition, and the book being browsed (ADR 0061), carried over. */
+const keepBook = (filters: Filters): Filters => ({
+  edition: filters.edition,
+  npc: 'any',
+  ...(filters.bookKeys ? { bookKeys: filters.bookKeys } : {}),
+});
+
 interface CompendiumState {
   kind: RecordKind;
   filters: Filters;
@@ -31,6 +38,10 @@ interface CompendiumState {
 
   setKind(kind: RecordKind): Promise<void>;
   setFilters(patch: Partial<Filters>): void;
+  /** The book the list is limited to (ADR 0061), by name, for its chip; null for none. */
+  bookLabel: string | null;
+  /** Limits the list to one book, or lifts the limit with null. Kept across the kind tabs. */
+  browseBook(book: { key: string; name: string } | null): void;
   search(): Promise<void>;
   loadFacets(): Promise<void>;
   select(recordId: string): Promise<void>;
@@ -90,12 +101,24 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
   async setKind(kind) {
     set({
       kind,
-      filters: { edition: get().filters.edition, npc: 'any' },
+      filters: keepBook(get().filters),
       selected: null,
       editions: [],
       history: [],
     });
     await Promise.all([get().search(), get().loadFacets()]);
+  },
+
+  bookLabel: null,
+
+  browseBook(book) {
+    const { bookKeys: _old, ...rest } = get().filters;
+    set({
+      filters: book ? { ...rest, bookKeys: [book.key] } : rest,
+      bookLabel: book?.name ?? null,
+      selected: null,
+    });
+    void get().search();
   },
 
   setFilters(patch) {
@@ -160,7 +183,7 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
       if (record.kind !== get().kind) {
         set({
           kind: record.kind,
-          filters: { edition: get().filters.edition, npc: 'any' },
+          filters: keepBook(get().filters),
           selected: record,
           editions,
           history: [],
