@@ -1,5 +1,5 @@
 import makeMdns from 'multicast-dns';
-import type { Answer, Packet, Question } from 'dns-packet';
+import type { Answer, Packet, Question, StringAnswer } from 'dns-packet';
 
 /** dns-packet's types leave out ANY (255), which it encodes fine. */
 const ANY = 'ANY' as unknown as Question['type'];
@@ -10,7 +10,9 @@ export interface MdnsResponse {
   flags: number;
   questions?: Question[];
   answers: Answer[];
+  additionals?: Answer[];
 }
+import { isPrivateAddress } from '@trifold/rules';
 import type { LanAddress } from './listen';
 
 /**
@@ -117,11 +119,187 @@ export function isConflict(
 /** `trifold.local`, then `trifold-2.local`, `trifold-3.local`… */
 export const candidateName = (n: number) => (n <= 1 ? 'trifold.local' : `trifold-${n}.local`);
 
+// ---------- the table as a service (docs/PLAYER-MODE.md, "Table discovery") ----------
+
+/**
+ * The name answers "where is trifold.local"; the service answers "which tables are up here".
+ * A player's Trifold asks for this type and gets, per table, the port and the campaign, so
+ * Join a campaign can list tables and a joined campaign can find its own again after an
+ * address or port change. It tells the network nothing the server does not already send to
+ * anything that connects (the `campaign` message).
+ */
+export const TABLE_SERVICE = '_trifold._tcp.local';
+/** Bumped when the TXT keys change in a way an older client cannot read. */
+export const TABLE_SERVICE_VERSION = '1';
+
+/** What a running table server advertises. */
+export interface TableService {
+  port: number;
+  campaignId: string;
+  campaignName: string;
+}
+
+/** `trifold.local` → `trifold._trifold._tcp.local`: one instance per host name, so it is unique. */
+export const serviceInstance = (hostName: string) =>
+  `${hostName.replace(/\.local$/i, '')}.${TABLE_SERVICE}`;
+
+/** A TXT string holds at most 255 bytes; a long campaign name is cut on a character boundary. */
+function txtValue(key: string, value: string): string {
+  let out = value;
+  while (Buffer.byteLength(`${key}=${out}`, 'utf8') > 255) out = [...out].slice(0, -1).join('');
+  return `${key}=${out}`;
+}
+
+function serviceRecords(
+  name: string,
+  service: TableService,
+  v4: readonly LanAddress[],
+  v6: readonly LanAddress[],
+  ttl: number,
+  flush: boolean,
+): { pointer: Answer; details: Answer[] } {
+  const instance = serviceInstance(name);
+  return {
+    // A PTR is shared between every table on the network, so it never carries cache-flush.
+    pointer: { type: 'PTR', name: TABLE_SERVICE, ttl, data: instance },
+    details: [
+      { type: 'SRV', name: instance, ttl, flush, data: { port: service.port, target: name } },
+      {
+        type: 'TXT',
+        name: instance,
+        ttl,
+        flush,
+        data: [
+          `v=${TABLE_SERVICE_VERSION}`,
+          txtValue('id', service.campaignId),
+          txtValue('name', service.campaignName),
+        ],
+      },
+      ...v4.map((a): Answer => ({ type: 'A', name, ttl, flush, data: a.host })),
+      ...v6.map((a): Answer => ({ type: 'AAAA', name, ttl, flush, data: bareV6(a.host) })),
+    ],
+  };
+}
+
+/**
+ * The answer to a query about the table service, or null when it asks about something else: a
+ * PTR question for the service type, or SRV or TXT for our instance. The port, the campaign and
+ * the addresses ride along as additional records, so one answer is enough to connect. Addresses
+ * follow the same rule as the name's: the asker's subnet first.
+ */
+export function serviceAnswerFor(
+  query: Pick<Packet, 'id' | 'questions'>,
+  rinfo: { address: string; port: number },
+  name: string,
+  service: TableService,
+  addresses: readonly LanAddress[],
+): MdnsResponse | null {
+  const instance = serviceInstance(name).toLowerCase();
+  const wanted = (query.questions ?? []).filter((q: Question) => {
+    const asked = q.name.toLowerCase();
+    if (asked === TABLE_SERVICE) return q.type === 'PTR' || q.type === ANY;
+    return asked === instance && (q.type === 'SRV' || q.type === 'TXT' || q.type === ANY);
+  });
+  if (!wanted.length) return null;
+  const legacy = rinfo.port !== MDNS_PORT;
+  const v4all = addresses.filter((a) => a.family === 'IPv4');
+  const local = v4all.filter((a) => sameSubnet(rinfo.address, a));
+  const { pointer, details } = serviceRecords(
+    name,
+    service,
+    local.length ? local : v4all,
+    addresses.filter((a) => a.family === 'IPv6'),
+    legacy ? LEGACY_TTL : TTL,
+    !legacy,
+  );
+  return {
+    type: 'response',
+    id: legacy ? (query.id ?? 0) : 0,
+    flags: 0x8400,
+    ...(legacy ? { questions: wanted } : {}),
+    answers: [pointer],
+    additionals: details,
+  };
+}
+
+/** A table found on the network. */
+export interface FoundTable {
+  /** The service instance, which is what tells two tables apart. */
+  instance: string;
+  /** The table's local name, `trifold.local`. */
+  host: string;
+  port: number;
+  /** Its private addresses a client can connect to, IPv4 first. Anything else is dropped. */
+  addresses: string[];
+  campaignId: string;
+  campaignName: string;
+}
+
+const text = (part: string | Buffer) => (typeof part === 'string' ? part : part.toString('utf8'));
+
+/**
+ * The tables a response describes, and the instances it says goodbye to (a PTR with TTL 0). A
+ * table counts only when the packet gives its port, its campaign id and at least one private
+ * address: the response is from the network, so nothing in it is trusted further than that.
+ */
+export function parseTableServices(packet: Pick<Packet, 'answers' | 'additionals'>): {
+  found: FoundTable[];
+  gone: string[];
+} {
+  const records = [...(packet.answers ?? []), ...(packet.additionals ?? [])];
+  const found: FoundTable[] = [];
+  const gone: string[] = [];
+  for (const ptr of records) {
+    if (ptr.type !== 'PTR' || ptr.name.toLowerCase() !== TABLE_SERVICE) continue;
+    const instance = ptr.data;
+    if (ptr.ttl === 0) {
+      gone.push(instance);
+      continue;
+    }
+    const at = (r: Answer) => r.name.toLowerCase() === instance.toLowerCase();
+    const srv = records.find((r) => r.type === 'SRV' && at(r));
+    const txt = records.find((r) => r.type === 'TXT' && at(r));
+    if (srv?.type !== 'SRV' || txt?.type !== 'TXT') continue;
+    const fields = new Map<string, string>();
+    for (const part of Array.isArray(txt.data) ? txt.data : [txt.data]) {
+      const line = text(part);
+      const eq = line.indexOf('=');
+      if (eq > 0) fields.set(line.slice(0, eq), line.slice(eq + 1));
+    }
+    const host = srv.data.target;
+    const addresses = records
+      .filter(
+        (r): r is StringAnswer =>
+          (r.type === 'A' || r.type === 'AAAA') && r.name.toLowerCase() === host.toLowerCase(),
+      )
+      // Link-local IPv6 needs the asker's own interface to be usable, so it is left out.
+      .filter((r) => isPrivateAddress(r.data) && !/^fe[89ab]/i.test(r.data))
+      .sort((a, b) => Number(a.type === 'AAAA') - Number(b.type === 'AAAA'))
+      .map((r) => r.data);
+    const campaignId = fields.get('id') ?? '';
+    const port = srv.data.port;
+    if (!campaignId || !addresses.length || !(port >= 1 && port <= 65535)) continue;
+    found.push({
+      instance,
+      host,
+      port,
+      addresses,
+      campaignId,
+      campaignName: fields.get('name') ?? '',
+    });
+  }
+  return { found, gone };
+}
+
 export class MdnsResponder {
   private mdns: ReturnType<typeof makeMdns> | null = null;
   private name: string | null = null;
 
-  constructor(private readonly addresses: () => readonly LanAddress[]) {}
+  constructor(
+    private readonly addresses: () => readonly LanAddress[],
+    /** What the table advertises as a service; null while there is nothing to advertise. */
+    private readonly service: () => TableService | null = () => null,
+  ) {}
 
   /**
    * Probes for a free name (RFC 6762 §8.1: three queries 250 ms apart; any answer for another
@@ -144,10 +322,16 @@ export class MdnsResponder {
     if (!this.name) throw new Error('trifold.local to trifold-9.local are all taken');
     const name = this.name;
     mdns.on('query', (query, rinfo) => {
-      const answer = answerFor(query, rinfo, name, this.addresses());
-      if (!answer) return;
-      if (rinfo.port !== MDNS_PORT) mdns.respond(answer, rinfo);
-      else mdns.respond(answer);
+      const service = this.service();
+      const answers = [
+        answerFor(query, rinfo, name, this.addresses()),
+        service ? serviceAnswerFor(query, rinfo, name, service, this.addresses()) : null,
+      ];
+      for (const answer of answers) {
+        if (!answer) continue;
+        if (rinfo.port !== MDNS_PORT) mdns.respond(answer, rinfo);
+        else mdns.respond(answer);
+      }
     });
     mdns.on('error', () => undefined);
     this.announce();
@@ -165,6 +349,19 @@ export class MdnsResponder {
       this.addresses(),
     );
     if (answer) this.mdns.respond(answer);
+    // The service too, unasked: a player's Join list fills as soon as the table is up, and
+    // follows a new address or campaign name.
+    const service = this.service();
+    const offered = service
+      ? serviceAnswerFor(
+          { id: 0, questions: [{ name: TABLE_SERVICE, type: 'PTR' }] },
+          { address: '', port: MDNS_PORT },
+          this.name,
+          service,
+          this.addresses(),
+        )
+      : null;
+    if (offered) this.mdns.respond(offered);
   }
 
   private probe(name: string): Promise<boolean> {
@@ -197,6 +394,8 @@ export class MdnsResponder {
       const answers: Answer[] = this.addresses()
         .filter((a) => a.family === 'IPv4')
         .map((a) => ({ type: 'A', name, ttl: 0, data: a.host }));
+      // The table leaves players' Join lists at once, not when its records run out.
+      answers.push({ type: 'PTR', name: TABLE_SERVICE, ttl: 0, data: serviceInstance(name) });
       await new Promise<void>((done) => mdns.respond({ answers }, () => done()));
     }
     await new Promise<void>((done) => mdns.destroy(() => done()));
