@@ -327,7 +327,11 @@ test('console, Library, import, search, stat block and player window all work en
     }
     await expect(console_.getByTestId('pc-row')).toHaveCount(2);
     await expect(console_.getByTestId('pc-row').filter({ hasText: 'Thora' })).toContainText(
-      'Sam · Fighter 5 · HP 44/44 · AC 18 · Init +1 · PP 12',
+      'Sam · Fighter 5 · AC 18 · Init +1 · PP 12',
+    );
+    // HP between fights (ADR 0055): its own button, which opens the editor under the row.
+    await expect(console_.getByRole('button', { name: "Change Thora's HP" })).toHaveText(
+      'HP 44/44',
     );
 
     // NPCs: a name is all a new NPC needs.

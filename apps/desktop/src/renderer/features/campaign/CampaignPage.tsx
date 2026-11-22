@@ -17,6 +17,7 @@ import { InlineConfirm } from '../shell/InlineConfirm';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { AddMenu } from './AddMenu';
 import { HeldConditions } from './HeldConditions';
+import { HpChip, HpEditor } from './HpBetweenFights';
 import { afterLongRest } from '@trifold/rules';
 import { AddNpcPanel, type AddNpcMode } from './AddNpcPanel';
 import { blankNpc, blankPc, CopyFromCampaign, NpcEditor, PcEditor } from './CharacterEditors';
@@ -28,6 +29,11 @@ import { editsInPlace, refreshNpcRows, saveStatBlock } from './npcStatBlock';
  * The NPC delete confirm (ADR 0037): where it is used, which it leaves, and whether its stat
  * block goes with it.
  */
+/** A PC card's HP as the tracker counts it: what it carries, else full. */
+function pcHp(pc: PCCard) {
+  return { current: pc.currentHp ?? pc.maxHp, max: pc.maxHp, temp: pc.tempHp ?? 0 };
+}
+
 export function deleteNpcQuestion(npc: NPC): string {
   const planned = planNpcRemoval(npc);
   if (!planned) return `Delete ${npc.name}?`;
@@ -83,6 +89,7 @@ function PartyTab() {
   const removePc = useCampaignStore((s) => s.removePc);
   const [view, setView] = useState<TabView<PCCard>>({ kind: 'list' });
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [hpOpen, setHpOpen] = useState<string | null>(null);
   if (!current) return null;
   const toList = (landId?: string) => {
     setView({ kind: 'list' });
@@ -169,59 +176,120 @@ function PartyTab() {
         />
       </div>
       {current.pcs.length === 0 && <p className="muted">No PC cards yet.</p>}
-      {current.pcs.map((pc) => (
-        <div key={pc.id} className="row pc-row" data-testid="pc-row" data-nav={navKey('pc', pc.id)}>
-          <ArtThumb url={pc.portrait ? mediaUrl(current.campaign.slug, pc.portrait) : undefined} />
-          <strong>{pc.name}</strong>
-          <span className="muted">
-            {pc.playerName ? `${pc.playerName} · ` : ''}
-            {pc.classText ? `${pc.classText} ${pc.level} · ` : ''}
-            HP {pc.currentHp ?? pc.maxHp}/{pc.maxHp}
-            {(pc.tempHp ?? 0) > 0 ? ` +${pc.tempHp}` : ''} · AC {pc.ac} · Init{' '}
-            {pc.initiativeBonus >= 0 ? '+' : ''}
-            {pc.initiativeBonus} · PP {pc.passives.perception}
-          </span>
-          <HeldConditions
-            name={pc.name}
-            conditions={pc.conditions}
-            onChange={(conditions) => void savePc({ ...pc, conditions })}
-          />
-          <span className="spacer" />
-          {confirmId === pc.id ? (
-            <InlineConfirm
-              name={pc.name}
-              onConfirm={() => {
-                setConfirmId(null);
-                void removePc(pc.id);
-              }}
-              onKeep={() => setConfirmId(null)}
-            />
-          ) : (
-            <span className="row-actions">
-              <button
-                type="button"
-                className="chrome-btn xs"
-                aria-label={`Edit ${pc.name}`}
-                title="Edit"
-                onClick={() => setView({ kind: 'edit', item: pc, key: 0 })}
-              >
-                <Icon name="pencil" />
-              </button>
-              <button
-                type="button"
-                className="chrome-btn xs danger"
-                aria-label={`Delete ${pc.name}`}
-                title="Delete"
-                onClick={() => setConfirmId(pc.id)}
-              >
-                <Icon name="trash" />
-              </button>
-            </span>
-          )}
-        </div>
-      ))}
+      {current.pcs.map((pc) => {
+        const hp = pcHp(pc);
+        return (
+          <div
+            key={pc.id}
+            className="entity-row pc-row"
+            data-testid="pc-row"
+            data-nav={navKey('pc', pc.id)}
+          >
+            <div className="row entity-head">
+              <ArtThumb
+                url={pc.portrait ? mediaUrl(current.campaign.slug, pc.portrait) : undefined}
+              />
+              <strong>{pc.name}</strong>
+              <span className="muted">
+                {pc.playerName ? `${pc.playerName} · ` : ''}
+                {pc.classText ? `${pc.classText} ${pc.level} · ` : ''}
+                AC {pc.ac} · Init {pc.initiativeBonus >= 0 ? '+' : ''}
+                {pc.initiativeBonus} · PP {pc.passives.perception}
+              </span>
+              <span className="spacer" />
+              {confirmId === pc.id ? (
+                <InlineConfirm
+                  name={pc.name}
+                  onConfirm={() => {
+                    setConfirmId(null);
+                    void removePc(pc.id);
+                  }}
+                  onKeep={() => setConfirmId(null)}
+                />
+              ) : (
+                <span className="row-actions">
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-label={`Edit ${pc.name}`}
+                    title="Edit"
+                    onClick={() => setView({ kind: 'edit', item: pc, key: 0 })}
+                  >
+                    <Icon name="pencil" />
+                  </button>
+                  <button
+                    type="button"
+                    className="chrome-btn xs danger"
+                    aria-label={`Delete ${pc.name}`}
+                    title="Delete"
+                    onClick={() => setConfirmId(pc.id)}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </span>
+              )}
+            </div>
+            <div className="status-line">
+              <HpChip
+                name={pc.name}
+                hp={hp}
+                open={hpOpen === pc.id}
+                onToggle={() => setHpOpen((id) => (id === pc.id ? null : pc.id))}
+              />
+              <HeldConditions
+                name={pc.name}
+                conditions={pc.conditions}
+                onChange={(conditions) => void savePc({ ...pc, conditions })}
+              />
+            </div>
+            {hpOpen === pc.id && (
+              <HpEditor
+                name={pc.name}
+                hp={hp}
+                onApply={(next) =>
+                  void savePc({ ...pc, currentHp: next.current, tempHp: next.temp })
+                }
+                onClose={() => setHpOpen(null)}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
+}
+
+/**
+ * An NPC's HP editor (ADR 0055). An NPC carries HP only once it has fought; before that it is at
+ * its stat block's average, read when the editor opens.
+ */
+function NpcHpEditor({
+  npc,
+  onApply,
+  onClose,
+}: {
+  npc: NPC;
+  onApply(hp: { current: number; max: number; temp: number }): void;
+  onClose(): void;
+}) {
+  const recordId = npc.hp ? undefined : npc.recordRef?.recordId;
+  const [max, setMax] = useState<number | null>(null);
+  useEffect(() => {
+    if (!recordId) return;
+    let live = true;
+    void window.trifold.compendium
+      .get(recordId)
+      .then((r) => {
+        if (live) setMax(r?.kind === 'monster' ? (r.data.hp?.average ?? 0) : 0);
+      })
+      .catch(() => live && setMax(0));
+    return () => {
+      live = false;
+    };
+  }, [recordId]);
+  const hp = npc.hp ?? (max !== null ? { current: max, max, temp: 0 } : null);
+  if (!hp) return <p className="muted small">Reading the stat block…</p>;
+  return <HpEditor name={npc.name} hp={hp} onApply={onApply} onClose={onClose} />;
 }
 
 /**
@@ -299,6 +367,7 @@ function NpcsTab() {
   const [view, setView] = useState<TabView<NPC>>({ kind: 'list' });
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [shownId, setShownId] = useState<string | null>(null);
+  const [hpOpen, setHpOpen] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const hasSources = sources.length > 0;
@@ -431,18 +500,7 @@ function NpcsTab() {
             <strong>{n.name}</strong>
             {n.role && <span className="muted">{n.role}</span>}
             {n.location && <span className="muted">· {n.location}</span>}
-            {n.hp && (
-              <span className="muted" title="HP carried from the last fight">
-                HP {n.hp.current}/{n.hp.max}
-                {n.hp.temp > 0 ? ` +${n.hp.temp}` : ''}
-              </span>
-            )}
             {!n.isAlive && <span className="badge">dead</span>}
-            <HeldConditions
-              name={n.name}
-              conditions={n.conditions}
-              onChange={(conditions) => void saveNpc({ ...n, conditions })}
-            />
             {n.recordRef && (
               <span
                 className="badge source-pill npc-home"
@@ -515,6 +573,30 @@ function NpcsTab() {
               </span>
             )}
           </div>
+          {(n.recordRef || n.hp || (n.conditions?.length ?? 0) > 0) && (
+            <div className="status-line">
+              {(n.recordRef || n.hp) && (
+                <HpChip
+                  name={n.name}
+                  hp={n.hp ?? null}
+                  open={hpOpen === n.id}
+                  onToggle={() => setHpOpen((id) => (id === n.id ? null : n.id))}
+                />
+              )}
+              <HeldConditions
+                name={n.name}
+                conditions={n.conditions}
+                onChange={(conditions) => void saveNpc({ ...n, conditions })}
+              />
+            </div>
+          )}
+          {hpOpen === n.id && (
+            <NpcHpEditor
+              npc={n}
+              onApply={(hp) => void saveNpc({ ...n, hp })}
+              onClose={() => setHpOpen(null)}
+            />
+          )}
           {n.notes && <p className="muted">{n.notes}</p>}
           {shownId === n.id && <NpcStatBlock npc={n} />}
         </div>
