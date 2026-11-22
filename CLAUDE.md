@@ -44,6 +44,7 @@ resources/               built at build time: srd-2024.jsonl, srd-2014.jsonl (gi
 scripts/                 dev.mjs, fetch-content.ts (runs fetch-open5e.ts + fetch-game-icons.ts + verify-mapping.ts
                          + build-sample.ts), rebuild-native.mjs, check-content.mjs (build guard),
                          update-keygen.mjs + update-manifest.mjs (update signing key and signed latest.yml, ADR 0045),
+                         third-party-notices.mjs (bundled libraries' licence texts, run by `pnpm build`, ADR 0056),
                          cr-audit/ (fight simulation of the CR scaler and hordes, SRD data only, ADR 0051)
 samples/greyford/        source of the bundled sample campaign (ADR 0016): campaign.json, notes/*.md, images/ + CREDITS.md;
                          built into resources/sample/ (git-ignored) by scripts/build-sample.ts

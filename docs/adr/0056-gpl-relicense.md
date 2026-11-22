@@ -35,8 +35,10 @@ Ian duPont's, and no employer has a claim.
 
 - Anyone may use, change and share Trifold, but a version they distribute must stay GPL with its
   source available, and may not be called Trifold.
-- The libraries Trifold bundles (MIT, ISC, BSD, Apache) are GPL-compatible. Their licence texts
-  are not yet shipped with the app; a third-party notices file generated from the build is the
-  next step.
+- The libraries Trifold bundles (MIT, ISC, BSD, Apache, BlueOak, Python-2.0) are GPL-compatible.
+  Their licence texts ship with the app in `resources/licenses/THIRD_PARTY_NOTICES.txt`, generated
+  at build time from what the bundles actually contain (`apps/desktop/licenseCollector.ts`) and
+  the main process's runtime dependencies (`scripts/third-party-notices.mjs`); Settings › About
+  shows it under **Open-source libraries Trifold uses**.
 - The CLA bot must be set up on the GitHub repository by its owner before outside pull requests
   are merged.

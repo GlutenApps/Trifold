@@ -60,6 +60,7 @@ export function installBridgeMock(): TrifoldBridge {
       textSize: vi.fn(async () => 'default' as const),
       setTextSize: vi.fn(async (size) => size),
       openLogsFolder: vi.fn(async () => undefined),
+      thirdPartyNotices: vi.fn(async () => null),
     },
     updates: (() => {
       // Off and already answered, so no test sees the Library's question unless it asks to.

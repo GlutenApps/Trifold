@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { licenseCollector } from './licenseCollector';
 
 /**
  * The player connector's browser client (ADR 0043): a small React page the table server serves
@@ -10,7 +11,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   root: resolve(__dirname, 'src/web'),
   base: '/',
-  plugins: [react()],
+  plugins: [react(), licenseCollector('web')],
   build: {
     outDir: resolve(__dirname, 'out/web'),
     emptyOutDir: true,

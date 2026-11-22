@@ -26,6 +26,9 @@ extraResources:
     to: licenses
     filter:
       - '*-OFL.txt'
+  # The bundled libraries' licence texts (ADR 0056), written by scripts/third-party-notices.mjs.
+  - from: out/THIRD_PARTY_NOTICES.txt
+    to: licenses/THIRD_PARTY_NOTICES.txt
   # electron-updater's settings (ADR 0045): the cache folder and, once signing is live, the
   # publisher name. The updater only runs in the installed Windows build.
   - from: build/app-update.yml

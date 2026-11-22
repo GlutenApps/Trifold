@@ -321,6 +321,36 @@ function TroubleshootingSection() {
   );
 }
 
+/** The bundled libraries' licences (ADR 0056), read only when the DM opens them. */
+function ThirdPartyNotices() {
+  const [text, setText] = useState<string | null | undefined>(undefined);
+  return (
+    <div className="attribution" data-testid="third-party-notices">
+      <details
+        onToggle={(e) => {
+          if ((e.currentTarget as HTMLDetailsElement).open && text === undefined) {
+            void window.trifold.app
+              .thirdPartyNotices()
+              .then(setText)
+              .catch(() => setText(null));
+          }
+        }}
+      >
+        <summary>Open-source libraries Trifold uses</summary>
+        {text === undefined ? (
+          <p className="muted small">Loading…</p>
+        ) : text === null ? (
+          <p className="muted small">
+            This build has no notices file; an installed Trifold carries it in its licenses folder.
+          </p>
+        ) : (
+          <pre className="source-text">{text}</pre>
+        )}
+      </details>
+    </div>
+  );
+}
+
 /** Settings › About: the version and every credit and licence the content policy requires. */
 function AboutSection() {
   const info = useAppStore((s) => s.info);
@@ -436,6 +466,7 @@ function AboutSection() {
           Trifold&apos;s licence. The adventure text and the handout are Trifold&apos;s own.
         </p>
       </div>
+      <ThirdPartyNotices />
       <div className="attribution" data-testid="font-credits">
         <p>
           Type: Outfit by the Outfit Project Authors and IBM Plex Mono by IBM, both under the SIL
