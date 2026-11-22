@@ -1,6 +1,7 @@
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
+import { licenseCollector } from './licenseCollector';
 
 // The renderer's CSP allows localhost websockets so the dev server can hot-reload. A packaged
 // build has no dev server, so the production index.html loses those two sources.
@@ -18,12 +19,12 @@ const productionCsp = (): Plugin => ({
 // workspace packages are devDependencies and are bundled in.
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin(), licenseCollector('main')],
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin(), licenseCollector('preload')],
   },
   renderer: {
-    plugins: [react(), productionCsp()],
+    plugins: [react(), productionCsp(), licenseCollector('renderer')],
   },
 });

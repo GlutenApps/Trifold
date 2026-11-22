@@ -837,6 +837,8 @@ export interface TrifoldApi {
     setTextSize(size: TextSize): Promise<TextSize>;
     /** Opens the folder Trifold writes its logs to: the Library's, or the app's before one is open. */
     openLogsFolder(): Promise<void>;
+    /** The bundled libraries' licence texts (ADR 0056); null in a build that has none. */
+    thirdPartyNotices(): Promise<string | null>;
   };
   /**
    * The update check (ADR 0034, ADR 0045): opt-in; when on, at launch and once a day after. It
@@ -1295,6 +1297,7 @@ export const API_METHODS = {
     'textSize',
     'setTextSize',
     'openLogsFolder',
+    'thirdPartyNotices',
   ],
   updates: ['status', 'setEnabled', 'checkNow', 'dismiss', 'openDownload', 'restartToUpdate'],
   library: [

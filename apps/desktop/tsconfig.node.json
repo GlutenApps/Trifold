@@ -3,5 +3,12 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["src/main", "src/preload", "electron.vite.config.ts", "vite.web.config.ts", "smoke"]
+  "include": [
+    "src/main",
+    "src/preload",
+    "electron.vite.config.ts",
+    "vite.web.config.ts",
+    "licenseCollector.ts",
+    "smoke"
+  ]
 }

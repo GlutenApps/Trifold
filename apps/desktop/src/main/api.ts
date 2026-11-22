@@ -1,4 +1,4 @@
-import { mkdir, stat } from 'node:fs/promises';
+import { mkdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { app, dialog, shell } from 'electron';
 import { reviewBooks, sourceOrder, type BookReview } from '@trifold/rules';
@@ -152,6 +152,13 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         const saved = await ctx.config.update({ textSize: size });
         ctx.windows.setConsoleZoom(TEXT_SIZE_ZOOM[saved.textSize]);
         return saved.textSize;
+      },
+      async thirdPartyNotices() {
+        // Packaged: resources/licenses (electron-builder.yml); in development: the build's out/.
+        const file = app.isPackaged
+          ? join(process.resourcesPath, 'licenses', 'THIRD_PARTY_NOTICES.txt')
+          : join(app.getAppPath(), 'out', 'THIRD_PARTY_NOTICES.txt');
+        return readFile(file, 'utf8').catch(() => null);
       },
       async openLogsFolder() {
         const dir = ctx.session.logDir ?? join(app.getPath('userData'), 'logs');

@@ -15,6 +15,7 @@ export default defineConfig({
             'packages/**/*.test.ts',
             'apps/desktop/src/main/**/*.test.ts',
             'apps/desktop/src/preload/**/*.test.ts',
+            'apps/desktop/*.test.ts',
           ],
         },
       },
