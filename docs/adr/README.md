@@ -61,6 +61,7 @@ An architecture decision record (ADR) is a short file about one choice that refi
 | [0053](0053-visible-fast-updates.md) | Updates show the installer's progress window alone ("Updating Trifold", no other pages) instead of nothing, and the game-icons ship as one glyphs.json instead of 4,176 files, so an update takes about 30 seconds instead of minutes. |
 | [0054](0054-settings-page.md) | Settings is one column of sections in order of use (Table display, Appearance, Backups, Updates, Library, Troubleshooting, About) as full-width cards with name-and-hint rows, and gains Text size, Recent Libraries, Open logs folder and Identify displays; credits stay visible. |
 | [0055](0055-status-between-fights.md) | PC rows, and NPC rows with a stat block, show HP and conditions on a second line: HP is a button that opens an inline Damage / Heal / Temp HP / Set editor, and conditions add from a plus menu; story NPCs show none. |
+| [0056](0056-gpl-relicense.md) | The code is GPL-3.0-or-later (copyright Ian duPont) from 0.4.6; earlier releases stay MIT; the installer and Settings › About show the notice and full text; contributors sign a CLA; TRADEMARK.md reserves the name and logo. |
 
 ## Decision log
 

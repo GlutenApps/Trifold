@@ -4,6 +4,10 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Changed
+
+- **Licence** (ADR 0056): Trifold is now free software under the GNU General Public License, version 3 or later, copyright © 2026 Ian duPont. The installer and Settings › About show the notice and the full text. Versions 0.3.0 to 0.4.5 stay under the MIT License. The name and logo are reserved ([TRADEMARK.md](TRADEMARK.md)), and contributors sign a CLA ([CONTRIBUTING.md](CONTRIBUTING.md)).
+
 ## [0.4.5] - 2026-11-21
 
 Scaled creatures and hordes that fight like their CR, an attack button for every SRD creature, updates that take seconds and show their progress, and a reorganised Settings page.

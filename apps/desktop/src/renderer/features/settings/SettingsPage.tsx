@@ -8,6 +8,8 @@ import { BackupsSection } from './BackupsSection';
 import { SampleCampaignRow } from './SampleCampaignRow';
 import { SettingRow, SettingsSection } from './SettingsLayout';
 import { UpdatesSection } from './Updates';
+// The app's own licence (ADR 0056); the GPL asks an interactive program to show it.
+import gplText from '../../../../../../LICENSE?raw';
 
 /**
  * Library › Settings (ADR 0054): one column of sections in the order a DM needs them. Table
@@ -379,6 +381,19 @@ function AboutSection() {
         icons and a sample campaign (credited below). Everything you import stays in your Library
         and is never transmitted.
       </p>
+      <h3>Licence</h3>
+      <div className="attribution" data-testid="app-licence">
+        <p>
+          Trifold {info?.version ?? ''}, copyright © 2026 Ian duPont. Trifold is free software: you
+          can redistribute it and change it under the terms of the GNU General Public License,
+          version 3 or (at your option) any later version. It comes with ABSOLUTELY NO WARRANTY.
+          Versions 0.3.0 to 0.4.5 were released under the MIT License.
+        </p>
+        <details>
+          <summary>GNU General Public License, version 3</summary>
+          <pre className="source-text">{gplText}</pre>
+        </details>
+      </div>
       <h3>Credits and licences</h3>
       {attribution.length === 0 ? (
         <p className="muted">No bundled content in this build.</p>
@@ -418,7 +433,7 @@ function AboutSection() {
           Sample campaign maps: Highway Town, Dwarven Tavern and Howling Tunnels by Ross McConnell,
           2-Minute Tabletop (2minutetabletop.com), licensed CC BY-NC 4.0
           (creativecommons.org/licenses/by-nc/4.0) and adapted for Trifold; not covered by
-          Trifold&apos;s MIT licence. The adventure text and the handout are Trifold&apos;s own.
+          Trifold&apos;s licence. The adventure text and the handout are Trifold&apos;s own.
         </p>
       </div>
       <div className="attribution" data-testid="font-credits">
