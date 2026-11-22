@@ -174,7 +174,9 @@ export function AreaLayer({
 }) {
   const k = 1 / (zoom || 1);
   const o = area.outline;
-  const at = o.kind === 'circle' ? { x: o.cx, y: o.cy } : o.points[0]!;
+  // The dot marks the point of origin: a sphere's centre, a cone's tip, the middle of the face a
+  // cube or line grows from (not the outline's first corner).
+  const at = o.kind === 'circle' ? { x: o.cx, y: o.cy } : o.origin;
   return (
     <>
       <svg className="area-layer" width={width} height={height} aria-hidden="true">

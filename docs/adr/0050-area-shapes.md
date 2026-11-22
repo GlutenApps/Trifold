@@ -23,9 +23,24 @@ of lightning. The map had a ruler but nothing for areas, and nothing in the road
 5. **The TV and phones show it** while its map is live, under the fog, so fogged squares stay
    hidden. Like the ruler, a shape whose origin is under fog stays off them; the DM still sees it.
 
+## Amendment (2026-11-21): shapes from a creature
+
+The DM could not start a shape on a token (the token took the press), so there was no way to draw
+an effect around a creature. Now the drawing tools (area shapes, ruler, fog) work over tokens, and
+a shape started on a token comes from that creature:
+
+- A **sphere** becomes an **Emanation**, the 2024 rules' shape for an effect around a creature:
+  it reaches its size past the edge of the creature's space (drawn as a circle on the space's
+  centre, its radius the size plus half the space), and reads "20-ft emanation".
+- A **cone, cube or line** starts where the aim leaves the creature's space, as Burning Hands or
+  a breath weapon leaves its caster.
+- A cube's origin stays on a face; no spell needs a centred one.
+- The origin dot sits on the point of origin: a cone's tip, the middle of a cube's or line's
+  starting face (it was drawn on a corner).
+
 ## Consequences
 
 - One shape at a time. The console works out the outline and squares once and every screen
   draws the same.
-- Emanations and cylinders are left out: an emanation is a sphere around a creature, and a
-  cylinder looks like a sphere from above, so the sphere covers both on a flat map.
+- Cylinders are left out: a cylinder looks like a sphere from above, so the sphere covers it on a
+  flat map. Emanations come from a sphere started on a token (amendment above).
