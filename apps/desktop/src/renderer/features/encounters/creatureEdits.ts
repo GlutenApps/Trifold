@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { normalizeKey } from '@trifold/rules';
 import type { CombatantTemplate, CompendiumRecord, Encounter } from '@trifold/schema';
 import type { EditOrigin, Original, Scope } from '../compendium/creatureSave';
+import { isOwnRecord } from '../compendium/homebrew';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
 import { flushPendingSaves } from '../../stores/pendingSaves';
@@ -47,18 +48,18 @@ export function recordTarget(record: CompendiumRecord): RecordTarget {
 }
 
 /**
- * The copy the editor opens: the row's label as its name when the DM gave one, else the copy's
- * own ("Copy of Goblin"), and the HP override as its average HP.
+ * The copy the editor opens on a pre-made creature: the row's label as its name when the DM gave
+ * one, else the creature's own name ("Goblin", never "Copy of Goblin"; a campaign creature may
+ * share a name, and saving to the compendium asks for another if it is taken), and the HP override
+ * as its average HP.
  */
 export function draftFromRow(
   draft: CompendiumRecord,
   row: Pick<Encounter['combatants'][number], 'label' | 'hpOverride' | 'ref'>,
 ): CompendiumRecord {
-  let out = draft;
   const label = row.label?.trim();
-  if (label && normalizeKey(label) !== normalizeKey(row.ref.name)) {
-    out = { ...out, name: label, displayName: label, key: normalizeKey(label) };
-  }
+  const name = label && normalizeKey(label) !== normalizeKey(row.ref.name) ? label : row.ref.name;
+  let out: CompendiumRecord = { ...draft, name, displayName: name, key: normalizeKey(name) };
   if (row.hpOverride && out.kind === 'monster') {
     // The formula no longer gives this average, so it goes; the editor can roll a new one.
     out = { ...out, data: { ...out.data, hp: { average: row.hpOverride } } };
@@ -153,6 +154,8 @@ export async function applyScope(
 /** What the Encounters panel shows in place of the builder or tracker while one is edited. */
 export interface CreatureEdit {
   record: CompendiumRecord;
+  /** The DM's own creature (homebrew or this campaign's), edited in place: Update it or Save as new. */
+  own: boolean;
   original: Original;
   origin: EditOrigin;
   title: string;
@@ -165,15 +168,32 @@ export const useCreatureEditStore = create<{
   close(): void;
 }>((set) => ({ edit: null, error: null, close: () => set({ edit: null, error: null }) }));
 
-/** The copy a row opens on, from its compendium creature. */
+/**
+ * What Edit on a row opens: the DM's own creature as it is, so Save can update it; a pre-made one
+ * (SRD, an imported book) as a copy, since those never change.
+ */
 async function copyOfRow(
   row: CombatantTemplate,
-): Promise<{ record: CompendiumRecord; original: Original } | null> {
+): Promise<{ record: CompendiumRecord; original: Original; own: boolean } | null> {
   if (row.ref.kind !== 'record') return null;
   try {
+    if (isOwnRecord(row.ref.ref)) {
+      const record = await window.trifold.compendium.get(row.ref.ref.recordId);
+      if (record) {
+        return {
+          record,
+          own: true,
+          original: {
+            identity: { id: record.id, sourceId: record.sourceId, key: record.key },
+            name: record.displayName,
+          },
+        };
+      }
+    }
     const draft = await window.trifold.homebrew.draft(row.ref.ref.recordId);
     return {
       record: draftFromRow(draft, row),
+      own: false,
       original: {
         identity: {
           id: row.ref.ref.recordId,

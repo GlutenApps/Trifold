@@ -214,6 +214,44 @@ describe('editRow', () => {
     expect(edit.record.displayName).toBe('Grik');
     expect(edit.origin).toEqual({ kind: 'row', encounterId: 'Bridge', templateId: 'r1' });
     expect(edit.original.identity).toEqual({ id: goblin.id, sourceId: 'srd', key: 'goblin' });
+    expect(edit.own).toBe(false);
     expect(window.trifold.homebrew.save).not.toHaveBeenCalled();
+  });
+
+  it('names a pre-made creature’s copy after the creature, never “Copy of”', async () => {
+    vi.mocked(window.trifold.homebrew.draft).mockResolvedValue({
+      ...goblin,
+      id: 'homebrew:monster:new',
+      sourceId: 'homebrew',
+      name: 'Copy of Goblin',
+      displayName: 'Copy of Goblin',
+      key: 'copy of goblin',
+    } as CompendiumRecord);
+    await editRow(encounter('Bridge', []), row('r1'));
+    const edit = useCreatureEditStore.getState().edit!;
+    expect(edit.record).toMatchObject({ displayName: 'Goblin', key: 'goblin' });
+    expect(edit.own).toBe(false);
+  });
+
+  it('opens the DM’s own creature as it is, to update in place', async () => {
+    vi.mocked(window.trifold.homebrew.draft).mockClear();
+    vi.mocked(window.trifold.compendium.get).mockResolvedValue(grik);
+    const grikRow = row('r2', {
+      ref: {
+        kind: 'record',
+        ref: { recordId: grik.id, sourceId: 'campaign:greyford', key: 'grik', edition: '2024' },
+        name: 'Grik',
+      },
+    });
+    await editRow(encounter('Bridge', []), grikRow);
+    const edit = useCreatureEditStore.getState().edit!;
+    expect(edit.own).toBe(true);
+    expect(edit.record.id).toBe(grik.id);
+    expect(edit.original.identity).toEqual({
+      id: grik.id,
+      sourceId: 'campaign:greyford',
+      key: 'grik',
+    });
+    expect(window.trifold.homebrew.draft).not.toHaveBeenCalled();
   });
 });
