@@ -47,13 +47,13 @@ Facts from the repo that the first draft did not have.
 
 ## Decisions
 
-Four ADRs, numbered from 0057 in the order they land (0056 is the latest in `docs/adr/`), each with a row in the index and the decision log. Remote play gets its own when it is built.
+Four ADRs, numbered in the order they land, each with a row in the index and the decision log. ADR 0057 is already taken by Your turn and you're next, which landed first. Remote play gets its own when it is built.
 
 **Shared content and player packs.** A GM can share content with a campaign's players, by source for imported sources (player-facing kinds only) and by record for homebrew, over the table connection and as a pack file before the first session. Shared content lives in the joined campaign and nowhere else. This rewrites `DESIGN.md` §8 item 3 ("the app sends content nowhere") and the decision log's "Nothing is hosted or shared"; sharing carries the same non-SRD warning as export.
 
 **Table rolls.** A player's roll is Table (made on the GM's machine, shown in the GM's and the players' roll logs) or Private (never leaves the player's machine).
 
-**ADR 0057: Player mode in Trifold.** The player side ships inside Trifold. A Library can hold campaigns it runs and campaigns it joined. A joined campaign opens a player console built from the per-device view, never from GM campaign data. The player's Trifold is a client of the GM's table server on the local network, with the same messages, views and checks as a phone. The browser connector stays.
+**Player mode in Trifold.** The player side ships inside Trifold. A Library can hold campaigns it runs and campaigns it joined. A joined campaign opens a player console built from the per-device view, never from GM campaign data. The player's Trifold is a client of the GM's table server on the local network, with the same messages, views and checks as a phone. The browser connector stays.
 
 **Player-facing characters.** Players can have a character sheet in Trifold, import one from a PDF they exported elsewhere, or keep it elsewhere entirely. A character builder is in scope. The player owns the sheet; the GM's console owns table state. This amends ADR 0029, which left the PDF import in Later.
 
@@ -177,6 +177,8 @@ Reuse notes, from the code:
 - **Compendium.** `CompendiumPage` applies the open campaign's sources. In the player console it shows what the Library shows for "All campaigns" and hides Edit in campaign, Used by and Replace.
 
 ### Your turn and you're next
+
+Built for the view and the phone page (ADR 0057, PLAYER-CONNECTOR.md, Your turn); the player console's strip and Initiative panel read the same field in phase 2.
 
 Each `CreatureView` gains `turn?: 'now' | 'next'`, set in `viewFor` for the device's own creatures:
 
@@ -431,7 +433,7 @@ A new file kind, `character`, at version 1. Characters rank in memory in global 
 One feature per PR (`CLAUDE.md`), and each phase updates its own docs and ADR as it lands. After phase 5, the PDF import and the builder run in parallel.
 
 1. **Seams, no behaviour change.** The `TableClient` split in `web/connection.ts`; the picker taking the device's name and the initiative box exported; player kinds and the player layout in the schema with no UI; the feature flag (`TRIFOLD_PLAYER_MODE=1`, read through `app.getInfo`). All existing tests and the smoke test stay green and unchanged. Built.
-2. **Player mode on the LAN.** First, as PRs with no behaviour change: `Stage` and `Dock` taking their registries, and the components both clients use moved to a shared folder. Then `turn` in the view and on the phone page; the service advertisement and table discovery; Join a campaign, the joined-campaign store and the Playing list; `LanClient` and `BridgeClient`; the `table` media host and image cache; the player console with Table, My creature, Initiative, Quick notes, Dice and Compendium; then the offline view, finding the table again, the failure messages and the sharing-backups warning. ADR 0057 and the ground rule 1 change. The flag comes off when this phase's acceptance passes.
+2. **Player mode on the LAN.** First, as PRs with no behaviour change: `Stage` and `Dock` taking their registries, and the components both clients use moved to a shared folder. Then the service advertisement and table discovery; Join a campaign, the joined-campaign store and the Playing list; `LanClient` and `BridgeClient`; the `table` media host and image cache; the player console with Table, My creature, Initiative, Quick notes, Dice and Compendium; then the offline view, finding the table again, the failure messages and the sharing-backups warning. Its ADR and the ground rule 1 change. The flag comes off when this phase's acceptance passes.
 3. **Table rolls.** The Table and Private switch, `roll` and `rolled`, table rolls in both roll logs. Its ADR.
 4. **Shared content and player packs.** The Shared with players list, the shared source in a joined campaign, sync on connect, Export for players and opening a pack. Its ADR, with the `DESIGN.md` §8 change.
 5. **Character foundation.** The sheet schema (marked by edition, linked records by key and name) and derived-number functions in `packages/rules/src/character/`, the Character tab, the Table numbers form, the `sheetUrl` migration, and the `sheetOffer` flow with Accept, Dismiss and auto-accept. Its ADR.

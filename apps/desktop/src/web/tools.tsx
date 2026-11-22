@@ -134,7 +134,14 @@ export function Summary({
     <>
       <Portrait url={creature.portraitUrl} name={creature.name} size={40} />
       <span className="pc-sum-text">
-        <span className="pc-sum-name">{creature.name}</span>
+        <span className="pc-sum-nameline">
+          <span className="pc-sum-name">{creature.name}</span>
+          {creature.turn && (
+            <span className={`pc-turn ${creature.turn}`} role="status">
+              {creature.turn === 'now' ? 'Your turn' : 'You’re next'}
+            </span>
+          )}
+        </span>
         <span className={`pc-sum-conds${conds ? ' active' : ''}`}>{conds || 'No conditions'}</span>
       </span>
       <span className="pc-sum-hp">

@@ -106,6 +106,18 @@ describe('isClaimable', () => {
 });
 
 describe('viewFor', () => {
+  it('tells a device its own creature’s turn, and nobody else’s', () => {
+    const snap = snapshot([brannocToken(1)]);
+    snap.creatures[0]!.turn = 'next';
+    snap.creatures[1]!.turn = 'now';
+    const mine = viewFor(snap, claims, 'd1', true);
+    expect(mine.mine.map((c) => [c.id, c.turn])).toEqual([['brannoc', 'next']]);
+    // Wren acts now, on another device or nobody's: this device is not told.
+    expect(JSON.stringify(mine)).not.toContain('"now"');
+    // The picker says nothing about turns either.
+    expect(JSON.stringify(viewFor(snap, claims, 'd2', true))).not.toContain('"turn"');
+  });
+
   it('shows a device with no claims the picker, never the map or stats', () => {
     const view = viewFor(snapshot([brannocToken(1)]), claims, 'd2', true);
     expect(view.map).toBeNull();

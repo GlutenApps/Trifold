@@ -235,6 +235,7 @@ export function viewFor(
         conditions: c.conditions,
         inFight: c.inFight,
         needsInitiative: c.needsInitiative,
+        ...(c.turn ? { turn: c.turn } : {}),
         editable: c.editable,
         movementLocked: movementLocked(movement, controller(c).kind, controller(c).id),
         ...(c.companionOf ? { companionOf: c.companionOf } : {}),

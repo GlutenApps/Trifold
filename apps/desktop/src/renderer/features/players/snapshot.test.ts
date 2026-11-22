@@ -141,6 +141,35 @@ describe('tableSnapshotFrom', () => {
     });
   });
 
+  it('marks whose turn it is and who is next, by the tracker’s order', () => {
+    const fighter = (id: string, extra: Record<string, unknown> = {}) =>
+      Combatant.parse({
+        id: `k-${id}`,
+        name: id,
+        maskedName: id,
+        ref: { kind: 'pc', pcId: id, name: id },
+        role: 'ally',
+        hp: { current: 5, max: 5, temp: 0 },
+        ac: 10,
+        initiative: 10,
+        ...extra,
+      });
+    const combatants = [fighter('a'), fighter('b', { dead: true }), fighter('c'), fighter('d')];
+    const pcs = [pc('a'), pc('b'), pc('c'), pc('d')];
+    const at = (turnIndex: number) =>
+      tableSnapshotFrom(
+        input({ pcs, combat: { round: 1, turnIndex, combatants, log: [], startedAt: T } }),
+      ).creatures.map((c) => c.turn);
+    // a acts; b is down, so c is next.
+    expect(at(0)).toEqual(['now', undefined, 'next', undefined]);
+    // d acts; the order wraps to a.
+    expect(at(3)).toEqual(['next', undefined, undefined, 'now']);
+    // Before the first turn nobody is told anything.
+    expect(at(-1)).toEqual([undefined, undefined, undefined, undefined]);
+    // No fight, no turns.
+    expect(tableSnapshotFrom(input({ pcs })).creatures.every((c) => !c.turn)).toBe(true);
+  });
+
   it('takes numbers and conditions from the loaded fight', () => {
     const fighter = Combatant.parse({
       id: 'k1',

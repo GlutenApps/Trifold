@@ -93,6 +93,12 @@ export interface CreatureStats {
   inFight: boolean;
   /** The loaded fight is waiting for its initiative (PLAYER-CONNECTOR.md, "Initiative"). */
   needsInitiative: boolean;
+  /**
+   * Its place in the loaded fight's turn order, when it is one of these two: `now` on its turn,
+   * `next` when Next turn would move to it. Only ever sent to the device that holds the creature
+   * (PLAYER-CONNECTOR.md, "Your turn"), whether or not the TV shows the initiative strip.
+   */
+  turn?: 'now' | 'next';
   editable: { hp: boolean; maxHp: boolean; ac: boolean; conditions: boolean };
 }
 
