@@ -82,6 +82,22 @@ connections, and to allow it on private networks. If nobody connects within a mi
 starting, it says the firewall or the Wi-Fi may be in the way and suggests a phone hotspot. The
 player page's joining screen says the same: guest and school Wi-Fi often keep devices apart.
 
+### The table as a service
+
+Beside the name, the same responder advertises the table as a DNS-SD service,
+`_trifold._tcp.local`, so a player's Trifold can list the tables on the network and find its own
+again after an address or port change (`docs/PLAYER-MODE.md`, Table discovery). A PTR record
+names the instance (`trifold._trifold._tcp.local`, one per local name); an SRV record gives the
+port and the local name; a TXT record gives a version, the campaign id and the campaign name;
+the addresses ride along. It is announced on start, when the addresses change and when the
+campaign's name is first known or changes, and withdrawn with a goodbye on stop. It tells the
+network nothing the server does not already send to anything that connects.
+
+The searching side is `apps/desktop/src/main/joined/discovery.ts`. It asks only while the
+player has Join a campaign or a joined campaign open, keeps only private addresses, drops a
+table on its goodbye or after 35 seconds of silence, and treats everything it hears as
+untrusted. Phones do not use the service.
+
 ## Who owns what
 
 The console's stores own the state, main relays and filters, and browsers only render, the same
@@ -473,6 +489,9 @@ logged through `log.ts`. Tokens never reach the log.
 - `apps/desktop/src/main/table/table.test.ts`: `PlayersStore` (token hashes, PINs, takeovers,
   Switch character, movement locks and the reclaim mode saved to `players.json`), LAN address
   listing, port fallback and the mDNS responder's answers and conflicts.
+- `apps/desktop/src/main/joined/discovery.test.ts`: the table service's records, reading them
+  back, what is refused (no private address, no campaign id, no port), goodbyes, and the
+  search's timing.
 - Renderer tests in `features/players/`: the Player devices pop-up, applying intents in and out
   of a fight, previews and moves, summon upkeep.
 - `smoke/players.spec.ts`, on Windows and macOS: the sample campaign; joining, claiming,

@@ -100,6 +100,8 @@ A player's Trifold shows in the GM's device list like any other device.
 
 ### Table discovery
 
+Built, both sides, without its UI: the advertisement in `main/table/mdns.ts` and the search in `main/joined/discovery.ts` (PLAYER-CONNECTOR.md, The table as a service). Checked on real sockets with both on one computer.
+
 The table server answers mDNS for its name only today (`mdns.ts`: A and AAAA for `trifold.local`), which gives an address but no port and no campaign. Add a DNS-SD service to the same responder, on the socket it already holds:
 
 - a PTR record for `_trifold._tcp.local`, an SRV record with the server's port and local name, and a TXT record with the campaign id, the campaign name and a protocol version;

@@ -355,7 +355,20 @@ export class TableHub {
   }
 
   private async startMdns(): Promise<void> {
-    if (this.mdns === undefined) this.mdns = new MdnsResponder(() => this.addresses);
+    if (this.mdns === undefined) {
+      this.mdns = new MdnsResponder(
+        () => this.addresses,
+        // The table as a service, so a player's Trifold can list and find it (PLAYER-MODE.md).
+        () =>
+          this.state === 'on' && this.port !== null && this.campaignId
+            ? {
+                port: this.port,
+                campaignId: this.campaignId,
+                campaignName: this.snapshot?.campaignName ?? '',
+              }
+            : null,
+      );
+    }
     if (!this.mdns) return;
     try {
       this.localName = await this.mdns.start();
@@ -464,9 +477,13 @@ export class TableHub {
     const namesChanged =
       JSON.stringify(this.snapshot?.creatures.map((c) => c.name)) !==
       JSON.stringify(snapshot.creatures.map((c) => c.name));
+    const campaignNamed = this.snapshot?.campaignName !== snapshot.campaignName;
     this.snapshot = snapshot;
     this.scheduleBroadcast();
     if (namesChanged) this.emit();
+    // The advertised service carries the campaign's name: say it again when it is first known
+    // or renamed.
+    if (campaignNamed && this.localName) this.mdns?.announce();
   }
 
   setMapImage(sceneId: string, imageKey: string, jpeg: Uint8Array): void {
