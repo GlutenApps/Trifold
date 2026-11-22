@@ -1,5 +1,5 @@
 import { InitiativeCard } from '../../../web/Playing';
-import { linkText, usePlayerTable } from './PlayerTable';
+import { linkSentence, usePlayerTable } from './PlayerTable';
 import '../../../web/web.css';
 
 /**
@@ -15,7 +15,7 @@ export function InitiativeTool() {
   if (!view) {
     return (
       <p className="muted small initiative-empty" role="status">
-        {linkText(conn.link)}.
+        {linkSentence(conn.link)}
       </p>
     );
   }

@@ -28,6 +28,7 @@ import type {
 } from '@trifold/schema';
 import type {
   ClientMessage,
+  ClientView,
   ServerMessage,
   CreatureKind,
   ReclaimMode,
@@ -990,6 +991,11 @@ export interface TrifoldApi {
     /** A request to the open campaign's table, the same messages a phone sends. */
     send(campaignId: string, message: ClientMessage): Promise<void>;
     /**
+     * What the campaign's table last showed this player, from main's cache, for the view while
+     * the table is not up. Null when the table has never been seen.
+     */
+    lastView(campaignId: string): Promise<LastTableView | null>;
+    /**
      * The player's own notes in a joined campaign (`joined/<id>/notes/`), newest first. They
      * never leave this Library: nothing here touches the network.
      */
@@ -1401,6 +1407,7 @@ export const API_METHODS = {
     'open',
     'close',
     'send',
+    'lastView',
     'notes',
     'saveNote',
     'removeNote',
@@ -1542,6 +1549,12 @@ export interface FoundTableSummary {
  */
 export type PlayerLink =
   'connecting' | 'open' | 'reconnecting' | 'stopped' | 'otherCampaign' | 'refused';
+
+/** A joined campaign's table as this player last saw it, and when (PLAYER-MODE.md, "Not live"). */
+export interface LastTableView {
+  view: ClientView;
+  at: string;
+}
 
 /** What a typed address turned out to be: a table, not a local address, or nothing answering. */
 export type TablePeekResult =

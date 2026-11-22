@@ -6,19 +6,22 @@ import { ScreenView } from '../../../web/ScreenView';
 import { TvBottom, TvTop } from '../../../web/TvOverlays';
 import { useMovePlan } from '../../../web/useMovePlan';
 import { rulerLabel } from '../presenter/ruler';
-import { creatureKeyOf, linkText, usePlayerTable } from './PlayerTable';
+import { creatureKeyOf, lastSeenText, linkSentence, linkText, usePlayerTable } from './PlayerTable';
 import '../../../web/web.css';
 
 /**
  * The player console's VTT tab (docs/PLAYER-MODE.md, "Panels"): what the table shows this
  * player. The map with its fog and the tokens they may see, or the TV's title, image or break
- * screen, with the TV's overlays; the character picker while they hold nothing; and a plain
- * line while the table is not up. It is drawn with the phone page's own map and picker, from
+ * screen, with the TV's overlays; the character picker while they hold nothing; and, while the
+ * table is not up, the map as they last saw it, to look at only. It is drawn with the phone page's own map and picker, from
  * the same per-device view, so nothing here knows more than a phone would.
  */
 export function TablePage() {
-  const { campaign, conn } = usePlayerTable();
+  const { campaign, conn, last } = usePlayerTable();
   const { view } = conn;
+  // Not at the table: the last map this player saw, if they held a character on one.
+  const lastMap =
+    last && last.view.mine.length > 0 && last.view.screen?.kind !== 'break' ? last.view.map : null;
   return (
     <div className="player-table pc-host" data-testid="player-table">
       {conn.error && (
@@ -29,7 +32,22 @@ export function TablePage() {
           </button>
         </div>
       )}
-      {!view || conn.link !== 'open' ? (
+      {conn.link !== 'open' && last && lastMap ? (
+        <MapView
+          map={lastMap}
+          selectedTokenId={null}
+          onSelectToken={() => undefined}
+          centerOn={last.view.mine.find((c) => c.tokenId)?.tokenId ?? null}
+          overlay={
+            <div className="pc-overlay-top">
+              <div className="pc-movebanner locked player-last" role="status">
+                {linkSentence(conn.link)} This is the map as you last saw it,{' '}
+                {lastSeenText(last.at)}.
+              </div>
+            </div>
+          }
+        />
+      ) : !view || conn.link !== 'open' ? (
         <div className="player-table-wait" role="status">
           <p>{linkText(conn.link)}</p>
           <p className="muted small">

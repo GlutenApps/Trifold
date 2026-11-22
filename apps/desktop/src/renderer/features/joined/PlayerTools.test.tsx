@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClientView, CreatureView, JoinedSummary } from '@trifold/api';
@@ -51,6 +51,7 @@ beforeEach(() => {
     return () => undefined;
   }) as never;
   window.trifold.joined.send = vi.fn(async () => undefined);
+  vi.mocked(window.trifold.joined.lastView).mockResolvedValue(null);
   table = {
     link: (link) =>
       act(() => (listeners.get('joinedLink') as (e: object) => void)({ campaignId: 'c1', link })),
@@ -105,6 +106,42 @@ describe('MyCharactersTool', () => {
   it('says where the table is while it is not up', () => {
     mount(<MyCharactersTool />);
     expect(screen.getByRole('status')).toHaveTextContent('Looking for your GM’s table');
+  });
+
+  it('shows the characters as last seen, with nothing to change, while the table is not up', async () => {
+    // A new run of the app with the table down: main kept what it last showed.
+    vi.mocked(window.trifold.joined.lastView).mockResolvedValue({
+      at: '2026-01-23T18:00:00.000Z',
+      view: view([
+        creature({ kind: 'summon', id: 't9', name: 'Wolf', companionOf: 'p1' }),
+        creature({ conditions: [{ id: 'x', name: 'Prone' }] }),
+      ]),
+    });
+    mount(<MyCharactersTool />);
+    await waitFor(() => expect(screen.getAllByTestId('my-character')).toHaveLength(2));
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Looking for your GM’s table… These are your characters as you last saw them, on Jan 23.',
+    );
+    const rows = screen.getAllByTestId('my-character');
+    expect(rows[0]).toHaveTextContent('Brannoc');
+    expect(rows[0]).toHaveTextContent('HP 20/24');
+    expect(rows[0]).toHaveTextContent('Prone');
+    expect(rows[1]).toHaveTextContent('Wolf');
+    expect(screen.queryAllByRole('button')).toEqual([]);
+
+    // The table comes up: the live rows take over by themselves.
+    table.link('open');
+    table.state(view([creature({ hp: { current: 9, max: 24, temp: 0 } })]));
+    expect(screen.getByRole('button', { name: "Change Brannoc's HP" })).toHaveTextContent(
+      'HP 9/24',
+    );
+
+    // It drops again: the newest numbers stay, to look at only.
+    table.link('reconnecting');
+    expect(screen.queryByRole('button', { name: "Change Brannoc's HP" })).toBeNull();
+    expect(screen.getByTestId('my-character')).toHaveTextContent('HP 9/24');
+    expect(screen.getByRole('status')).toHaveTextContent('Your GM’s table isn’t up right now.');
+    expect(sent()).toEqual([]);
   });
 
   it('lists the character, then its companions, with HP and conditions as the GM’s rows show them', () => {

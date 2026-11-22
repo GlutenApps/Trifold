@@ -1263,6 +1263,19 @@ body.resizing {
   text-align: center;
 }
 
+/* The map as last seen, while the table is not up: its note may wrap, the map is only looked at. */
+.player-last {
+  white-space: normal;
+  text-align: center;
+}
+
+.my-character-last {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .player-move {
   display: flex;
   align-items: center;
