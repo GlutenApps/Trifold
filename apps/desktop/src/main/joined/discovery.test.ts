@@ -200,6 +200,20 @@ describe('FoundTables', () => {
     );
   });
 
+  it('keeps every address a table answers from, across its answers', () => {
+    const tables = new FoundTables();
+    const from = (lan: LanAddress) =>
+      serviceAnswerFor(ask(TABLE_SERVICE, 'PTR'), multicast, 'trifold.local', service, [
+        lan,
+      ]) as Packet;
+    expect(tables.take(from(hyperV), 0)).toBe(true);
+    expect(tables.take(from(wifi), 10)).toBe(true);
+    expect(tables.list()[0]?.addresses).toEqual(['192.168.1.23', '172.20.0.1']);
+    // Hearing the first one again changes nothing, and does not reshuffle.
+    expect(tables.take(from(hyperV), 20)).toBe(false);
+    expect(tables.list()[0]?.addresses).toEqual(['192.168.1.23', '172.20.0.1']);
+  });
+
   it('drops a table on its goodbye, or after it goes quiet', () => {
     const tables = new FoundTables();
     tables.take(offer(), 0);

@@ -16,6 +16,8 @@ import { parseTableServices, TABLE_SERVICE, type FoundTable } from '../table/mdn
 /** When the search asks: at once, twice more quickly, then every ten seconds while it runs. */
 export const QUERY_DELAYS_MS = [0, 1000, 3000] as const;
 export const REQUERY_MS = 10_000;
+/** How many addresses one table is remembered by. */
+const ADDRESSES_PER_TABLE = 8;
 /** A table not heard from for this long is dropped (its records live 120 s; three missed asks). */
 export const STALE_MS = 35_000;
 
@@ -32,11 +34,26 @@ export class FoundTables {
     const { found, gone } = parseTableServices(packet);
     let changed = false;
     for (const instance of gone) changed = this.seen.delete(instance.toLowerCase()) || changed;
-    for (const table of found) {
-      const key = table.instance.toLowerCase();
+    for (const heard of found) {
+      const key = heard.instance.toLowerCase();
       const before = this.seen.get(key);
-      if (!before || JSON.stringify(before.table) !== JSON.stringify(table)) changed = true;
-      this.seen.set(key, { table, at: now });
+      // A table with several adapters answers once per network, each answer with the addresses
+      // on that network. They are all ways to the same table, so they are kept together, the
+      // latest first: a caller that cannot reach one tries the next.
+      const table = {
+        ...heard,
+        addresses: [
+          ...heard.addresses,
+          ...(before?.table.addresses ?? []).filter((a) => !heard.addresses.includes(a)),
+        ].slice(0, ADDRESSES_PER_TABLE),
+      };
+      const same =
+        before &&
+        JSON.stringify({ ...before.table, addresses: [...before.table.addresses].sort() }) ===
+          JSON.stringify({ ...table, addresses: [...table.addresses].sort() });
+      if (!same) changed = true;
+      // An answer that only repeats known addresses does not reshuffle them.
+      this.seen.set(key, { table: same ? before.table : table, at: now });
     }
     return changed;
   }

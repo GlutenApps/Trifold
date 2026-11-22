@@ -115,7 +115,14 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
       await readFile(join(playerLibrary, 'joined', campaign.id, 'joined.json'), 'utf8'),
     ) as { campaignName: string; displayName: string; addresses: string[]; deviceToken?: string };
     expect(joined).toMatchObject({ campaignName: 'The Lantern at Greyford', displayName: 'Sam' });
-    expect(joined.addresses[0]).toBe(url.replace(/^http:\/\//, ''));
+    // A typed address is kept as typed. A found table is kept at whichever of the GM's private
+    // addresses the search heard first, which on a machine with several adapters need not be the
+    // one its Trifold shows.
+    if (bySearch) {
+      expect(joined.addresses[0]).toMatch(new RegExp(`^\\d+\\.\\d+\\.\\d+\\.\\d+:${PORT}$`));
+    } else {
+      expect(joined.addresses[0]).toBe(url.replace(/^http:\/\//, ''));
+    }
     expect(joined.deviceToken).toBeUndefined();
 
     // Looking and joining claim nothing: the GM's table has seen no device.
