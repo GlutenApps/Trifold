@@ -184,6 +184,18 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(row.getByText('Prone')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('initiative-tool')).toContainText('No fight is running.');
 
+    // With the dock collapsed to its icons, a tool opens as a fly-out and still reads the table.
+    await page.getByRole('button', { name: 'Collapse dock to icons' }).click();
+    await page.getByRole('button', { name: 'My characters tool' }).click();
+    const fly = page.getByRole('dialog', { name: 'My characters' });
+    await expect(fly.getByTestId('my-character')).toContainText('Brannoc Hale');
+    await page.getByRole('button', { name: 'Initiative tool' }).click();
+    await expect(
+      page.getByRole('dialog', { name: 'Initiative' }).getByTestId('initiative-tool'),
+    ).toContainText('No fight is running.');
+    await page.getByRole('button', { name: 'Close flyout' }).click();
+    await page.getByRole('button', { name: 'Expand dock' }).click();
+
     // Quick notes are the player's own, saved in the joined campaign and nowhere else.
     const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
     await page.keyboard.press(`${mod}+n`);
