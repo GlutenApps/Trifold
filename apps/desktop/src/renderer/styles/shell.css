@@ -2364,7 +2364,15 @@ button.chrome-btn:disabled:not(.primary, .tally) {
 
 /* The strip's dice pool mirrors the Dice pop-up, which stays one click away on the Dice button. */
 @media (max-width: 1180px) {
-  .strip .dice-pool.compact {
+  .strip:not(.player-strip) .dice-pool.compact {
+    display: none;
+  }
+}
+
+/* The player's strip holds far less than the GM's, so its pool stays until the window is too
+   narrow for the pool and the turn note together. */
+@media (max-width: 800px) {
+  .player-strip .dice-pool.compact {
     display: none;
   }
 }

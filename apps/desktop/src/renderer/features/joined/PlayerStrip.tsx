@@ -21,7 +21,7 @@ export function PlayerStrip() {
   const pop = useShellStore((s) => s.pop);
   const togglePop = useShellStore((s) => s.togglePop);
   return (
-    <footer className="strip" role="contentinfo" data-testid="player-strip">
+    <footer className="strip player-strip" role="contentinfo" data-testid="player-strip">
       <div className="strip-sections">
         <div className="strip-sec" data-strip="link">
           <span className={`pip${conn.link === 'open' ? '' : ' alert'}`} aria-hidden="true" />
