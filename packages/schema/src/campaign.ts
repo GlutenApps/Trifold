@@ -608,7 +608,8 @@ export const PinnedRoll = z.object({
   /** Faces rolled, as the log shows them (`2d6: 4, 2`). */
   faces: z.string(),
   kind: z.enum(['dice', 'attack', 'damage', 'save', 'check', 'other']).default('dice'),
-  source: z.enum(['pool', 'tracker', 'compendium']).default('pool'),
+  /** `table`: made at the table for a player (ADR 0059). */
+  source: z.enum(['pool', 'tracker', 'compendium', 'table']).default('pool'),
   actor: z.string().optional(),
   outcome: z.enum(['crit', 'fumble']).optional(),
   /** When it was rolled; `createdAt` is when it was pinned. */

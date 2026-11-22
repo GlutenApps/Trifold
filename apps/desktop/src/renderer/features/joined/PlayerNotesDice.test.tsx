@@ -11,6 +11,7 @@ import { usePinnedRollsStore } from '../../stores/pinnedRollsStore';
 import { useRollLogStore } from '../../stores/rollLogStore';
 import { useSearchStore } from '../../stores/searchStore';
 import { useShellStore } from '../../stores/shellStore';
+import { logTableRoll, useTableRollStore } from '../../stores/tableRollStore';
 import { QuickNotesTool } from '../campaign/QuickNotesTool';
 import { DiceRoller } from '../dice/DiceRoller';
 
@@ -60,6 +61,7 @@ beforeEach(() => {
   useAppStore.setState({ error: null });
   useRollLogStore.getState().clear();
   usePinnedRollsStore.setState({ fromLog: {}, naming: null, error: null });
+  useTableRollStore.setState({ mode: 'table', send: null });
   for (const fn of Object.values(window.trifold.joined)) vi.mocked(fn).mockClear();
   vi.mocked(window.trifold.notes.capture).mockClear();
   vi.mocked(window.trifold.notes.save).mockClear();
@@ -241,5 +243,81 @@ describe('Search in a player console', () => {
     expect(
       useShellStore.getState().layout.dock.sections.find((s) => s.tool === 'quickNotes')?.open,
     ).toBe(true);
+  });
+});
+
+describe('Table and Private rolls in a player console', () => {
+  const entries = () => useRollLogStore.getState().entries;
+
+  it('asks the table for a roll and logs it only when the table sends it back', async () => {
+    await open();
+    const send = vi.fn();
+    useTableRollStore.getState().setSend(send);
+    render(<DiceRoller />);
+    expect(screen.getByRole('button', { name: 'Table' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('table-roll-switch')).toHaveTextContent(
+      'Rolled on your GM’s computer. Everyone at the table sees it.',
+    );
+
+    await userEvent.type(screen.getByLabelText('Dice expression'), 'd20+5 adv{Enter}');
+    expect(send).toHaveBeenCalledWith('d20+5 adv');
+    // Nothing is rolled here: the result is the table's to make.
+    expect(entries()).toEqual([]);
+
+    logTableRoll({
+      id: 'table-1',
+      at: 1,
+      by: 'Brannoc',
+      label: 'd20+5 (advantage)',
+      expression: 'd20+5',
+      total: 25,
+      faces: '1d20: 20, 4 → 20',
+      outcome: 'crit',
+    });
+    expect(entries()[0]).toMatchObject({
+      source: 'table',
+      actor: 'Brannoc',
+      total: 25,
+      outcome: 'crit',
+    });
+    const latest = await screen.findByTestId('latest-roll');
+    expect(latest).toHaveTextContent('table');
+    expect(latest).toHaveTextContent('Brannoc');
+
+    // What the table would refuse is caught before it is sent.
+    await userEvent.type(screen.getByLabelText('Dice expression'), `1d6${'+1'.repeat(40)}{Enter}`);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('That roll is too long for the table.')).toBeInTheDocument();
+  });
+
+  it('rolls here and sends nothing when the player chooses Private', async () => {
+    await open();
+    const send = vi.fn();
+    useTableRollStore.getState().setSend(send);
+    render(<DiceRoller />);
+    await userEvent.click(screen.getByRole('button', { name: 'Private' }));
+    expect(screen.getByTestId('table-roll-switch')).toHaveTextContent(
+      'Rolled here. Nobody else sees it.',
+    );
+    await userEvent.type(screen.getByLabelText('Dice expression'), '2d6+1{Enter}');
+    expect(send).not.toHaveBeenCalled();
+    expect(entries()[0]).toMatchObject({ source: 'pool', expression: '2d6+1' });
+  });
+
+  it('makes every roll private away from the table, and says so', async () => {
+    await open();
+    render(<DiceRoller />);
+    expect(screen.getByRole('button', { name: 'Table' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Private' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('table-roll-switch')).toHaveTextContent(
+      'You are not at the table with a character, so every roll is private.',
+    );
+    await userEvent.type(screen.getByLabelText('Dice expression'), '1d4{Enter}');
+    expect(entries()[0]).toMatchObject({ source: 'pool' });
+  });
+
+  it('offers no switch in the GM’s console, whose rolls are the GM’s own', () => {
+    render(<DiceRoller />);
+    expect(screen.queryByTestId('table-roll-switch')).toBeNull();
   });
 });

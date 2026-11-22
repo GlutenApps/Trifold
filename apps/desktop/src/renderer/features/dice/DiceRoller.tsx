@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { rollAndLog } from '../../stores/dicePoolStore';
 import { useRollLogStore, type RollLogEntry } from '../../stores/rollLogStore';
+import { useShellStore } from '../../stores/shellStore';
+import { useTableRollStore } from '../../stores/tableRollStore';
 import { Icon } from '../shell/icons';
 import { DicePool } from './DicePool';
 import { PinButton, PinnedRolls } from './PinnedRolls';
@@ -57,6 +59,7 @@ export function DiceRoller({ showLog = true, inputLabel = 'Dice expression' }: D
 
   return (
     <div className="dice-roller">
+      <TableRollSwitch />
       <DicePool />
       <form
         className="row typed-roll"
@@ -144,6 +147,50 @@ export function DiceRoller({ showLog = true, inputLabel = 'Dice expression' }: D
           </ol>
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * Table or Private (ADR 0059), in a player console only. Table asks the GM's Trifold to make
+ * the roll, so everyone at the table sees the same result; Private rolls here and sends
+ * nothing. Away from the table, or with no character, there is nobody to ask: Private.
+ */
+function TableRollSwitch() {
+  const player = useShellStore((s) => s.role === 'player');
+  const mode = useTableRollStore((s) => s.mode);
+  const atTable = useTableRollStore((s) => !!s.send);
+  const setMode = useTableRollStore((s) => s.setMode);
+  if (!player) return null;
+  const toTable = atTable && mode === 'table';
+  return (
+    <div className="row table-roll-switch" data-testid="table-roll-switch">
+      <span className="seg" role="group" aria-label="Who sees your rolls">
+        <button
+          type="button"
+          className="btn"
+          aria-pressed={toTable}
+          disabled={!atTable}
+          onClick={() => setMode('table')}
+        >
+          Table
+        </button>
+        <button
+          type="button"
+          className="btn"
+          aria-pressed={!toTable}
+          onClick={() => setMode('private')}
+        >
+          Private
+        </button>
+      </span>
+      <span className="muted small" role="status">
+        {!atTable
+          ? 'You are not at the table with a character, so every roll is private.'
+          : toTable
+            ? 'Rolled on your GM’s computer. Everyone at the table sees it.'
+            : 'Rolled here. Nobody else sees it.'}
+      </span>
     </div>
   );
 }

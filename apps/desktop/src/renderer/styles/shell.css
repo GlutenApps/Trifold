@@ -2611,3 +2611,8 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   font-size: 12px;
   color: var(--text-muted);
 }
+
+/* Table or Private, at the top of a player's Dice pop-up (ADR 0059). */
+.table-roll-switch {
+  margin-bottom: 8px;
+}

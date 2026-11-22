@@ -227,8 +227,39 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
       .getByRole('button', { name: 'Dice', exact: true })
       .click();
     const dice = page.getByRole('dialog', { name: 'Dice' });
+    // Table is the default: the roll is made on the GM's computer and lands in both roll logs,
+    // named for the player's character (ADR 0059).
+    await expect(page.getByTestId('roll-mode')).toHaveText('Table');
     await dice.getByRole('textbox', { name: 'Dice expression' }).fill('2d6+1');
     await dice.getByRole('button', { name: 'Roll typed' }).click();
+    const mine = dice.getByTestId('latest-roll');
+    await expect(mine).toContainText('Brannoc Hale', { timeout: 10_000 });
+    await expect(mine).toContainText('table');
+    // The total tumbles before it settles: read it once it has.
+    const settled = '[data-testid="roll-reveal"][data-settled="true"]';
+    await expect(mine.locator(settled)).toBeVisible({ timeout: 10_000 });
+    const total = (await mine.locator(settled).textContent())!.trim();
+    await gmPage
+      .getByTestId('live-strip')
+      .getByRole('button', { name: 'Dice', exact: true })
+      .click();
+    const gmDice = gmPage.getByRole('dialog', { name: 'Dice' });
+    const theirs = gmDice.getByTestId('latest-roll');
+    await expect(theirs).toContainText('Brannoc Hale');
+    await expect(theirs).toContainText('2d6+1');
+    await expect(theirs.locator(settled)).toHaveText(total, { timeout: 10_000 });
+    // Private: rolled on the player's computer, and the GM's log hears nothing of it.
+    await dice.getByRole('button', { name: 'Private' }).click();
+    await dice.getByRole('textbox', { name: 'Dice expression' }).fill('3d4');
+    await dice.getByRole('button', { name: 'Roll typed' }).click();
+    await expect(dice.getByTestId('latest-roll')).toContainText('3d4');
+    await expect(page.getByTestId('roll-mode')).toHaveText('Private');
+    await gmPage.waitForTimeout(1_000);
+    await expect(gmDice.getByRole('list', { name: 'Roll log' }).getByRole('listitem')).toHaveCount(
+      1,
+    );
+    await gmPage.keyboard.press('Escape');
+    await dice.getByRole('button', { name: 'Table' }).click();
     await dice.getByRole('button', { name: 'Pin 2d6+1' }).click();
     const pinName = dice.getByRole('textbox', { name: 'Name for the pinned 2d6+1 roll' });
     await pinName.fill('Greatsword');

@@ -1,4 +1,5 @@
 import type { AreaOutline } from '../areaShapes';
+import type { TableRoll } from './rolls';
 import type { FogShapeLike } from '../fog';
 
 /**
@@ -342,7 +343,9 @@ export type ServerMessage =
   /** A drag is over without moving the token: refused, expired or taken by the DM. */
   | { type: 'dragEnded'; tokenId: string; reason: string }
   /** The DM pressed Stop or closed the campaign. */
-  | { type: 'closed' };
+  | { type: 'closed' }
+  /** A roll made at the table (ADR 0059), sent to every device holding a creature. */
+  | { type: 'rolled'; roll: TableRoll };
 
 export type ClientMessage =
   | { type: 'hello'; token?: string }
@@ -372,7 +375,9 @@ export type ClientMessage =
   /** Summoning: bring creatures into play, take one out, keep one after concentration. */
   | ({ type: 'summon' } & SummonRequest)
   | { type: 'dismiss'; tokenId: string }
-  | { type: 'keepSummon'; tokenId: string };
+  | { type: 'keepSummon'; tokenId: string }
+  /** A Table roll (ADR 0059): the roller's syntax; the DM's Trifold makes the roll. */
+  | { type: 'roll'; expression: string };
 
 /** What main hands the console to do about summons. */
 export type TableSummonEvent =

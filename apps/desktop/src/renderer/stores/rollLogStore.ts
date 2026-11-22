@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { RollResult } from '@trifold/rules';
+import { facesText } from '@trifold/rules';
 
 /**
  * The one shared roll log (DESIGN.md §6.7; ADR 0004, one roll log): every roll in the app lands
@@ -21,8 +21,12 @@ export interface RollLogEntry {
   note?: string;
   /** A natural 20 or natural 1 on the d20, for the reveal's flourish. */
   outcome?: 'crit' | 'fumble';
-  /** Where the roll came from (ADR 0004, one roll log): the pool, the tracker, a save call, or a stat block read outside a fight. */
-  source: 'pool' | 'tracker' | 'compendium';
+  /**
+   * Where the roll came from (ADR 0004, one roll log): the pool, the tracker, a save call, a
+   * stat block read outside a fight, or `table`, a roll made at the table for a player and
+   * shown in every roll log there (ADR 0059).
+   */
+  source: 'pool' | 'tracker' | 'compendium' | 'table';
   /** The fight the roll belongs to, when it came from the tracker. */
   encounterId?: string;
 }
@@ -30,14 +34,8 @@ export interface RollLogEntry {
 const LIMIT = 500;
 let seq = 0;
 
-export function facesText(result: RollResult): string {
-  return result.dice
-    .map((d) => {
-      const kept = d.kept.length !== d.rolls.length ? ` → ${d.kept.join(', ')}` : '';
-      return `${d.term.count}d${d.term.sides}: ${d.rolls.join(', ')}${kept}`;
-    })
-    .join(' · ');
-}
+// The formatting lives with the dice, so the table server words its rolls the same way.
+export { facesText };
 
 interface RollLogState {
   entries: RollLogEntry[];

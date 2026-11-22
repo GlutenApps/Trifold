@@ -193,6 +193,7 @@ async function main(): Promise<void> {
     onIntent: (intent) => windows.sendToConsole(EVENT_CHANNELS.tableIntent, intent),
     onToken: (event) => windows.sendToConsole(EVENT_CHANNELS.tableToken, event),
     onSummon: (event) => windows.sendToConsole(EVENT_CHANNELS.tableSummon, event),
+    onRoll: (roll) => windows.sendToConsole(EVENT_CHANNELS.tableRoll, roll),
     ...(smokePort ? { ports: [smokePort] } : {}),
   });
 

@@ -33,6 +33,7 @@ import type {
   CreatureKind,
   ReclaimMode,
   TableIntent,
+  TableRoll,
   TableSnapshot,
   TableTokenEvent,
   TableSummonEvent,
@@ -51,6 +52,7 @@ export type {
   ReclaimMode,
   ServerMessage,
   TableIntent,
+  TableRoll,
   TableCreature,
   TableOverlays,
   TableScene,
@@ -1594,6 +1596,8 @@ export interface TrifoldEvents {
   tableStatus: TableStatus;
   /** A player's change for the console to apply. */
   tableIntent: TableIntentEvent;
+  /** A roll a player made at the table (ADR 0059), for the DM's roll log. */
+  tableRoll: TableRoll;
   /** A player dragging or dropping a token. */
   tableToken: TableTokenEvent;
   /** A player summoning, dismissing or keeping a summon. */
@@ -1618,6 +1622,7 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   updateStatus: 'trifold:event:update-status',
   tableStatus: 'trifold:event:table-status',
   tableIntent: 'trifold:event:table-intent',
+  tableRoll: 'trifold:event:table-roll',
   tableToken: 'trifold:event:table-token',
   tableSummon: 'trifold:event:table-summon',
   joinedTables: 'trifold:event:joined-tables',
