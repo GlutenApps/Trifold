@@ -63,6 +63,7 @@ An architecture decision record (ADR) is a short file about one choice that refi
 | [0055](0055-status-between-fights.md) | PC rows, and NPC rows with a stat block, show HP and conditions on a second line: HP is a button that opens an inline Damage / Heal / Temp HP / Set editor, and conditions add from a plus menu; story NPCs show none. |
 | [0056](0056-gpl-relicense.md) | The code is GPL-3.0-or-later (copyright Ian duPont) from 0.4.6; earlier releases stay MIT; the installer and Settings › About show the notice and full text; contributors sign a CLA; TRADEMARK.md reserves the name and logo. |
 | [0057](0057-your-turn-on-phones.md) | A player's device is told when its own creature acts and when it is next, whether or not the TV shows the initiative strip; nobody else's turn is sent. |
+| [0058](0058-player-mode-joins-a-table.md) | Player mode: one app for running and playing; a joined campaign is a local shell filled from the per-device view; the player's Trifold is a device at the GM's table on the local network, finds tables by mDNS, and keeps its claim in the Library; a fourth network use, behind a flag until finished. |
 
 ## Decision log
 

@@ -23,7 +23,7 @@ The app is a **DM console**. Players build characters wherever they like (anothe
 ### 1.2 Non-goals
 
 - No character builder or player-facing character sheets.
-- No accounts, no cloud backend, no sync between users, no hosted web client. The player connector's page is served by the DM's own Trifold, on the private local network only, while the DM has it on (ADR 0043). The app never phones home. It goes to the network only when the DM asks: web tabs (pages the DM typed the address of), the opt-in update check, and the player connector.
+- No accounts, no cloud backend, no sync between users, no hosted web client. The player connector's page is served by the DM's own Trifold, on the private local network only, while the DM has it on (ADR 0043). The app never phones home. It goes to the network only when the person at the computer asks: web tabs (pages the DM typed the address of), the opt-in update check, the player connector, and, in player mode, joining another Trifold's table on the private local network (ADR 0058; behind a flag while it is built, see [PLAYER-MODE.md](PLAYER-MODE.md)).
 - No virtual tabletop features beyond §6.5: no dynamic lighting, no line-of-sight.
 - No bundled non-SRD content, ever, and no links to community repositories in the app.
 - No map making. Maps are images the DM supplies.
@@ -98,6 +98,9 @@ Trifold Library/
       images/                  scene images (copied in) and display-size versions
       tokens/                  one token's art, and PC and NPC portraits
       players.json             player connector devices and claims
+  joined/
+    <campaignId>/              a campaign this Library plays in (ADR 0058), named by the GM's campaign id
+      joined.json              its name, the player's name, addresses that worked, the claim, the linked character
   templates/
     notes/<id>.json            note templates, shared by every campaign
   music/

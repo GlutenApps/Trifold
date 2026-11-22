@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CampaignSummary } from '@trifold/api';
+import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { useJoinedStore } from '../../stores/joinedStore';
+import { JoinCampaignPanel } from '../joined/JoinCampaignPanel';
+import { PlayingSection } from '../joined/PlayingSection';
 import { deleteCampaign, switchCampaign } from '../shell/campaignFlow';
 import { Icon } from '../shell/icons';
 import { CampaignExportPanel, useCampaignPackageImport } from './CampaignPackages';
@@ -11,6 +15,10 @@ import { UpdatePrompt } from '../settings/Updates';
  * Trifold campaign file, a Game Master XML file), and a card per campaign with Open (Back to console for the open one), Import into this
  * campaign, Export campaign inline in the card (ADR 0015) and a typed-DELETE removal. Opening a
  * campaign leaves the Library for the console (ADR 0004).
+ *
+ * With player mode on (docs/PLAYER-MODE.md) the page also has Join a campaign, and splits into
+ * Running, the campaigns this Library runs, and Playing, the ones it joined. A Library that has
+ * joined nothing shows no split.
  */
 
 /** Inline confirm on a campaign card: the DM types DELETE before the folder goes. */
@@ -184,6 +192,17 @@ export function CampaignsPage() {
   const error = useCampaignStore((s) => s.error);
   const clearError = useCampaignStore((s) => s.clearError);
   const [creating, setCreating] = useState(false);
+  // Player mode is behind a flag until it is finished (docs/PLAYER-MODE.md, release safety).
+  const playerMode = useAppStore((s) => s.info?.flags.playerMode ?? false);
+  const playing = useJoinedStore((s) => s.joined.length > 0);
+  const joinError = useJoinedStore((s) => s.error);
+  const clearJoinError = useJoinedStore((s) => s.clearError);
+  const loadJoined = useJoinedStore((s) => s.load);
+  const [joining, setJoining] = useState(false);
+  useEffect(() => {
+    if (playerMode) void loadJoined();
+  }, [playerMode, loadJoined]);
+  const split = playerMode && playing;
   const [deleting, setDeleting] = useState<string | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
   const packageImport = useCampaignPackageImport();
@@ -193,11 +212,27 @@ export function CampaignsPage() {
       <div className="row">
         <h1>Campaigns</h1>
         <span className="spacer" />
+        {playerMode && (
+          <button
+            type="button"
+            className={`btn${joining ? ' on' : ''}`}
+            aria-expanded={joining}
+            onClick={() => {
+              setCreating(false);
+              setJoining((v) => !v);
+            }}
+          >
+            Join a campaign
+          </button>
+        )}
         <button
           type="button"
           className={`btn primary${creating ? ' on' : ''}`}
           aria-expanded={creating}
-          onClick={() => setCreating((v) => !v)}
+          onClick={() => {
+            setJoining(false);
+            setCreating((v) => !v);
+          }}
         >
           <Icon name="plus" />
           Create campaign
@@ -210,6 +245,15 @@ export function CampaignsPage() {
           importPackage={() => void packageImport.pick()}
           packageBusy={packageImport.busy}
         />
+      )}
+      {playerMode && joining && <JoinCampaignPanel onClose={() => setJoining(false)} />}
+      {playerMode && joinError && (
+        <div className="banner error" role="alert">
+          <span>{joinError}</span>
+          <button type="button" className="btn small" onClick={clearJoinError}>
+            Dismiss
+          </button>
+        </div>
       )}
       {packageImport.panel}
       {error && (
@@ -231,6 +275,7 @@ export function CampaignsPage() {
             : ''}
         </p>
       )}
+      {split && <h2>Running</h2>}
       {campaigns.length === 0 ? (
         <p className="muted">No campaigns yet. Start one, or bring one in, with Create campaign.</p>
       ) : (
@@ -302,6 +347,7 @@ export function CampaignsPage() {
           })}
         </div>
       )}
+      {playerMode && <PlayingSection />}
       <p className="muted small">
         A campaign holds its party, NPCs, notes, encounters, scenes and playlists. Opening one
         enters the console with its tabs, dock and layouts as you left them; the Library stays a

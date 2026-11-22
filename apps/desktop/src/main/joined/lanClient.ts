@@ -93,6 +93,52 @@ function openSocket(url: string, origin: string): LanSocket {
   };
 }
 
+/**
+ * Asks a table which campaign it is and hangs up: for an address the player typed, where no
+ * search told us. Nothing is sent, so the table never sees a device. Resolves to null when
+ * nothing answers in time, the answer is not a table's, or the address is not a local one.
+ */
+export function peekTable(
+  endpoint: TableEndpoint,
+  open: (url: string, origin: string) => LanSocket = openSocket,
+  timeoutMs = HANDSHAKE_MS,
+): Promise<{ campaignId: string; campaignName: string } | null> {
+  return new Promise((resolve) => {
+    const origin = tableUrl(endpoint.host, endpoint.port);
+    const socket = open(`${origin.replace(/^http/, 'ws')}/ws`, origin);
+    let done = false;
+    const finish = (answer: { campaignId: string; campaignName: string } | null) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(answer);
+      socket.close();
+    };
+    const timer = setTimeout(() => finish(null), timeoutMs);
+    socket.onOpen(() => {
+      const remote = socket.remoteAddress();
+      if (remote !== undefined && !isPrivateAddress(remote)) finish(null);
+    });
+    socket.onClose(() => finish(null));
+    socket.onMessage((text) => {
+      try {
+        const msg = JSON.parse(text) as Partial<Extract<ServerMessage, { type: 'campaign' }>>;
+        if (
+          msg?.type === 'campaign' &&
+          typeof msg.campaignId === 'string' &&
+          typeof msg.campaignName === 'string'
+        ) {
+          finish({ campaignId: msg.campaignId, campaignName: msg.campaignName });
+          return;
+        }
+      } catch {
+        // Not a table.
+      }
+      finish(null);
+    });
+  });
+}
+
 export interface LanClientOptions {
   endpoint: TableEndpoint;
   /** The campaign this connection is for; a table up with another one is not joined. */

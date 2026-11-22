@@ -1,6 +1,6 @@
 import { app, net, screen } from 'electron';
 import { join } from 'node:path';
-import { EVENT_CHANNELS } from '@trifold/api';
+import { EVENT_CHANNELS, featureFlags } from '@trifold/api';
 import { TEXT_SIZE_ZOOM } from '@trifold/schema';
 import { createApi } from './api';
 import { AppConfigStore } from './appConfig';
@@ -18,6 +18,7 @@ import { PresenterHub } from './presenter';
 import { SaveFlush } from './saveFlush';
 import { createSplashWindow, Splash } from './splash';
 import { TableHub } from './table/hub';
+import { JoinedService } from './joined/service';
 import { NsisSelfInstaller, selfUpdateBlocker } from './updateInstaller';
 import { UpdateService, releaseFolder } from './updates';
 import { UPDATE_PUBLIC_KEYS } from './updateSignature';
@@ -194,6 +195,15 @@ async function main(): Promise<void> {
     ...(smokePort ? { ports: [smokePort] } : {}),
   });
 
+  // Joined campaigns (docs/PLAYER-MODE.md): nothing searches or connects until the player asks,
+  // and not at all while player mode is switched off.
+  const joined = new JoinedService({
+    session: activeSession,
+    logger,
+    enabled: featureFlags(process.env).playerMode,
+    onTables: (tables) => windows.sendToConsole(EVENT_CHANNELS.joinedTables, tables),
+  });
+
   registerIpc(
     createApi({
       config,
@@ -201,6 +211,7 @@ async function main(): Promise<void> {
       windows,
       presenter,
       table,
+      joined,
       logger,
       icons,
       phoneAudio,
@@ -228,6 +239,7 @@ async function main(): Promise<void> {
     }
     phoneAudio.disconnect();
     void table.stop();
+    joined.stop();
     updates.stop();
     activeSession.close();
   });

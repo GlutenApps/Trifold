@@ -306,7 +306,10 @@ export class MdnsResponder {
    * address is a conflict), then announces it and answers for it. Resolves to the name won.
    */
   async start(): Promise<string> {
-    const mdns = makeMdns({ reuseAddr: true, loopback: false });
+    // Loopback on, so a player's Trifold on this same computer can ask and be answered (two
+    // copies side by side, and the smoke test). It changes nothing on the wire. Hearing our own
+    // packets is harmless: a probe counts only answers for addresses that are not ours.
+    const mdns = makeMdns({ reuseAddr: true, loopback: true });
     this.mdns = mdns;
     await new Promise<void>((resolve, reject) => {
       mdns.once('ready', () => resolve());

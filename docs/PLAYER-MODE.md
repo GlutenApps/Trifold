@@ -88,6 +88,8 @@ Every Library still gets the sample campaign once (ADR 0016), so a player-only L
 
 ### Joining
 
+Built, behind the flag (ADR 0058): Join a campaign with the search and the typed address, the name step, the Playing list and Leave. Run end to end by `smoke/joined.spec.ts` with two copies of the app on one computer. Opening a joined campaign is next.
+
 Nothing changes in what the GM does: Let players join in the Player devices pop-up starts the table server and shows the addresses, the QR and Copy link, as today.
 
 1. The player chooses **Join a campaign**. Trifold searches the local network and lists the tables it finds, each with its campaign name and a **Join** button. With one GM in the room that is one row.

@@ -957,6 +957,28 @@ export interface TrifoldApi {
     /** Player summoning's mode and cap per character. */
     setSummoning(summoning: { mode: SummonMode; cap: number }): Promise<TableStatus>;
   };
+  /**
+   * Joined campaigns (docs/PLAYER-MODE.md): the campaigns this Library plays in. The search and
+   * `peek` are the only calls that touch the network, on the local network only, and only when
+   * the player asks from Join a campaign.
+   */
+  joined: {
+    list(): Promise<JoinedSummary[]>;
+    /** Starts looking for tables; what it finds also arrives as `joinedTables` events. */
+    startSearch(): Promise<FoundTableSummary[]>;
+    stopSearch(): Promise<void>;
+    /** Asks the table at a typed address which campaign it is. */
+    peek(address: string): Promise<TablePeekResult>;
+    /** Adds the campaign to this Library, or takes a new name and address for one already in it. */
+    join(input: {
+      campaignId: string;
+      campaignName: string;
+      displayName: string;
+      address: string;
+    }): Promise<JoinedSummary>;
+    /** Leave campaign: removes the local shell, the player's notes in it included. */
+    leave(campaignId: string): Promise<void>;
+  };
   presenter: {
     /**
      * The console's state, relayed to the player; a push with an older `updatedAt` than the last is
@@ -1346,6 +1368,7 @@ export const API_METHODS = {
     'setMovementLock',
     'setSummoning',
   ],
+  joined: ['list', 'startSearch', 'stopSearch', 'peek', 'join', 'leave'],
   sources: [
     'list',
     'chooseFile',
@@ -1447,6 +1470,37 @@ export interface WebTabInput {
   meta: boolean;
 }
 
+// ---------- joined campaigns (docs/PLAYER-MODE.md) ----------
+
+/** A campaign this Library plays in. The device token stays in main; `claimed` says there is one. */
+export interface JoinedSummary {
+  /** The GM's campaign id. */
+  campaignId: string;
+  campaignName: string;
+  /** The name the GM's device list shows for this player. */
+  displayName: string;
+  characterId: string | null;
+  joinedAt: string;
+  /** When this Library was last connected to the campaign's table. */
+  lastLiveAt: string | null;
+  /** This Library holds a claim at the table: it picked a character there before. */
+  claimed: boolean;
+}
+
+/** A table on the local network that Join a campaign can list. */
+export interface FoundTableSummary {
+  campaignId: string;
+  campaignName: string;
+  /** Where to connect, `host:port`. */
+  address: string;
+  /** This Library has joined the campaign already. */
+  joined: boolean;
+}
+
+/** What a typed address turned out to be: a table, not a local address, or nothing answering. */
+export type TablePeekResult =
+  { ok: true; table: FoundTableSummary } | { ok: false; reason: 'address' | 'noAnswer' };
+
 /** Events pushed from main to a renderer without a request. */
 export interface TrifoldEvents {
   presenterState: PresenterState;
@@ -1469,6 +1523,8 @@ export interface TrifoldEvents {
   tableToken: TableTokenEvent;
   /** A player summoning, dismissing or keeping a summon. */
   tableSummon: TableSummonEvent;
+  /** The tables found on the local network, while Join a campaign is searching. */
+  joinedTables: FoundTableSummary[];
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
@@ -1485,6 +1541,7 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   tableIntent: 'trifold:event:table-intent',
   tableToken: 'trifold:event:table-token',
   tableSummon: 'trifold:event:table-summon',
+  joinedTables: 'trifold:event:joined-tables',
 };
 
 /** What `window.trifold` actually is: the API plus an event subscription. */
