@@ -247,6 +247,42 @@ describe('JoinedService: an open campaign', () => {
     reclaimMode: 'open',
   });
 
+  it('changes address only to a table running this campaign, then connects there', async () => {
+    const { service, net, file } = await setup();
+    await service.open('c1');
+    // The saved address is tried first and does not answer.
+    expect(net.all[0]?.url).toBe('ws://192.168.1.23:8130/ws');
+    expect(await service.changeAddress('c1', 'example.com')).toEqual({
+      ok: false,
+      reason: 'address',
+    });
+    expect(net.all).toHaveLength(1);
+
+    // The typed address is asked which campaign it is: a second socket, which says another.
+    const other = service.changeAddress('c1', '192.168.1.40:8130');
+    await vi.waitFor(() => expect(net.all).toHaveLength(2));
+    net.all[1]!.receive({ ...campaign, campaignId: 'c2' } as ServerMessage);
+    expect(await other).toEqual({ ok: false, reason: 'otherCampaign' });
+    expect((await file()).addresses).toEqual(['192.168.1.23:8130']);
+
+    // This campaign's table: the address is kept, first, and the campaign connects there.
+    const mine = service.changeAddress('c1', 'http://192.168.1.50:8130/');
+    await vi.waitFor(() => expect(net.all).toHaveLength(3));
+    net.all[2]!.receive(campaign);
+    expect(await mine).toEqual({ ok: true });
+    await vi.waitFor(() => expect(net.all.at(-1)?.url).toBe('ws://192.168.1.50:8130/ws'));
+    expect(net.all.length).toBeGreaterThan(3);
+    await service.settled();
+    expect((await file()).addresses.slice(0, 2)).toEqual([
+      '192.168.1.50:8130',
+      '192.168.1.23:8130',
+    ]);
+    expect(await service.changeAddress('nope', '192.168.1.50:8130')).toEqual({
+      ok: false,
+      reason: 'noAnswer',
+    });
+  });
+
   it('keeps what the table last showed, for the next time the table is not up', async () => {
     const { service, net } = await setup();
     expect(await service.lastView('c1')).toBeNull();

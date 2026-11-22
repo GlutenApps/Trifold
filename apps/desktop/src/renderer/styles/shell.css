@@ -1269,6 +1269,17 @@ body.resizing {
   text-align: center;
 }
 
+/* Change address, above the VTT tab while the player is not at the table. */
+.change-address {
+  flex: none;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.change-address p {
+  margin: 6px 0 0;
+}
+
 /* The map as last seen, while the table is not up: its note may wrap, the map is only looked at. */
 .player-last {
   white-space: normal;

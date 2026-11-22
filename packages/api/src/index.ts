@@ -996,6 +996,11 @@ export interface TrifoldApi {
     /** A request to the open campaign's table, the same messages a phone sends. */
     send(campaignId: string, message: ClientMessage): Promise<void>;
     /**
+     * Change address: asks the table at a typed address which campaign it is and, when it is
+     * this one, keeps the address and connects there. For a network that blocks the search.
+     */
+    changeAddress(campaignId: string, address: string): Promise<ChangeAddressResult>;
+    /**
      * What the campaign's table last showed this player, from main's cache, for the view while
      * the table is not up. Null when the table has never been seen.
      */
@@ -1413,6 +1418,7 @@ export const API_METHODS = {
     'open',
     'close',
     'send',
+    'changeAddress',
     'lastView',
     'notes',
     'saveNote',
@@ -1565,6 +1571,10 @@ export interface LastTableView {
 /** What a typed address turned out to be: a table, not a local address, or nothing answering. */
 export type TablePeekResult =
   { ok: true; table: FoundTableSummary } | { ok: false; reason: 'address' | 'noAnswer' };
+
+/** What Change address found: this campaign's table, or why the address was not taken. */
+export type ChangeAddressResult =
+  { ok: true } | { ok: false; reason: 'address' | 'noAnswer' | 'otherCampaign' };
 
 /** Events pushed from main to a renderer without a request. */
 export interface TrifoldEvents {

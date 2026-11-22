@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/p
 import { join } from 'node:path';
 import type {
   ClientMessage,
+  ChangeAddressResult,
   FoundTableSummary,
   JoinedSummary,
   LastTableView,
@@ -307,6 +308,32 @@ export class JoinedService {
     this.connectNext();
     this.opts.logger.info(`joined: opened campaign ${campaignId}`);
     return summarize(joined);
+  }
+
+  /**
+   * Change address (PLAYER-MODE.md, "What the player sees when it fails"): the player typed
+   * where their GM's table is, because their network blocks the search. The address is asked
+   * which campaign it is, and nothing more is sent to it unless it is this one; then it is kept
+   * in `joined.json` and the open campaign connects there.
+   */
+  async changeAddress(campaignId: string, address: string): Promise<ChangeAddressResult> {
+    const endpoint = parseTableAddress(address);
+    if (!endpoint) return { ok: false, reason: 'address' };
+    if (!this.opts.enabled || !(await this.store().get(campaignId))) {
+      return { ok: false, reason: 'noAnswer' };
+    }
+    const answer = await peekTable(endpoint, this.opts.open);
+    if (!answer) return { ok: false, reason: 'noAnswer' };
+    if (answer.campaignId !== campaignId) return { ok: false, reason: 'otherCampaign' };
+    const text = formatTableAddress(endpoint);
+    this.save('the address', (store) => store.addAddress(campaignId, text));
+    const current = this.current;
+    if (current?.campaignId === campaignId) {
+      current.saved = [endpoint, ...current.saved.filter((e) => formatTableAddress(e) !== text)];
+      if (current.link !== 'open') this.connectTo(current, endpoint);
+    }
+    this.opts.logger.info(`joined: address changed for campaign ${campaignId}`);
+    return { ok: true };
   }
 
   /** Closes the open campaign's connection. */

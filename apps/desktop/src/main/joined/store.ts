@@ -103,6 +103,18 @@ export class JoinedStore {
     return next;
   }
 
+  /** Keeps an address the player typed, first among those to try. Null when not joined. */
+  async addAddress(campaignId: string, address: string): Promise<JoinedCampaign | null> {
+    const existing = await this.get(campaignId);
+    if (!existing) return null;
+    const next = JoinedCampaign.parse({
+      ...existing,
+      addresses: withAddress(existing.addresses, address),
+    });
+    await this.store.writeJson(this.file(campaignId), next);
+    return next;
+  }
+
   /** Records a connection that worked: its address goes first, and the campaign was live now. */
   async connected(
     campaignId: string,

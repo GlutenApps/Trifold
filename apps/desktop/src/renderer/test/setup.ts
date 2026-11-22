@@ -140,6 +140,7 @@ export function installBridgeMock(): TrifoldBridge {
       open: vi.fn(async () => null),
       close: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined),
+      changeAddress: vi.fn(async () => ({ ok: true as const })),
       lastView: vi.fn(async () => null),
       notes: vi.fn(async () => []),
       saveNote: vi.fn(async (_campaignId, note) => ({ ...note, id: note.id || 'note-new' })),

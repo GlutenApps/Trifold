@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClientView, CreatureView, JoinedSummary } from '@trifold/api';
 import { useShellStore } from '../../stores/shellStore';
+import { ChangeAddress } from './ChangeAddress';
 import { InitiativeTool } from './InitiativeTool';
 import { conditionIntents, hpIntent, MyCharactersTool } from './MyCharactersTool';
 import { PlayerTableProvider } from './PlayerTable';
@@ -332,5 +333,34 @@ describe('InitiativeTool', () => {
   it('says so when no fight is running', () => {
     mount(<InitiativeTool />, view([creature()]));
     expect(screen.getByText('No fight is running.')).toBeInTheDocument();
+  });
+});
+
+describe('ChangeAddress', () => {
+  it('tries a typed address, says why it was not taken, and closes once it is', async () => {
+    const user = userEvent.setup();
+    const change = vi.mocked(window.trifold.joined.changeAddress);
+    change.mockClear();
+    mount(<ChangeAddress />);
+    await user.click(screen.getByRole('button', { name: 'Change address' }));
+    const field = screen.getByRole('textbox', { name: 'Your GM’s table address' });
+    expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
+
+    change.mockResolvedValueOnce({ ok: false, reason: 'otherCampaign' });
+    await user.type(field, '192.168.1.40:8130{Enter}');
+    expect(change).toHaveBeenLastCalledWith('c1', '192.168.1.40:8130');
+    expect(await screen.findByRole('alert')).toHaveTextContent('running another campaign');
+
+    change.mockResolvedValueOnce({ ok: false, reason: 'address' });
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('not an address on your local');
+
+    change.mockResolvedValueOnce({ ok: true });
+    await user.clear(field);
+    await user.type(field, 'trifold.local');
+    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    // Taken: the form closes, and the console goes live by itself when the table answers.
+    expect(await screen.findByRole('button', { name: 'Change address' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 });

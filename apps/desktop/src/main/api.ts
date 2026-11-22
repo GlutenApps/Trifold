@@ -289,6 +289,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async send(campaignId, message) {
         ctx.joined.send(campaignId, message);
       },
+      changeAddress: (campaignId, address) => ctx.joined.changeAddress(campaignId, address),
       lastView: (campaignId) => ctx.joined.lastView(campaignId),
       notes: (campaignId) => ctx.joined.notes(campaignId),
       saveNote: (campaignId, note) => ctx.joined.saveNote(campaignId, note),
