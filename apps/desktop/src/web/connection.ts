@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import type { ClientMessage, ClientView, PlayerLink, ServerMessage } from '@trifold/api';
+import { useEffect, useRef, useState } from 'react';
+import type { ClientMessage, ClientView, PlayerLink, ServerMessage, TableRoll } from '@trifold/api';
 import { syncClock } from './clock';
 
 /**
@@ -134,8 +134,17 @@ export interface Connection {
   send(msg: ClientMessage): void;
 }
 
-/** What a page shows of one client's link. `client` must stay the same object between renders. */
-export function useConnection(client: TableClient): Connection {
+/**
+ * What a page shows of one client's link. `client` must stay the same object between renders.
+ * `onRolled` hears the rolls made at the table (ADR 0059); the phone page has no roll log and
+ * passes none.
+ */
+export function useConnection(
+  client: TableClient,
+  handlers: { onRolled?(roll: TableRoll): void } = {},
+): Connection {
+  const onRolled = useRef(handlers.onRolled);
+  onRolled.current = handlers.onRolled;
   const [link, setLink] = useState<Link>('connecting');
   const [view, setView] = useState<ClientView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -178,6 +187,9 @@ export function useConnection(client: TableClient): Connection {
               break;
             case 'closed':
               setLink('stopped');
+              break;
+            case 'rolled':
+              onRolled.current?.(msg.roll);
               break;
           }
         },

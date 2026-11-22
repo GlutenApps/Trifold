@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import {
+  d20Outcome,
   parseRollRequest,
   rollRequest,
-  type D20Roll,
+  tableRollProblem,
   type RollMode,
-  type RollResult,
 } from '@trifold/rules';
 import { facesText, useRollLogStore } from './rollLogStore';
+import { tableRollSender } from './tableRollStore';
 
 /** The dice the app offers as buttons, largest first so expressions read naturally. */
 export const POOL_DICE = [100, 20, 12, 10, 8, 6, 4] as const;
@@ -57,19 +58,24 @@ export function poolLabel(pool: DicePool): string {
   return pretty + mode;
 }
 
-/** Natural 20 or 1 when the roll was a lone d20 (with or without a modifier), else nothing. */
-export function d20Outcome(result: RollResult & { d20?: D20Roll }): 'crit' | 'fumble' | undefined {
-  const only = result.dice.length === 1 ? result.dice[0] : undefined;
-  const natural =
-    result.d20?.natural ??
-    (only && only.term.sides === 20 && only.term.count === 1 ? only.kept[0] : undefined);
-  return natural === 20 ? 'crit' : natural === 1 ? 'fumble' : undefined;
-}
+// The outcome rule lives with the dice, so the table server marks its rolls the same way.
+export { d20Outcome };
 
-/** Rolls `text` into the shared log. Returns an error message, or null when it rolled. */
+/**
+ * Rolls `text` into the shared log. Returns an error message, or null when it rolled. In a
+ * player console with Table chosen (ADR 0059) the roll is asked of the GM's Trifold instead,
+ * and reaches the log when the table sends it back.
+ */
 export function rollAndLog(text: string, actor?: string): string | null {
   const request = parseRollRequest(text);
   if (!request) return `Cannot read "${text}". Try 2d6+3, 4d6kh3 or d20 adv.`;
+  const toTable = actor ? null : tableRollSender();
+  if (toTable) {
+    const problem = tableRollProblem(text);
+    if (problem) return problem;
+    toTable(text.trim());
+    return null;
+  }
   const result = rollRequest(request);
   const modeNote = request.mode === 'normal' ? '' : ` (${request.mode})`;
   const outcome = d20Outcome(result);

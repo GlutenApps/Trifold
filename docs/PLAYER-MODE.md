@@ -367,6 +367,8 @@ The player's Dice pop-up has a two-way switch, **Table** (the default) or **Priv
 
 New messages `roll {expression, label?}` from the player and `rolled {…}` from the server, checked like intents (the device holds a creature; the expression parses with `packages/rules` dice and is within limits). The view carries no roll history; a client that connects late sees rolls from then on.
 
+Built (ADR 0059): the switch at the top of a player's Dice pop-up, a Table or Private badge beside the strip's pool, `roll {expression}` and `rolled {roll}`, the roll made in the GM's table server by `rollForTable` (`packages/rules/src/table/rolls.ts`), and both roll logs showing it with the source `table` and the character's name. The label is the expression; a player's own label is left for later. Rolls from a stat block in the player's compendium stay private.
+
 Later, not in this plan: a dedicated place in both consoles to show table rolls; a GM-only setting; rolls from the phone page.
 
 ---

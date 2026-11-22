@@ -164,6 +164,7 @@ a connection dot.
 | `grab`, `preview`, `hold`, `drop`, `letGo` | Moving a token |
 | `releaseOne {creatureKind, creatureId}` | Release one companion |
 | `summon {…}`, `dismiss {tokenId}`, `keepSummon {tokenId}` | Summoning |
+| `roll {expression}` | A Table roll from a player's Trifold: the DM's Trifold makes it (ADR 0059) |
 
 | Server sends | Meaning |
 | --- | --- |
@@ -175,6 +176,7 @@ a connection dot.
 | `released {names, undoMs}` | Switch character released these |
 | `grabbed`, `dragEnded {reason}` | A drag may go on, or ended without moving |
 | `closed` | The DM stopped the server or closed the campaign |
+| `rolled {roll}` | A roll made at the table, to every device holding a creature (ADR 0059). The phone page ignores it |
 
 Main hands the console three kinds of event: `tableIntent` (a checked edit), token events
 (preview, preview end, move) and summon events (spawn, dismiss, keep).

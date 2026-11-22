@@ -23,6 +23,9 @@ import {
   PREVIEWS_PER_SECOND,
   controller,
   summonProblem,
+  rollForTable,
+  TABLE_ROLL_MAX_LENGTH,
+  type TableRoll,
   type AnyCreatureKind,
   type SummonRequest,
   type TableSummonEvent,
@@ -126,6 +129,10 @@ const ClientMessageSchema: z.ZodType<ClientMessage> = z.discriminatedUnion('type
   }),
   z.object({ type: z.literal('dismiss'), tokenId: z.string().min(1).max(64) }),
   z.object({ type: z.literal('keepSummon'), tokenId: z.string().min(1).max(64) }),
+  z.object({
+    type: z.literal('roll'),
+    expression: z.string().min(1).max(TABLE_ROLL_MAX_LENGTH),
+  }),
 ]);
 
 /** More than this many messages in a second from one browser are dropped (previews included). */
@@ -191,6 +198,8 @@ export interface TableHubOptions {
   onToken(event: TableTokenEvent): void;
   /** A player summoning, dismissing or keeping a summon. */
   onSummon(event: TableSummonEvent): void;
+  /** A roll made at the table, for the DM's roll log. */
+  onRoll?(roll: TableRoll): void;
   /** Tests replace the network lookups. */
   addresses?: () => LanAddress[];
   mdns?: { start(): Promise<string>; announce(): void; stop(): Promise<void> } | null;
@@ -690,6 +699,8 @@ export class TableHub {
       case 'dismiss':
       case 'keepSummon':
         return this.summonAction(client, msg.type === 'dismiss' ? 'dismiss' : 'keep', msg.tokenId);
+      case 'roll':
+        return this.roll(client, msg.expression);
     }
   }
 
@@ -845,6 +856,39 @@ export class TableHub {
       creatureId: id,
       intent,
     });
+  }
+
+  // ---------- table rolls ----------
+
+  private rollSeq = 0;
+
+  /**
+   * A Table roll (ADR 0059): a player holding a character asks, the roll is made here on the
+   * DM's machine, and the result goes to the DM's roll log and to every device at the table
+   * that holds a creature. It is named for the player's character. Nothing is kept: a device
+   * that connects later sees rolls from then on.
+   */
+  private roll(client: Client, expression: string): void {
+    const claims = (this.players?.claims ?? []).filter((c) => c.deviceId === client.deviceId);
+    if (!client.deviceId || claims.length === 0) {
+      return this.reject(client, 'Pick a character before rolling at the table.');
+    }
+    const made = rollForTable(expression);
+    if (!made.ok) return this.reject(client, made.problem);
+    // The player's own character names the roll; a companion only when that is all they hold.
+    const held = claims.find((c) => c.creatureKind === 'pc') ?? claims[0]!;
+    const by =
+      this.snapshot?.creatures.find((c) => c.kind === held.creatureKind && c.id === held.creatureId)
+        ?.name ??
+      this.device(client)?.label ??
+      'A player';
+    const at = Date.now();
+    const roll: TableRoll = { id: `table-${at}-${++this.rollSeq}`, at, by, ...made.roll };
+    const holding = new Set((this.players?.claims ?? []).map((c) => c.deviceId));
+    for (const c of this.clients) {
+      if (c.deviceId && holding.has(c.deviceId)) this.send(c, { type: 'rolled', roll });
+    }
+    this.opts.onRoll?.(roll);
   }
 
   // ---------- movement ----------

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { CreatureView, JoinedSummary, LastTableView } from '@trifold/api';
 import { useShellStore } from '../../stores/shellStore';
+import { logTableRoll, useTableRollStore } from '../../stores/tableRollStore';
 import { useConnection, type Connection } from '../../../web/connection';
 import { createBridgeClient, withTableUrls } from './bridgeClient';
 
@@ -41,7 +42,8 @@ export function PlayerTableProvider({
   children: ReactNode;
 }) {
   const client = useMemo(() => createBridgeClient(campaign.campaignId), [campaign.campaignId]);
-  const conn = useConnection(client);
+  // Rolls made at the table land in this console's roll log, the player's own among them.
+  const conn = useConnection(client, { onRolled: logTableRoll });
   const [selected, select] = useState<string | null>(null);
   // The tracker is waiting for one of the player's creatures to roll initiative: the Initiative
   // tool comes forward, as a section or a flyout, so the box to enter it is never out of sight.
@@ -51,6 +53,18 @@ export function PlayerTableProvider({
       useShellStore.getState().showTool('initiative');
     }
   }, [rollWanted]);
+  // At the table and holding a character, a roll can be asked of the GM's Trifold (ADR 0059).
+  // Otherwise there is nobody to ask, and every roll is private.
+  const canRollAtTable = conn.link === 'open' && (conn.view?.mine.length ?? 0) > 0;
+  const { send } = conn;
+  useEffect(() => {
+    if (!canRollAtTable) return;
+    useTableRollStore.getState().setSend((expression) => send({ type: 'roll', expression }));
+    return () => useTableRollStore.getState().setSend(null);
+    // `send` is a new function each render and always sends through the same client.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canRollAtTable, client]);
+
   // What the table last showed: the newest view of this run, else what main kept from the last.
   const [kept, setKept] = useState<LastTableView | null>(null);
   const [seen, setSeen] = useState<LastTableView | null>(null);

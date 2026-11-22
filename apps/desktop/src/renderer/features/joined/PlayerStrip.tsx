@@ -1,5 +1,6 @@
 import { hk } from '../../platform';
 import { useShellStore } from '../../stores/shellStore';
+import { useTableRollStore } from '../../stores/tableRollStore';
 import { DicePool } from '../dice/DicePool';
 import { Icon } from '../shell/icons';
 import { linkText, usePlayerTable } from './PlayerTable';
@@ -20,6 +21,8 @@ export function PlayerStrip() {
   const round = view?.overlays?.round ?? view?.overlays?.initiative?.round;
   const pop = useShellStore((s) => s.pop);
   const togglePop = useShellStore((s) => s.togglePop);
+  // Whether the pool's Roll is seen by the table or only here (ADR 0059); changed in the Dice pop-up.
+  const toTable = useTableRollStore((s) => s.mode === 'table' && !!s.send);
   return (
     <footer className="strip player-strip" role="contentinfo" data-testid="player-strip">
       <div className="strip-sections">
@@ -44,6 +47,17 @@ export function PlayerStrip() {
         )}
       </div>
       <div className="strip-sec" data-strip="dice">
+        <span
+          className={`badge${toTable ? ' on' : ''}`}
+          data-testid="roll-mode"
+          title={
+            toTable
+              ? 'Table: rolled on your GM’s computer, and everyone at the table sees it. Change it in Dice.'
+              : 'Private: rolled here, and nobody else sees it. Change it in Dice.'
+          }
+        >
+          {toTable ? 'Table' : 'Private'}
+        </span>
         <DicePool compact />
         <button
           type="button"
