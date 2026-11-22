@@ -1,10 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BackupCopyStatus, BackupFileInfo } from '@trifold/api';
 import { defaultLibrarySettings } from '@trifold/schema';
 import { useAppStore } from '../../stores/appStore';
-import { BackupsSection } from './BackupsSection';
+import { useJoinedStore } from '../../stores/joinedStore';
+import { BackupsSection, sharingEffects } from './BackupsSection';
 
 const OFF: BackupCopyStatus = { folder: null, target: null, lastCopyAt: null, lastError: null };
 
@@ -89,5 +90,35 @@ describe('BackupsSection', () => {
     expect(await screen.findByTestId('backup-file-picked')).toHaveTextContent('newer Trifold');
     expect(screen.queryByRole('button', { name: 'Restore' })).toBeNull();
     expect(window.trifold.backups.restoreFile).not.toHaveBeenCalled();
+  });
+
+  it('warns about sharing backups once the Library has joined a campaign, and not before', async () => {
+    expect(sharingEffects({ joinedCampaigns: 0 })).toEqual([]);
+    const { unmount } = render(<BackupsSection />);
+    await screen.findByRole('button', { name: 'Choose folder…' });
+    expect(screen.queryByRole('note', { name: 'Sharing backups' })).toBeNull();
+    unmount();
+
+    vi.mocked(window.trifold.joined.list).mockResolvedValue([
+      {
+        campaignId: 'c1',
+        campaignName: 'Greyford',
+        displayName: 'Sam',
+        characterId: null,
+        joinedAt: '2026-11-23T18:00:00.000Z',
+        lastLiveAt: null,
+        claimed: true,
+      },
+    ]);
+    render(<BackupsSection />);
+    const warning = await screen.findByRole('note', { name: 'Sharing backups' });
+    expect(warning).toHaveTextContent('Anyone with a copy of a backup');
+    expect(
+      within(warning)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['play your characters in the campaigns you joined']);
+    vi.mocked(window.trifold.joined.list).mockResolvedValue([]);
+    useJoinedStore.setState({ joined: [] });
   });
 });

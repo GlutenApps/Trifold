@@ -1167,6 +1167,12 @@ body.resizing {
   padding: 4px 0;
 }
 
+/* The sharing-backups warning lists what a copy of a backup lets someone else do. */
+.backup-sharing-effects {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
 .settings-fold > summary {
   cursor: pointer;
   color: var(--text-muted);

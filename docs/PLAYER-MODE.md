@@ -133,6 +133,8 @@ Anyone holding a copy of the player's backup could take that player's characters
 
 Each line shows only when it applies, and the warning is absent when neither does. Part 4 adds its line to this warning; it does not add a second one.
 
+Built: the warning sits under Second copy in Settings › Backups, the row where a backup is sent somewhere else, with its lines from `sharingEffects` in `BackupsSection.tsx`.
+
 ### Opening a joined campaign
 
 Built, behind the flag: Open on a Playing card loads the player console in the shell's player role, main keeps the connection (trying where the search finds the table, then the addresses that worked), and the VTT tab shows the picker, then the map or the TV's screen with its overlays, moving one's own tokens, and the box to enter initiative. The strip shows the link, the round and Your turn or You're next. The table's pictures come through `trifold-media://table/…` from main's cache in the app's user-data folder. `smoke/joined.spec.ts` runs it with two copies of the app. Quick notes and Dice are in too (below). The offline view is in: main keeps what the table last showed this player in `table-cache/<joined id>/last-view.json`, beside its pictures and outside the Library, and while the table is not up the VTT tab shows that map and My characters lists those characters, both to look at only, with when they were last seen. The console goes live by itself when the table is found. Global search is in: the top bar's field searches the player's own notes by title and by text, the web tabs and the compendium, and a found note opens in Quick notes (`homeOf` in `navigate.ts` takes the console's role). Still to come in the console: Change address.
