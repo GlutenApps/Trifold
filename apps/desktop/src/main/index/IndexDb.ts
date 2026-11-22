@@ -11,6 +11,7 @@ import { CompendiumRecord, type RecordKind, type Source } from '@trifold/schema'
 import {
   bookFilter,
   buildSearch,
+  campaignBooksFilter,
   buildSuggest,
   PRIORITY,
   buildTextSearch,
@@ -239,6 +240,7 @@ export class IndexDb {
       preferEdition?: '2024' | '2014';
       campaignSourceId?: string | null;
       campaignId?: string | null;
+      campaignBookKeys?: string[] | null;
     } = {},
   ): CompendiumSuggestion[] {
     if (!text.trim()) return [];
@@ -248,6 +250,7 @@ export class IndexDb {
       opts.preferEdition,
       opts.campaignSourceId ?? null,
       opts.campaignId ?? null,
+      opts.campaignBookKeys ?? null,
     );
     return (this.db.prepare(built.sql).all(...built.params) as (RawRow & { tier: number })[]).map(
       (raw) => ({ ...toRow(raw), tier: SUGGEST_TIERS[raw.tier] ?? 'substring' }),
@@ -261,6 +264,7 @@ export class IndexDb {
       preferEdition?: '2024' | '2014';
       campaignSourceId?: string | null;
       campaignId?: string | null;
+      campaignBookKeys?: string[] | null;
     } = {},
   ): CompendiumTextHit[] {
     const built = buildTextSearch(
@@ -269,6 +273,7 @@ export class IndexDb {
       opts.preferEdition,
       opts.campaignSourceId ?? null,
       opts.campaignId ?? null,
+      opts.campaignBookKeys ?? null,
     );
     if (!built) return [];
     return (this.db.prepare(built.sql).all(...built.params) as (RawRow & { snip: string })[]).map(
@@ -328,6 +333,26 @@ export class IndexDb {
       .all() as never;
   }
 
+  /**
+   * The records of some books in the imported files (ADR 0062), for sharing a collection. Books
+   * that are off are still shared: off is the GM's own view.
+   */
+  recordsOfBooks(keys: readonly string[]): CompendiumRecord[] {
+    const books = bookFilter(keys);
+    if (!books) return [];
+    const rows = this.db
+      .prepare(
+        `SELECT r.json FROM records r JOIN sources s ON s.id = r.source_id WHERE s.kind IN ('xml', 'open5e') AND s.enabled = 1 AND ${books.sql}`,
+      )
+      .all(...books.params) as Array<{ json: string }>;
+    const out: CompendiumRecord[] = [];
+    for (const row of rows) {
+      const parsed = CompendiumRecord.safeParse(JSON.parse(row.json));
+      if (parsed.success) out.push(parsed.data);
+    }
+    return out;
+  }
+
   applySourceOrder(order: readonly string[]): void {
     const reset = this.db.prepare('UPDATE sources SET priority = 1000000');
     const set = this.db.prepare('UPDATE sources SET priority = ? WHERE id = ?');
@@ -347,12 +372,15 @@ export class IndexDb {
     key: string,
     includeDisabled = false,
     campaignId: string | null = null,
+    campaignBookKeys: readonly string[] | null = null,
   ): CompendiumRecord[] {
-    const limit = campaignId
-      ? ' AND (s.campaigns IS NULL OR EXISTS (SELECT 1 FROM json_each(s.campaigns) WHERE value = ?))'
-      : '';
+    const used = campaignBooksFilter(campaignBookKeys);
+    const limit =
+      (campaignId
+        ? ' AND (s.campaigns IS NULL OR EXISTS (SELECT 1 FROM json_each(s.campaigns) WHERE value = ?))'
+        : '') + (used ? ` AND ${used.sql}` : '');
     const sql = `SELECT r.json FROM records r JOIN sources s ON s.id = r.source_id WHERE r.kind = ? AND r.key = ? AND s.kind != 'campaign'${includeDisabled ? '' : ' AND s.enabled = 1 AND r.book_off = 0'}${limit} ORDER BY ${PRIORITY}, r.edition DESC, r.id`;
-    const params = campaignId ? [kind, key, campaignId] : [kind, key];
+    const params = [kind, key, ...(campaignId ? [campaignId] : []), ...(used?.params ?? [])];
     const rows = this.db.prepare(sql).all(...params) as Array<{ json: string }>;
     const out: CompendiumRecord[] = [];
     for (const row of rows) {

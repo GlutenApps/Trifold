@@ -585,6 +585,8 @@ export interface BookSummary {
 export interface SharingOverview {
   /** Imported source id → the ids of the campaigns that share it with their players. */
   bySource: Record<string, string[]>;
+  /** Collection id → the ids of the campaigns that share it with their players (ADR 0062). */
+  byCollection: Record<string, string[]>;
   /** Campaign id → how many homebrew records it shares. */
   homebrewByCampaign: Record<string, number>;
 }
@@ -647,6 +649,11 @@ export interface CompendiumQuery {
   sourceIds?: string[];
   /** Only these books (ADR 0061), by `bookKey`, or `unnamedBookKey` for a file's unnamed records. */
   bookKeys?: string[];
+  /**
+   * The open campaign's books (ADR 0062), set by main from the Library's collections: imported
+   * files answer only for these. Null or absent for every book.
+   */
+  campaignBookKeys?: string[] | null;
   edition?: 'all' | '2024' | '2014';
   crMin?: number;
   crMax?: number;
@@ -1013,6 +1020,11 @@ export interface TrifoldApi {
      * each changed file. A file whose original is not kept is left as it is.
      */
     setRules(keys: string[], use2024: boolean): Promise<BookSummary[]>;
+    /**
+     * The campaigns that share a collection with their players (ADR 0062), written to each
+     * campaign's file: each named campaign gains it, every other loses it.
+     */
+    shareCollection(collectionId: string, campaignIds: string[]): Promise<SharingOverview>;
   };
   /**
    * Joined campaigns (docs/PLAYER-MODE.md): the campaigns this Library plays in. The search and
@@ -1487,7 +1499,7 @@ export const API_METHODS = {
     'savePinnedRoll',
     'removePinnedRoll',
   ],
-  books: ['list', 'update', 'setRules'],
+  books: ['list', 'update', 'setRules', 'shareCollection'],
   sources: [
     'list',
     'chooseFile',

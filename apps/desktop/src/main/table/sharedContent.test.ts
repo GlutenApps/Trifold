@@ -134,7 +134,12 @@ describe('loadShared', () => {
       list: async () => all,
       readAllRecords: async (id: string) => records[id] ?? [],
     },
-    index: { get: (id: string) => stock.get(id) ?? null },
+    index: {
+      get: (id: string) => stock.get(id) ?? null,
+      // Books by key, as the index answers: S2 holds the feat "bold" in the book "tome two".
+      recordsOfBooks: (keys: readonly string[]) =>
+        keys.includes('tome two') ? [rec('S2:feat:bold', 'feat', 'S2')] : [],
+    },
     homebrew: {
       list: async () => [rec('hb-blade', 'item', 'homebrew'), rec('hb-secret', 'item', 'homebrew')],
     },
@@ -162,6 +167,38 @@ describe('loadShared', () => {
       new Set(),
     );
     expect(out.records.map((r) => r.id)).toEqual(['shared:C1:S1:spell:ward', 'shared:C1:hb-blade']);
+  });
+
+  it('shares a collection’s books from the files this campaign sees (ADR 0062)', async () => {
+    const collections = [
+      { id: 'K1', name: 'Table books', bookKeys: ['tome two'], campaignIds: [] },
+      { id: 'K2', name: 'Other', bookKeys: ['nothing here'], campaignIds: [] },
+    ];
+    const out = await loadShared(
+      from,
+      campaign({ collectionIds: ['K1', 'gone'] }),
+      view,
+      [],
+      new Set(),
+      collections,
+    );
+    // S2 is switched off in the Library, so its book is not shared even through a collection.
+    expect(out.records).toEqual([]);
+    const on = {
+      ...from,
+      catalog: { ...from.catalog, list: async () => all.map((s) => ({ ...s, enabled: true })) },
+    };
+    const shared = await loadShared(
+      on,
+      campaign({ collectionIds: ['K1'] }),
+      view,
+      [],
+      new Set(),
+      collections,
+    );
+    expect(shared.records.map((r) => [r.id, r.sharedFrom?.sourceName])).toEqual([
+      ['shared:C1:S2:feat:bold', 'Book S2'],
+    ]);
   });
 
   it('shares the stat blocks of the companion list, of NPC companions and of held NPCs', async () => {

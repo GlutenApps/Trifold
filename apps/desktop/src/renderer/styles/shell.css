@@ -2713,6 +2713,50 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   margin: 0 0 6px;
 }
 
+/* Collections on the Books tab (ADR 0062). */
+.collections {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.collections-head h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.collections-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.collection-row {
+  padding: 2px 0;
+  border-top: 1px solid var(--border);
+}
+
+.collection-row:first-child {
+  border-top: 0;
+}
+
+.collection-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.collection-row.active .collection-name {
+  color: var(--accent);
+}
+
 /* Edit source on Library › Compendium › Sources: its books, where it shows, and sharing. */
 .edit-source {
   display: flex;

@@ -279,6 +279,23 @@ export const LibrarySettings = z.object({
       z.object({ starred: z.boolean().default(false), off: z.boolean().default(false) }),
     )
     .default({}),
+  /**
+   * Collections (ADR 0062): named groups of books, by `bookKey`. A campaign listed in a
+   * collection's `campaignIds` uses its books: while it is open, its compendium shows only the
+   * imported books in the collections it uses (the SRD, homebrew and its own creatures always
+   * show). A campaign in no collection shows every book. Kept in the Library beside the books,
+   * as a file's campaigns are (ADR 0036). Additive with a default; no schema bump.
+   */
+  collections: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        name: z.string().min(1).max(80),
+        bookKeys: z.array(z.string()).default([]),
+        campaignIds: z.array(z.string()).default([]),
+      }),
+    )
+    .default([]),
   /** Bundled sources (srd-2024, srd-2014) the user switched off; other sources carry their own flag. */
   disabledSourceIds: z.array(z.string()).default([]),
   backups: z
