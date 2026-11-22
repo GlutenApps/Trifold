@@ -673,7 +673,32 @@ main.pc-center {
   gap: 2px;
 }
 
+.pc-sum-nameline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Your turn, and You're next (PLAYER-CONNECTOR.md, "Your turn"). */
+.pc-turn {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pc-turn.now {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
 .pc-sum-name {
+  min-width: 0;
   font-size: 16px;
   font-weight: 600;
   white-space: nowrap;

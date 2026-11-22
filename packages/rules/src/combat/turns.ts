@@ -67,11 +67,13 @@ export interface TurnResult<C extends TurnCombatant> {
   savePrompts: SavePrompt[];
 }
 
-function nextActiveIndex<C extends TurnCombatant>(
-  state: TurnState<C>,
-  from: number,
-  step: 1 | -1,
-): number {
+/** What turn order looks at: who is in the order, and who is skipped. */
+interface TurnOrder {
+  turnIndex: number;
+  combatants: ReadonlyArray<{ dead: boolean; held: boolean }>;
+}
+
+function nextActiveIndex(state: Pick<TurnOrder, 'combatants'>, from: number, step: 1 | -1): number {
   const n = state.combatants.length;
   if (n === 0) return -1;
   let i = from;
@@ -184,6 +186,17 @@ function startOfTurn<C extends TurnCombatant>(
   });
   events.unshift({ kind: 'turn', combatantId: active.id, text: `${active.name}'s turn` });
   return { state: { ...state, combatants }, events };
+}
+
+/**
+ * The index Next turn would move to from the active combatant: the next living, non-held one. -1
+ * before the first turn (the order is not settled until the fight begins), with nobody to move
+ * to, and when the active combatant is the only one left, so nobody is "next" after themselves.
+ */
+export function upNextIndex(state: TurnOrder): number {
+  if (state.turnIndex < 0) return -1;
+  const index = nextActiveIndex(state, state.turnIndex, 1);
+  return index === state.turnIndex ? -1 : index;
 }
 
 /** Advances to the next living, non-held combatant, wrapping into a new round. */

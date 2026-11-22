@@ -15,6 +15,7 @@ import {
   rollD20,
   rollRequest,
   type TurnCombatant,
+  upNextIndex,
 } from './index';
 
 function seq(values: number[], sides: number) {
@@ -231,5 +232,38 @@ describe('turn loop', () => {
     };
     const r = advanceTurn(state, () => 0);
     expect(r.state.combatants[1]?.conditions).toEqual([]);
+  });
+});
+
+describe('upNextIndex', () => {
+  const order = (turnIndex: number, flags: Array<'ok' | 'dead' | 'held'>) => ({
+    turnIndex,
+    combatants: flags.map((f) => ({ dead: f === 'dead', held: f === 'held' })),
+  });
+
+  it('is who Next turn would move to: the next living, non-held combatant, wrapping', () => {
+    expect(upNextIndex(order(0, ['ok', 'ok', 'ok']))).toBe(1);
+    expect(upNextIndex(order(0, ['ok', 'dead', 'held', 'ok']))).toBe(3);
+    expect(upNextIndex(order(2, ['ok', 'ok', 'ok']))).toBe(0);
+  });
+
+  it('agrees with advanceTurn', () => {
+    const c = (id: string, dead = false): TurnCombatant => ({
+      id,
+      name: id,
+      dead,
+      held: false,
+      conditions: [],
+      counters: [],
+      recharges: [],
+    });
+    const state = { round: 1, turnIndex: 1, combatants: [c('a'), c('b'), c('c', true), c('d')] };
+    expect(advanceTurn(state, () => 0).state.turnIndex).toBe(upNextIndex(state));
+  });
+
+  it('is nobody before the first turn, and nobody when one combatant is left', () => {
+    expect(upNextIndex(order(-1, ['ok', 'ok']))).toBe(-1);
+    expect(upNextIndex(order(0, ['ok', 'dead']))).toBe(-1);
+    expect(upNextIndex(order(0, []))).toBe(-1);
   });
 });

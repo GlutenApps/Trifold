@@ -6,7 +6,7 @@ import {
   type TableToken,
   type TokenStyle,
 } from '@trifold/api';
-import { activeFog, isClaimable, mapImageKey, type Role } from '@trifold/rules';
+import { activeFog, isClaimable, mapImageKey, upNextIndex, type Role } from '@trifold/rules';
 import type {
   CampaignSettings,
   CombatState,
@@ -176,6 +176,12 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       .map((t) => t.role),
     ...combatants.filter((c) => c.ref.kind === 'npc' && c.ref.npcId === id).map((c) => c.role),
   ];
+  // Whose turn it is and who Next turn would move to, by the tracker's own rule (dead and held
+  // combatants are skipped). Main sends it only to the device holding that creature.
+  const acting = input.combat ? input.combat.combatants[input.combat.turnIndex] : undefined;
+  const upNext = input.combat ? input.combat.combatants[upNextIndex(input.combat)] : undefined;
+  const turnOf = (f: Combatant | undefined): { turn?: 'now' | 'next' } =>
+    !f ? {} : f === acting ? { turn: 'now' } : f === upNext ? { turn: 'next' } : {};
   const creatures: TableSnapshot['creatures'] = [];
   const held = input.held ?? new Set<string>();
   for (const pc of input.pcs) {
@@ -194,6 +200,7 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       conditions: conditionsOf(f, pc.conditions),
       inFight: !!f,
       needsInitiative: !!f && f.initiative === null,
+      ...turnOf(f),
       editable: { hp: true, maxHp: true, ac: true, conditions: true },
     });
   }
@@ -217,6 +224,7 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       conditions: conditionsOf(f, npc.conditions),
       inFight: !!f,
       needsInitiative: !!f && f.initiative === null,
+      ...turnOf(f),
       // Outside a fight an NPC's max HP and AC come from its stat block.
       editable: { hp: !!f || !!npc.hp, maxHp: !!f, ac: !!f, conditions: true },
     });
@@ -238,6 +246,7 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       conditions: conditionsOf(f, s.conditions),
       inFight: !!f,
       needsInitiative: !!f && f.initiative === null,
+      ...turnOf(f),
       editable: { hp: true, maxHp: true, ac: true, conditions: true },
       companionOf: s.ownerId,
       summon: {

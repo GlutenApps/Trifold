@@ -253,7 +253,8 @@ rotation (`useLayout.ts`):
 | Wide | Everything else | A permanent right panel; Health is open by default |
 
 **Header and summary.** The campaign name, a connection dot and Switch; then the character
-summary: portrait or initials, name, conditions as text, an HP bar, temp HP and AC.
+summary: portrait or initials, name, Your turn or You're next in a fight (see
+[Your turn](#your-turn)), conditions as text, an HP bar, temp HP and AC.
 
 **The map.** The live map as SVG: the fogged image, grid, fog shapes and tokens. One finger on
 one of the player's own tokens drags it; one finger anywhere else pans; two fingers pinch-zoom
@@ -314,6 +315,19 @@ initiative. The player types the number they rolled (the app never rolls for the
 Submit; the box goes and the number lands in the tracker. If the DM types it first, the box goes
 too. Only the loaded fight counts: a paused fight asks again when it is loaded. Only the DM
 changes initiative after that.
+
+### Your turn
+
+In the loaded fight, a player is told when one of their creatures acts and when it is next: the
+character summary shows **Your turn** or **You're next** beside its name. A creature's `turn` is
+`now` while its combatant is the active one and `next` while it is the one Next turn would move
+to (`upNextIndex` in `packages/rules`, the tracker's own rule, so dead and held combatants are
+skipped). There is no `next` before the first turn, or when one combatant is left.
+
+The console marks it on each creature in the snapshot, and `viewFor` sends it only with a
+device's own creatures, summons included. It does not depend on the TV's initiative strip: with
+that overlay off a player still learns of their own turn, and nothing about anyone else's (ADR
+0057).
 
 ## Movement
 
