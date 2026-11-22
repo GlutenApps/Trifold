@@ -57,6 +57,8 @@ describe('DiceRoller: pinned rolls', () => {
       current: {
         campaign: { id: 'c1', slug: 'keep', settings: {} },
         pinnedRolls: [],
+        // The stores the pins now sit beside read the open campaign's scenes.
+        scenes: [],
       } as unknown as CampaignBundle,
     });
     vi.mocked(window.trifold.pinnedRolls.save).mockClear();

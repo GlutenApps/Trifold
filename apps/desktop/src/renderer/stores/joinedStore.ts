@@ -1,6 +1,13 @@
 import { create } from 'zustand';
-import { errorMessage } from '@trifold/schema';
+import {
+  CAMPAIGN_SCHEMA_VERSION,
+  errorMessage,
+  nowIso,
+  type Note,
+  type PinnedRoll,
+} from '@trifold/schema';
 import type { FoundTableSummary, JoinedSummary, TablePeekResult } from '@trifold/api';
+import { useAppStore } from './appStore';
 import { useCampaignStore } from './campaignStore';
 import { useCombatStore } from './combatStore';
 import { usePresenterStore } from './presenterStore';
@@ -16,6 +23,12 @@ interface JoinedState {
   joined: JoinedSummary[];
   /** The joined campaign whose player console is loaded; null when none is. */
   current: JoinedSummary | null;
+  /**
+   * The open joined campaign's own files, the player's and nobody else's: quick notes, newest
+   * first, and pinned rolls. Empty when none is open. They never go to the GM's table.
+   */
+  notes: Note[];
+  pins: PinnedRoll[];
   tables: FoundTableSummary[];
   searching: boolean;
   error: string | null;
@@ -35,14 +48,28 @@ interface JoinedState {
   openCampaign(campaignId: string): Promise<void>;
   /** Closes the player console; the connection to the table goes with it. */
   closeCampaign(): void;
+  /** Saves a new quick note in the open joined campaign. */
+  captureNote(title: string, body: string): Promise<Note | null>;
+  saveNote(note: Note): Promise<Note | null>;
+  removeNote(id: string): Promise<void>;
+  /** The pinned-rolls store's way to show a change it has saved. */
+  setPins(campaignId: string, pins: PinnedRoll[]): void;
   clearError(): void;
 }
 
 let stopListening: (() => void) | null = null;
 
+/** A failure inside the player console shows where the console's other failures do. */
+const fail = (err: unknown) => useAppStore.setState({ error: errorMessage(err) });
+
+const newestFirst = (notes: Note[]) =>
+  notes.sort((a, b) => (b.capture?.at ?? b.createdAt).localeCompare(a.capture?.at ?? a.createdAt));
+
 export const useJoinedStore = create<JoinedState>((set, get) => ({
   joined: [],
   current: null,
+  notes: [],
+  pins: [],
   tables: [],
   searching: false,
   error: null,
@@ -124,13 +151,22 @@ export const useJoinedStore = create<JoinedState>((set, get) => ({
       }
       await running.close();
     }
-    set({ current: joined, error: null });
+    set({ current: joined, notes: [], pins: [], error: null });
     shell.enterPlayerConsole(campaignId);
+    try {
+      const [notes, pins] = await Promise.all([
+        window.trifold.joined.notes(campaignId),
+        window.trifold.joined.pinnedRolls(campaignId),
+      ]);
+      if (get().current?.campaignId === campaignId) set({ notes, pins });
+    } catch (err) {
+      fail(err);
+    }
   },
 
   closeCampaign() {
     if (!get().current) return;
-    set({ current: null });
+    set({ current: null, notes: [], pins: [] });
     useShellStore.getState().leaveCampaign();
   },
 
@@ -142,6 +178,57 @@ export const useJoinedStore = create<JoinedState>((set, get) => ({
     } catch (err) {
       set({ error: errorMessage(err) });
     }
+  },
+
+  async captureNote(title, body) {
+    const at = nowIso();
+    return get().saveNote({
+      schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+      id: '',
+      kind: 'note',
+      title,
+      body,
+      tags: [],
+      links: [],
+      parentId: null,
+      order: 0,
+      capture: { at },
+      createdAt: at,
+      updatedAt: at,
+    });
+  },
+
+  async saveNote(note) {
+    const campaignId = get().current?.campaignId;
+    if (!campaignId) return null;
+    try {
+      const saved = await window.trifold.joined.saveNote(campaignId, note);
+      if (get().current?.campaignId === campaignId) {
+        set({ notes: newestFirst([...get().notes.filter((n) => n.id !== saved.id), saved]) });
+      }
+      return saved;
+    } catch (err) {
+      // A draft that flushes after the campaign closed or was left has nowhere to go.
+      if (get().current?.campaignId === campaignId) fail(err);
+      return null;
+    }
+  },
+
+  async removeNote(id) {
+    const campaignId = get().current?.campaignId;
+    if (!campaignId) return;
+    try {
+      await window.trifold.joined.removeNote(campaignId, id);
+      if (get().current?.campaignId === campaignId) {
+        set({ notes: get().notes.filter((n) => n.id !== id) });
+      }
+    } catch (err) {
+      fail(err);
+    }
+  },
+
+  setPins(campaignId, pins) {
+    if (get().current?.campaignId === campaignId) set({ pins });
   },
 
   clearError() {

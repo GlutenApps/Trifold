@@ -1,9 +1,15 @@
+import { hk } from '../../platform';
+import { useShellStore } from '../../stores/shellStore';
+import { DicePool } from '../dice/DicePool';
+import { Icon } from '../shell/icons';
 import { linkText, usePlayerTable } from './PlayerTable';
 
 /**
  * The player console's strip (docs/PLAYER-MODE.md, "Its own composition"): table state only, and
  * fixed, where the GM's is chosen. The link to the GM's table, the round when the TV shows it,
- * and whether one of the player's creatures is acting or is next (ADR 0057).
+ * and whether one of the player's creatures is acting or is next (ADR 0057); then Dice at the
+ * right end, as on the GM's strip: the compact pool and the button for the Dice pop-up. A
+ * player's rolls stay on this computer.
  */
 export function PlayerStrip() {
   const { conn } = usePlayerTable();
@@ -12,6 +18,8 @@ export function PlayerStrip() {
   const next = view?.mine.find((c) => c.turn === 'next');
   const several = (view?.mine.length ?? 0) > 1;
   const round = view?.overlays?.round ?? view?.overlays?.initiative?.round;
+  const pop = useShellStore((s) => s.pop);
+  const togglePop = useShellStore((s) => s.togglePop);
   return (
     <footer className="strip" role="contentinfo" data-testid="player-strip">
       <div className="strip-sections">
@@ -34,6 +42,21 @@ export function PlayerStrip() {
             </span>
           </div>
         )}
+      </div>
+      <div className="strip-sec" data-strip="dice">
+        <DicePool compact />
+        <button
+          type="button"
+          className={`chrome-btn${pop === 'dice' ? ' on' : ''}`}
+          aria-label="Dice"
+          aria-haspopup="dialog"
+          aria-expanded={pop === 'dice'}
+          data-pop="dice"
+          title={`Dice (${hk('Ctrl+D')})`}
+          onClick={() => togglePop('dice')}
+        >
+          <Icon name="dice" />
+        </button>
       </div>
     </footer>
   );

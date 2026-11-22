@@ -9,7 +9,7 @@ import type {
   ServerMessage,
   TablePeekResult,
 } from '@trifold/api';
-import { JoinedCampaignId, type JoinedCampaign } from '@trifold/schema';
+import { JoinedCampaignId, type JoinedCampaign, type Note, type PinnedRoll } from '@trifold/schema';
 import { tableUrl } from '@trifold/rules';
 import type { LibrarySession } from '../library/session';
 import { errorMessage, type Logger } from '../log';
@@ -248,6 +248,32 @@ export class JoinedService {
     }
     this.opts.logger.info(`joined: left campaign ${campaignId}`);
     if (this.searching) this.opts.onTables(this.tables());
+  }
+
+  // ---------- the player's own notes and pinned rolls: files only, no network ----------
+
+  notes(campaignId: string): Promise<Note[]> {
+    return this.store().notes(campaignId);
+  }
+
+  saveNote(campaignId: string, note: Note): Promise<Note> {
+    return this.store().saveNote(campaignId, note);
+  }
+
+  removeNote(campaignId: string, id: string): Promise<void> {
+    return this.store().removeNote(campaignId, id);
+  }
+
+  pinnedRolls(campaignId: string): Promise<PinnedRoll[]> {
+    return this.store().pinnedRolls(campaignId);
+  }
+
+  savePinnedRoll(campaignId: string, pin: PinnedRoll): Promise<PinnedRoll> {
+    return this.store().savePinnedRoll(campaignId, pin);
+  }
+
+  removePinnedRoll(campaignId: string, id: string): Promise<void> {
+    return this.store().removePinnedRoll(campaignId, id);
   }
 
   // ---------- an open campaign ----------

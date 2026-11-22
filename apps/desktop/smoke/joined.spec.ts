@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Page } from '@playwright/test';
@@ -184,6 +184,39 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(row.getByText('Prone')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('initiative-tool')).toContainText('No fight is running.');
 
+    // Quick notes are the player's own, saved in the joined campaign and nowhere else.
+    const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+    await page.keyboard.press(`${mod}+n`);
+    await page.getByRole('textbox', { name: 'Quick note title' }).fill('The ferryman lied');
+    await page.keyboard.press(`${mod}+s`);
+    await expect(page.getByTestId('quick-note-row')).toHaveText(/The ferryman lied/, {
+      timeout: 10_000,
+    });
+    const own = join(playerLibrary, 'joined', campaign.id);
+    expect(await readdir(join(own, 'notes'))).toHaveLength(1);
+
+    // Dice from the strip: a roll stays on this computer, and a pinned one is kept the same way.
+    await page
+      .getByTestId('player-strip')
+      .getByRole('button', { name: 'Dice', exact: true })
+      .click();
+    const dice = page.getByRole('dialog', { name: 'Dice' });
+    await dice.getByRole('textbox', { name: 'Dice expression' }).fill('2d6+1');
+    await dice.getByRole('button', { name: 'Roll typed' }).click();
+    await dice.getByRole('button', { name: 'Pin 2d6+1' }).click();
+    const pinName = dice.getByRole('textbox', { name: 'Name for the pinned 2d6+1 roll' });
+    await pinName.fill('Greatsword');
+    await pinName.press('Enter');
+    await expect(dice.getByTestId('pinned-roll')).toContainText('Greatsword');
+    await expect(async () => {
+      const [file] = await readdir(join(own, 'pinnedRolls'));
+      const pin = JSON.parse(await readFile(join(own, 'pinnedRolls', file!), 'utf8')) as {
+        name: string;
+      };
+      expect(pin.name).toBe('Greatsword');
+    }).toPass({ timeout: 10_000 });
+    await page.keyboard.press('Escape');
+
     // The claim is kept in the Library, and the GM sees the player as a device.
     await expect(async () => {
       const now = JSON.parse(
@@ -202,6 +235,12 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await card.getByRole('button', { name: 'Open The Lantern at Greyford' }).click();
     await expect(table.locator('.pc-map')).toBeVisible({ timeout: 20_000 });
     await expect(table.getByRole('heading', { name: 'Pick your character' })).toHaveCount(0);
+    // The note and the pinned roll are still there.
+    await page.keyboard.press(`${mod}+n`);
+    await expect(page.getByTestId('quick-note-row')).toHaveText(/The ferryman lied/);
+    await page.keyboard.press(`${mod}+d`);
+    await expect(dice.getByTestId('pinned-roll')).toContainText('Greatsword');
+    await page.keyboard.press(`${mod}+d`);
 
     // The Library is a click away, and the table stays connected behind it.
     await page.getByRole('button', { name: 'Library', exact: true }).click();

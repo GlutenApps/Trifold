@@ -6,7 +6,6 @@ import {
   descendantsOf,
   foldName,
   quickNotesFolder,
-  quickNotesIn,
   quickNoteTitle,
 } from '@trifold/rules';
 import { registerHotkey } from '../../hotkeys';
@@ -17,6 +16,7 @@ import { useQuickNotesStore } from '../../stores/quickNotesStore';
 import { Icon } from '../shell/icons';
 import { NotePane } from './CampaignNotes';
 import { NoteEditor } from './NoteEditor';
+import { useNotesSource, type NotesSource } from './notesSource';
 
 /**
  * The Quick notes dock tool (ADR 0018): a capture form on top (a required title, the formatted
@@ -24,8 +24,10 @@ import { NoteEditor } from './NoteEditor';
  * ordinary note in the Quick Notes folder; opening one shows the same pane the notes panel
  * uses (rename, tags, formatting, delete) plus Move to and Open in Notes. Moving a note out of
  * the folder makes it an ordinary note, and it leaves this list.
+ *
+ * The player console shows the same tool over the player's own notes (`notesSource.ts`): there
+ * every note is a quick note, and Move to and Open in Notes are not offered.
  */
-const NO_NOTES: readonly Note[] = [];
 
 function timeLabel(iso: string): string {
   const at = new Date(iso);
@@ -36,13 +38,12 @@ function timeLabel(iso: string): string {
 }
 
 export function QuickNotesTool() {
-  const campaignId = useCampaignStore((s) => s.current?.campaign.id ?? null);
-  const notes = useCampaignStore((s) => s.current?.notes ?? NO_NOTES);
+  const source = useNotesSource();
+  const { ownerId: campaignId, notes, quick } = source;
   const [openId, setOpenId] = useState<string | null>(null);
   const [find, setFind] = useState('');
   const pendingFocus = useQuickNotesStore((s) => s.pendingFocus);
 
-  const quick = useMemo(() => quickNotesIn(notes), [notes]);
   const shown = useMemo(() => {
     const q = foldName(find);
     return q ? quick.filter((n) => foldName(n.title).includes(q)) : quick;
@@ -66,7 +67,7 @@ export function QuickNotesTool() {
           highlight={null}
           backLabel="Back to quick notes"
           onBack={() => setOpenId(null)}
-          actions={<NoteActions note={open} notes={notes} />}
+          actions={source.tree ? <NoteActions note={open} notes={notes} /> : undefined}
         />
       </div>
     );
@@ -75,7 +76,7 @@ export function QuickNotesTool() {
   return (
     <div className="quick-notes">
       {/* A draft belongs to its campaign: switching campaigns starts a fresh form. */}
-      <CaptureForm key={campaignId} />
+      <CaptureForm key={campaignId} capture={source.capture} />
       <div className="quick-list-head row">
         <input
           type="search"
@@ -111,8 +112,7 @@ export function QuickNotesTool() {
 }
 
 /** Title, body and Save. Save stays off until there is a title; Escape drops the draft. */
-function CaptureForm() {
-  const captureNote = useCampaignStore((s) => s.captureNote);
+function CaptureForm({ capture: captureNote }: { capture: NotesSource['capture'] }) {
   const pendingFocus = useQuickNotesStore((s) => s.pendingFocus);
   const focusTaken = useQuickNotesStore((s) => s.focusTaken);
   const finish = useQuickNotesStore((s) => s.finish);

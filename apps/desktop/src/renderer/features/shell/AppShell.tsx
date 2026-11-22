@@ -306,10 +306,9 @@ export function AppShell() {
         id: 'quickNotes.open',
         combo: 'Ctrl+N',
         description: 'Quick note: jot something down without leaving your place',
+        // Both consoles have Quick notes; a player's are their own.
         run: () => {
-          if (shell().space === 'console' && shell().role === 'gm') {
-            useQuickNotesStore.getState().summon();
-          }
+          if (shell().space === 'console') useQuickNotesStore.getState().summon();
         },
       }),
       registerHotkey({
@@ -384,7 +383,7 @@ export function AppShell() {
         id: 'tool.dice',
         combo: 'Ctrl+D',
         description: 'Dice',
-        run: gm(() => shell().togglePop('dice')),
+        run: () => shell().togglePop('dice'),
       }),
       registerHotkey({
         id: 'tool.music',

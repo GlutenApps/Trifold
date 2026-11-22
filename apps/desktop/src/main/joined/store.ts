@@ -1,11 +1,22 @@
 import { readdir, rm } from 'node:fs/promises';
+import { ulid } from 'ulid';
+import type { ZodType } from 'zod';
 import {
+  CAMPAIGN_SCHEMA_VERSION,
   JOINED_SCHEMA_VERSION,
   JoinedCampaign,
   JoinedCampaignId,
+  Note,
+  nowIso,
+  PinnedRoll,
   TableAddress,
+  type FileKind,
 } from '@trifold/schema';
+import { quickNoteTitle } from '@trifold/rules';
 import type { LibraryStore } from '../library/LibraryStore';
+
+/** The player's own files in a joined campaign, one JSON file each. */
+type OwnFolder = 'notes' | 'pinnedRolls';
 
 /** How many working addresses a joined campaign remembers. */
 const ADDRESSES_KEPT = 4;
@@ -107,6 +118,107 @@ export class JoinedStore {
     });
     await this.store.writeJson(this.file(campaignId), next);
     return next;
+  }
+
+  // ---------- the player's own notes and pinned rolls ----------
+
+  /**
+   * A file of the player's in a joined campaign. Both ids name a path and reach here from the
+   * renderer, so each is held to a plain name first.
+   */
+  private own(campaignId: string, folder: OwnFolder, id?: string): string {
+    const dir = `joined/${JoinedCampaignId.parse(campaignId)}/${folder}`;
+    return id === undefined ? dir : `${dir}/${JoinedCampaignId.parse(id)}.json`;
+  }
+
+  private async readOwn<T>(
+    campaignId: string,
+    folder: OwnFolder,
+    schema: ZodType<T>,
+    kind: FileKind,
+  ): Promise<T[]> {
+    const dir = this.own(campaignId, folder);
+    let files: string[];
+    try {
+      files = await readdir(this.store.resolvePath(dir));
+    } catch {
+      return [];
+    }
+    const out: T[] = [];
+    for (const file of files) {
+      if (!file.endsWith('.json')) continue;
+      try {
+        out.push(await this.store.readJson(`${dir}/${file}`, schema, kind));
+      } catch {
+        // One unreadable file does not hide the rest.
+      }
+    }
+    return out;
+  }
+
+  /** Nothing is written into a campaign this Library has left, which would bring it back. */
+  private async mustBeJoined(campaignId: string): Promise<void> {
+    if (!(await this.get(campaignId))) throw new Error('This Library has not joined that campaign');
+  }
+
+  /** The player's notes in a joined campaign, newest first. They are flat: no folders. */
+  async notes(campaignId: string): Promise<Note[]> {
+    const notes = await this.readOwn(campaignId, 'notes', Note, 'note');
+    return notes.sort((a, b) =>
+      (b.capture?.at ?? b.createdAt).localeCompare(a.capture?.at ?? a.createdAt),
+    );
+  }
+
+  /** Saves a note of the player's; one with no id is new, stamped as captured now. */
+  async saveNote(campaignId: string, input: Note): Promise<Note> {
+    await this.mustBeJoined(campaignId);
+    const at = nowIso();
+    const title = quickNoteTitle(input.title);
+    if (!title) throw new Error('A note needs a title');
+    const note = Note.parse({
+      ...input,
+      schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+      id: input.id || ulid(),
+      kind: 'note',
+      title,
+      parentId: null,
+      role: undefined,
+      capture: input.capture ?? { at: input.createdAt || at },
+      createdAt: input.createdAt || at,
+      updatedAt: at,
+    });
+    await this.store.writeJson(this.own(campaignId, 'notes', note.id), note);
+    return note;
+  }
+
+  async removeNote(campaignId: string, id: string): Promise<void> {
+    await rm(this.store.resolvePath(this.own(campaignId, 'notes', id)), { force: true });
+  }
+
+  /** The rolls the player pinned in a joined campaign, in the order they were pinned. */
+  async pinnedRolls(campaignId: string): Promise<PinnedRoll[]> {
+    const pins = await this.readOwn(campaignId, 'pinnedRolls', PinnedRoll, 'pinnedRoll');
+    return pins.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  /** Pins a roll (no id) or renames one, as a running campaign does. */
+  async savePinnedRoll(campaignId: string, input: PinnedRoll): Promise<PinnedRoll> {
+    await this.mustBeJoined(campaignId);
+    const at = nowIso();
+    const pin = PinnedRoll.parse({
+      ...input,
+      schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+      id: input.id || ulid(),
+      name: input.name.trim() || input.label || 'Roll',
+      createdAt: input.createdAt || at,
+      updatedAt: at,
+    });
+    await this.store.writeJson(this.own(campaignId, 'pinnedRolls', pin.id), pin);
+    return pin;
+  }
+
+  async removePinnedRoll(campaignId: string, id: string): Promise<void> {
+    await rm(this.store.resolvePath(this.own(campaignId, 'pinnedRolls', id)), { force: true });
   }
 
   /** Leave campaign: the whole shell goes, the player's notes in it included. */
