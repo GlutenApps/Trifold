@@ -6,6 +6,7 @@ import { SearchResults } from './GlobalSearch';
 import { HotkeysTool } from './HotkeysTool';
 import { Icon, type IconName } from './icons';
 import { LayoutsTool } from './LayoutsTool';
+import { PanelBoundary } from './PanelBoundary';
 import { TrayTool } from './TrayTool';
 
 /**
@@ -128,7 +129,9 @@ export function Pop() {
         </header>
       )}
       <div className={`fly-body${pop === 'search' ? ' search-body' : ''}`}>
-        <PopBody kind={pop} compact={compact} />
+        <PanelBoundary key={pop} name={POP_TITLES[pop]}>
+          <PopBody kind={pop} compact={compact} />
+        </PanelBoundary>
       </div>
     </div>
   );

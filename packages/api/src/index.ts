@@ -860,6 +860,11 @@ export interface TrifoldApi {
     setTextSize(size: TextSize): Promise<TextSize>;
     /** Opens the folder Trifold writes its logs to: the Library's, or the app's before one is open. */
     openLogsFolder(): Promise<void>;
+    /**
+     * Writes an error a panel caught while drawing to the log (`PanelBoundary`): which panel,
+     * and the error with where it was thrown. Local, like every log line.
+     */
+    reportError(where: string, detail: string): Promise<void>;
     /** The bundled libraries' licence texts (ADR 0056); null in a build that has none. */
     thirdPartyNotices(): Promise<string | null>;
   };
@@ -1368,6 +1373,7 @@ export const API_METHODS = {
     'textSize',
     'setTextSize',
     'openLogsFolder',
+    'reportError',
     'thirdPartyNotices',
   ],
   updates: ['status', 'setEnabled', 'checkNow', 'dismiss', 'openDownload', 'restartToUpdate'],

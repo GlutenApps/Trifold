@@ -6,6 +6,7 @@ import { MINOR_TITLES, type ToolKind } from '../../stores/shellLayout';
 import { useFit, useShellStore } from '../../stores/shellStore';
 import { Icon } from './icons';
 import { MINOR_ICON, MinorBody } from './minors';
+import { PanelBoundary } from './PanelBoundary';
 import { usePlayerTableIfAny } from '../joined/PlayerTable';
 
 /**
@@ -158,7 +159,9 @@ export function Dock() {
               </header>
               {!isCollapsed && (
                 <div className="dsec-body">
-                  <MinorBody kind={s.tool} />
+                  <PanelBoundary name={MINOR_TITLES[s.tool]}>
+                    <MinorBody kind={s.tool} />
+                  </PanelBoundary>
                 </div>
               )}
             </section>

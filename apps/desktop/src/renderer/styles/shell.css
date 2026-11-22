@@ -1371,6 +1371,16 @@ body.resizing {
   white-space: nowrap;
 }
 
+/* A panel that stopped (PanelBoundary): its message takes the panel's place, with room around it. */
+.panel-crash {
+  margin: 12px;
+}
+
+.panel-crash-detail {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
 .panel-pending {
   margin: 0;
   padding: 16px;
