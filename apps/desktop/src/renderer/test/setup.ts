@@ -139,6 +139,12 @@ export function installBridgeMock(): TrifoldBridge {
       open: vi.fn(async () => null),
       close: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined),
+      notes: vi.fn(async () => []),
+      saveNote: vi.fn(async (_campaignId, note) => ({ ...note, id: note.id || 'note-new' })),
+      removeNote: vi.fn(async () => undefined),
+      pinnedRolls: vi.fn(async () => []),
+      savePinnedRoll: vi.fn(async (_campaignId, pin) => ({ ...pin, id: pin.id || 'pin-new' })),
+      removePinnedRoll: vi.fn(async () => undefined),
     },
     table: {
       status: vi.fn(async () => TABLE_OFF),

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PinnedRoll } from '@trifold/schema';
-import { useCampaignStore } from '../../stores/campaignStore';
-import { usePinnedRolls, usePinnedRollsStore } from '../../stores/pinnedRollsStore';
+import { useCanPin, usePinnedRolls, usePinnedRollsStore } from '../../stores/pinnedRollsStore';
 import type { RollLogEntry } from '../../stores/rollLogStore';
 import { Icon } from '../shell/icons';
 import { InlineConfirm } from '../shell/InlineConfirm';
@@ -144,7 +143,7 @@ function PinnedRow({ pin }: { pin: PinnedRoll }) {
 
 /** The log row's pin: pins the roll, or shows it is pinned (unpinning is the pinned row's). */
 export function PinButton({ entry }: { entry: RollLogEntry }) {
-  const open = useCampaignStore((s) => !!s.current);
+  const open = useCanPin();
   const pins = usePinnedRolls();
   const pinId = usePinnedRollsStore((s) => s.fromLog[entry.id]);
   const pin = usePinnedRollsStore((s) => s.pin);

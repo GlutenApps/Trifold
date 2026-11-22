@@ -150,6 +150,91 @@ describe('JoinedStore', () => {
     expect(await readdir(join(root, 'joined'))).toEqual([]);
     await joined.leave('c1');
   });
+
+  const noteInput = (title: string, extra: object = {}) =>
+    ({
+      schemaVersion: 1,
+      id: '',
+      kind: 'note',
+      title,
+      body: '',
+      tags: [],
+      links: [],
+      parentId: null,
+      order: 0,
+      createdAt: '',
+      updatedAt: '',
+      ...extra,
+    }) as never;
+
+  it('keeps the player’s notes in the joined campaign, flat and newest first', async () => {
+    await joined.join({ campaignId: 'c1', campaignName: 'A', displayName: '', now: T });
+    expect(await joined.notes('c1')).toEqual([]);
+    const first = await joined.saveNote(
+      'c1',
+      noteInput('  The   ferryman  ', {
+        capture: { at: '2026-11-23T18:00:00.000Z' },
+        // A player's notes have no folders, whatever the renderer sends.
+        kind: 'folder',
+        parentId: 'elsewhere',
+        role: 'quickNotes',
+      }),
+    );
+    expect(first).toMatchObject({ title: 'The ferryman', kind: 'note', parentId: null });
+    expect(first.role).toBeUndefined();
+    const second = await joined.saveNote(
+      'c1',
+      noteInput('Owes us a favour', { capture: { at: '2026-11-23T19:00:00.000Z' } }),
+    );
+    expect(await readdir(join(root, 'joined', 'c1', 'notes'))).toHaveLength(2);
+    expect((await joined.notes('c1')).map((n) => n.title)).toEqual([
+      'Owes us a favour',
+      'The ferryman',
+    ]);
+
+    // Saving again changes the same file.
+    await joined.saveNote('c1', { ...first, body: 'Paid in silver.' });
+    expect((await joined.notes('c1')).find((n) => n.id === first.id)?.body).toBe('Paid in silver.');
+    expect(await readdir(join(root, 'joined', 'c1', 'notes'))).toHaveLength(2);
+
+    await joined.removeNote('c1', second.id);
+    expect((await joined.notes('c1')).map((n) => n.id)).toEqual([first.id]);
+    await expect(joined.saveNote('c1', noteInput('   '))).rejects.toThrow('title');
+  });
+
+  it('keeps the rolls the player pinned, and renames one in place', async () => {
+    await joined.join({ campaignId: 'c1', campaignName: 'A', displayName: '', now: T });
+    const pin = await joined.savePinnedRoll('c1', {
+      schemaVersion: 1,
+      id: '',
+      name: '2d6+1',
+      label: '2d6+1',
+      expression: '2d6+1',
+      total: 9,
+      faces: '2d6: 5, 3',
+      kind: 'dice',
+      source: 'pool',
+      rolledAt: T.toISOString(),
+      createdAt: '',
+      updatedAt: '',
+    } as never);
+    expect(pin.id).not.toBe('');
+    await joined.savePinnedRoll('c1', { ...pin, name: 'Greatsword' });
+    expect(await joined.pinnedRolls('c1')).toMatchObject([{ id: pin.id, name: 'Greatsword' }]);
+    await joined.removePinnedRoll('c1', pin.id);
+    expect(await joined.pinnedRolls('c1')).toEqual([]);
+  });
+
+  it('writes nothing into a campaign that was left, and refuses ids that are not plain names', async () => {
+    await expect(joined.saveNote('c1', noteInput('Late'))).rejects.toThrow('not joined');
+    await expect(joined.savePinnedRoll('c1', { name: 'x' } as never)).rejects.toThrow('not joined');
+    expect(await readdir(root)).not.toContain('joined');
+    await joined.join({ campaignId: 'c1', campaignName: 'A', displayName: '', now: T });
+    await expect(joined.removeNote('c1', '../joined')).rejects.toThrow();
+    await expect(joined.saveNote('c1', noteInput('Up', { id: '../../up' }))).rejects.toThrow();
+    await expect(joined.notes('../c1')).rejects.toThrow();
+    expect(await joined.get('c1')).not.toBeNull();
+  });
 });
 
 describe('LanClient', () => {

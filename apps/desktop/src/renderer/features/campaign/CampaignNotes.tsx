@@ -11,6 +11,7 @@ import { Icon } from '../shell/icons';
 import { AUTOSAVE_MS } from './autosave';
 import { InlineConfirm } from '../shell/InlineConfirm';
 import { NoteEditor, type Highlight } from './NoteEditor';
+import { useNotesSource } from './notesSource';
 import { TemplatesPane } from './TemplatesPane';
 
 /**
@@ -67,7 +68,7 @@ type Editable = Pick<Note, 'title' | 'body' | 'tags'>;
  * that lands while typing is not undone by the next flush.
  */
 function useDraft(note: Note) {
-  const saveNote = useCampaignStore((s) => s.saveNote);
+  const saveNote = useNotesSource().save;
   const [draft, setDraft] = useState<Editable>({
     title: note.title,
     body: note.body,
@@ -145,7 +146,7 @@ export function NotePane({
   backLabel?: string;
   actions?: ReactNode;
 }) {
-  const removeNote = useCampaignStore((s) => s.removeNote);
+  const removeNote = useNotesSource().remove;
   const { draft, update, dirty, flush } = useDraft(note);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tagText, setTagText] = useState(draft.tags.join(', '));

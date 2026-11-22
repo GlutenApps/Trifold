@@ -989,6 +989,18 @@ export interface TrifoldApi {
     close(campaignId: string): Promise<void>;
     /** A request to the open campaign's table, the same messages a phone sends. */
     send(campaignId: string, message: ClientMessage): Promise<void>;
+    /**
+     * The player's own notes in a joined campaign (`joined/<id>/notes/`), newest first. They
+     * never leave this Library: nothing here touches the network.
+     */
+    notes(campaignId: string): Promise<Note[]>;
+    /** Saves a note of the player's; one with no id is new. */
+    saveNote(campaignId: string, note: Note): Promise<Note>;
+    removeNote(campaignId: string, id: string): Promise<void>;
+    /** The rolls the player pinned in a joined campaign (`joined/<id>/pinnedRolls/`). */
+    pinnedRolls(campaignId: string): Promise<PinnedRoll[]>;
+    savePinnedRoll(campaignId: string, pin: PinnedRoll): Promise<PinnedRoll>;
+    removePinnedRoll(campaignId: string, id: string): Promise<void>;
   };
   presenter: {
     /**
@@ -1379,7 +1391,23 @@ export const API_METHODS = {
     'setMovementLock',
     'setSummoning',
   ],
-  joined: ['list', 'startSearch', 'stopSearch', 'peek', 'join', 'leave', 'open', 'close', 'send'],
+  joined: [
+    'list',
+    'startSearch',
+    'stopSearch',
+    'peek',
+    'join',
+    'leave',
+    'open',
+    'close',
+    'send',
+    'notes',
+    'saveNote',
+    'removeNote',
+    'pinnedRolls',
+    'savePinnedRoll',
+    'removePinnedRoll',
+  ],
   sources: [
     'list',
     'chooseFile',
