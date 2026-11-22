@@ -3756,8 +3756,51 @@ input[type='range'].wide {
   gap: 2px;
 }
 
-.held-condition-add {
-  width: auto;
+/* HP and conditions between fights (ADR 0055): a second line under a PC or NPC row, which wraps
+   inside the panel instead of running past it, and the HP editor under that. */
+.entity-head {
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+.status-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  min-width: 0;
+}
+
+.hp-chip {
+  font-variant-numeric: tabular-nums;
+}
+
+.hp-chip.hurt {
+  color: var(--warn);
+}
+
+.hp-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+}
+
+/* A menu that opens from a control near the row's start grows to the right. */
+.menu.menu-start {
+  left: 0;
+  right: auto;
+}
+
+.condition-menu {
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 /* Impossible (ADR 0052): twice the High budget, filled so it reads as past the scale. */
