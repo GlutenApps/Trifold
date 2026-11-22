@@ -20,3 +20,6 @@ resources/icons/glyphs.json
 resources/icons/credits.json
 resources/icons/license.txt
 resources/sample/
+
+# The second, player copy of the dev app (scripts/dev-player.mjs): its user data and Library.
+.dev-player/
