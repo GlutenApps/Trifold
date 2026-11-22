@@ -169,11 +169,11 @@ export function BackupsSection() {
     });
 
   return (
-    <SettingsSection id="backups" title="Backups" testId="backups-card">
+    <SettingsSection id="backups" icon="shield" title="Backups" testId="backups-card">
       <SettingRow
         label="Daily backup"
         htmlFor="backup-daily"
-        hint="A zip of the Library (everything but the search index, logs and music files), written once a day while Trifold is open and again when it closes if anything changed."
+        hint="A zip of the Library once a day, and on close if anything changed."
       >
         <input
           id="backup-daily"
@@ -208,7 +208,7 @@ export function BackupsSection() {
         </label>
       </SettingRow>
 
-      <SettingRow label="Back up now" hint="Writes a backup into the Library's backups folder now.">
+      <SettingRow label="Back up now" hint="Into the Library's backups folder.">
         <button
           type="button"
           className="btn primary"
@@ -229,7 +229,7 @@ export function BackupsSection() {
 
       <SettingRow
         label="Second copy"
-        hint="Keep a copy off this computer: a folder on another drive, or one your cloud sync app keeps. Every backup is copied there too."
+        hint="Also copy every backup to another drive or a synced folder."
         status={
           copy?.folder ? (
             <>
@@ -276,7 +276,7 @@ export function BackupsSection() {
 
       <SettingRow
         label="Restore"
-        hint="Replaces the Library with a backup. A zip of the current state is saved first. On a new computer, restore the newest zip from your copy folder."
+        hint="Replaces the Library with a backup; the current state is saved first."
         below={
           <>
             {picked && (

@@ -23,8 +23,7 @@ tab.
 
 ## Decision
 
-1. **One column of sections, most used first.** Each section has a heading (an `<h2>`, set in
-   small capitals) and setting rows:
+1. **One column of sections, most used first.** Each section is a card with a header and setting rows:
 
    | Section | Rows |
    |---|---|
@@ -36,9 +35,11 @@ tab.
    | Troubleshooting | Search index, Logs |
    | About | Version (Copy version info), the 5e-compatible note, Credits and licences |
 
-   A row is the setting's name and one or two sentences on what it does, with its controls
-   beside it from 640 px and under it below (ADR 0014). The page is at most 760 px wide. Jump
-   links to each section sit at the top from 640 px.
+   A row is the setting's name and one short line on what it does, with its controls beside it
+   from 640 px and under it below (ADR 0014). Each section is a card across the page's full
+   width, with its icon and title in a header bar (13 px, the text colour), so the sections read
+   as separate groups. Longer explanations live in the user guide. There are no jump links: with
+   seven short sections the page needs none.
 2. **Credits stay visible.** The SRD attribution statements, the game-icons line, the map and
    font credits are shown in full as fine print. Only the licence texts and the icon author list
    fold, as before, so About still shows the attribution the content policy requires.
