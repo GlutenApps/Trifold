@@ -1,14 +1,17 @@
-import { readdir, rm } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { ulid } from 'ulid';
 import type { ZodType } from 'zod';
 import {
   CAMPAIGN_SCHEMA_VERSION,
+  CompendiumRecord,
   JOINED_SCHEMA_VERSION,
   JoinedCampaign,
   JoinedCampaignId,
   Note,
   nowIso,
   PinnedRoll,
+  Source,
+  SOURCE_SCHEMA_VERSION,
   TableAddress,
   type FileKind,
 } from '@trifold/schema';
@@ -233,11 +236,144 @@ export class JoinedStore {
     await rm(this.store.resolvePath(this.own(campaignId, 'pinnedRolls', id)), { force: true });
   }
 
+  // ---------- shared content (ADR 0060) ----------
+
+  private sharedDir(campaignId: string): string {
+    return `joined/${JoinedCampaignId.parse(campaignId)}/shared`;
+  }
+
+  /** The hash of the shared content this Library holds for a campaign; '' when it holds none. */
+  async sharedHash(campaignId: string): Promise<string> {
+    return (await this.sharedSource(campaignId))?.fileHash ?? '';
+  }
+
+  private async sharedSource(campaignId: string): Promise<Source | null> {
+    try {
+      return await this.store.readJson(
+        `${this.sharedDir(campaignId)}/source.json`,
+        Source,
+        'source',
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Replaces what a GM shared with this campaign's players: one read-only source in the joined
+   * campaign's folder, `shared/source.json` and `shared/records.jsonl`, the same two files an
+   * imported source has. It shows only while that campaign is open.
+   */
+  async writeShared(
+    campaignId: string,
+    content: { hash: string; records: readonly CompendiumRecord[] },
+  ): Promise<Source> {
+    const joined = await this.get(campaignId);
+    if (!joined) throw new Error('This Library has not joined that campaign');
+    const dir = this.sharedDir(campaignId);
+    const counts: Record<string, number> = {};
+    for (const r of content.records) counts[r.kind] = (counts[r.kind] ?? 0) + 1;
+    const source = Source.parse({
+      schemaVersion: SOURCE_SCHEMA_VERSION,
+      id: sharedSourceId(campaignId),
+      name: `Shared in ${joined.campaignName || 'a joined campaign'}`,
+      kind: 'shared',
+      enabled: true,
+      fileHash: content.hash,
+      campaignIds: [campaignId],
+      defaultEdition: '2024',
+      license: {
+        attribution: null,
+        nonSrd: content.records.some((r) => r.sharedFrom?.nonSrd),
+      },
+      importedAt: nowIso(),
+      recordCounts: counts,
+    });
+    await mkdir(this.store.resolvePath(dir), { recursive: true });
+    const lines = content.records.map((r) => JSON.stringify(r));
+    await this.store.writeText(`${dir}/records.jsonl`, `${lines.join('\n')}\n`);
+    await this.store.writeJson(`${dir}/source.json`, source);
+    return source;
+  }
+
+  /** The GM unshared everything: the source goes. */
+  async removeShared(campaignId: string): Promise<void> {
+    await rm(this.store.resolvePath(this.sharedDir(campaignId)), { recursive: true, force: true });
+  }
+
+  /** Every joined campaign's shared source, for the index. */
+  async sharedSources(): Promise<Source[]> {
+    const out: Source[] = [];
+    for (const joined of await this.list()) {
+      const source = await this.sharedSource(joined.campaignId);
+      // A folder renamed by hand does not get to show under another campaign.
+      if (source && source.id === sharedSourceId(joined.campaignId)) out.push(source);
+    }
+    return out;
+  }
+
+  /** A shared source's records; unreadable lines are skipped. */
+  async sharedRecords(sourceId: string): Promise<CompendiumRecord[]> {
+    const campaignId = sourceId.slice(SHARED_PREFIX.length);
+    if (!sourceId.startsWith(SHARED_PREFIX) || !JoinedCampaignId.safeParse(campaignId).success) {
+      return [];
+    }
+    let text: string;
+    try {
+      text = await readFile(
+        this.store.resolvePath(`${this.sharedDir(campaignId)}/records.jsonl`),
+        'utf8',
+      );
+    } catch {
+      return [];
+    }
+    return cleanShared(
+      campaignId,
+      text.split('\n').flatMap((line) => {
+        if (!line.trim()) return [];
+        try {
+          return [JSON.parse(line) as unknown];
+        } catch {
+          return [];
+        }
+      }),
+    );
+  }
+
   /** Leave campaign: the whole shell goes, the player's notes in it included. */
   async leave(campaignId: string): Promise<void> {
     const dir = this.store.resolvePath(`joined/${JoinedCampaignId.parse(campaignId)}`);
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+const SHARED_PREFIX = 'shared:';
+
+/** The id of the source a joined campaign's shared content lives in. */
+export const sharedSourceId = (campaignId: string): string => `${SHARED_PREFIX}${campaignId}`;
+
+/** More records than this from one table is not shared content. */
+const SHARED_MAX_RECORDS = 50_000;
+
+/**
+ * Shared records as this Library will keep them. They came from another computer, so each must
+ * be a record, sit under this campaign's shared source and carry an id of that source's own:
+ * nothing a table sends can land in, or stand in for, another source's records.
+ */
+export function cleanShared(campaignId: string, raw: readonly unknown[]): CompendiumRecord[] {
+  const sourceId = sharedSourceId(campaignId);
+  const out: CompendiumRecord[] = [];
+  const seen = new Set<string>();
+  for (const item of raw.slice(0, SHARED_MAX_RECORDS)) {
+    const parsed = CompendiumRecord.safeParse(item);
+    if (!parsed.success) continue;
+    const record = parsed.data;
+    if (record.sourceId !== sourceId || !record.id.startsWith(`${sourceId}:`)) continue;
+    if (seen.has(record.id)) continue;
+    seen.add(record.id);
+    out.push(record);
+  }
+  return out;
 }
 
 /** `address` first, the rest after it without repeats; an address that does not parse is ignored. */

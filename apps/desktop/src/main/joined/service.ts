@@ -25,7 +25,7 @@ import {
   type LanSocket,
   type TableEndpoint,
 } from './lanClient';
-import { JoinedStore } from './store';
+import { cleanShared, JoinedStore, sharedSourceId } from './store';
 
 /**
  * What the renderer may do about joined campaigns (docs/PLAYER-MODE.md): list them, look for
@@ -49,12 +49,21 @@ export interface JoinedServiceOptions {
   onMessage?(event: { campaignId: string; message: ServerMessage }): void;
   /** Where pictures fetched from tables are kept: derived data, outside the Library. */
   cacheDir?: string;
-  /** Tests replace the search, the socket and the picture fetch. */
+  /**
+   * A joined campaign's shared content changed on disk (synced, unshared, or the campaign was
+   * left): the index is brought in line.
+   */
+  onShared?(campaignId: string): void | Promise<void>;
+  /** Tests replace the search, the socket and the fetches. */
   discovery?: (
     onChange: (tables: FoundTable[]) => void,
   ) => Pick<TableDiscovery, 'start' | 'stop' | 'list'>;
   open?: (url: string, origin: string) => LanSocket;
   fetchPicture?: (url: string) => Promise<{ body: Uint8Array; type: string } | null>;
+  fetchShared?: (
+    url: string,
+    token: string,
+  ) => Promise<{ hash: string; records: unknown[] } | null>;
 }
 
 /** What the renderer sees of a joined campaign: never the device token, only that there is one. */
@@ -92,6 +101,33 @@ async function fetchPicture(url: string): Promise<{ body: Uint8Array; type: stri
   if (declared > PICTURE_MAX_BYTES) return null;
   const body = new Uint8Array(await res.arrayBuffer());
   return body.length > PICTURE_MAX_BYTES ? null : { body, type };
+}
+
+/** Shared content larger than this is not fetched. */
+const SHARED_MAX_BYTES = 64 * 1024 * 1024;
+
+/**
+ * Asks a table for what its campaign shares (ADR 0060). The device token goes in a header: it
+ * is what proves this is a device the table knows.
+ */
+async function fetchShared(
+  url: string,
+  token: string,
+): Promise<{ hash: string; records: unknown[] } | null> {
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    redirect: 'error',
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok || Number(res.headers.get('content-length') ?? 0) > SHARED_MAX_BYTES) return null;
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes.length > SHARED_MAX_BYTES) return null;
+  const body = JSON.parse(new TextDecoder().decode(bytes)) as {
+    hash?: unknown;
+    records?: unknown;
+  } | null;
+  if (!body || typeof body.hash !== 'string' || !Array.isArray(body.records)) return null;
+  return { hash: body.hash, records: body.records as unknown[] };
 }
 
 /** The one joined campaign that is open, and its connection. */
@@ -141,7 +177,45 @@ export class JoinedService {
   /** Resolves once every save asked for so far has been written (quitting, and tests). */
   async settled(): Promise<void> {
     this.flushView();
-    await Promise.all([this.writes, this.viewWrites]);
+    await Promise.all([this.writes, this.viewWrites, this.sharedSync]);
+  }
+
+  // ---------- shared content (ADR 0060) ----------
+
+  private sharedSync: Promise<void> = Promise.resolve();
+
+  /** The open joined campaign's shared source, which the compendium shows while it is open. */
+  openSharedSourceId(): string | null {
+    return this.current ? sharedSourceId(this.current.campaignId) : null;
+  }
+
+  /**
+   * The table said what its campaign shares now. When this Library holds something else, it
+   * fetches the whole set and replaces its copy; an empty hash means nothing is shared, and the
+   * copy goes. What arrives is checked record by record before it is kept.
+   */
+  private syncShared(current: OpenCampaign, hash: string): void {
+    const { campaignId } = current;
+    this.sharedSync = this.sharedSync
+      .then(async () => {
+        const store = this.store();
+        if ((await store.sharedHash(campaignId)) === hash) return;
+        if (!hash) {
+          await store.removeShared(campaignId);
+        } else {
+          if (this.current !== current || !current.endpoint || !current.token) return;
+          const url = `${tableUrl(current.endpoint.host, current.endpoint.port)}/shared`;
+          const got = await (this.opts.fetchShared ?? fetchShared)(url, current.token);
+          if (!got) return;
+          const records = cleanShared(campaignId, got.records);
+          await store.writeShared(campaignId, { hash: got.hash, records });
+          this.opts.logger.info(`joined: shared content updated, ${records.length} records`);
+        }
+        await this.opts.onShared?.(campaignId);
+      })
+      .catch((err: unknown) => {
+        this.opts.logger.warn(`joined: shared content did not sync: ${errorMessage(err)}`);
+      });
   }
 
   private store(): JoinedStore {
@@ -244,9 +318,11 @@ export class JoinedService {
   async leave(campaignId: string): Promise<void> {
     if (this.current?.campaignId === campaignId) this.close(campaignId);
     // Saves still waiting finish first, so none of them brings the folder back.
-    await Promise.all([this.writes, this.viewWrites]);
+    await Promise.all([this.writes, this.viewWrites, this.sharedSync]);
     await this.store().leave(campaignId);
     this.joinedIds.delete(campaignId);
+    // Its shared content went with the folder: the index lets go of it too.
+    await this.opts.onShared?.(campaignId);
     if (this.opts.cacheDir && JoinedCampaignId.safeParse(campaignId).success) {
       await rm(join(this.opts.cacheDir, campaignId), { recursive: true, force: true }).catch(
         () => undefined,
@@ -412,6 +488,8 @@ export class JoinedService {
         if (this.current !== current || current.client !== client) return;
         // The token is the claim and stays in main; the console is told only that there is one.
         if (message.type === 'token') return;
+        // What the campaign shares is main's to fetch and file; the console only reads it.
+        if (message.type === 'shared') return this.syncShared(current, message.hash);
         if (message.type === 'state') this.rememberView(current.campaignId, message);
         this.opts.onMessage?.({ campaignId: current.campaignId, message });
       },

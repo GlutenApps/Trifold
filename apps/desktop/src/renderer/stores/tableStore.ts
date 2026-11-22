@@ -112,6 +112,7 @@ export function installTableSync(): () => void {
         name: current.campaign.name,
         tokenStyle: current.campaign.settings.tokenStyle,
         summonable: current.campaign.settings.summonable,
+        shared: current.campaign.settings.shared,
       },
       pcs: current.pcs,
       npcs: current.npcs,

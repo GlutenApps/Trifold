@@ -10,6 +10,12 @@ export interface SourceCatalog {
   readAllRecords(sourceId: string): Promise<CompendiumRecord[]>;
 }
 
+/** Joined campaigns' shared sources: one read-only source each, kept in the joined folder. */
+export interface SharedSources {
+  sharedSources(): Promise<Source[]>;
+  sharedRecords(sourceId: string): Promise<CompendiumRecord[]>;
+}
+
 /**
  * The bundled SRD documents, imported sources, the Library's homebrew and every campaign's own
  * creatures (ADR 0035): a campaign with creatures is one more source, which the index keeps for
@@ -23,6 +29,8 @@ export class CombinedCatalog implements SourceCatalog {
     private readonly homebrew: HomebrewRepository,
     /** One creature folder per campaign; none before campaigns exist. */
     private readonly campaignCreatures: () => Promise<HomebrewRepository[]> = async () => [],
+    /** What GMs shared with the campaigns this Library has joined (ADR 0060). */
+    private readonly shared: SharedSources | null = null,
   ) {}
 
   async list(): Promise<Source[]> {
@@ -38,11 +46,13 @@ export class CombinedCatalog implements SourceCatalog {
       ...(await this.repository.list()),
       await this.homebrew.source(),
       ...creatures,
+      ...((await this.shared?.sharedSources()) ?? []),
     ];
   }
 
   async readAllRecords(sourceId: string): Promise<CompendiumRecord[]> {
     if (sourceId === HOMEBREW_SOURCE_ID) return this.homebrew.list();
+    if (sourceId.startsWith('shared:')) return (await this.shared?.sharedRecords(sourceId)) ?? [];
     if (sourceId.startsWith('campaign:')) {
       const folder = (await this.campaignCreatures()).find((f) => f.sourceId === sourceId);
       return folder ? folder.list() : [];

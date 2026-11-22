@@ -342,7 +342,7 @@ export function toRow(raw: RawRow): CompendiumRow {
  * every one while no campaign is open. Binds three parameters: `campaignParams` below.
  */
 const CAMPAIGN_FILTER =
-  "(s.kind != 'campaign' OR r.source_id = ?) AND (s.campaigns IS NULL OR ? = '' OR EXISTS (SELECT 1 FROM json_each(s.campaigns) WHERE value = ?))";
+  "(s.kind NOT IN ('campaign', 'shared') OR r.source_id = ?) AND (s.campaigns IS NULL OR ? = '' OR EXISTS (SELECT 1 FROM json_each(s.campaigns) WHERE value = ?))";
 
 /** The open campaign's creature source and id, in `CAMPAIGN_FILTER`'s order. */
 function campaignParams(

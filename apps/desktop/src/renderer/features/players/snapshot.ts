@@ -39,6 +39,8 @@ export interface SnapshotInput {
     tokenStyle: TokenStyle;
     /** The DM's summon list. */
     summonable?: CampaignSettings['summonable'];
+    /** What the DM shares with players (ADR 0060). */
+    shared?: CampaignSettings['shared'];
   };
   pcs: readonly PCCard[];
   npcs: readonly NPC[];
@@ -261,6 +263,13 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
   return {
     campaignId: input.campaign.id,
     campaignName: input.campaign.name,
+    // Main reads the shared content; this only says when to look again.
+    sharedKey: JSON.stringify([
+      input.campaign.shared ?? null,
+      input.npcs
+        .filter((n) => n.recordRef)
+        .map((n) => [n.id, n.companionOf ?? '', n.recordRef!.recordId]),
+    ]),
     live: input.presenter.live !== false,
     scene,
     screen: tableScreen(input.presenter),

@@ -76,6 +76,11 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     if (!store) throw new Error('No Library is open');
     return store;
   };
+  /**
+   * The source the compendium is scoped to besides the ones every campaign sees: the open
+   * campaign's own creatures (ADR 0035), or the open joined campaign's shared content (ADR 0060).
+   */
+  const scopeSourceId = () => ctx.session.openCampaignSourceId() ?? ctx.joined.openSharedSourceId();
   let importing = false;
   // An imported file's books and clashes (ADR 0028), read once per import of it.
   const reviews = new Map<string, BookReview>();
@@ -355,7 +360,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         if (!catalog) return [];
         const out = [];
         for (const s of await catalog.list()) {
-          if (s.kind === 'campaign') continue;
+          // A campaign's creatures and a joined campaign's shared content are not the DM's to manage here.
+          if (s.kind === 'campaign' || s.kind === 'shared') continue;
           const bundled = s.kind === 'srd' || s.kind === 'homebrew';
           out.push({
             ...s,
@@ -496,6 +502,10 @@ export function createApi(ctx: ApiContext): TrifoldApi {
     homebrew: {
       async draft(recordId, home = 'library') {
         const original = ctx.session.require().index.get(recordId);
+        // Shared content is the GM's, lent to this campaign's players (ADR 0060): no copies.
+        if (original?.sourceId.startsWith('shared:')) {
+          throw new Error('Content your GM shared cannot be edited or copied.');
+        }
         if (!original) throw new Error('Record not found');
         const folder = home === 'campaign' ? await openCampaignCreatures() : requireHomebrew();
         return folder.copyOf(original);
@@ -504,6 +514,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         const { index, catalog, store } = ctx.session.require();
         const saved = await (await folderFor(record.sourceId)).save(record);
         await syncIndex(index, catalog, store, ctx.logger);
+        // A homebrew change may be a change to what players are shared.
+        ctx.table.sharedChanged();
         return saved;
       },
       async remove(recordId) {
@@ -511,6 +523,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         const record = index.get(recordId);
         await (await folderFor(record?.sourceId ?? HOMEBREW_SOURCE_ID)).remove(recordId);
         await syncIndex(index, catalog, store, ctx.logger);
+        // A homebrew change may be a change to what players are shared.
+        ctx.table.sharedChanged();
       },
       async addToLibrary(recordId) {
         const { index, catalog, store } = ctx.session.require();
@@ -520,6 +534,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           throw new Error('Only a campaign creature can be added to the compendium');
         const added = await requireHomebrew().adopt(record);
         await syncIndex(index, catalog, store, ctx.logger);
+        // A homebrew change may be a change to what players are shared.
+        ctx.table.sharedChanged();
         return added;
       },
     },
@@ -600,7 +616,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async search(query) {
         return ctx.session.require().index.search({
           ...query,
-          campaignSourceId: ctx.session.openCampaignSourceId(),
+          campaignSourceId: scopeSourceId(),
           campaignId: ctx.session.openCampaignId(),
         });
       },
@@ -618,14 +634,14 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async suggest(text, opts) {
         return ctx.session.require().index.suggest(text, {
           ...opts,
-          campaignSourceId: ctx.session.openCampaignSourceId(),
+          campaignSourceId: scopeSourceId(),
           campaignId: ctx.session.openCampaignId(),
         });
       },
       async searchText(text, opts) {
         return ctx.session.require().index.searchText(text, {
           ...opts,
-          campaignSourceId: ctx.session.openCampaignSourceId(),
+          campaignSourceId: scopeSourceId(),
           campaignId: ctx.session.openCampaignId(),
         });
       },

@@ -37,6 +37,7 @@ import {
   type Claim,
   type PinTries,
 } from '@trifold/rules';
+import { NOTHING_SHARED, type SharedContent } from './sharedContent';
 import type {
   ClientMessage,
   CreatureKind,
@@ -200,6 +201,11 @@ export interface TableHubOptions {
   onSummon(event: TableSummonEvent): void;
   /** A roll made at the table, for the DM's roll log. */
   onRoll?(roll: TableRoll): void;
+  /**
+   * Reads what the open campaign shares with its players (ADR 0060); `heldNpcIds` are the NPCs
+   * some device holds now. Absent, nothing is shared.
+   */
+  shared?(heldNpcIds: ReadonlySet<string>): Promise<SharedContent>;
   /** Tests replace the network lookups. */
   addresses?: () => LanAddress[];
   mdns?: { start(): Promise<string>; announce(): void; stop(): Promise<void> } | null;
@@ -302,6 +308,87 @@ export class TableHub {
 
   private emit(): void {
     this.opts.onStatus(this.status());
+    // A claim or a release changes which NPCs' stat blocks players may see.
+    void this.refreshShared();
+  }
+
+  // ---------- shared content (ADR 0060) ----------
+
+  private shared: SharedContent = NOTHING_SHARED;
+  /** What the content was last read for; unchanged, it is not read again. */
+  private sharedKey: string | null = null;
+  private sharedRead: Promise<void> = Promise.resolve();
+
+  /** Homebrew or a source changed in the Library: what is shared may have, so look again. */
+  sharedChanged(): void {
+    this.sharedKey = null;
+    void this.refreshShared();
+  }
+
+  /**
+   * Reads the shared content again when something it depends on changed, and tells every known
+   * device when the result differs. The content itself goes out only over `/shared`, to a
+   * device that proves it is known.
+   */
+  private refreshShared(): Promise<void> {
+    const read = this.opts.shared;
+    const snapshot = this.snapshot;
+    if (!read || !snapshot || this.state !== 'on') return this.sharedRead;
+    const held = (this.players?.claims ?? [])
+      .filter((c) => c.creatureKind === 'npc')
+      .map((c) => c.creatureId)
+      .sort();
+    const key = JSON.stringify([
+      snapshot.sharedKey ?? '',
+      (snapshot.summonOptions ?? []).map((o) => o.key),
+      held,
+    ]);
+    if (key === this.sharedKey) return this.sharedRead;
+    this.sharedKey = key;
+    const campaignId = this.campaignId;
+    this.sharedRead = this.sharedRead
+      .then(() => read(new Set(held)))
+      .then((content) => {
+        if (this.campaignId !== campaignId || content.hash === this.shared.hash) return;
+        this.shared = content;
+        this.opts.logger.info(
+          `table server: sharing ${content.records.length} records with players`,
+        );
+        for (const c of this.clients) {
+          if (c.deviceId) this.send(c, { type: 'shared', hash: content.hash });
+        }
+      })
+      .catch((err: unknown) => {
+        this.sharedKey = null;
+        this.opts.logger.warn(`table server: could not read shared content: ${errorMessage(err)}`);
+      });
+    return this.sharedRead;
+  }
+
+  /**
+   * `/shared`: the shared records, for a device the table knows. The device proves it with its
+   * token, the same secret that holds its claim, so a browser that merely reached the page gets
+   * nothing.
+   */
+  private serveShared(req: IncomingMessage, res: ServerResponse, headers: object): void {
+    const auth = req.headers.authorization ?? '';
+    const token = /^Bearer ([A-Za-z0-9_-]{1,64})$/.exec(auth)?.[1];
+    const device = token ? this.players?.deviceForToken(token) : null;
+    if (!device) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' }).end('Forbidden');
+      return;
+    }
+    const body = Buffer.from(
+      JSON.stringify({ hash: this.shared.hash, records: this.shared.records }),
+      'utf8',
+    );
+    res.writeHead(200, {
+      ...headers,
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Length': body.length,
+      'Cache-Control': 'no-store',
+    });
+    res.end(req.method === 'HEAD' ? undefined : body);
   }
 
   async start(campaignId: string): Promise<TableStatus> {
@@ -418,6 +505,8 @@ export class TableHub {
     this.locks.clear();
     this.lastPreview.clear();
     this.snapshot = null;
+    this.shared = NOTHING_SHARED;
+    this.sharedKey = null;
     this.mapImage = null;
     this.state = 'off';
     this.campaignId = null;
@@ -489,6 +578,7 @@ export class TableHub {
     const campaignNamed = this.snapshot?.campaignName !== snapshot.campaignName;
     this.snapshot = snapshot;
     this.scheduleBroadcast();
+    void this.refreshShared();
     if (namesChanged) this.emit();
     // The advertised service carries the campaign's name: say it again when it is first known
     // or renamed.
@@ -664,6 +754,8 @@ export class TableHub {
       if (device) players.touch(device.deviceId);
       client.last = '';
       this.sendState(client);
+      // A known device learns what is shared now; one that holds something else fetches it.
+      if (device) this.send(client, { type: 'shared', hash: this.shared.hash });
       this.emit();
       return;
     }
@@ -1348,6 +1440,7 @@ export class TableHub {
         res.end(req.method === 'HEAD' ? undefined : img.jpeg);
         return;
       }
+      if (path === '/shared') return this.serveShared(req, res, common);
       const tokenArt = /^\/t\/([^/]+)\/(art|glyph)$/.exec(path);
       if (tokenArt)
         return await this.serveTokenArt(res, tokenArt[1]!, tokenArt[2] as 'art' | 'glyph', common);

@@ -203,6 +203,11 @@ export interface TableSnapshot {
   campaignId: string;
   campaignName: string;
   /**
+   * Changes whenever what the campaign shares with its players may have (ADR 0060): the DM's
+   * choices and which NPCs point at which stat blocks. Main reads the content itself.
+   */
+  sharedKey?: string;
+  /**
    * Whether the DM is live (ADR 0046). Not live, phones get no map and no screen and say they
    * are waiting; absent counts as live.
    */
@@ -345,7 +350,12 @@ export type ServerMessage =
   /** The DM pressed Stop or closed the campaign. */
   | { type: 'closed' }
   /** A roll made at the table (ADR 0059), sent to every device holding a creature. */
-  | { type: 'rolled'; roll: TableRoll };
+  | { type: 'rolled'; roll: TableRoll }
+  /**
+   * What the campaign shares with its players changed, or this is what it is now (ADR 0060):
+   * a player's Trifold holding a different hash fetches `/shared`. Empty means nothing is shared.
+   */
+  | { type: 'shared'; hash: string };
 
 export type ClientMessage =
   | { type: 'hello'; token?: string }

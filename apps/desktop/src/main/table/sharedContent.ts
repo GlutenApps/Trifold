@@ -8,6 +8,7 @@ import type {
   SourceLicense,
 } from '@trifold/schema';
 import type { IndexDb } from '../index/IndexDb';
+import { sharedSourceId } from '../joined/store';
 import { sourceShowsIn, type CampaignView } from '../sources/campaignScope';
 import type { SourceCatalog } from '../sources/catalog';
 import type { HomebrewRepository } from '../sources/homebrew';
@@ -37,8 +38,8 @@ export const PLAYER_FACING_KINDS: readonly RecordKind[] = [
   'rule',
 ];
 
-/** The id of the source a joined campaign's shared content lives in, on the player's side. */
-export const sharedSourceId = (campaignId: string): string => `shared:${campaignId}`;
+// The id of the source a joined campaign's shared content lives in, on the player's side.
+export { sharedSourceId };
 
 /** Bundled sources ship with every Trifold. */
 const isBundled = (sourceId: string): boolean => sourceId.startsWith('srd-');
