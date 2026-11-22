@@ -1,0 +1,241 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PlayerLink, ServerMessage } from '@trifold/api';
+import { LibraryStore } from '../library/LibraryStore';
+import type { LibrarySession } from '../library/session';
+import type { FoundTable } from '../table/mdns';
+import type { LanSocket } from './lanClient';
+import { JoinedService } from './service';
+import { JoinedStore } from './store';
+
+const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() } as never;
+
+/** Sockets the test drives: each one opened is kept, with what was sent on it. */
+function sockets() {
+  const all: Array<{
+    url: string;
+    sent: Array<Record<string, unknown>>;
+    closed: boolean;
+    receive(msg: ServerMessage): void;
+    drop(): void;
+  }> = [];
+  const open = (url: string): LanSocket => {
+    let onMessage = (_text: string) => undefined as void;
+    let onClose = () => undefined as void;
+    const record = {
+      url,
+      sent: [] as Array<Record<string, unknown>>,
+      closed: false,
+      receive: (msg: ServerMessage) => onMessage(JSON.stringify(msg)),
+      drop: () => onClose(),
+    };
+    all.push(record);
+    return {
+      onOpen: () => undefined,
+      onMessage: (l) => void (onMessage = l),
+      onClose: (l) => void (onClose = l),
+      send: (text) => void record.sent.push(JSON.parse(text) as Record<string, unknown>),
+      close: () => {
+        record.closed = true;
+      },
+      remoteAddress: () => '192.168.1.23',
+    };
+  };
+  return { all, open };
+}
+
+describe('JoinedService: an open campaign', () => {
+  let root: string;
+  let cache: string;
+  let found: FoundTable[];
+  let heard: () => void;
+  const links: PlayerLink[] = [];
+  const messages: ServerMessage[] = [];
+  const discovery = { start: vi.fn(), stop: vi.fn(), list: () => found };
+  const campaign: ServerMessage = {
+    type: 'campaign',
+    campaignId: 'c1',
+    campaignName: 'Greyford, renamed',
+    now: 1,
+  };
+
+  async function setup(options: { enabled?: boolean; fetched?: Uint8Array | null } = {}) {
+    const store = await LibraryStore.open(root);
+    await new JoinedStore(store).join({
+      campaignId: 'c1',
+      campaignName: 'Greyford',
+      displayName: 'Sam',
+      address: '192.168.1.23:8130',
+    });
+    const net = sockets();
+    const fetchPicture = vi.fn(async () =>
+      options.fetched === null
+        ? null
+        : { body: options.fetched ?? new Uint8Array([1, 2, 3]), type: 'image/jpeg' },
+    );
+    const service = new JoinedService({
+      session: { store } as unknown as LibrarySession,
+      logger,
+      enabled: options.enabled ?? true,
+      onTables: () => undefined,
+      onLink: (e) => links.push(e.link),
+      onMessage: (e) => messages.push(e.message),
+      cacheDir: cache,
+      discovery: (onChange) => {
+        heard = () => onChange(found);
+        return discovery;
+      },
+      open: net.open,
+      fetchPicture,
+    });
+    const file = async () =>
+      JSON.parse(await readFile(join(root, 'joined', 'c1', 'joined.json'), 'utf8')) as {
+        deviceToken?: string;
+        lastLiveAt: string | null;
+        campaignName: string;
+        addresses: string[];
+      };
+    return { service, net, fetchPicture, file };
+  }
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), 'trifold-joined-open-'));
+    cache = await mkdtemp(join(tmpdir(), 'trifold-joined-cache-'));
+    found = [];
+    links.length = 0;
+    messages.length = 0;
+    discovery.start.mockClear();
+    discovery.stop.mockClear();
+  });
+  afterEach(async () => {
+    await rm(root, { recursive: true, force: true });
+    await rm(cache, { recursive: true, force: true });
+  });
+
+  it('connects to the address that worked, and keeps every save of the connection', async () => {
+    const { service, net, file } = await setup();
+    expect(await service.open('c1')).toMatchObject({ campaignId: 'c1', claimed: false });
+    expect(discovery.start).toHaveBeenCalledOnce();
+    expect(net.all[0]?.url).toBe('ws://192.168.1.23:8130/ws');
+
+    // The table names the campaign, the player claims, the table hands over the token: three
+    // saves to one file within moments, and none of them may undo another.
+    net.all[0]!.receive(campaign);
+    net.all[0]!.receive({ type: 'token', token: 'secret', campaignId: 'c1' });
+    await vi.waitFor(async () => {
+      expect(await file()).toMatchObject({
+        deviceToken: 'secret',
+        campaignName: 'Greyford, renamed',
+        addresses: ['192.168.1.23:8130'],
+      });
+      expect((await file()).lastLiveAt).not.toBeNull();
+    });
+    expect(links).toEqual(['connecting', 'open']);
+
+    // The token is the claim and stays in main: the console never receives it.
+    expect(messages.map((m) => m.type)).toEqual(['campaign']);
+    service.send('c1', { type: 'switch' });
+    service.send('other', { type: 'undo' });
+    expect(net.all[0]!.sent).toEqual([{ type: 'hello' }, { type: 'switch' }]);
+
+    service.close('c1');
+    expect(net.all[0]!.closed).toBe(true);
+    expect(discovery.stop).toHaveBeenCalledOnce();
+  });
+
+  it('goes where the search finds the table when the old address stops answering', async () => {
+    const { service, net } = await setup();
+    await service.open('c1');
+    net.all[0]!.drop();
+    // The table is up at a new address and port: found by its campaign id, not its address.
+    found = [
+      {
+        instance: 'trifold._trifold._tcp.local',
+        host: 'trifold.local',
+        port: 8131,
+        addresses: ['192.168.1.77'],
+        campaignId: 'c1',
+        campaignName: 'Greyford',
+      },
+    ];
+    heard();
+    expect(net.all.at(-1)?.url).toBe('ws://192.168.1.77:8131/ws');
+    // A table for some other campaign is no reason to move.
+    const count = net.all.length;
+    found = [{ ...found[0]!, campaignId: 'c2', addresses: ['192.168.1.99'] }];
+    heard();
+    expect(net.all).toHaveLength(count);
+  });
+
+  it('opens nothing on the network while player mode is off, or for a campaign not joined', async () => {
+    const { service, net } = await setup({ enabled: false });
+    expect(await service.open('c1')).toMatchObject({ campaignId: 'c1' });
+    expect(await service.open('nope')).toBeNull();
+    expect(net.all).toEqual([]);
+    expect(discovery.start).not.toHaveBeenCalled();
+  });
+
+  it('serves a table’s pictures from the table once, then from its cache', async () => {
+    const { service, net, fetchPicture } = await setup();
+    const path = '/map/s1/abc-123.jpg';
+    // Not connected, nothing cached: there is no picture, and nothing is fetched.
+    await service.open('c1');
+    expect(await service.picture('c1', path)).toBeNull();
+    expect(fetchPicture).not.toHaveBeenCalled();
+
+    net.all[0]!.receive(campaign);
+    expect(await service.picture('c1', path)).toEqual({
+      body: new Uint8Array([1, 2, 3]),
+      type: 'image/jpeg',
+    });
+    expect(fetchPicture).toHaveBeenCalledWith('http://192.168.1.23:8130/map/s1/abc-123.jpg');
+    await service.picture('c1', path);
+    expect(fetchPicture).toHaveBeenCalledOnce();
+
+    // Offline, the last map is still there.
+    service.close('c1');
+    expect((await service.picture('c1', path))?.type).toBe('image/jpeg');
+  });
+
+  it('asks a table only for the paths a table serves pictures under', async () => {
+    const { service, net, fetchPicture } = await setup();
+    await service.open('c1');
+    net.all[0]!.receive(campaign);
+    for (const bad of [
+      '/',
+      '/ws',
+      '/index.html',
+      '/map/../../secret.jpg',
+      '/map/s1/k.jpg/extra',
+      '/t/tok/art?v=x&u=http://example.com',
+      '//example.com/map/s/k.jpg',
+      '/c/dm/1/portrait',
+    ]) {
+      expect(await service.picture('c1', bad), bad).toBeNull();
+    }
+    expect(fetchPicture).not.toHaveBeenCalled();
+    for (const good of [
+      '/t/tok/art?v=1a2b',
+      '/t/tok/glyph',
+      '/c/pc/p1/portrait?v=z',
+      '/screen/s/image',
+    ]) {
+      expect(await service.picture('c1', good), good).not.toBeNull();
+    }
+    // Another campaign's pictures are not this connection's to fetch.
+    expect(await service.picture('c2', '/t/tok/art')).toBeNull();
+  });
+
+  it('takes the picture cache with it when the campaign is left', async () => {
+    const { service, net } = await setup();
+    await service.open('c1');
+    net.all[0]!.receive(campaign);
+    await service.picture('c1', '/t/tok/art');
+    await service.leave('c1');
+    expect(net.all[0]!.closed).toBe(true);
+    expect(await service.picture('c1', '/t/tok/art')).toBeNull();
+    expect(await service.list()).toEqual([]);
+  });
+});

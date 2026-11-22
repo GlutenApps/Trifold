@@ -4,28 +4,15 @@
    surfaces --bg-rail (bars), --bg-panel (page), --bg (inset), --bg-hover (raised),
    --bg-active (an open tab or segment). */
 
-:root {
+/* Everything below hangs off a class, so the console can load this file too. `--touch` is the
+   target size the components are built on: 44 px on the phone page (.pc-app), the console's
+   control height where a console panel hosts them (.pc-host). */
+.pc-app {
   --touch: 44px;
-  font-size: 16px;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
-body {
-  background: var(--bg-panel);
-  color: var(--text);
-  -webkit-text-size-adjust: 100%;
-}
-
-button {
-  font: inherit;
-  color: inherit;
+.pc-host {
+  --touch: 30px;
 }
 
 .pc-app {

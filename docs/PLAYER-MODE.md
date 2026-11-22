@@ -135,6 +135,8 @@ Each line shows only when it applies, and the warning is absent when neither doe
 
 ### Opening a joined campaign
 
+Built, behind the flag: Open on a Playing card loads the player console in the shell's player role, main keeps the connection (trying where the search finds the table, then the addresses that worked), and the VTT tab shows the picker, then the map or the TV's screen with its overlays, moving one's own tokens, and the box to enter initiative. The strip shows the link, the round and Your turn or You're next. The table's pictures come through `trifold-media://table/…` from main's cache in the app's user-data folder. `smoke/joined.spec.ts` runs it with two copies of the app. Still to come in the console: My characters, Initiative, Quick notes, Dice, the offline view's cached state, and global search.
+
 Opening a Playing campaign shows the player console at once and connects in the background.
 
 - **Live:** the console fills from the server's view and works as described under Player console.
@@ -174,6 +176,7 @@ When the player holds no creature, the VTT tab shows the claim picker (`web/Pick
 
 Reuse notes, from the code:
 
+- **Shared so far.** The phone page's document-level styles are in `web/page.css`, so the console loads `web.css` for the components; moving a token is `web/useMovePlan.ts`, used by both. The files have not moved folders yet.
 - **Shared components move.** Put what both clients use (`MapView`, `ScreenView`, `TvOverlays`, the four tools, `AddCompanion`, `Picker`, `Portrait`, `InitiativeCard`) in a folder both import, and leave `Playing.tsx`, `App.tsx` and `useLayout.ts` as the phone page's own. The tools need the console's control scale in a panel (30 px, `UI-GUIDELINES.md`) and keep the 44 px touch scale on phones: one set of components, two style sheets.
 - **`Picker`** reads the device label from `localStorage` (`connection.ts`); in the player console the name comes from `joined.json`.
 - **Quick notes.** `QuickNotesTool` files into the GM's notes tree through `useCampaignStore`. Give it a notes source (save, list, the Quick Notes folder) that the GM console backs with the campaign store and the player console with `joined/<id>/notes/`.

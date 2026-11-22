@@ -1241,6 +1241,39 @@ body.resizing {
   border-top: 1px solid var(--danger);
 }
 
+/* The player console's VTT tab (docs/PLAYER-MODE.md): the table's map or picker fills the panel. */
+.player-table {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.player-table > .pc-map,
+.player-table > .pc-scroll,
+.player-table > .pc-center {
+  flex: 1;
+  min-height: 0;
+}
+
+.player-table-wait {
+  margin: auto;
+  padding: 24px;
+  text-align: center;
+}
+
+.player-move {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-pending {
+  margin: 0;
+  padding: 16px;
+}
+
 /* Join a campaign (docs/PLAYER-MODE.md): the tables found, one row each. */
 .join-tables {
   list-style: none;

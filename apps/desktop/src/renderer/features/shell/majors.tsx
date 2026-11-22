@@ -2,6 +2,7 @@ import { CampaignPage } from '../campaign/CampaignPage';
 import { CompendiumPage } from '../compendium/CompendiumPage';
 import { EncountersPage } from '../encounters/EncountersPage';
 import { TvPage } from '../presenter/TvPage';
+import { TablePage } from '../joined/TablePage';
 import type { AnyMajorKind } from '../../stores/shellLayout';
 import type { IconName } from './icons';
 
@@ -20,6 +21,11 @@ export const MAJOR_ICON: Record<AnyMajorKind, IconName> = {
   sheets: 'card',
 };
 
+/** A panel of the player console that is still to come; only seen with player mode switched on. */
+function Pending({ children }: { children: string }) {
+  return <p className="muted panel-pending">{children}</p>;
+}
+
 /** Major kind → the feature that fills its tab. Titles live with the layout math. */
 export function MajorBody({ kind }: { kind: AnyMajorKind }) {
   switch (kind) {
@@ -31,10 +37,10 @@ export function MajorBody({ kind }: { kind: AnyMajorKind }) {
       return <EncountersPage />;
     case 'map':
       return <TvPage />;
-    // The player console's own pages arrive with it (docs/PLAYER-MODE.md, phase 2). Nothing
-    // loads a player console until then, so these are never drawn.
     case 'table':
+      return <TablePage />;
+    // Sheets arrives with characters (docs/PLAYER-MODE.md, Part 3).
     case 'sheets':
-      return null;
+      return <Pending>Character sheets are not built yet.</Pending>;
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { useJoinedStore } from '../../stores/joinedStore';
 import { useShellStore } from '../../stores/shellStore';
 import { closeCampaign, switchCampaign } from './campaignFlow';
 import { GlobalSearch } from './GlobalSearch';
@@ -29,6 +30,8 @@ export function TopBar() {
   const layout = useShellStore((s) => s.layout);
   const currentIndex = useShellStore((s) => s.currentPresetIndex)();
   const current = useCampaignStore((s) => s.current);
+  const joined = useJoinedStore((s) => s.current);
+  const closeJoined = useJoinedStore((s) => s.closeCampaign);
   const campaigns = useCampaignStore((s) => s.campaigns);
   const importXml = useCampaignStore((s) => s.importXml);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -68,7 +71,24 @@ export function TopBar() {
           <BrandMark size={MARK} />
           {!inConsole && <BrandWordmark markSize={MARK} />}
         </button>
-        {inConsole ? (
+        {joined && space === 'console' ? (
+          <div className="crumbs">
+            <span className="muted">›</span>
+            <span className="crumb-name" data-testid="joined-crumb">
+              {joined.campaignName || 'Unnamed campaign'}
+            </span>
+            <span className="badge">playing</span>
+            <button
+              type="button"
+              className="chrome-btn"
+              aria-label="Close campaign"
+              title="Close campaign"
+              onClick={closeJoined}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
+        ) : inConsole ? (
           <div className="crumbs" ref={menuRef}>
             <span className="muted">›</span>
             <button
