@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { BackupCopyStatus, BackupFileInfo, BackupInfo } from '@trifold/api';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { useJoinedStore } from '../../stores/joinedStore';
 import { flushPendingSaves } from '../../stores/pendingSaves';
 import { Icon } from '../shell/icons';
 import { SettingRow, SettingsSection } from './SettingsLayout';
@@ -69,6 +70,46 @@ function CopyStatusLine({ status }: { status: BackupCopyStatus }) {
 }
 
 /**
+ * What a copy of a backup, or of a synced Library folder, lets someone else do
+ * (docs/PLAYER-MODE.md, "Claims follow the Library"). One line per thing the Library holds that
+ * is worth keeping to oneself; remote play adds its line here, not a second warning.
+ */
+export function sharingEffects(library: { joinedCampaigns: number }): string[] {
+  const effects: string[] = [];
+  if (library.joinedCampaigns > 0) {
+    effects.push('play your characters in the campaigns you joined');
+  }
+  return effects;
+}
+
+/** The lines that apply to the open Library; empty when there is nothing to warn about. */
+function useSharingEffects(): string[] {
+  const joinedCampaigns = useJoinedStore((s) => s.joined.length);
+  const loadJoined = useJoinedStore((s) => s.load);
+  useEffect(() => {
+    void loadJoined();
+  }, [loadJoined]);
+  return sharingEffects({ joinedCampaigns });
+}
+
+/** The one warning about sharing backups, beside where a backup is sent somewhere else. */
+function SharingWarning({ effects }: { effects: readonly string[] }) {
+  return (
+    <div className="banner warn wraps" role="note" aria-label="Sharing backups">
+      <span>
+        <strong>Keep your backups to yourself.</strong> Anyone with a copy of a backup, or of your
+        Library folder if it is synced, could:
+        <ul className="backup-sharing-effects">
+          {effects.map((effect) => (
+            <li key={effect}>{effect}</li>
+          ))}
+        </ul>
+      </span>
+    </div>
+  );
+}
+
+/**
  * Settings › Backups (DESIGN.md §4.2 and §10 M1 item 8, ADR 0015; layout ADR 0054): the schedule,
  * back up now, the second location, and restore from a file or the list.
  */
@@ -85,6 +126,7 @@ export function BackupsSection() {
   const [message, setMessage] = useState<string | null>(null);
   const settings = library?.settings?.backups ?? null;
   const hasLibrary = library?.ok === true;
+  const sharing = useSharingEffects();
 
   const refresh = useCallback(async () => {
     try {
@@ -230,6 +272,7 @@ export function BackupsSection() {
       <SettingRow
         label="Second copy"
         hint="Also copy every backup to another drive or a synced folder."
+        below={sharing.length > 0 ? <SharingWarning effects={sharing} /> : undefined}
         status={
           copy?.folder ? (
             <>
