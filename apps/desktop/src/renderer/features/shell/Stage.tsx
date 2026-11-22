@@ -29,6 +29,7 @@ import { usePresenterStore } from '../../stores/presenterStore';
 import { useSceneStore } from '../../stores/sceneStore';
 import { Icon, type IconName } from './icons';
 import { MAJOR_ICON, MajorBody } from './majors';
+import { PanelBoundary } from './PanelBoundary';
 import { WebTabIconPicker, WebTabPage } from './WebTabPage';
 import { hk } from '../../platform';
 import { useTableStore } from '../../stores/tableStore';
@@ -241,7 +242,9 @@ export function Stage() {
                       role="tabpanel"
                       aria-label={tabTitle(kind, webTabs)}
                     >
-                      <MajorBody kind={kind} />
+                      <PanelBoundary name={tabTitle(kind, webTabs)}>
+                        <MajorBody kind={kind} />
+                      </PanelBoundary>
                     </div>
                   );
                 })}
@@ -259,7 +262,9 @@ export function Stage() {
       <div className="stage-parked" hidden aria-hidden="true">
         {parked.map((kind) => (
           <div key={kind} data-major={kind}>
-            <MajorBody kind={kind} />
+            <PanelBoundary name={tabTitle(kind, webTabs)}>
+              <MajorBody kind={kind} />
+            </PanelBoundary>
           </div>
         ))}
       </div>

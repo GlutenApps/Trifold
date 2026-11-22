@@ -3,6 +3,7 @@ import { MINOR_TITLES } from '../../stores/shellLayout';
 import { useFit, useShellStore } from '../../stores/shellStore';
 import { Icon } from './icons';
 import { MINOR_ICON, MinorBody } from './minors';
+import { PanelBoundary } from './PanelBoundary';
 
 /**
  * A minor opened while the dock shows icons only (ADR 0004, dock; the dock is never hidden
@@ -58,7 +59,10 @@ export function Flyout() {
         </button>
       </header>
       <div className="fly-body">
-        <MinorBody kind={flyout} />
+        {/* Keyed by tool: opening another tool starts clean. */}
+        <PanelBoundary key={flyout} name={MINOR_TITLES[flyout]}>
+          <MinorBody kind={flyout} />
+        </PanelBoundary>
       </div>
     </div>
   );

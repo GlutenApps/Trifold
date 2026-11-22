@@ -163,6 +163,12 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           : join(app.getAppPath(), 'out', 'THIRD_PARTY_NOTICES.txt');
         return readFile(file, 'utf8').catch(() => null);
       },
+      async reportError(where, detail) {
+        // From the window, so it is held to a size and to text before it is written.
+        ctx.logger.error(
+          `window: ${String(where).slice(0, 80)} stopped: ${String(detail).slice(0, 4000)}`,
+        );
+      },
       async openLogsFolder() {
         const dir = ctx.session.logDir ?? join(app.getPath('userData'), 'logs');
         await mkdir(dir, { recursive: true });
