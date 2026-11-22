@@ -4,7 +4,7 @@ import { app, dialog, shell } from 'electron';
 import { reviewBooks, sourceOrder, type BookReview } from '@trifold/rules';
 import { TEXT_SIZE_ZOOM, type Source } from '@trifold/schema';
 import { reopenLibrary } from './libraryOpen';
-import { EVENT_CHANNELS, type TrifoldApi } from '@trifold/api';
+import { EVENT_CHANNELS, featureFlags, type TrifoldApi } from '@trifold/api';
 import type { AppConfigStore } from './appConfig';
 import { copyStatus } from './backupCopy';
 import { createCampaignApi } from './campaignApi';
@@ -129,6 +129,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           node: process.versions.node,
           platform: process.platform,
           userDataPath: app.getPath('userData'),
+          flags: featureFlags(process.env),
         };
       },
       async openSystemPage(page) {

@@ -10,8 +10,21 @@ import { Portrait } from './Portrait';
  * over. Either way the campaign's reclaim mode decides: at once, with the PIN, or after the DM
  * says yes.
  */
-export function Picker({ view, conn }: { view: ClientView; conn: Connection }) {
-  const [label, setLabel] = useState(readLabel);
+export function Picker({
+  view,
+  conn,
+  deviceName,
+}: {
+  view: ClientView;
+  conn: Connection;
+  /**
+   * The name this device goes by when its host already knows it (the player console,
+   * PLAYER-MODE.md). Absent, the page asks for one and remembers it in the browser.
+   */
+  deviceName?: string;
+}) {
+  const [typed, setLabel] = useState(readLabel);
+  const label = deviceName ?? typed;
   const [busy, setBusy] = useState(false);
   /** The character being asked about: a takeover to confirm, or a PIN to type. */
   const [asking, setAsking] = useState<{ entry: PickerEntry; step: 'takeover' | 'pin' } | null>(
@@ -29,7 +42,7 @@ export function Picker({ view, conn }: { view: ClientView; conn: Connection }) {
   }, [conn.error]);
 
   const send = (entry: PickerEntry, withPin?: string) => {
-    saveLabel(label);
+    if (deviceName === undefined) saveLabel(label);
     setBusy(true);
     conn.clearError();
     conn.send({
@@ -156,15 +169,17 @@ export function Picker({ view, conn }: { view: ClientView; conn: Connection }) {
           ))}
         </ul>
       )}
-      <label className="pc-field">
-        <span>This device’s name (optional)</span>
-        <input
-          value={label}
-          maxLength={40}
-          placeholder="Sam’s phone"
-          onChange={(ev) => setLabel(ev.target.value)}
-        />
-      </label>
+      {deviceName === undefined && (
+        <label className="pc-field">
+          <span>This device’s name (optional)</span>
+          <input
+            value={label}
+            maxLength={40}
+            placeholder="Sam’s phone"
+            onChange={(ev) => setLabel(ev.target.value)}
+          />
+        </label>
+      )}
     </main>
   );
 }

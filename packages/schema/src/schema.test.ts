@@ -7,6 +7,7 @@ import {
   isWebUrl,
   normalizeWebUrl,
   LibrarySettings,
+  PlayerShellLayout,
   ShellLayout,
   StageGroup,
   WebTab,
@@ -37,7 +38,7 @@ describe('LibrarySettings', () => {
         sfxVolume: 0.8,
         crossfadeSec: 4,
       },
-      workspace: { presets: [], seeded: false, consoles: {}, webTabs: [] },
+      workspace: { presets: [], seeded: false, consoles: {}, webTabs: [], playerConsoles: {} },
       sampleCampaign: { added: false },
     });
   });
@@ -50,6 +51,43 @@ describe('LibrarySettings', () => {
     const parsed = LibrarySettings.parse({ schemaVersion: 5, theme: 'light', playerDisplayId: 42 });
     expect(parsed.theme).toBe('light');
     expect(parsed.playerDisplayId).toBe(42);
+  });
+});
+
+describe('PlayerShellLayout (docs/PLAYER-MODE.md)', () => {
+  const layout = {
+    stage: { groups: [{ tabs: ['table', 'character', 'web:01A'], active: 'table' }] },
+    dock: { sections: [{ tool: 'myCreature', open: true }, { tool: 'initiative' }] },
+  };
+
+  it('takes the player kinds and web tabs, with the stage and dock defaults', () => {
+    const parsed = PlayerShellLayout.parse(layout);
+    expect(parsed.stage.groups[0]?.tabs).toEqual(['table', 'character', 'web:01A']);
+    expect(parsed.stage.split).toBe(0.5);
+    expect(parsed.dock.state).toBe('wide');
+    expect(parsed.dock.sections[1]).toEqual({ tool: 'initiative', open: false });
+  });
+
+  it('refuses the GM console kinds, and the GM layout refuses the player kinds', () => {
+    const gmTab = { ...layout, stage: { groups: [{ tabs: ['encounters'], active: null }] } };
+    expect(PlayerShellLayout.safeParse(gmTab).success).toBe(false);
+    const gmTool = { ...layout, dock: { sections: [{ tool: 'scenes' }] } };
+    expect(PlayerShellLayout.safeParse(gmTool).success).toBe(false);
+    expect(
+      ShellLayout.safeParse({
+        stage: { groups: [{ tabs: ['table'], active: null }] },
+        dock: {},
+      }).success,
+    ).toBe(false);
+  });
+
+  it('is kept per joined campaign in the workspace, beside the GM consoles', () => {
+    const parsed = LibrarySettings.parse({
+      schemaVersion: 5,
+      workspace: { playerConsoles: { '01HZXCAMPAIGN': layout } },
+    });
+    expect(parsed.workspace.playerConsoles['01HZXCAMPAIGN']?.dock.sections).toHaveLength(2);
+    expect(parsed.workspace.consoles).toEqual({});
   });
 });
 

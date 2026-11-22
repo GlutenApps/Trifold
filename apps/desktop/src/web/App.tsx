@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useConnection, type Connection } from './connection';
+import { useEffect, useState } from 'react';
+import { createWebSocketClient, useConnection, type Connection } from './connection';
 import { Picker } from './Picker';
 import { Playing } from './Playing';
 import { useLayout } from './useLayout';
@@ -10,7 +10,8 @@ import { useLayout } from './useLayout';
  * 360 px wide, with 44 px touch targets and nothing that needs hover.
  */
 export function App() {
-  const conn = useConnection();
+  const [client] = useState(createWebSocketClient);
+  const conn = useConnection(client);
   const { view } = conn;
   const layout = useLayout();
   const playing = !!view?.mine.length;
