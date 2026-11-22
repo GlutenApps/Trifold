@@ -571,7 +571,7 @@ export function EncountersPage() {
         <CreatureEditor
           key={creatureEdit.record.id}
           record={creatureEdit.record}
-          own={false}
+          own={creatureEdit.own}
           original={creatureEdit.original}
           origin={creatureEdit.origin}
           title={creatureEdit.title}

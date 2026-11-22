@@ -19,7 +19,10 @@ the Library's homebrew, beside creatures meant for every campaign.
 
 - **Encounter builder:** on a compendium creature's row the pencil is **Edit**. It opens the
   monster editor in place of the builder, on a copy of the row's stat block with the row's label
-  as its name and its HP override as its HP. Other rows (PCs, NPCs, custom) keep the pencil as
+  as its name and its HP override as its HP. *(Amended 2026-11-21:)* a creature that is already
+  the DM's own (homebrew or this campaign's) opens as it is, so Save defaults to **Update it**;
+  only a pre-made one (SRD, an imported book) opens as a copy, named after the creature or the
+  row's label, never "Copy of …". The same holds for **Edit** in the tracker. Other rows (PCs, NPCs, custom) keep the pencil as
   their label, since they have no stat block. The book icon goes.
 - **Tracker:** a compendium creature has **Edit**, opening the editor in the tracker's panel; the
   fight stays loaded and nothing else changes until Save. No modal (CLAUDE.md UI conventions).
