@@ -30,6 +30,18 @@ describe('area shapes', () => {
     );
   });
 
+  it("keeps a cube's and a line's origin in the middle of the starting face, not on a corner", () => {
+    for (const kind of ['cube', 'line'] as const) {
+      const outline = areaOutline(
+        { kind, origin: { x: 100, y: 100 }, aim: { x: 100, y: 400 }, sizeFt: 10 },
+        grid,
+      );
+      expect(outline.kind === 'polygon' && outline.origin).toEqual({ x: 100, y: 100 });
+      // The corners of the starting face sit either side of it.
+      expect(outline.kind === 'polygon' && outline.points[0]).not.toEqual({ x: 100, y: 100 });
+    }
+  });
+
   it('covers a 5-ft line one square wide along its length', () => {
     // Along the middle of row 2, a 30-ft line to the right covers 6 squares.
     const line: AreaShape = {
@@ -63,6 +75,7 @@ describe('area shapes', () => {
         { x: 250, y: 275 },
         { x: 250, y: 125 },
       ],
+      origin: { x: 100, y: 200 },
     });
     const cells = areaSquares(cone, grid, map);
     // A 15-ft cone right from a corner: 1 square, then 2, then 2 (the 2024 rules' template).

@@ -36,7 +36,12 @@ export interface AreaGrid {
 }
 
 export type AreaOutline =
-  | { kind: 'polygon'; points: Array<{ x: number; y: number }> }
+  | {
+      kind: 'polygon';
+      points: Array<{ x: number; y: number }>;
+      /** The point of origin: a cone's tip, the middle of a cube's or line's starting face. */
+      origin: { x: number; y: number };
+    }
   | { kind: 'circle'; cx: number; cy: number; r: number };
 
 const PX_PER_FT = (grid: AreaGrid) => grid.cellPx / 5;
@@ -64,12 +69,13 @@ export function areaOutline(shape: AreaShape, grid: AreaGrid): AreaOutline {
     y: o.y + d.y * along + n.y * across,
   });
   if (shape.kind === 'cone') {
-    return { kind: 'polygon', points: [o, at(size, size / 2), at(size, -size / 2)] };
+    return { kind: 'polygon', points: [o, at(size, size / 2), at(size, -size / 2)], origin: o };
   }
   const half = shape.kind === 'cube' ? size / 2 : (LINE_WIDTH_FT * PX_PER_FT(grid)) / 2;
   return {
     kind: 'polygon',
     points: [at(0, half), at(size, half), at(size, -half), at(0, -half)],
+    origin: o,
   };
 }
 
