@@ -13,6 +13,7 @@ import { createCampaignApi } from './campaignApi';
 import { createArtApi } from './art';
 import { createMusicApi } from './musicApi';
 import { createNoteTemplatesApi } from './noteTemplates';
+import { createCharactersApi } from './characters';
 import { createPhoneAudioApi } from './phoneAudio/phoneAudioApi';
 import type { PhoneAudioReceiver } from './phoneAudio/receiver';
 import type { IconResources } from './icons';
@@ -565,6 +566,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
 
     ...createCampaignApi(ctx.session, ctx.logger),
     ...createNoteTemplatesApi(ctx.session, ctx.logger),
+    ...createCharactersApi(ctx.session, ctx.logger),
     ...createMusicApi(ctx.session, ctx.windows),
     ...createArtApi(ctx.session),
     ...createPhoneAudioApi(ctx.phoneAudio, ctx.config, ctx.logger),

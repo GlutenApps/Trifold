@@ -2856,3 +2856,202 @@ button.chrome-btn:disabled:not(.primary, .tally) {
 .table-roll-switch {
   margin-bottom: 8px;
 }
+
+/* Library › Characters and a character's editor (ADR 0068). */
+.characters-page,
+.character-editor {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.character-kinds {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.character-kind {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.character-kind > span {
+  display: grid;
+  gap: 2px;
+}
+
+.character-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.character-open {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg-panel);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.character-open:hover,
+.character-open:focus-visible {
+  background: var(--bg-hover);
+}
+
+.character-head {
+  flex-wrap: wrap;
+}
+
+.character-name {
+  min-width: min(240px, 100%);
+}
+
+.character-body {
+  display: grid;
+  gap: 16px;
+}
+
+.sheet-section {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.sheet-section h2,
+.sheet-section h3 {
+  margin: 0;
+  color: var(--text);
+}
+
+.sheet-section h2 {
+  font-size: 16px;
+}
+
+.sheet-section h3 {
+  font-size: 13px;
+}
+
+/* Labels sit over their fields, text fields take the column's width. */
+.sheet-section .field {
+  align-items: stretch;
+  text-align: left;
+}
+
+.sheet-section .field input[type='text'],
+.sheet-section .field input[type='url'],
+.sheet-section .field select,
+.sheet-section .field textarea {
+  width: 100%;
+}
+
+.sheet-section .field .num-field,
+.sheet-section .field .derived-field {
+  align-self: flex-start;
+}
+
+.sheet-section > .btn {
+  justify-self: start;
+}
+
+.new-character-way {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.new-character-way .wide-input {
+  width: min(360px, 100%);
+}
+
+.sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 12px;
+  align-items: end;
+}
+
+.num-field {
+  width: 6em;
+}
+
+.derived-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.derived-field.overridden .num-field {
+  border-color: var(--warn);
+}
+
+.sheet-mod {
+  min-width: 2.5em;
+  text-align: center;
+}
+
+.sheet-abilities {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px 12px;
+}
+
+.sheet-ability {
+  display: grid;
+  gap: 4px;
+}
+
+.sheet-skills {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 4px 16px;
+}
+
+.sheet-skill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sheet-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.sheet-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sheet-row.stacked {
+  display: grid;
+}
+
+.sheet-row .grow {
+  min-width: min(160px, 100%);
+}

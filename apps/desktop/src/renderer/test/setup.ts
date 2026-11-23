@@ -9,7 +9,12 @@ import {
   type TrifoldBridge,
   type UpdateStatus,
 } from '@trifold/api';
-import { defaultLibrarySettings, type CompendiumRecord, type Playlist } from '@trifold/schema';
+import {
+  defaultLibrarySettings,
+  type Character,
+  type CompendiumRecord,
+  type Playlist,
+} from '@trifold/schema';
 
 /**
  * Vitest setup for the renderer. `installBridgeMock` builds a complete `window.trifold` of
@@ -351,6 +356,13 @@ export function installBridgeMock(): TrifoldBridge {
       capture: vi.fn(async () => {
         throw new Error('not mocked');
       }),
+    },
+    characters: {
+      list: vi.fn(async () => []),
+      save: vi.fn(async (c: Character) => c),
+      remove: vi.fn(async () => undefined),
+      exportFile: vi.fn(async () => null),
+      importFile: vi.fn(async () => null),
     },
     noteTemplates: {
       list: vi.fn(async () => []),

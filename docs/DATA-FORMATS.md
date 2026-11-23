@@ -268,6 +268,7 @@ Library/
   art/<kind>/<key>.png         creature art (§5.4)
   templates/notes/<id>.json    note templates (§5.4)
   campaigns/<slug>/            one folder per campaign (§5.4)
+  characters/<id>.json         the player's characters (§5.7)
   music/library.json           music library (§5.5)
   music/playlists/<id>.json    playlists (§5.5)
   backups/                     daily backup zips
@@ -366,6 +367,36 @@ Kind (`music`, `ambience`, `sfx`) is edited as a tag: the first kind word among 
 Derived, and rebuildable from the files at any time. Tables: `sources(id, name, kind, enabled, file_hash, record_count, campaigns, priority)`, `records(id, kind, key, name, display_name, source_id, edition, cr, cr_num, type, size, environment, is_npc, level, type_code, rarity, book_key, book, starred, book_off, chosen, json)`, `records_fts(id UNINDEXED, name, text)` (FTS5) and `meta` (see `apps/desktop/src/main/index/IndexDb.ts` for the exact DDL). `campaigns` is `Source.campaignIds` as a JSON array, NULL for every campaign; `priority` follows the default source order (ADR 0027). `book_key` and `book` are the record's book (ADR 0061): `bookKey` of its `sourceBook`, and the name, both empty when it names none. `starred` and `book_off` copy `library.json`'s `books`, and `chosen` its `duplicateChoices` (ADR 0063); all three are set after every sync, import and re-parse. A book that is off is left out of every query. Which copy of a record answers: the chosen copy, homebrew, a starred book, imported files, the 2024 SRD, the legacy SRD.
 
 On each sync, a source is re-read when its `fileHash`, enabled flag or name differs from its index row, and rows for sources that no longer exist are dropped. Homebrew and campaign creatures are virtual sources whose hash follows their files. When the index layout version stored in `meta` differs from the app's, the tables are dropped and rebuilt; `library.json` records the same version in `indexVersion`. Campaign entities other than creatures are not indexed; they load from their JSON files.
+
+### 5.7 `characters/<id>.json`
+
+A player's character (docs/PLAYER-MODE.md, Part 3; ADR 0068), schema `Character` in `packages/schema/src/character.ts`, file kind `character` at version 1. Characters belong to the Library; a joined campaign links one by id (`joined.json`'s `characterId`).
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "01J…",
+  "name": "Aria",
+  "kind": "trifold",
+  "edition": "2024",
+  "sheetUrl": "https://…",
+  "numbers": { "classText": "", "level": 1, "maxHp": 10, "ac": 10, "initiativeBonus": 0, "speed": 30,
+               "passives": { "perception": 10, "insight": 10, "investigation": 10 }, "saves": {} },
+  "sheet": {
+    "species": "", "background": "", "classes": [{ "name": "Rogue", "subclass": "", "level": 3 }],
+    "abilities": { "str": 10, "dex": 16, "con": 12, "int": 13, "wis": 10, "cha": 14 },
+    "saves": ["dex", "int"], "skills": { "stealth": "expertise" }, "otherProficiencies": "",
+    "maxHp": 21, "armor": { "kind": "light", "base": 11, "shield": false, "bonus": 0 }, "speed": 30,
+    "spellcastingAbility": null, "attacks": [], "features": [], "spells": [], "equipment": [],
+    "overrides": { "ac": 15 }
+  },
+  "notes": "",
+  "createdAt": "…",
+  "updatedAt": "…"
+}
+```
+
+`kind` is `external` (the sheet is kept elsewhere: `numbers` holds the table numbers as entered, and `sheet` is absent) or `trifold` (`sheet` holds the sheet, and the table numbers are worked out from it by `tableNumbers` in `packages/rules/src/character/`; `numbers` is left as it was). `overrides` holds numbers set by hand over what the sheet works out, by key (`ac`, `initiative`, `save.dex`, `skill.stealth`, …). A sheet's attacks, features, spells and items may carry `ref: { kind, key, name }`, a compendium record by kind and key with its name kept for when the record is gone. `sheetUrl` is an `http` or `https` address only. A character exported from the Library is this same JSON; importing one whose id is taken gives it a new id.
 
 ---
 

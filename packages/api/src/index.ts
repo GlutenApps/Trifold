@@ -14,6 +14,7 @@ import type {
   LibrarySettings,
   Note,
   NoteTemplate,
+  Character,
   NPC,
   PCCard,
   PinnedRoll,
@@ -1308,6 +1309,24 @@ export interface TrifoldApi {
      */
     capture(input: { title: string; body: string }): Promise<{ note: Note; folder: Note }>;
   };
+  /**
+   * The player's characters (docs/PLAYER-MODE.md, Part 3; ADR 0068): `characters/<id>.json` in
+   * the Library, shared by every joined campaign.
+   */
+  characters: {
+    /** Every character, by name. A file that cannot be read is logged and left out. */
+    list(): Promise<Character[]>;
+    /** Writes the character; `updatedAt` is set. Resolves to what was written. */
+    save(character: Character): Promise<Character>;
+    remove(characterId: string): Promise<void>;
+    /** Saves a copy as a JSON file the player picks; null when cancelled. Resolves to its path. */
+    exportFile(characterId: string): Promise<string | null>;
+    /**
+     * Reads a character JSON file the player picks into the Library, as a new character when
+     * its id is taken; null when cancelled. Throws on a file that is not a character.
+     */
+    importFile(): Promise<Character | null>;
+  };
   /** Starting bodies for new notes, shared by every campaign in the Library (ADR 0010). */
   noteTemplates: {
     /** Seeds the session-prep template the first time a Library is asked. */
@@ -1641,6 +1660,7 @@ export const API_METHODS = {
   ],
   notes: ['save', 'remove', 'move', 'capture'],
   noteTemplates: ['list', 'save', 'remove'],
+  characters: ['list', 'save', 'remove', 'exportFile', 'importFile'],
   npcs: ['save', 'remove', 'copyFrom', 'fromRecord'],
   scenes: ['save', 'remove', 'importImage'],
   counters: ['save', 'remove', 'move'],

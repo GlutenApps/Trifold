@@ -1,6 +1,8 @@
 import { useMusicStore } from '../../stores/musicStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useShellStore, type LibraryPage } from '../../stores/shellStore';
+import { useAppStore } from '../../stores/appStore';
+import { CharactersPage } from '../character/CharactersPage';
 import { MusicFolders } from '../music/MusicFolders';
 import { SettingsPage } from '../settings/SettingsPage';
 import { Icon, type IconName } from '../shell/icons';
@@ -16,6 +18,7 @@ import { hk } from '../../platform';
  */
 const PAGES: Array<{ id: LibraryPage; label: string; icon: IconName }> = [
   { id: 'campaigns', label: 'Campaigns', icon: 'campaign' },
+  { id: 'characters', label: 'Characters', icon: 'person' },
   { id: 'compendium', label: 'Compendium', icon: 'compendium' },
   { id: 'images', label: 'Images', icon: 'image' },
   { id: 'music', label: 'Music folders', icon: 'music' },
@@ -28,6 +31,9 @@ export function LibraryView() {
   const setPage = useShellStore((s) => s.setLibraryPage);
   const campaigns = useCampaignStore((s) => s.campaigns.length);
   const tracks = useMusicStore((s) => s.library?.tracks.length ?? 0);
+  // Characters are player mode's (docs/PLAYER-MODE.md, Part 3), behind its flag until finished.
+  const playerMode = useAppStore((s) => s.info?.flags.playerMode ?? false);
+  const pages = PAGES.filter((p) => p.id !== 'characters' || playerMode);
 
   const counts: Partial<Record<LibraryPage, string>> = {
     campaigns: String(campaigns),
@@ -38,7 +44,7 @@ export function LibraryView() {
   return (
     <div className="library" data-testid="library">
       <nav className="lib-nav" aria-label="Library">
-        {PAGES.map((p) => (
+        {pages.map((p) => (
           <button
             key={p.id}
             type="button"
@@ -62,6 +68,7 @@ export function LibraryView() {
       </nav>
       <div className="lib-content">
         {page === 'campaigns' && <CampaignsPage />}
+        {page === 'characters' && playerMode && <CharactersPage />}
         {page === 'compendium' && <CompendiumLibraryPage />}
         {page === 'images' && <ImagesPage />}
         {page === 'music' && (

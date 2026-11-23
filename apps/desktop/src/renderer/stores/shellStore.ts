@@ -67,7 +67,8 @@ export type Space = 'library' | 'console';
 /** Tools that pop up from their own button rather than living in the dock (ADR 0009), plus the
  *  global search's results under its field in the top bar (ADR 0017). */
 export type PopKind = 'dice' | 'hotkeys' | 'layouts' | 'search' | 'tray';
-export type LibraryPage = 'campaigns' | 'compendium' | 'images' | 'music' | 'settings';
+export type LibraryPage =
+  'campaigns' | 'characters' | 'compendium' | 'images' | 'music' | 'settings';
 
 interface ShellState {
   space: Space;
