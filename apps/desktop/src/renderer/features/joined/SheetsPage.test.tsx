@@ -10,6 +10,7 @@ import { useShellStore } from '../../stores/shellStore';
 import { MyCharactersTool } from './MyCharactersTool';
 import { PlayerTableProvider } from './PlayerTable';
 import { SheetsPage } from './SheetsPage';
+import { TablePage } from './TablePage';
 
 const now = '2026-11-23T00:00:00.000Z';
 const campaign = (characterId: string | null = null): JoinedSummary => ({
@@ -223,5 +224,33 @@ describe('My characters and Sheets (ADR 0069)', () => {
     expect(useCharacterStore.getState().characters.find((c) => c.id === linked)?.name).toBe('Wren');
     await waitFor(() => expect(openMajor).toHaveBeenCalledWith('sheets'));
     expect(useCharacterStore.getState().editingSheet).toBe(true);
+  });
+});
+
+describe('New PC from player sheet, the player’s side (ADR 0072)', () => {
+  it('asks the GM to add the linked character while holding nothing', async () => {
+    useJoinedStore.setState({ current: campaign('K1') });
+    const user = userEvent.setup();
+    mount(<TablePage />, {
+      ...view([]),
+      picker: [{ kind: 'pc', id: 'p1', name: 'Brannoc', inUse: false, holderOnline: false }],
+    });
+    await user.click(await screen.findByRole('button', { name: 'Ask your GM to add Bren' }));
+    const sent = vi.mocked(window.trifold.joined.send).mock.calls.at(-1)![1];
+    expect(sent).toMatchObject({
+      type: 'sheetOffer',
+      label: 'Sam',
+      offer: { name: 'Bren', numbers: { level: 3, ac: 13 }, sheetUrl: 'https://example.test/bren' },
+    });
+    expect(sent).not.toHaveProperty('creatureId');
+  });
+
+  it('offers nothing without a linked character', async () => {
+    mount(<TablePage />, {
+      ...view([]),
+      picker: [{ kind: 'pc', id: 'p1', name: 'Brannoc', inUse: false, holderOnline: false }],
+    });
+    await screen.findByRole('heading', { name: /Pick your character/ });
+    expect(screen.queryByTestId('ask-new-pc')).toBeNull();
   });
 });

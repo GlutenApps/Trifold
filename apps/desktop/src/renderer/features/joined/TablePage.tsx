@@ -6,7 +6,9 @@ import { ScreenView } from '../../../web/ScreenView';
 import { TvBottom, TvTop } from '../../../web/TvOverlays';
 import { useMovePlan } from '../../../web/useMovePlan';
 import { rulerLabel } from '../presenter/ruler';
+import { tableNumbers } from '@trifold/rules';
 import { ChangeAddress } from './ChangeAddress';
+import { useLinkedCharacter } from './CharacterLink';
 import { creatureKeyOf, lastSeenText, linkSentence, linkText, usePlayerTable } from './PlayerTable';
 import '../../../web/web.css';
 
@@ -59,10 +61,44 @@ export function TablePage() {
           </p>
         </div>
       ) : view.mine.length === 0 ? (
-        <Picker view={view} conn={conn} deviceName={campaign.displayName} />
+        <>
+          <Picker view={view} conn={conn} deviceName={campaign.displayName} />
+          {!conn.waiting && <AskForNewPc conn={conn} label={campaign.displayName} />}
+        </>
       ) : (
         <Table view={view} conn={conn} />
       )}
+    </div>
+  );
+}
+
+/**
+ * New PC from player sheet (ADR 0072): holding nothing, a player whose character is linked here
+ * asks the GM to add it as a new PC. The GM makes the card from its numbers and hands it over.
+ */
+function AskForNewPc({ conn, label }: { conn: Connection; label: string }) {
+  const { character } = useLinkedCharacter();
+  if (!character) return null;
+  return (
+    <div className="row ask-new-pc" data-testid="ask-new-pc">
+      <span className="muted small grow">Not on the list?</span>
+      <button
+        type="button"
+        className="btn"
+        onClick={() =>
+          conn.send({
+            type: 'sheetOffer',
+            label,
+            offer: {
+              name: character.name,
+              numbers: tableNumbers(character),
+              ...(character.sheetUrl ? { sheetUrl: character.sheetUrl } : {}),
+            },
+          })
+        }
+      >
+        Ask your GM to add {character.name}
+      </button>
     </div>
   );
 }

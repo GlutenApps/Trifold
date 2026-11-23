@@ -80,6 +80,21 @@ describe('sheet updates on the GM’s side (ADR 0071)', () => {
   });
 });
 
+describe('New PC from player sheet (ADR 0072)', () => {
+  it('makes a card from the offer and hands it to the player who asked', async () => {
+    const savePc = vi.fn(async (pc: PCCard) => ({ ...pc, id: 'new-pc' }));
+    useCampaignStore.setState({
+      current: { campaign: { id: 'c1' }, pcs: [], scenes: [] } as never,
+      savePc: savePc as never,
+    });
+    await applyTableSheet({ deviceLabel: 'Sam', pcId: null, offer: levelUp, requestId: 'r9' });
+    expect(savePc).toHaveBeenCalledWith(
+      expect.objectContaining({ id: '', name: 'Brannoc Hale', level: 5, maxHp: 24 }),
+    );
+    expect(window.trifold.table.grantNewPc).toHaveBeenCalledWith('r9', 'new-pc');
+  });
+});
+
 describe('sheet updates in the Player devices pop-up (ADR 0071)', () => {
   const ON: TableStatus = {
     ...TABLE_OFF,
@@ -145,6 +160,31 @@ describe('sheet updates in the Player devices pop-up (ADR 0071)', () => {
       );
     });
     expect(window.trifold.table.answerSheet).toHaveBeenCalledWith('r1', false);
+  });
+
+  it('asks before adding a new PC from a player’s sheet', async () => {
+    useTableStore.setState({
+      status: {
+        ...ON,
+        sheetOffers: [
+          {
+            requestId: 'r2',
+            label: 'Wren’s laptop',
+            pcId: null,
+            creatureName: 'Wren',
+            offer: { ...levelUp, name: 'Wren' },
+          },
+        ],
+      },
+    });
+    render(<PlayerDevicesPop open onToggle={() => undefined} onClose={() => undefined} />);
+    const offer = screen.getByTestId('sheet-offer');
+    expect(offer).toHaveTextContent('Wren’s laptop asks to add Wren as a new PC');
+    expect(offer).toHaveTextContent('Fighter · AC 16 · 24 HP');
+    await act(async () => {
+      fireEvent.click(within(offer).getByRole('button', { name: 'Add Wren as a PC' }));
+    });
+    expect(window.trifold.table.answerSheet).toHaveBeenCalledWith('r2', true);
   });
 
   it('turns on Accept sheet updates automatically', async () => {

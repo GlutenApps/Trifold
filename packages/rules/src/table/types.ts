@@ -401,8 +401,12 @@ export type ClientMessage =
   | { type: 'keepSummon'; tokenId: string }
   /** A Table roll (ADR 0059): the roller's syntax; the DM's Trifold makes the roll. */
   | { type: 'roll'; expression: string }
-  /** The held PC's numbers from the player's linked character, for the GM to accept (ADR 0071). */
-  | { type: 'sheetOffer'; creatureId: string; offer: SheetOffer };
+  /**
+   * The held PC's numbers from the player's linked character, for the GM to accept (ADR 0071).
+   * Without `creatureId`, a device holding nothing asks the GM to add the character as a new PC
+   * (ADR 0072); `label` is the name the GM's device list shows.
+   */
+  | { type: 'sheetOffer'; creatureId?: string; offer: SheetOffer; label?: string };
 
 /** What main hands the console to do about summons. */
 export type TableSummonEvent =

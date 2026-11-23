@@ -165,7 +165,7 @@ a connection dot.
 | `releaseOne {creatureKind, creatureId}` | Release one companion |
 | `summon {…}`, `dismiss {tokenId}`, `keepSummon {tokenId}` | Summoning |
 | `roll {expression}` | A Table roll from a player's Trifold: the DM's Trifold makes it (ADR 0059) |
-| `sheetOffer {creatureId, offer}` | A player's Trifold offers its linked character's table numbers for the PC it holds (ADR 0071): checked like an intent, then held for the DM or accepted automatically |
+| `sheetOffer {creatureId?, offer, label?}` | A player's Trifold offers its linked character's table numbers for the PC it holds (ADR 0071): checked like an intent, then held for the DM or accepted automatically. Without `creatureId`, a device holding nothing asks for a new PC from the sheet, which always waits for the DM (ADR 0072) |
 
 | Server sends | Meaning |
 | --- | --- |

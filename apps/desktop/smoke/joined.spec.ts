@@ -293,6 +293,26 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(offerRow).toHaveCount(0);
     await expect(page.getByTestId('sheet-answer')).toContainText('took its numbers');
     await expect(row).toContainText('AC 13', { timeout: 10_000 });
+
+    // New PC from player sheet (ADR 0072): holding nothing, the player asks the GM to add their
+    // character; the GM adds it, and the new card is the player's at once.
+    await page.getByRole('tab', { name: 'VTT', exact: true }).click();
+    await page
+      .getByTestId('my-characters')
+      .getByRole('button', { name: 'Switch character' })
+      .click();
+    await expect(table.getByRole('heading', { name: 'Pick your character' })).toBeVisible();
+    await page.getByRole('button', { name: 'Ask your GM to add Brannoc Hale' }).click();
+    await expect(table.getByText('Asked the DM for Brannoc Hale…')).toBeVisible();
+    await expect(offerRow).toContainText('asks to add Brannoc Hale as a new PC', {
+      timeout: 15_000,
+    });
+    await offerRow.getByRole('button', { name: 'Add Brannoc Hale as a PC' }).click();
+    await expect(table.getByRole('heading', { name: 'Pick your character' })).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    await expect(row).toContainText('AC 13');
+    await expect(page.getByTestId('sheet-answer')).toContainText('took its numbers');
     await gmPage.keyboard.press('Escape');
     await page.getByRole('tab', { name: 'VTT', exact: true }).click();
 

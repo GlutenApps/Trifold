@@ -206,6 +206,42 @@ function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boo
           {(status!.sheetOffers?.length ?? 0) > 0 && (
             <ul className="device-list approvals" aria-label="Sheet updates">
               {status!.sheetOffers!.map((o) => {
+                // A new PC from a player's sheet (ADR 0072): what the card would say.
+                if (o.pcId === null) {
+                  const n = o.offer.numbers;
+                  return (
+                    <li
+                      key={o.requestId}
+                      className="approval-row sheet-offer"
+                      data-testid="sheet-offer"
+                    >
+                      <span className="grow">
+                        {o.label || 'A player'} asks to add {o.creatureName} as a new PC
+                        <span className="muted small sheet-changes">
+                          {[n.classText || `Level ${n.level}`, `AC ${n.ac}`, `${n.maxHp} HP`].join(
+                            ' · ',
+                          )}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        className="btn primary"
+                        aria-label={`Add ${o.creatureName} as a PC`}
+                        onClick={() => void answerSheet(o.requestId, true)}
+                      >
+                        Add PC
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        aria-label={`Don’t add ${o.creatureName}`}
+                        onClick={() => void answerSheet(o.requestId, false)}
+                      >
+                        Dismiss
+                      </button>
+                    </li>
+                  );
+                }
                 const pc = pcs?.find((p) => p.id === o.pcId);
                 const changes = pc ? sheetChanges(pc, o.offer) : [];
                 return (
