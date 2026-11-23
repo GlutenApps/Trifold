@@ -382,6 +382,11 @@ function Body({
             rows={[
               ['Hit die', d.hd ? `d${d.hd}` : undefined],
               ['Proficiencies', d.proficiency],
+              ['Skills', d.numSkills ? `Choose ${d.numSkills}` : undefined],
+              ['Armor', d.armor],
+              ['Weapons', d.weapons],
+              ['Tools', d.tools],
+              ['Starting equipment', d.extra['equipment']?.join('; ')],
               ['Spellcasting', d.spellAbility],
             ]}
           />
