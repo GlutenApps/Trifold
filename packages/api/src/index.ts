@@ -1146,6 +1146,11 @@ export interface TrifoldApi {
     /** Leave campaign: removes the local shell, the player's notes in it included. */
     leave(campaignId: string): Promise<void>;
     /**
+     * Links one of the player's characters (ADR 0068) to a joined campaign, or unlinks with
+     * null. Resolves to the campaign; throws when it is not joined.
+     */
+    linkCharacter(campaignId: string, characterId: string | null): Promise<JoinedSummary>;
+    /**
      * Opens a joined campaign: main looks for its table and stays connected until `close`. The
      * link and the table's messages arrive as `joinedLink` and `joinedMessage` events. Null when
      * the campaign is not joined.
@@ -1610,6 +1615,7 @@ export const API_METHODS = {
     'peek',
     'join',
     'leave',
+    'linkCharacter',
     'open',
     'close',
     'send',

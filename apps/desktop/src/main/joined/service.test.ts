@@ -162,6 +162,24 @@ describe('JoinedService', () => {
     expect(seen.at(-1)).toEqual([expect.objectContaining({ campaignId: 'c1', joined: false })]);
   });
 
+  it('links a character to a joined campaign and unlinks it (ADR 0069)', async () => {
+    const joined = await service();
+    found = [table('c1', 'Greyford')];
+    await joined.startSearch();
+    await joined.join({
+      campaignId: 'c1',
+      campaignName: 'Greyford',
+      displayName: 'Sam',
+      address: '192.168.1.23:8130',
+    });
+    expect((await joined.linkCharacter('c1', 'K1')).characterId).toBe('K1');
+    const file = JSON.parse(await readFile(join(root, 'joined', 'c1', 'joined.json'), 'utf8'));
+    expect(file.characterId).toBe('K1');
+    expect((await joined.list())[0]?.characterId).toBe('K1');
+    expect((await joined.linkCharacter('c1', null)).characterId).toBeNull();
+    await expect(joined.linkCharacter('nope', 'K1')).rejects.toThrow('not joined');
+  });
+
   it('refuses to join at an address that is not on the local network', async () => {
     const joined = await service();
     await expect(

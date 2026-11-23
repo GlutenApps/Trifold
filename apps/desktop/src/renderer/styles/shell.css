@@ -3055,3 +3055,133 @@ button.chrome-btn:disabled:not(.primary, .tally) {
 .sheet-row .grow {
   min-width: min(160px, 100%);
 }
+
+/* The player console's Sheets tab (ADR 0069): a sheet to read at the table. */
+.sheets-page {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 12px;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.sheet-view {
+  display: grid;
+  gap: 12px;
+}
+
+.sheet-view-head {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.sheet-view-name {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.sheet-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px;
+}
+
+.sheet-stat {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg-panel);
+}
+
+.sheet-stat strong {
+  font-size: 18px;
+}
+
+.sheet-stat.overridden {
+  border-color: var(--warn);
+}
+
+.sheet-view-section {
+  display: grid;
+  gap: 6px;
+}
+
+.sheet-view-section h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.sheet-view-abilities {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+}
+
+.sheet-view-abilities li {
+  display: grid;
+  gap: 2px;
+}
+
+.sheet-view-skills {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 2px 16px;
+}
+
+.sheet-view-skills li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sheet-trained {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sheet-view-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.sheet-view-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sheet-view-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.sheet-view-feature summary {
+  cursor: pointer;
+}
+
+.sheets-editing {
+  display: grid;
+  gap: 12px;
+}
+
+.character-link {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}

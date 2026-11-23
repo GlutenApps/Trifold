@@ -344,6 +344,16 @@ export class JoinedService {
     return summarize(joined);
   }
 
+  /** Links a character of the Library to a joined campaign (ADR 0068), or unlinks with null. */
+  async linkCharacter(campaignId: string, characterId: string | null): Promise<JoinedSummary> {
+    // In the same queue as the connection's saves to the file, so neither undoes the other.
+    const run = this.writes.then(() => this.store().update(campaignId, { characterId }));
+    this.writes = run.catch(() => undefined);
+    const next = await run;
+    if (!next) throw new Error('This campaign is not joined.');
+    return summarize(next);
+  }
+
   async leave(campaignId: string): Promise<void> {
     if (this.current?.campaignId === campaignId) this.close(campaignId);
     // Saves still waiting finish first, so none of them brings the folder back.

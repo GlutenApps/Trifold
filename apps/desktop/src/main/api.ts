@@ -331,6 +331,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       peek: (address) => ctx.joined.peek(address),
       join: (input) => ctx.joined.join(input),
       leave: (campaignId) => ctx.joined.leave(campaignId),
+      linkCharacter: (campaignId, characterId) => ctx.joined.linkCharacter(campaignId, characterId),
       open: (campaignId) => ctx.joined.open(campaignId),
       async close(campaignId) {
         ctx.joined.close(campaignId);

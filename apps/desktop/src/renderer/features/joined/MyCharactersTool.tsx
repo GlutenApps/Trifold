@@ -6,6 +6,7 @@ import { HeldConditions } from '../campaign/HeldConditions';
 import { HpChip, HpEditor, type HpChange } from '../campaign/HpBetweenFights';
 import { Icon } from '../shell/icons';
 import { InlineConfirm } from '../shell/InlineConfirm';
+import { CharacterLink, openSheet } from './CharacterLink';
 import {
   creatureKeyOf,
   lastSeenText,
@@ -116,6 +117,20 @@ export function MyCharactersTool() {
             >
               <div className="row">
                 <strong className="my-character-last">{c.name}</strong>
+                <span className="row-actions">
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-label={`Open ${c.name}’s sheet`}
+                    title="Open sheet"
+                    onClick={() => {
+                      select(creatureKeyOf(c));
+                      openSheet(false);
+                    }}
+                  >
+                    <Icon name="card" />
+                  </button>
+                </span>
                 <span className="muted small">
                   {c.summon ? `${c.summon.type} · ` : ''}AC {c.ac ?? '—'}
                 </span>
@@ -134,6 +149,7 @@ export function MyCharactersTool() {
             </li>
           ))}
         </ul>
+        <CharacterLink />
       </div>
     );
   }
@@ -147,6 +163,7 @@ export function MyCharactersTool() {
             ? `${linkSentence(conn.link)} Your characters show here when you are at the table.`
             : 'Pick your character on the VTT tab.'}
         </p>
+        <CharacterLink />
       </div>
     );
   }
@@ -202,8 +219,12 @@ export function MyCharactersTool() {
                   type="button"
                   className="my-character-name"
                   aria-pressed={selected === key}
-                  title="Select: the VTT tab follows"
+                  title="Select: the VTT tab follows. Double-click to open the sheet"
                   onClick={() => select(key)}
+                  onDoubleClick={() => {
+                    select(key);
+                    openSheet(false);
+                  }}
                 >
                   {c.name}
                 </button>
@@ -217,6 +238,34 @@ export function MyCharactersTool() {
                   {c.movementLocked ? ' · movement locked' : ''}
                 </span>
                 <span className="spacer" />
+                <span className="row-actions">
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-label={`Open ${c.name}’s sheet`}
+                    title="Open sheet"
+                    onClick={() => {
+                      select(key);
+                      openSheet(false);
+                    }}
+                  >
+                    <Icon name="card" />
+                  </button>
+                  {c === me && (
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-label={`Edit ${c.name}’s sheet`}
+                      title="Edit your sheet"
+                      onClick={() => {
+                        select(key);
+                        openSheet(true);
+                      }}
+                    >
+                      <Icon name="pencil" />
+                    </button>
+                  )}
+                </span>
                 {companion &&
                   (removing === key ? (
                     <InlineConfirm
@@ -325,6 +374,7 @@ export function MyCharactersTool() {
           Switch character
         </button>
       </div>
+      <CharacterLink />
     </div>
   );
 }
