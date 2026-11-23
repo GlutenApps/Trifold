@@ -436,7 +436,7 @@ The GM already sets the edition: every campaign has `preferredEdition` (2024 by 
 
 The rules layer is keyed by edition from the first commit so the second engine is an addition, not a rewrite. Check what SRD 5.1 holds that SRD 5.2.1 does not against the fetched snapshots before sizing the 2014 phase.
 
-The sheet schema and the derived-number functions come first; the PDF import and the builder both write sheets, so they can proceed in parallel once it lands. Give the builder its own short spec before starting it.
+The sheet schema and the derived-number functions come first; the PDF import and the builder both write sheets, so they can proceed in parallel once it lands. Give the builder its own short spec before starting it. That spec is `docs/BUILDER.md` (draft).
 
 ## Data model for Part 3
 
