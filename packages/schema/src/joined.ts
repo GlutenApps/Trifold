@@ -39,6 +39,11 @@ export const JoinedCampaign = z.object({
   deviceToken: z.string().min(1).max(64).optional(),
   /** The player's character linked to the one they hold at this table (`characters/<id>.json`). */
   characterId: z.string().nullable().default(null),
+  /**
+   * The last sheet update the GM answered (ADR 0071), accepted or dismissed, as the offer's key:
+   * the same numbers are not offered again.
+   */
+  sheetAnswered: z.string().max(8000).nullable().default(null),
   joinedAt: IsoDateTime,
   /** When this Library was last connected to the campaign's table. */
   lastLiveAt: IsoDateTime.nullable().default(null),

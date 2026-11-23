@@ -1,6 +1,17 @@
 import type { AreaOutline } from '../areaShapes';
 import type { TableRoll } from './rolls';
 import type { FogShapeLike } from '../fog';
+import type { TableNumbers } from '@trifold/schema';
+
+/**
+ * A player's character's table numbers offered to the GM's PC card (docs/PLAYER-MODE.md, Sheet
+ * updates; ADR 0071): its name, the numbers field for field, and its sheet link.
+ */
+export interface SheetOffer {
+  name: string;
+  numbers: TableNumbers;
+  sheetUrl?: string;
+}
 
 /**
  * The player connector's data (docs/PLAYER-CONNECTOR.md, ADR 0043). The console pushes a
@@ -355,7 +366,9 @@ export type ServerMessage =
    * What the campaign shares with its players changed, or this is what it is now (ADR 0060):
    * a player's Trifold holding a different hash fetches `/shared`. Empty means nothing is shared.
    */
-  | { type: 'shared'; hash: string };
+  | { type: 'shared'; hash: string }
+  /** The GM took (or kept their own) numbers a `sheetOffer` sent (ADR 0071). */
+  | { type: 'sheetAnswer'; accepted: boolean };
 
 export type ClientMessage =
   | { type: 'hello'; token?: string }
@@ -387,7 +400,9 @@ export type ClientMessage =
   | { type: 'dismiss'; tokenId: string }
   | { type: 'keepSummon'; tokenId: string }
   /** A Table roll (ADR 0059): the roller's syntax; the DM's Trifold makes the roll. */
-  | { type: 'roll'; expression: string };
+  | { type: 'roll'; expression: string }
+  /** The held PC's numbers from the player's linked character, for the GM to accept (ADR 0071). */
+  | { type: 'sheetOffer'; creatureId: string; offer: SheetOffer };
 
 /** What main hands the console to do about summons. */
 export type TableSummonEvent =

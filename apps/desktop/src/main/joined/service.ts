@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/p
 import { join } from 'node:path';
 import type {
   ClientMessage,
+  SheetOffer,
   ChangeAddressResult,
   FoundTableSummary,
   OpenPackResult,
@@ -58,6 +59,11 @@ export interface JoinedServiceOptions {
    * how many records the campaign holds.
    */
   onShared?(campaignId: string, records: number): void | Promise<void>;
+  /**
+   * The table numbers of one of the Library's characters (ADR 0071), offered to the GM for the
+   * PC the player holds; null when the character is gone.
+   */
+  characterOffer?(characterId: string): Promise<SheetOffer | null>;
   /** Tests replace the search, the socket and the fetches. */
   discovery?: (
     onChange: (tables: FoundTable[]) => void,
@@ -156,6 +162,12 @@ interface OpenCampaign {
   /** Addresses that worked before, from `joined.json`. */
   saved: TableEndpoint[];
   token: string | undefined;
+  /** The character linked here, and the last sheet update the GM answered (ADR 0071). */
+  characterId: string | null;
+  sheetAnswered: string | null;
+  /** The PC this connection holds, and the update sent for it and not answered yet. */
+  offerPc: string | null;
+  offered: string | null;
 }
 
 export class JoinedService {
@@ -344,6 +356,30 @@ export class JoinedService {
     return summarize(joined);
   }
 
+  /** A character of the Library changed (ADR 0071): if it is the one linked, offer its numbers. */
+  characterChanged(characterId: string): void {
+    const current = this.current;
+    if (current && current.characterId === characterId) void this.offerSheet(current);
+  }
+
+  /**
+   * Offers the linked character's table numbers for the PC held at the table (PLAYER-MODE.md,
+   * Sheet updates): only connected, holding a PC, and when they differ from what the GM last
+   * answered and from what is waiting for an answer.
+   */
+  private async offerSheet(current: OpenCampaign): Promise<void> {
+    const pcId = current.offerPc;
+    const characterId = current.characterId;
+    if (current.link !== 'open' || !pcId || !characterId || !this.opts.characterOffer) return;
+    const offer = await this.opts.characterOffer(characterId).catch(() => null);
+    if (!offer || this.current !== current || current.offerPc !== pcId) return;
+    const key = JSON.stringify({ pcId, offer });
+    if (key === current.sheetAnswered || key === current.offered) return;
+    current.offered = key;
+    current.client?.send({ type: 'sheetOffer', creatureId: pcId, offer });
+    this.opts.logger.info(`joined: offered sheet numbers for pc ${pcId}`);
+  }
+
   /** Links a character of the Library to a joined campaign (ADR 0068), or unlinks with null. */
   async linkCharacter(campaignId: string, characterId: string | null): Promise<JoinedSummary> {
     // In the same queue as the connection's saves to the file, so neither undoes the other.
@@ -351,6 +387,12 @@ export class JoinedService {
     this.writes = run.catch(() => undefined);
     const next = await run;
     if (!next) throw new Error('This campaign is not joined.');
+    const current = this.current;
+    if (current?.campaignId === campaignId) {
+      current.characterId = characterId;
+      current.offered = null;
+      void this.offerSheet(current);
+    }
     return summarize(next);
   }
 
@@ -479,6 +521,10 @@ export class JoinedService {
       failures: 0,
       saved: joined.addresses.flatMap((a) => parseTableAddress(a) ?? []),
       token: joined.deviceToken,
+      characterId: joined.characterId,
+      sheetAnswered: joined.sheetAnswered,
+      offerPc: null,
+      offered: null,
     };
     // What the campaign's GM shared last time is here before the table is found.
     this.sharedSync = this.sharedSync
@@ -598,7 +644,25 @@ export class JoinedService {
         if (message.type === 'token') return;
         // What the campaign shares is main's to fetch and file; the console only reads it.
         if (message.type === 'shared') return this.syncShared(current, message.hash);
-        if (message.type === 'state') this.rememberView(current.campaignId, message);
+        if (message.type === 'state') {
+          this.rememberView(current.campaignId, message);
+          // The PC held here: a new one (or the first) is offered the linked sheet's numbers.
+          const pc = message.mine.find((c) => c.kind === 'pc')?.id ?? null;
+          if (pc !== current.offerPc) {
+            current.offerPc = pc;
+            current.offered = null;
+            void this.offerSheet(current);
+          }
+        }
+        if (message.type === 'sheetAnswer' && current.offered) {
+          // Accepted or dismissed, the same numbers are not offered again.
+          const answered = current.offered;
+          current.sheetAnswered = answered;
+          current.offered = null;
+          this.save('the sheet answer', (store) =>
+            store.update(current.campaignId, { sheetAnswered: answered }),
+          );
+        }
         this.opts.onMessage?.({ campaignId: current.campaignId, message });
       },
       onToken: (token) => {
@@ -618,6 +682,11 @@ export class JoinedService {
 
   private setLink(current: OpenCampaign, link: PlayerLink): void {
     current.link = link;
+    // An update not answered before the link dropped is offered again at the next connection.
+    if (link !== 'open') {
+      current.offerPc = null;
+      current.offered = null;
+    }
     this.opts.onLink?.({ campaignId: current.campaignId, link });
   }
 

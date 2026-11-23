@@ -83,6 +83,8 @@ export class CharactersRepository {
 export function createCharactersApi(
   session: LibrarySession,
   logger: Logger,
+  /** A character was written (ADR 0071): a joined campaign linked to it may offer its numbers. */
+  onSaved: (characterId: string) => void = () => undefined,
 ): Pick<TrifoldApi, 'characters'> {
   const repo = () => {
     if (!session.store) throw new Error('No Library is open');
@@ -94,7 +96,9 @@ export function createCharactersApi(
         return repo().list();
       },
       async save(character) {
-        return repo().save(character);
+        const saved = await repo().save(character);
+        onSaved(saved.id);
+        return saved;
       },
       async remove(id) {
         await repo().remove(id);

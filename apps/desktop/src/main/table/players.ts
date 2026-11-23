@@ -47,6 +47,7 @@ const empty = (): PlayersFile => ({
   reclaimMode: 'open',
   movement: { all: false, creatures: [] },
   summoning: { mode: 'on', cap: 8 },
+  sheets: { autoAccept: false },
 });
 
 /**
@@ -94,6 +95,16 @@ export class PlayersStore {
 
   async setSummoning(summoning: { mode: 'on' | 'approval' | 'off'; cap: number }): Promise<void> {
     this.data = { ...this.data, summoning };
+    await this.save();
+  }
+
+  /** Accept sheet updates automatically (ADR 0071). */
+  get sheets(): { autoAccept: boolean } {
+    return this.data.sheets;
+  }
+
+  async setSheetAutoAccept(autoAccept: boolean): Promise<void> {
+    this.data = { ...this.data, sheets: { autoAccept } };
     await this.save();
   }
 

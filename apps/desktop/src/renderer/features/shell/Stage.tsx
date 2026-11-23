@@ -299,7 +299,9 @@ function TabStrip({
   const playerOpen = useAppStore((s) => s.playerOpen);
   // Players waiting for the DM's approval (ADR 0043; PLAYER-CONNECTOR.md, "What the DM controls"):
   // a dot, never a toast.
-  const playersWaiting = useTableStore((s) => s.status?.approvals.length ?? 0);
+  const playersWaiting = useTableStore(
+    (s) => (s.status?.approvals.length ?? 0) + (s.status?.sheetOffers?.length ?? 0),
+  );
   const unsavedHomebrew = false;
   const stripRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);

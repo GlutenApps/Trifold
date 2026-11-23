@@ -96,7 +96,10 @@ export class JoinedStore {
   async update(
     campaignId: string,
     patch: Partial<
-      Pick<JoinedCampaign, 'campaignName' | 'displayName' | 'deviceToken' | 'characterId'>
+      Pick<
+        JoinedCampaign,
+        'campaignName' | 'displayName' | 'deviceToken' | 'characterId' | 'sheetAnswered'
+      >
     >,
   ): Promise<JoinedCampaign | null> {
     const existing = await this.get(campaignId);

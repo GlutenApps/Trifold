@@ -21,6 +21,8 @@ import { SaveFlush } from './saveFlush';
 import { createSplashWindow, Splash } from './splash';
 import { TableHub } from './table/hub';
 import { JoinedService } from './joined/service';
+import { CharactersRepository } from './characters';
+import { tableNumbers } from '@trifold/rules';
 import { NsisSelfInstaller, selfUpdateBlocker } from './updateInstaller';
 import { UpdateService, releaseFolder } from './updates';
 import { UPDATE_PUBLIC_KEYS } from './updateSignature';
@@ -193,6 +195,7 @@ async function main(): Promise<void> {
     webDir: join(app.getAppPath(), 'out', 'web'),
     onStatus: (status) => windows.sendToConsole(EVENT_CHANNELS.tableStatus, status),
     onIntent: (intent) => windows.sendToConsole(EVENT_CHANNELS.tableIntent, intent),
+    onSheet: (event) => windows.sendToConsole(EVENT_CHANNELS.tableSheet, event),
     onToken: (event) => windows.sendToConsole(EVENT_CHANNELS.tableToken, event),
     onSummon: (event) => windows.sendToConsole(EVENT_CHANNELS.tableSummon, event),
     onRoll: (roll) => windows.sendToConsole(EVENT_CHANNELS.tableRoll, roll),
@@ -235,6 +238,18 @@ async function main(): Promise<void> {
         records,
         ownCopies: index.standInCount(`shared:${campaignId}`),
       });
+    },
+    // A linked character's table numbers, offered to the GM (ADR 0071).
+    characterOffer: async (characterId) => {
+      const store = activeSession.store;
+      if (!store) return null;
+      const character = await new CharactersRepository(store, logger).get(characterId);
+      if (!character) return null;
+      return {
+        name: character.name,
+        numbers: tableNumbers(character),
+        ...(character.sheetUrl ? { sheetUrl: character.sheetUrl } : {}),
+      };
     },
     // Pictures from a GM's table are derived data: beside the app's settings, not in the Library.
     cacheDir: join(app.getPath('userData'), 'table-cache'),

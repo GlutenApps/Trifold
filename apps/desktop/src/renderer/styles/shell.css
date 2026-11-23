@@ -3185,3 +3185,8 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   gap: 6px;
   margin-top: 8px;
 }
+
+/* A sheet update in the Player devices pop-up (ADR 0071): what would change, under the line. */
+.sheet-changes {
+  display: block;
+}

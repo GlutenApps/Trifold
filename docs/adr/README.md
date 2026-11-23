@@ -76,6 +76,7 @@ An architecture decision record (ADR) is a short file about one choice that refi
 | [0068](0068-characters.md) | Characters: `characters/<id>.json` in the Library, an External character (table numbers + sheet link) or a Trifold character (a sheet whose numbers are worked out, each overridable), External → Trifold one way; Library › Characters behind the player-mode flag. |
 | [0069](0069-sheets-tab.md) | The player console's Sheets tab: the linked character's sheet to read, worked out, with the table's live HP and conditions above it and Edit on the sheet; companions show what the table sends. My characters links a character (Link a character, New character, Unlink) and opens the sheet. |
 | [0070](0070-pc-sheet-url.md) | The PC card's `dndBeyondUrl` becomes `sheetUrl` (a web address only), PC files go to version 2 with their own constant, and the PC form gains Character sheet link; the party row opens it as a web tab. |
+| [0071](0071-sheet-updates.md) | Sheet updates: a player's Trifold offers its linked character's table numbers (`sheetOffer`) for the PC it holds, once per change; the GM sees what would change in Player devices and accepts or dismisses (`sheetAnswer`), or accepts automatically (players.json); the console writes the PC card. |
 
 ## Decision log
 
@@ -126,4 +127,5 @@ Product-level decisions by area, as they were settled. Rationale is in the ADRs 
 | Characters | Library › Characters (player mode): New character makes an External character (numbers and a sheet link) or a Trifold character (the sheet here, numbers worked out); an External one can become a Trifold one. Export, import, typed DELETE. See ADR 0068. |
 | Sheets | In a joined campaign, My characters links one of your characters and opens it on the Sheets tab, which shows the sheet with the table's HP and conditions, its sheet link and Edit. See ADR 0069. |
 | PC sheet link | A PC card can hold the player's character sheet link (PC form › Basics); the party row's external-link button opens it as a web tab. See ADR 0070. |
+| Sheet updates | A player's level-up reaches the GM as a sheet update in Player devices, listing what would change, with Accept and Dismiss; Accept sheet updates automatically skips the prompt. See ADR 0071. |
 | Web tabs | The stage `+` menu adds a web tab: an address the DM typed, hosted in a sandboxed Electron webview in one persistent session, so a hosted document or sheet sits beside the console as a tab and reopens where it was left at the next launch. Library-wide list stored with the layouts; close parks, remove forgets; modifier hotkeys reach through the page; every tab has Open in system browser. See ADR 0011. |

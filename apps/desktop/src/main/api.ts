@@ -399,6 +399,12 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       setSummoning(summoning) {
         return ctx.table.setSummoning(summoning);
       },
+      answerSheet(requestId, accept) {
+        return ctx.table.answerSheet(requestId, accept);
+      },
+      setSheetAutoAccept(on) {
+        return ctx.table.setSheetAutoAccept(on);
+      },
     },
     presenter: {
       async push(state) {
@@ -567,7 +573,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
 
     ...createCampaignApi(ctx.session, ctx.logger),
     ...createNoteTemplatesApi(ctx.session, ctx.logger),
-    ...createCharactersApi(ctx.session, ctx.logger),
+    ...createCharactersApi(ctx.session, ctx.logger, (id) => ctx.joined.characterChanged(id)),
     ...createMusicApi(ctx.session, ctx.windows),
     ...createArtApi(ctx.session),
     ...createPhoneAudioApi(ctx.phoneAudio, ctx.config, ctx.logger),
