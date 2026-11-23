@@ -9,7 +9,7 @@ import {
 } from '@trifold/schema';
 import { useAppStore } from '../../stores/appStore';
 import { UseThisCopy } from '../compendium/UseThisCopy';
-import { copyLabel, DuplicatesView } from './DuplicatesView';
+import { copyLabel, differLine, DuplicatesView } from './DuplicatesView';
 
 let settings: LibrarySettings;
 function library(duplicateChoices: Record<string, string> = {}) {
@@ -27,6 +27,8 @@ const ward: DuplicateGroup = {
   name: 'Ward',
   reason: 'starred',
   chosen: null,
+  differ: true,
+  numbers: ['level 1 · AB', 'level 2 · AB'],
   copies: [
     {
       recordId: 'A:ward',
@@ -60,6 +62,7 @@ describe('DuplicatesView (ADR 0063)', () => {
     render(<DuplicatesView />);
     const row = await screen.findByTestId('duplicate-row');
     expect(row).toHaveTextContent('Shown: Tome (Big file) · legacy · starred, from a starred book');
+    expect(row).toHaveTextContent('Copies differ: level 1 · AB vs level 2 · AB');
     expect(within(row).getByRole('radio', { name: 'Automatic' })).toBeChecked();
     // Main answers with the record settled once the choice is saved.
     vi.mocked(window.trifold.duplicates.list).mockResolvedValue({
@@ -80,10 +83,15 @@ describe('DuplicatesView (ADR 0063)', () => {
     await screen.findByTestId('duplicate-row');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Kind' }), 'monster');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Settled' }), 'settled');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Copies' }), 'all');
     await waitFor(() =>
       expect(window.trifold.duplicates.list).toHaveBeenLastCalledWith(
-        expect.objectContaining({ kind: 'monster', show: 'settled' }),
+        expect.objectContaining({ kind: 'monster', show: 'settled', copies: 'all' }),
       ),
+    );
+    expect(differLine({ differ: false, copies: ward.copies })).toBe('The same in 2 places');
+    expect(differLine({ differ: true, copies: ward.copies })).toBe(
+      'Copies differ: same numbers, different rules text',
     );
     expect(copyLabel({ ...ward.copies[0]!, homebrew: true })).toBe(
       'Homebrew (Big file) · legacy · starred',

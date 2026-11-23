@@ -1,5 +1,12 @@
 import type { CompendiumQuery, CompendiumRow } from '@trifold/api';
-import { bookKey, crToNumber, unnamedBookKey, unnamedBookSource } from '@trifold/rules';
+import {
+  bookKey,
+  crToNumber,
+  recordNumbers,
+  recordWords,
+  unnamedBookKey,
+  unnamedBookSource,
+} from '@trifold/rules';
 import type { CompendiumRecord } from '@trifold/schema';
 
 /**
@@ -28,6 +35,9 @@ export interface RecordColumns {
   book_key: string;
   /** That book's name as the file writes it; '' when none. */
   book: string;
+  /** What the record says, for telling real duplicates from reprints (ADR 0063). */
+  content_numbers: string;
+  content_words: string;
   json: string;
 }
 
@@ -56,6 +66,8 @@ export function recordColumns(record: CompendiumRecord): RecordColumns {
     rarity: null,
     book_key: record.sourceBook ? bookKey(record.sourceBook) : '',
     book: record.sourceBook ?? '',
+    content_numbers: recordNumbers(record),
+    content_words: recordWords(record).join(' '),
     json: JSON.stringify(record),
   };
   switch (record.kind) {

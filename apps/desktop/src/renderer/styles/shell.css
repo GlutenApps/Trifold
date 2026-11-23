@@ -2739,6 +2739,10 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   border-top: 0;
 }
 
+.duplicate-why {
+  margin: 2px 0 0;
+}
+
 .duplicate-copies {
   display: flex;
   flex-wrap: wrap;

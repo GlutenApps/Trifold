@@ -84,6 +84,9 @@ CREATE TABLE IF NOT EXISTS records (
   book_off INTEGER NOT NULL DEFAULT 0,
   -- The copy the GM chose for its record (ADR 0063), from library.json's duplicateChoices.
   chosen INTEGER NOT NULL DEFAULT 0,
+  -- What the record says (ADR 0063): its deciding numbers, and its rules text as words.
+  content_numbers TEXT NOT NULL DEFAULT '',
+  content_words TEXT NOT NULL DEFAULT '',
   json TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS records_book ON records(book_key, source_id);
@@ -164,8 +167,8 @@ export class IndexDb {
   /** Replaces every row of a source in one transaction. Returns the number of records written. */
   replaceSource(source: Source, records: Iterable<CompendiumRecord>): number {
     const insertRecord = this.db.prepare(
-      `INSERT INTO records (id, kind, key, name, display_name, source_id, edition, cr, cr_num, type, size, environment, is_npc, level, type_code, rarity, book_key, book, json)
-       VALUES (@id, @kind, @key, @name, @display_name, @source_id, @edition, @cr, @cr_num, @type, @size, @environment, @is_npc, @level, @type_code, @rarity, @book_key, @book, @json)`,
+      `INSERT INTO records (id, kind, key, name, display_name, source_id, edition, cr, cr_num, type, size, environment, is_npc, level, type_code, rarity, book_key, book, content_numbers, content_words, json)
+       VALUES (@id, @kind, @key, @name, @display_name, @source_id, @edition, @cr, @cr_num, @type, @size, @environment, @is_npc, @level, @type_code, @rarity, @book_key, @book, @content_numbers, @content_words, @json)`,
     );
     const insertFts = this.db.prepare('INSERT INTO records_fts (id, name, text) VALUES (?, ?, ?)');
     const upsertSource = this.db.prepare(
@@ -350,13 +353,16 @@ export class IndexDb {
     edition: string;
     starred: number;
     chosen: number;
+    content_numbers: string;
+    content_words: string;
     rn: number;
   }> {
     return this.db
       .prepare(
         `WITH copies AS (
            SELECT r.id, r.kind, r.key, r.display_name, r.source_id, s.name AS source_name, s.kind AS source_kind,
-                  r.book_key, r.book, r.edition, r.starred, r.chosen, ${PRIORITY} AS pr
+                  r.book_key, r.book, r.edition, r.starred, r.chosen, r.content_numbers, r.content_words,
+                  ${PRIORITY} AS pr
            FROM records r JOIN sources s ON s.id = r.source_id
            WHERE s.enabled = 1 AND r.book_off = 0 AND s.kind != 'campaign'
          ), groups AS (
@@ -364,7 +370,7 @@ export class IndexDb {
            HAVING COUNT(DISTINCT source_id || char(31) || book_key) > 1 AND SUM(source_kind != 'srd') > 0
          )
          SELECT c.id, c.kind, c.key, c.display_name, c.source_id, c.source_name, c.source_kind, c.book_key, c.book,
-                c.edition, c.starred, c.chosen,
+                c.edition, c.starred, c.chosen, c.content_numbers, c.content_words,
                 ROW_NUMBER() OVER (PARTITION BY c.kind, c.key ORDER BY c.pr, (c.edition = ?) DESC, c.edition DESC, c.source_name COLLATE NOCASE, c.id) AS rn
          FROM copies c JOIN groups g ON g.kind = c.kind AND g.key = c.key
          ORDER BY c.display_name COLLATE NOCASE, c.kind, rn`,

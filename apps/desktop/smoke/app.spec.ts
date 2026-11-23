@@ -137,9 +137,12 @@ test('console, Library, import, search, stat block and player window all work en
     // Duplicates tab lists it; choosing the legacy book's copy makes that copy lead, and
     // Automatic hands it back to the usual order.
     await console_.getByRole('tab', { name: 'Duplicates' }).click();
+    // The test file's Aboleth is the SRD's, reprinted: listed only with every duplicate shown.
+    await console_.getByRole('combobox', { name: 'Copies' }).selectOption('all');
     await console_.getByRole('searchbox', { name: 'Search duplicates' }).fill('Aboleth');
     const abolethDup = console_.getByTestId('duplicate-row').filter({ hasText: 'Aboleth' });
     await expect(abolethDup).toHaveCount(1);
+    await expect(abolethDup).toContainText('The same in');
     await abolethDup
       .getByRole('radio', {
         name: /^System Reference Document 5\.1 \(compendium-sample\) · legacy/,

@@ -163,7 +163,7 @@ export function BooksView({
   const reparse = files.filter((f) => f.stale).length;
   const warned = files.filter((f) => f.warnings.length > 0).length;
   const inTwo = all.filter((b) => b.files.length > 1).length;
-  // Records in more than one place that the GM has not settled (ADR 0063).
+  // Records whose copies disagree that the GM has not settled (ADR 0063); reprints are left out.
   const [unsettled, setUnsettled] = useState(0);
   useEffect(() => {
     let stale = false;
@@ -182,7 +182,7 @@ export function BooksView({
     warned && `${warned} ${warned === 1 ? 'file has' : 'files have'} import warnings (Files tab)`,
     inTwo && `${inTwo} ${inTwo === 1 ? 'book is' : 'books are'} in more than one file`,
     unsettled &&
-      `${unsettled.toLocaleString()} ${unsettled === 1 ? 'record is' : 'records are'} in more than one place (Duplicates tab)`,
+      `${unsettled.toLocaleString()} ${unsettled === 1 ? 'record has copies' : 'records have copies'} that disagree (Duplicates tab)`,
   ].filter(Boolean);
 
   return (

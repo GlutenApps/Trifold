@@ -30,7 +30,7 @@ const REASONS: Record<DuplicateGroup['reason'], string> = {
   chosen: 'your choice',
   homebrew: 'your homebrew comes first',
   starred: 'from a starred book',
-  order: 'imported files come before the SRD',
+  order: 'by the usual order (no choice or star decides it)',
 };
 
 /** "Book · legacy" or "File · 2024": where a copy is, as its option says. */
@@ -39,6 +39,14 @@ export function copyLabel(copy: DuplicateCopy): string {
   const extra = copy.book && copy.book !== copy.sourceName ? ` (${copy.sourceName})` : '';
   const edition = copy.edition === '2014' ? 'legacy' : copy.edition;
   return `${where}${extra} · ${edition}${copy.starred ? ' · starred' : ''}`;
+}
+
+/** Why a record is listed: how its copies disagree, or that they are one record reprinted. */
+export function differLine(group: Pick<DuplicateGroup, 'differ' | 'numbers' | 'copies'>): string {
+  if (!group.differ) return `The same in ${group.copies.length} places`;
+  return group.numbers?.length
+    ? `Copies differ: ${group.numbers.join(' vs ')}`
+    : 'Copies differ: same numbers, different rules text';
 }
 
 /** Saves a choice of copy for one record, or with null leaves it to the usual order. */
@@ -92,9 +100,11 @@ export function DuplicatesView() {
   return (
     <div className="duplicates-view" data-testid="duplicates-view">
       <p className="muted small">
-        Records that are in more than one file or book. Each shows one copy: your choice, then your
-        homebrew, then a starred book, then imported files before the SRD. Pick a copy to settle a
-        record; Automatic leaves it to that order. The other copies stay on the record.
+        Records in more than one file or book whose copies disagree: different numbers or different
+        rules, in the same edition. Each shows one copy: your choice, then your homebrew, then a
+        starred book, then imported files before the SRD. Pick a copy to settle a record; Automatic
+        leaves it to that order. Reprints of the same record are hidden unless you show every
+        duplicate.
       </p>
       {error && (
         <div className="banner error" role="alert">
@@ -128,6 +138,14 @@ export function DuplicatesView() {
           ))}
         </select>
         <select
+          aria-label="Copies"
+          value={query.copies ?? 'differ'}
+          onChange={(e) => set({ copies: e.target.value as DuplicateQuery['copies'] })}
+        >
+          <option value="differ">Copies differ</option>
+          <option value="all">Every duplicate, reprints too</option>
+        </select>
+        <select
           aria-label="Settled"
           value={query.show ?? 'all'}
           onChange={(e) => set({ show: e.target.value as DuplicateQuery['show'] })}
@@ -143,7 +161,9 @@ export function DuplicatesView() {
         <p className="muted">
           {query.text || query.kind || query.show !== 'all'
             ? 'No duplicate matches.'
-            : 'No record is in more than one place.'}
+            : query.copies === 'all'
+              ? 'No record is in more than one place.'
+              : 'No record has copies that disagree.'}
         </p>
       ) : (
         <>
@@ -160,6 +180,9 @@ export function DuplicatesView() {
                     Shown: {copyLabel(g.copies[0]!)}, {REASONS[g.reason]}
                   </span>
                 </div>
+                <p className={`small duplicate-why${g.differ ? ' warn-text' : ' muted'}`}>
+                  {differLine(g)}
+                </p>
                 <fieldset className="duplicate-copies" disabled={busy === g.group}>
                   <legend className="sr-only">Copy of {g.name} to show</legend>
                   <label>

@@ -606,6 +606,13 @@ export interface DuplicateGroup {
   chosen: string | null;
   /** Why the first copy answers. */
   reason: 'chosen' | 'homebrew' | 'starred' | 'order';
+  /**
+   * Whether two copies of the same edition disagree in their numbers or rules text, rather than
+   * being one record reprinted in several places.
+   */
+  differ: boolean;
+  /** The numbers that differ, such as `CR 13` and `CR 23`, when they do. */
+  numbers?: string[];
 }
 
 export interface DuplicateQuery {
@@ -613,6 +620,8 @@ export interface DuplicateQuery {
   text?: string;
   /** Every group, only those the GM settled, or only those left to the usual order. */
   show?: 'all' | 'settled' | 'unsettled';
+  /** Only records whose copies disagree (the default), or reprints too. */
+  copies?: 'differ' | 'all';
   offset?: number;
   limit?: number;
 }

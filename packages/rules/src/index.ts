@@ -24,3 +24,4 @@ export * from './fog';
 export * from './table/index';
 export * from './areaShapes';
 export * from './books';
+export * from './recordContent';
