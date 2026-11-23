@@ -9,6 +9,9 @@ import {
   normalizeRulesets,
   rulesetDocument,
   type Open5eContext,
+  equipmentOptions,
+  skillChoice,
+  tableRows,
 } from './normalize';
 import type { O5eBase, O5eCondition, O5eKind, O5eRuleset } from './types';
 
@@ -203,10 +206,65 @@ describe('normalizeOpen5e', () => {
     const wizard = get('classes', 'srd-2024_wizard');
     if (wizard.kind !== 'class') throw new Error('kind');
     expect(wizard.data.hd).toBe(6);
-    expect(wizard.data.proficiency).toBe('Intelligence, Wisdom');
+    // Saves, then the skill options, as a Lion's Den file writes them (docs/BUILDER.md).
+    expect(wizard.data.proficiency).toBe(
+      'Intelligence, Wisdom, Arcana, History, Insight, Investigation, Medicine, Nature, Religion',
+    );
+    expect(wizard.data.numSkills).toBe(2);
+    expect(wizard.data.weapons).toBe('Simple weapons');
+    expect(wizard.data.armor).toBeUndefined();
+    expect(wizard.data.extra['equipment']).toEqual([
+      'A: 2 Daggers, Arcane Focus (Quarterstaff), Robe, Spellbook, Scholar’s Pack, and 5 GP'.replace(
+        '’',
+        "'",
+      ),
+      'B: 55 GP',
+    ]);
+    expect(wizard.data.extra['primaryAbility']).toEqual(['Intelligence']);
+    // A table column, filled forward between the levels the source lists.
+    const cantrips = wizard.data.extra['table:Cantrips'] ?? [];
+    expect(cantrips).toHaveLength(20);
+    expect(cantrips[0]).toBe('3');
+    expect(cantrips[9]).toBe('5');
     expect(wizard.data.levels.map((l) => l.level)).toEqual([1, 4, 5, 8, 12, 16]);
     expect(wizard.data.levels.find((l) => l.level === 4)?.scoreImprovement).toBe(true);
     expect(wizard.data.levels[0]?.features[0]?.name).toBe('Arcane Recovery');
+  });
+});
+
+describe('class core traits (docs/BUILDER.md)', () => {
+  const skills = ['Arcana', 'Animal Handling', 'History', 'Insight', 'Nature', 'Survival'];
+
+  it('reads the rows of a two-column table', () => {
+    const table = ['|||', '|---|---|', '|Primary Ability|Strength|', '|Armor Training|None|'];
+    expect(tableRows(table.join('\n'))).toEqual([
+      ['Primary Ability', 'Strength'],
+      ['Armor Training', 'None'],
+    ]);
+  });
+
+  it('reads a skill choice, stray spaces and all, or any skills', () => {
+    expect(
+      skillChoice('Choose 2: Animal Handling, Na ture, In sight, or Survival', skills),
+    ).toEqual({
+      choose: 2,
+      from: ['Animal Handling', 'Nature', 'Insight', 'Survival'],
+    });
+    expect(skillChoice('Choose any 3 skills', skills)).toEqual({ choose: 3, from: [] });
+    expect(skillChoice('Two skills', skills)).toBeNull();
+  });
+
+  it('splits starting equipment into its options', () => {
+    expect(
+      equipmentOptions(
+        'Choose A, B, or C: (A) Chain Mail, 8 Javelins, and 4 GP; (B) Longbow, 20 Arrows, and 11 GP; or (C) 155 GP',
+      ),
+    ).toEqual([
+      'A: Chain Mail, 8 Javelins, and 4 GP',
+      'B: Longbow, 20 Arrows, and 11 GP',
+      'C: 155 GP',
+    ]);
+    expect(equipmentOptions('')).toEqual([]);
   });
 });
 

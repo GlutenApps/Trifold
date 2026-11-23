@@ -606,6 +606,73 @@ export function normalizeBackground(raw: O5eBackground, ctx: Open5eContext): Com
   };
 }
 
+/** The rows of a two-column markdown table, `|name|value|`; header and rule rows left out. */
+export function tableRows(markdown: string): Array<[string, string]> {
+  const out: Array<[string, string]> = [];
+  for (const line of markdown.split(/\r?\n/)) {
+    const m = /^\|([^|]*)\|([^|]*)\|$/.exec(line.trim());
+    if (!m) continue;
+    const name = m[1]!.trim();
+    if (!name || /^-+$/.test(name)) continue;
+    out.push([name, m[2]!.trim()]);
+  }
+  return out;
+}
+
+/**
+ * A class's skill choice from its core traits: "Choose 2: Arcana, History, or Religion" is two
+ * of those three; "Choose any 3 skills" is three of all of them (`from` empty). Skill names are
+ * matched with spaces ignored, so a stray space in the source ("In sight") still reads.
+ */
+export function skillChoice(
+  text: string,
+  skills: readonly string[],
+): { choose: number; from: string[] } | null {
+  const any = /^choose any (\d+)/i.exec(text);
+  if (any) return { choose: Number(any[1]), from: [] };
+  const m = /^choose (\d+):\s*(.+)$/i.exec(text);
+  if (!m) return null;
+  const squash = (s: string) => s.replace(/\s+/g, '').toLowerCase();
+  const known = new Map(skills.map((s) => [squash(s), s]));
+  const from = m[2]!
+    .split(/,|\bor\b/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => known.get(squash(s)) ?? s);
+  return { choose: Number(m[1]), from };
+}
+
+/** Starting equipment options: "Choose A or B: (A) …; or (B) 75 GP" → ["A: …", "B: 75 GP"]. */
+export function equipmentOptions(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(/\(([A-Z])\)\s*([^;]+?)\s*(?:;\s*(?:or\s*)?|$)/g)) {
+    out.push(`${m[1]}: ${m[2]!.replace(/\.$/, '').trim()}`);
+  }
+  return out.length ? out : text ? [text] : [];
+}
+
+/** The skills a core traits table can name, as the SRD writes them. */
+const SKILL_NAMES_2024 = [
+  'Acrobatics',
+  'Animal Handling',
+  'Arcana',
+  'Athletics',
+  'Deception',
+  'History',
+  'Insight',
+  'Intimidation',
+  'Investigation',
+  'Medicine',
+  'Nature',
+  'Perception',
+  'Performance',
+  'Persuasion',
+  'Religion',
+  'Sleight of Hand',
+  'Stealth',
+  'Survival',
+];
+
 export function normalizeClass(raw: O5eClass, ctx: Open5eContext): CompendiumRecord {
   const byLevel = new Map<number, ClassLevel>();
   const level = (n: number): ClassLevel => {
@@ -635,23 +702,59 @@ export function normalizeClass(raw: O5eClass, ctx: Open5eContext): CompendiumRec
   }
   const hd = /d?(\d+)/i.exec(raw.hit_dice ?? '')?.[1];
   const parent = raw.subclass_of?.name ?? undefined;
+
+  // The core traits table (docs/BUILDER.md): skill choice, weapons, armour, tools, equipment.
+  const core = new Map(
+    tableRows((raw.features ?? []).find((f) => f.feature_type === 'CORE_TRAITS_TABLE')?.desc ?? ''),
+  );
+  const saves = (raw.saving_throws ?? []).map((s) => s.name ?? '').filter(Boolean);
+  const skills = skillChoice(core.get('Skill Proficiencies') ?? '', SKILL_NAMES_2024);
+  if (core.size && !skills) ctx.warn(`class ${raw.key}: skill proficiencies not read`);
+  const armor = core.get('Armor Training');
+  const weapons = core.get('Weapon Proficiencies');
+  const tools = core.get('Tool Proficiencies');
+  const equipment = equipmentOptions(core.get('Starting Equipment') ?? '');
+  const primary = core.get('Primary Ability');
+
+  // The class table's own columns (Cantrips, Prepared Spells, Rages…), one value per level,
+  // a level the source leaves out taking the value before it.
+  const columns: Record<string, string[]> = {};
+  for (const f of raw.features ?? []) {
+    if (f.feature_type !== 'CLASS_TABLE_DATA' || !f.name) continue;
+    const at = new Map<number, string>();
+    for (const v of f.data_for_class_table ?? []) {
+      if (v.level && v.level >= 1 && v.level <= 20) at.set(v.level, (v.column_value ?? '').trim());
+    }
+    if (!at.size) continue;
+    const values: string[] = [];
+    let last = '';
+    for (let l = 1; l <= 20; l += 1) {
+      last = at.get(l) ?? last;
+      values.push(last);
+    }
+    columns[`table:${text(f.name)}`] = values;
+  }
   const record = {
     ...header(raw, ctx, 'class'),
     kind: 'class' as const,
     data: {
       ...(hd ? { hd: Number(hd) } : {}),
-      ...(raw.saving_throws?.length
-        ? {
-            proficiency: raw.saving_throws
-              .map((s) => s.name ?? '')
-              .filter(Boolean)
-              .join(', '),
-          }
+      // As a Lion's Den file writes it (DATA-FORMATS.md §2.12): saves, then the skill options.
+      ...(saves.length || skills?.from.length
+        ? { proficiency: [...saves, ...(skills?.from ?? [])].join(', ') }
         : {}),
+      ...(skills ? { numSkills: skills.choose } : {}),
+      ...(armor && !/^none$/i.test(armor) ? { armor } : {}),
+      ...(weapons ? { weapons } : {}),
+      ...(tools ? { tools } : {}),
       levels: [...byLevel.values()].sort((a, b) => a.level - b.level),
       extra: {
         ...(parent ? { subclassOf: [parent] } : {}),
         ...(raw.caster_type ? { casterType: [raw.caster_type] } : {}),
+        ...(skills && skills.from.length === 0 ? { anySkills: ['true'] } : {}),
+        ...(equipment.length ? { equipment } : {}),
+        ...(primary ? { primaryAbility: [primary] } : {}),
+        ...columns,
       },
     },
   };
