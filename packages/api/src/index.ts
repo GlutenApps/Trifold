@@ -634,6 +634,8 @@ export interface PlayerPackOptions {
   sourceIds: string[];
   /** Shared collections to include. */
   collectionIds: string[];
+  /** Shared books to include (ADR 0067). */
+  bookKeys?: string[];
 }
 
 /** A player pack, read but not opened yet (ADR 0064). */
@@ -661,6 +663,8 @@ export interface SharingOverview {
   bySource: Record<string, string[]>;
   /** Collection id → the ids of the campaigns that share it with their players (ADR 0062). */
   byCollection: Record<string, string[]>;
+  /** Book key → the ids of the campaigns that share it with their players (ADR 0067). */
+  byBook: Record<string, string[]>;
   /** Campaign id → how many homebrew records it shares. */
   homebrewByCampaign: Record<string, number>;
 }
@@ -1113,6 +1117,11 @@ export interface TrifoldApi {
      * campaign's file: each named campaign gains it, every other loses it.
      */
     shareCollection(collectionId: string, campaignIds: string[]): Promise<SharingOverview>;
+    /**
+     * Shares books with one campaign's players, or stops (ADR 0067), written to the campaign's
+     * file. Players get the books' player-facing records at the table.
+     */
+    share(keys: string[], campaignId: string, share: boolean): Promise<SharingOverview>;
   };
   /**
    * Joined campaigns (docs/PLAYER-MODE.md): the campaigns this Library plays in. The search and
@@ -1213,11 +1222,6 @@ export interface TrifoldApi {
      * campaign shares.
      */
     sharing(): Promise<SharingOverview>;
-    /**
-     * The campaigns that share an imported source with their players: each named campaign gains
-     * it, every other loses it. A campaign that does not show the source cannot share it.
-     */
-    setShared(sourceId: string, campaignIds: string[]): Promise<SharingOverview>;
     /**
      * Deletes `sources/<id>/` (original.xml and records) and its index rows; refuses bundled
      * sources.
@@ -1601,7 +1605,7 @@ export const API_METHODS = {
     'savePinnedRoll',
     'removePinnedRoll',
   ],
-  books: ['list', 'update', 'setRules', 'delete', 'shareCollection'],
+  books: ['list', 'update', 'setRules', 'delete', 'shareCollection', 'share'],
   duplicates: ['list'],
   sources: [
     'list',
@@ -1612,7 +1616,6 @@ export const API_METHODS = {
     'setEnabled',
     'setCampaigns',
     'sharing',
-    'setShared',
     'remove',
     'rebuildIndex',
     'attribution',

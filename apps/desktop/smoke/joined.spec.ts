@@ -330,14 +330,20 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     )) as { records: number } | null;
     expect(exported?.records).toBeGreaterThanOrEqual(1);
 
-    // A player's own copy stands in for a shared one (ADR 0060). The GM shares a whole file;
-    // the player imports the same file; the shared copies step aside and theirs answer.
+    // A player's own copy stands in for a shared one (ADR 0060). The GM shares the test file's
+    // two books (ADR 0067); the player imports the same file; the shared copies step aside and
+    // theirs answer.
     const FIXTURE = resolve(__dirname, '..', '..', '..', 'fixtures', 'compendium-sample.xml');
     const gmFile = (await gmPage.evaluate(
       `window.trifold.sources.importFile(${JSON.stringify(FIXTURE)})`,
     )) as { sourceId: string };
+    const fileBooks = JSON.stringify([
+      'system reference document 5 1',
+      'system reference document 5 2 1',
+    ]);
+    expect(gmFile.sourceId).toBeTruthy();
     await gmPage.evaluate(
-      `window.trifold.sources.setShared(${JSON.stringify(gmFile.sourceId)}, [${JSON.stringify(campaign.id)}])`,
+      `window.trifold.books.share(${fileBooks}, ${JSON.stringify(campaign.id)}, true)`,
     );
     const fireballFrom = async () =>
       (await page.evaluate(`window.trifold.compendium
@@ -353,7 +359,7 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     expect(await fireballFrom()).toContain('compendium-sample');
     await expect(page.getByTestId('shared-status')).toContainText('in your own books');
     await gmPage.evaluate(
-      `window.trifold.sources.setShared(${JSON.stringify(gmFile.sourceId)}, [])`,
+      `window.trifold.books.share(${fileBooks}, ${JSON.stringify(campaign.id)}, false)`,
     );
 
     // Unshared, it leaves the player's Library at once.

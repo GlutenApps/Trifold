@@ -91,6 +91,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
   const sharingOverview = async (): Promise<SharingOverview> => {
     const bySource: Record<string, string[]> = {};
     const byCollection: Record<string, string[]> = {};
+    const byBook: Record<string, string[]> = {};
     const homebrewByCampaign: Record<string, number> = {};
     for (const { campaign } of (await ctx.session.campaigns?.allCampaigns()) ?? []) {
       for (const id of campaign.settings.shared.sourceIds) {
@@ -99,10 +100,13 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       for (const id of campaign.settings.shared.collectionIds) {
         (byCollection[id] ??= []).push(campaign.id);
       }
+      for (const key of campaign.settings.shared.bookKeys) {
+        (byBook[key] ??= []).push(campaign.id);
+      }
       const homebrew = campaign.settings.shared.homebrewIds.length;
       if (homebrew > 0) homebrewByCampaign[campaign.id] = homebrew;
     }
-    return { bySource, byCollection, homebrewByCampaign };
+    return { bySource, byCollection, byBook, homebrewByCampaign };
   };
 
   /** Whether a source's original file is kept, so Re-parse has something to read. */
@@ -541,36 +545,6 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async sharing() {
         return sharingOverview();
       },
-      async setShared(sourceId, campaignIds) {
-        const { sources, bundled } = ctx.session.require();
-        const source = bundled.has(sourceId) ? null : await sources.get(sourceId);
-        if (!source || !canLimitToCampaigns(source, false)) {
-          throw new Error('Only an imported source can be shared with players');
-        }
-        const repo = ctx.session.campaigns;
-        if (!repo) throw new Error('No Library is open');
-        const wanted = new Set(campaignIds);
-        for (const { slug, campaign } of await repo.allCampaigns()) {
-          const has = campaign.settings.shared.sourceIds.includes(sourceId);
-          // Only a campaign that shows the source may share it (ADR 0036, ADR 0060).
-          const sees = !source.campaignIds || source.campaignIds.includes(campaign.id);
-          const want = wanted.has(campaign.id) && sees;
-          if (has === want) continue;
-          await repo.updateCampaignOf(slug, (c) => ({
-            settings: {
-              ...c.settings,
-              shared: {
-                ...c.settings.shared,
-                sourceIds: want
-                  ? [...c.settings.shared.sourceIds, sourceId]
-                  : c.settings.shared.sourceIds.filter((id) => id !== sourceId),
-              },
-            },
-          }));
-        }
-        ctx.table.sharedChanged();
-        return sharingOverview();
-      },
       async remove(sourceId) {
         const { sources, bundled, index } = ctx.session.require();
         if (bundled.has(sourceId))
@@ -668,6 +642,22 @@ export function createApi(ctx: ApiContext): TrifoldApi {
               },
             },
           }));
+        }
+        ctx.table.sharedChanged();
+        return sharingOverview();
+      },
+      async share(keys, campaignId, share) {
+        const repo = ctx.session.campaigns;
+        if (!repo) throw new Error('No Library is open');
+        for (const { slug, campaign } of await repo.allCampaigns()) {
+          if (campaign.id !== campaignId) continue;
+          await repo.updateCampaignOf(slug, (c) => {
+            const current = c.settings.shared.bookKeys;
+            const bookKeys = share
+              ? [...new Set([...current, ...keys])]
+              : current.filter((k) => !keys.includes(k));
+            return { settings: { ...c.settings, shared: { ...c.settings.shared, bookKeys } } };
+          });
         }
         ctx.table.sharedChanged();
         return sharingOverview();

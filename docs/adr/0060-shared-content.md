@@ -1,6 +1,6 @@
 # ADR 0060 — What a campaign shares with its players
 
-**Status:** accepted, 2026-11-23. Player packs and character sheets that lean on shared content are not built yet (`docs/PLAYER-MODE.md`, Part 2 and Part 3).
+**Status:** accepted, 2026-11-23. Imported content is now shared by book, not by file (ADR 0067); a campaign's whole-file shares from before still work. Character sheets that lean on shared content are not built yet (`docs/PLAYER-MODE.md`, Part 3).
 
 ## Context
 

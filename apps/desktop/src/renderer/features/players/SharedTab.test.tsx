@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CampaignBundle, SourceSummary } from '@trifold/api';
+import type { BookSummary, CampaignBundle, SourceSummary } from '@trifold/api';
 import type { CompendiumRecord } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
@@ -26,15 +26,32 @@ const source = (id: string, extra: Partial<SourceSummary> = {}): SourceSummary =
     ...extra,
   }) as SourceSummary;
 
+const book = (key: string, name: string, extra: Partial<BookSummary> = {}): BookSummary => ({
+  key,
+  name,
+  unnamed: false,
+  tags: [],
+  records: 342,
+  counts: { spell: 40, feat: 2, monster: 300 },
+  editions: { '2024': 0, '2014': 342, unknown: 0 },
+  files: [{ id: 'S1', name: 'Book S1', records: 342 }],
+  starred: false,
+  off: false,
+  ...extra,
+});
+
 const update = vi.fn(async () => undefined);
 
-function open(shared: { sourceIds?: string[]; homebrewIds?: string[] } = {}) {
+function open(shared: { sourceIds?: string[]; homebrewIds?: string[]; bookKeys?: string[] } = {}) {
   useCampaignStore.setState({
     current: {
       campaign: {
         id: 'C1',
         name: 'Greyford',
-        settings: { summonable: [], shared: { sourceIds: [], homebrewIds: [], ...shared } },
+        settings: {
+          summonable: [],
+          shared: { sourceIds: [], homebrewIds: [], bookKeys: [], ...shared },
+        },
       },
       scenes: [],
     } as unknown as CampaignBundle,
@@ -59,39 +76,66 @@ beforeEach(() => {
     source('S4', { enabled: false }),
     source('srd-2024', { kind: 'srd', bundled: true }),
   ]);
+  vi.mocked(window.trifold.books.list).mockResolvedValue([
+    book('tome', 'Tome'),
+    // Creatures alone, or off: never offered.
+    book('beasts', 'Beasts', { counts: { monster: 12 } }),
+    book('hidden', 'Hidden', { off: true }),
+  ]);
   vi.mocked(window.trifold.compendium.get).mockImplementation(async (id) =>
     id === 'hb-lantern' ? lantern : null,
   );
 });
 
 describe('SharedTab', () => {
-  it('offers the campaign’s imported sources, counting only what players would get', async () => {
+  it('offers the campaign’s books that hold anything for players, and shares one', async () => {
     open();
     render(<SharedTab />);
-    const list = await screen.findByRole('list', { name: 'Sources shared with players' });
-    await waitFor(() => expect(within(list).getAllByRole('listitem')).toHaveLength(2));
-    const [book, monsters] = within(list).getAllByRole('listitem');
-    expect(book).toHaveTextContent('Book S1');
-    expect(book).toHaveTextContent('42 records for players');
-    expect(book).toHaveTextContent('user content');
-    // A source of creatures alone has nothing to share.
-    expect(monsters).toHaveTextContent('nothing for players in it');
-    expect(within(monsters!).getByRole('checkbox')).toBeDisabled();
+    expect(await screen.findByText('No books are shared.')).toBeInTheDocument();
+    const pick = screen.getByRole('combobox', { name: 'Share a book with players' });
+    await waitFor(() =>
+      expect(
+        within(pick)
+          .getAllByRole('option')
+          .map((o) => o.textContent),
+      ).toEqual(['Share a book…', 'Tome (42 for players)']),
+    );
     expect(playerFacingCount(source('x'))).toBe(42);
     // Nothing is shared until it is turned on, so nothing is warned about.
-    expect(within(book!).getByRole('checkbox')).not.toBeChecked();
     expect(screen.queryByRole('note', { name: 'Sharing user content' })).toBeNull();
-
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Share Book S1 with players' }));
+    await userEvent.selectOptions(pick, 'tome');
     expect(update).toHaveBeenCalledWith({
       settings: expect.objectContaining({
-        shared: { sourceIds: ['S1'], homebrewIds: [], collectionIds: [] },
+        shared: { sourceIds: [], homebrewIds: [], collectionIds: [], bookKeys: ['tome'] },
       }),
     });
   });
 
-  it('warns while a source marked as user content is shared, and lists shared homebrew', async () => {
-    open({ sourceIds: ['S1'], homebrewIds: ['hb-lantern', 'hb-gone'] });
+  it('lists shared books and files shared before books, and stops sharing either', async () => {
+    open({ bookKeys: ['tome'], sourceIds: ['S2'] });
+    render(<SharedTab />);
+    const list = await screen.findByRole('list', { name: 'Books shared with players' });
+    await waitFor(() => expect(list).toHaveTextContent('Tome'));
+    expect(list).toHaveTextContent('42 records for players');
+    expect(list).toHaveTextContent('All of Only monsters');
+    await userEvent.click(screen.getByRole('button', { name: 'Stop sharing Tome' }));
+    expect(update).toHaveBeenLastCalledWith({
+      settings: expect.objectContaining({
+        shared: { sourceIds: ['S2'], homebrewIds: [], collectionIds: [], bookKeys: [] },
+      }),
+    });
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Stop sharing All of Only monsters' }),
+    );
+    expect(update).toHaveBeenLastCalledWith({
+      settings: expect.objectContaining({
+        shared: { sourceIds: [], homebrewIds: [], collectionIds: [], bookKeys: ['tome'] },
+      }),
+    });
+  });
+
+  it('warns while a book marked as user content is shared, and lists shared homebrew', async () => {
+    open({ bookKeys: ['tome'], homebrewIds: ['hb-lantern', 'hb-gone'] });
     render(<SharedTab />);
     expect(await screen.findByRole('note', { name: 'Sharing user content' })).toHaveTextContent(
       'It may hold text from outside the SRD.',
@@ -103,7 +147,7 @@ describe('SharedTab', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Stop sharing Greyford Lantern' }));
     expect(update).toHaveBeenCalledWith({
       settings: expect.objectContaining({
-        shared: { sourceIds: ['S1'], homebrewIds: ['hb-gone'], collectionIds: [] },
+        shared: { sourceIds: [], homebrewIds: ['hb-gone'], collectionIds: [], bookKeys: ['tome'] },
       }),
     });
   });
@@ -131,7 +175,7 @@ describe('ShareToggle', () => {
     await user.click(screen.getByRole('button', { name: 'Share' }));
     expect(update).toHaveBeenLastCalledWith({
       settings: expect.objectContaining({
-        shared: { sourceIds: [], homebrewIds: ['hb-lantern'], collectionIds: [] },
+        shared: { sourceIds: [], homebrewIds: ['hb-lantern'], collectionIds: [], bookKeys: [] },
       }),
     });
     useSourcesStore.setState({ sources: [] });
@@ -145,7 +189,7 @@ describe('ShareToggle', () => {
     await userEvent.click(button);
     expect(update).toHaveBeenLastCalledWith({
       settings: expect.objectContaining({
-        shared: { sourceIds: [], homebrewIds: ['hb-lantern'], collectionIds: [] },
+        shared: { sourceIds: [], homebrewIds: ['hb-lantern'], collectionIds: [], bookKeys: [] },
       }),
     });
 
@@ -158,7 +202,7 @@ describe('ShareToggle', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Share with players' }));
     expect(update).toHaveBeenLastCalledWith({
       settings: expect.objectContaining({
-        shared: { sourceIds: [], homebrewIds: [], collectionIds: [] },
+        shared: { sourceIds: [], homebrewIds: [], collectionIds: [], bookKeys: [] },
       }),
     });
   });

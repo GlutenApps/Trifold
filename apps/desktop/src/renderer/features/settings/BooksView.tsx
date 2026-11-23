@@ -5,6 +5,7 @@ import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { Icon } from '../shell/icons';
 import { CollectionsSection, useCollections } from './CollectionsSection';
+import { bookSharedLine, ShareBooksPanel } from './ShareBooksPanel';
 
 /**
  * The Books tab of Library › Compendium › Sources (ADR 0061): every book across the imported
@@ -14,7 +15,7 @@ import { CollectionsSection, useCollections } from './CollectionsSection';
  * book they can do to forty.
  */
 
-type Show = 'all' | 'starred' | 'on' | 'off';
+type Show = 'all' | 'starred' | 'on' | 'off' | 'shared';
 
 /** "2024", "Legacy", or "Mixed" when a book has both. */
 export function rulesOf(book: Pick<BookSummary, 'editions'>): '2024' | 'Legacy' | 'Mixed' | '—' {
@@ -53,6 +54,8 @@ export function bookMatches(
     fileId: string;
     /** The books of the collection picked, or null for every book. */
     inCollection?: ReadonlySet<string> | null;
+    /** The books some campaign shares with its players (ADR 0067). */
+    shared?: ReadonlySet<string>;
   },
 ): boolean {
   if (filter.inCollection && !filter.inCollection.has(book.key)) return false;
@@ -61,6 +64,7 @@ export function bookMatches(
   if (filter.show === 'starred' && !book.starred) return false;
   if (filter.show === 'on' && book.off) return false;
   if (filter.show === 'off' && !book.off) return false;
+  if (filter.show === 'shared' && !filter.shared?.has(book.key)) return false;
   if (filter.tag && !book.tags.includes(filter.tag)) return false;
   if (filter.fileId && !book.files.some((f) => f.id === filter.fileId)) return false;
   return true;
@@ -161,8 +165,16 @@ export function BooksView({
   const [fileId, setFileId] = useState('');
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const importing = useSourcesStore((s) => s.importing);
-  /** The books a typed-DELETE confirm is open for, beside one row or under the toolbar. */
-  const [deleting, setDeleting] = useState<{ keys: string[]; inRow: boolean } | null>(null);
+  /** A typed-DELETE confirm or Share with players, beside one row or under the toolbar. */
+  const [panel, setPanel] = useState<{
+    kind: 'delete' | 'share';
+    keys: string[];
+    inRow: boolean;
+  } | null>(null);
+  const sharedKeys = useMemo(
+    () => new Set(Object.keys(sharing?.byBook ?? {}).filter((k) => sharing!.byBook[k]!.length)),
+    [sharing],
+  );
   // Only an imported XML file's books can be deleted; bundled documents come back on sync.
   const xmlIds = useMemo(
     () => new Set(files.filter((f) => f.kind === 'xml').map((f) => f.id)),
@@ -209,7 +221,7 @@ export function BooksView({
   const remove = (keys: string[]) =>
     run(async () => {
       const next = await window.trifold.books.delete(keys);
-      setDeleting(null);
+      setPanel(null);
       setSelected(new Set());
       // A file lost records, or was emptied and removed: the Files tab follows.
       void useSourcesStore.getState().load();
@@ -219,7 +231,28 @@ export function BooksView({
   const all = useMemo(() => books ?? [], [books]);
   const tags = useMemo(() => [...new Set(all.flatMap((b) => b.tags))].sort(), [all]);
   const inCollection = useMemo(() => (picked ? new Set(picked.bookKeys) : null), [picked]);
-  const shown = all.filter((b) => bookMatches(b, { text, show, tag, fileId, inCollection }));
+  const shown = all.filter((b) =>
+    bookMatches(b, { text, show, tag, fileId, inCollection, shared: sharedKeys }),
+  );
+  /** The open panel, beside a row or under the toolbar. */
+  const panelFor = (keys: string[]) =>
+    panel?.kind === 'share' ? (
+      <ShareBooksPanel
+        books={all.filter((b) => keys.includes(b.key))}
+        campaigns={campaigns}
+        sources={files}
+        sharing={sharing}
+        onShared={onShared}
+        onClose={() => setPanel(null)}
+      />
+    ) : (
+      <DeleteBooksConfirm
+        books={all.filter((b) => keys.includes(b.key))}
+        xmlIds={xmlIds}
+        onDelete={() => void remove(keys)}
+        onCancel={() => setPanel(null)}
+      />
+    );
   /** Adds the chosen books to a collection, or takes them out of the one picked. */
   const file = (id: string, keys: string[], into: boolean) =>
     void saveCollections(
@@ -283,7 +316,8 @@ export function BooksView({
       <p className="muted small">
         Every book in your imported files. When a record is in more than one book, a starred book’s
         copy is shown first, after your homebrew. A book that is off leaves the compendium; its file
-        keeps it. Deleting a book takes its records out of the file.
+        keeps it. Deleting a book takes its records out of the file. Share a book to give a
+        campaign’s players its spells, items and other player options.
       </p>
       {attention.length > 0 && (
         <p className="books-attention small" role="status" data-testid="books-attention">
@@ -328,6 +362,7 @@ export function BooksView({
           <option value="starred">Starred</option>
           <option value="on">On</option>
           <option value="off">Off</option>
+          <option value="shared">Shared with players</option>
         </select>
         {tags.length > 0 && (
           <select aria-label="Tag" value={tag} onChange={(e) => setTag(e.target.value)}>
@@ -449,13 +484,21 @@ export function BooksView({
                 Remove from {picked.name}
               </button>
             )}
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setPanel({ kind: 'share', keys: chosen, inRow: false })}
+            >
+              Share…
+            </button>
             {chosen.some((k) => all.some((b) => b.key === k && deletable(b))) && (
               <button
                 type="button"
                 className="btn danger"
                 disabled={busy || importing}
                 onClick={() =>
-                  setDeleting({
+                  setPanel({
+                    kind: 'delete',
                     keys: chosen.filter((k) => all.some((b) => b.key === k && deletable(b))),
                     inRow: false,
                   })
@@ -471,14 +514,7 @@ export function BooksView({
         )}
       </div>
 
-      {deleting && !deleting.inRow && (
-        <DeleteBooksConfirm
-          books={all.filter((b) => deleting.keys.includes(b.key))}
-          xmlIds={xmlIds}
-          onDelete={() => void remove(deleting.keys)}
-          onCancel={() => setDeleting(null)}
-        />
-      )}
+      {panel && !panel.inRow && panelFor(panel.keys)}
 
       {books === null ? (
         <p className="muted">Reading your books…</p>
@@ -547,6 +583,22 @@ export function BooksView({
                 >
                   <Icon name="compendium" />
                 </button>
+                <button
+                  type="button"
+                  className={`chrome-btn xs${sharedKeys.has(b.key) ? ' on' : ''}`}
+                  aria-label={`Share ${b.name} with players`}
+                  aria-pressed={sharedKeys.has(b.key)}
+                  title={bookSharedLine(b.key, campaigns, sharing) ?? 'Share with players'}
+                  onClick={() =>
+                    setPanel(
+                      panel?.kind === 'share' && panel.inRow && panel.keys[0] === b.key
+                        ? null
+                        : { kind: 'share', keys: [b.key], inRow: true },
+                    )
+                  }
+                >
+                  <Icon name="party" />
+                </button>
                 {deletable(b) && (
                   <button
                     type="button"
@@ -554,7 +606,7 @@ export function BooksView({
                     aria-label={`Delete ${b.name}`}
                     title="Delete this book from your imported files"
                     disabled={busy || importing}
-                    onClick={() => setDeleting({ keys: [b.key], inRow: true })}
+                    onClick={() => setPanel({ kind: 'delete', keys: [b.key], inRow: true })}
                   >
                     <Icon name="trash" />
                   </button>
@@ -570,14 +622,9 @@ export function BooksView({
                 />
               </label>
             </li>,
-            deleting?.inRow && deleting.keys[0] === b.key ? (
-              <li key={`${b.key}-delete`} className="book-delete-row">
-                <DeleteBooksConfirm
-                  books={[b]}
-                  xmlIds={xmlIds}
-                  onDelete={() => void remove([b.key])}
-                  onCancel={() => setDeleting(null)}
-                />
+            panel?.inRow && panel.keys[0] === b.key ? (
+              <li key={`${b.key}-panel`} className="book-delete-row">
+                {panelFor([b.key])}
               </li>
             ) : null,
           ])}

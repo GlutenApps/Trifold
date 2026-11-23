@@ -141,8 +141,14 @@ export async function loadShared(
     sources.push({ source, records: await from.catalog.readAllRecords(id) });
   }
 
-  // A shared collection (ADR 0062) shares its books' records, grouped by the file they are in.
-  const bookKeys = booksInCollections(collections, shared.collectionIds ?? []);
+  // A shared collection (ADR 0062) or book (ADR 0067) shares its books' records, grouped by the
+  // file they are in.
+  const bookKeys = [
+    ...new Set([
+      ...booksInCollections(collections, shared.collectionIds ?? []),
+      ...(shared.bookKeys ?? []),
+    ]),
+  ];
   const byFile = new Map<string, CompendiumRecord[]>();
   for (const record of bookKeys.length ? from.index.recordsOfBooks(bookKeys) : []) {
     const list = byFile.get(record.sourceId) ?? [];

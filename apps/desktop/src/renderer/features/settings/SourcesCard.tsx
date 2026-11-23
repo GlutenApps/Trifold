@@ -5,21 +5,64 @@ import { sourceOrder } from '@trifold/rules';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { Icon } from '../shell/icons';
-import { useCampaignStore } from '../../stores/campaignStore';
-import { BooksPanel, clashLine } from './BooksPanel';
 import { BooksView } from './BooksView';
 import { DuplicatesView } from './DuplicatesView';
-import { CampaignsPanel, campaignsLine } from './CampaignsPanel';
-import { homebrewSharedLine, SharePanel, sharedLine } from './SharePanel';
 
 /**
- * The Sources card, shown under Library › Compendium › Sources (DESIGN.md §6.1): every bundled
- * and imported source with its enabled flag, record counts and import warnings, the import's
- * progress (its button is in the page header, ADR 0025), and, on an imported file, which of its
- * books use 2024 rules (ADR 0028, DATA-FORMATS.md §2.10). Importing runs in main and reports progress over the
- * `importProgress` event; a source whose parser has moved on since it was imported is marked
- * stale and can be re-parsed.
+ * The Sources card, shown under Library › Compendium › Sources (DESIGN.md §6.1), with three tabs:
+ * Books (ADR 0061), Files and Duplicates (ADR 0063). Files is housekeeping for what was imported
+ * (ADR 0067): each source's on switch, record counts, import warnings, Re-parse when the parser
+ * has moved on, and Remove. Rules, sharing and where books show are set on books. Importing runs
+ * in main and reports progress over the `importProgress` event (its button is in the page
+ * header, ADR 0025).
  */
+
+const NOUNS: Record<string, [string, string]> = {
+  monster: ['monster', 'monsters'],
+  spell: ['spell', 'spells'],
+  item: ['item', 'items'],
+  feat: ['feat', 'feats'],
+  species: ['species', 'species'],
+  background: ['background', 'backgrounds'],
+  class: ['class', 'classes'],
+  condition: ['condition', 'conditions'],
+  rule: ['rule', 'rules'],
+};
+
+/** "14 monsters and 3 spells appear twice in this file…", or null when nothing clashes. */
+export function clashLine(source: SourceSummary): string | null {
+  const entries = Object.entries(source.review?.duplicates ?? {}).filter(([, n]) => (n ?? 0) > 0);
+  if (entries.length === 0) return null;
+  const total = entries.reduce((sum, [, n]) => sum + (n ?? 0), 0);
+  const parts = entries.map(([kind, n]) => {
+    const [one, many] = NOUNS[kind] ?? [kind, `${kind}s`];
+    return `${n} ${n === 1 ? one : many}`;
+  });
+  const list =
+    parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
+  return `${list} ${total === 1 ? 'appears' : 'appear'} twice in this file, and nothing marks which copy uses 2024 rules.`;
+}
+
+/** What the Library's homebrew is shared in, for its row. */
+export function homebrewSharedLine(
+  campaigns: readonly CampaignSummary[],
+  sharing: SharingOverview | null,
+): string | null {
+  const parts = campaigns
+    .filter((c) => (sharing?.homebrewByCampaign[c.id] ?? 0) > 0)
+    .map((c) => `${sharing!.homebrewByCampaign[c.id]!} in ${c.name}`);
+  return parts.length ? `Shared with players: ${parts.join(', ')}` : null;
+}
+
+/** "Only in Silt Springs" for a file limited to some campaigns (ADR 0036), else null. */
+export function limitedLine(
+  source: Pick<SourceSummary, 'campaignIds'>,
+  campaigns: readonly CampaignSummary[],
+): string | null {
+  if (!source.campaignIds) return null;
+  const names = campaigns.filter((c) => source.campaignIds!.includes(c.id)).map((c) => c.name);
+  return names.length === 0 ? 'In no campaign' : `Only in ${names.join(', ')}`;
+}
 /** "species" stays as it is; "class" takes "es". */
 function plural(kind: string, n: number): string {
   if (n === 1 || kind === 'species') return kind;
@@ -36,31 +79,30 @@ function SourceRow({
   source,
   campaigns,
   sharing,
-  onShare,
+  onShowBooks,
 }: {
   source: SourceSummary;
   /** What every campaign shares with its players (ADR 0060); null until read. */
   sharing: SharingOverview | null;
-  onShare(sourceId: string, campaignIds: string[]): void;
-  /** Every campaign in the Library, for the campaigns a source shows in (ADR 0036). */
+  /** Every campaign in the Library, for the campaigns a limited file shows in (ADR 0036). */
   campaigns: readonly CampaignSummary[];
+  /** Opens the Books tab, where rules and sharing are set. */
+  onShowBooks(): void;
 }) {
   const setEnabled = useSourcesStore((s) => s.setEnabled);
   const remove = useSourcesStore((s) => s.remove);
   const reimport = useSourcesStore((s) => s.reimport);
   const importing = useSourcesStore((s) => s.importing);
+  const setCampaigns = useSourcesStore((s) => s.setCampaigns);
   const [showWarnings, setShowWarnings] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const setCampaigns = useSourcesStore((s) => s.setCampaigns);
-  const openCampaignId = useCampaignStore((s) => s.current?.campaign.id ?? null);
-  // Only an imported file can be limited to some campaigns (ADR 0036).
-  const limitable = !source.bundled && (source.kind === 'xml' || source.kind === 'open5e');
-  const changeCampaigns = async (ids: string[] | null) => {
-    // The open campaign's lists may gain or lose this source's records.
-    if (await setCampaigns(source.id, ids)) void useCompendiumStore.getState().search();
-  };
   const clash = clashLine(source);
+  // A campaign file's stat blocks start in their campaign only (ADR 0036); the DM can widen it.
+  const limited = !source.bundled && source.kind === 'xml' ? limitedLine(source, campaigns) : null;
+  const widen = async () => {
+    // The open campaign's lists may gain this file's records.
+    if (await setCampaigns(source.id, null)) void useCompendiumStore.getState().search();
+  };
 
   return (
     <div className="source-row" data-testid="source-row" data-source-id={source.id}>
@@ -125,18 +167,6 @@ function SourceRow({
                 <Icon name="warning" />
               </button>
             )}
-            {limitable && (
-              <button
-                type="button"
-                className={`chrome-btn xs${editing ? ' on' : ''}`}
-                title="Edit source: its books and rules, the campaigns it shows in, and sharing"
-                aria-label={`Edit ${source.name}`}
-                aria-pressed={editing}
-                onClick={() => setEditing((v) => !v)}
-              >
-                <Icon name="pencil" />
-              </button>
-            )}
             {!source.bundled && (
               <button
                 type="button"
@@ -155,71 +185,28 @@ function SourceRow({
         {source.kind === 'homebrew'
           ? 'Records you made or copied with New homebrew and Edit'
           : `${source.bundled ? 'Snapshot taken' : 'Imported'} ${new Date(source.importedAt).toLocaleString()} · default edition ${source.defaultEdition}`}
-        {limitable && (
-          <span data-testid="source-campaigns"> · {campaignsLine(source, campaigns)}</span>
-        )}
-        {limitable && sharedLine(source, campaigns, sharing) && (
-          <span data-testid="source-shared"> · {sharedLine(source, campaigns, sharing)}</span>
-        )}
         {source.kind === 'homebrew' && homebrewSharedLine(campaigns, sharing) && (
           <span data-testid="source-shared"> · {homebrewSharedLine(campaigns, sharing)}</span>
         )}
       </p>
-      {editing && (
-        <div
-          className="edit-source"
-          role="group"
-          aria-label={`Edit ${source.name}`}
-          data-testid="edit-source"
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              e.stopPropagation();
-              setEditing(false);
-            }
-          }}
-        >
-          <div className="books-panel-head">
-            <strong>Edit {source.name}</strong>
-            <span className="spacer" />
-            <button
-              type="button"
-              className="chrome-btn xs"
-              aria-label="Close Edit source"
-              title="Close"
-              onClick={() => setEditing(false)}
-            >
-              <Icon name="close" />
-            </button>
-          </div>
-          {source.review && (
-            <BooksPanel source={source} embedded onClose={() => setEditing(false)} />
-          )}
-          <CampaignsPanel
-            embedded
-            source={source}
-            campaigns={campaigns}
-            openCampaignId={openCampaignId}
-            onChange={(ids) => void changeCampaigns(ids)}
-            onClose={() => setEditing(false)}
-          />
-          <SharePanel
-            source={source}
-            campaigns={campaigns}
-            sharing={sharing}
-            onChange={(ids) => onShare(source.id, ids)}
-          />
-        </div>
-      )}
-      {clash && !editing && (
-        <p className="source-clash" data-testid="source-clash">
-          <span>⚠ {clash}</span>
+      {limited && (
+        <p className="row source-limited" data-testid="source-campaigns">
+          <span className="muted small">{limited}</span>
           <button
             type="button"
             className="btn small"
-            disabled={importing}
-            onClick={() => setEditing(true)}
+            aria-label={`Use ${source.name} in every campaign`}
+            onClick={() => void widen()}
           >
-            Edit source…
+            Use in every campaign
+          </button>
+        </p>
+      )}
+      {clash && (
+        <p className="source-clash" data-testid="source-clash">
+          <span>⚠ {clash}</span>
+          <button type="button" className="btn small" onClick={onShowBooks}>
+            Mark rules on Books…
           </button>
         </p>
       )}
@@ -264,16 +251,6 @@ export function SourcesCard({
       stale = true;
     };
   }, [sources]);
-  const share = async (sourceId: string, campaignIds: string[]) => {
-    try {
-      setSharing(await window.trifold.sources.setShared(sourceId, campaignIds));
-      // The open campaign's Shared sources tab, and what its table sends, follow its file.
-      const open = useCampaignStore.getState().current?.campaign.id;
-      if (open) await useCampaignStore.getState().load();
-    } catch (err) {
-      useSourcesStore.setState({ error: err instanceof Error ? err.message : String(err) });
-    }
-  };
   const [campaigns, setCampaignList] = useState<CampaignSummary[]>([]);
   useEffect(() => {
     let live = true;
@@ -383,9 +360,9 @@ export function SourcesCard({
       ) : (
         <>
           <p className="muted small" data-testid="files-hint">
-            What you imported, and what ships with Trifold. Re-parse, warnings, which campaigns see
-            a file, sharing and removal live here; to choose which copy of a record is shown, star
-            books on the Books tab.
+            What you imported, and what ships with Trifold: switch a file on or off, re-parse it,
+            read its import warnings or remove it. Rules, sharing, stars and collections are set on
+            the Books tab.
           </p>
           <div className="source-list">
             {ranked.map((s) => (
@@ -394,7 +371,7 @@ export function SourcesCard({
                 source={s}
                 campaigns={campaigns}
                 sharing={sharing}
-                onShare={(id, ids) => void share(id, ids)}
+                onShowBooks={() => setTab('books')}
               />
             ))}
           </div>

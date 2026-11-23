@@ -11,22 +11,28 @@ import { errorMessage, type LibrarySettings } from '@trifold/schema';
  */
 export function ExportForPlayers({
   sources,
+  books = [],
   collections,
   nothingShared = false,
 }: {
-  /** The campaign shares no homebrew, companions, sources or collections yet. */
+  /** The campaign shares no homebrew, companions, books, sources or collections yet. */
   nothingShared?: boolean;
-  /** The imported sources the campaign shares. */
+  /** The whole files the campaign shares, as campaigns did before books (ADR 0067). */
   sources: readonly SourceSummary[];
+  /** The books the campaign shares (ADR 0067). */
+  books?: ReadonlyArray<{ key: string; name: string; userContent: boolean }>;
   /** The collections the campaign shares. */
   collections: LibrarySettings['collections'];
 }) {
   const [sourceIds, setSourceIds] = useState<string[]>([]);
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
+  const [bookKeys, setBookKeys] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const userContent = sources.some((s) => sourceIds.includes(s.id) && s.license.nonSrd);
+  const userContent =
+    sources.some((s) => sourceIds.includes(s.id) && s.license.nonSrd) ||
+    books.some((b) => bookKeys.includes(b.key) && b.userContent);
   const toggle = (list: string[], id: string, on: boolean) =>
     on ? [...list, id] : list.filter((x) => x !== id);
 
@@ -35,7 +41,11 @@ export function ExportForPlayers({
     setError(null);
     setDone(null);
     try {
-      const result = await window.trifold.campaigns.exportForPlayers({ sourceIds, collectionIds });
+      const result = await window.trifold.campaigns.exportForPlayers({
+        sourceIds,
+        collectionIds,
+        bookKeys,
+      });
       if (result) {
         setDone(
           `Saved ${result.records.toLocaleString()} ${result.records === 1 ? 'record' : 'records'} to ${result.path}. Send it to your players however you like.`,
@@ -57,11 +67,25 @@ export function ExportForPlayers({
       <h2>Export for players</h2>
       <p className="muted small">
         A file your players open in their Trifold before the first session, with the homebrew and
-        companions you share. Tick a shared source or collection to put it in too; the others are
-        listed by name, so a player who owns one can import it.
+        companions you share. Tick a shared book or collection to put it in too; the files left out
+        are listed by name, so a player who owns one can import it.
       </p>
-      {(sources.length > 0 || collections.length > 0) && (
+      {(sources.length > 0 || books.length > 0 || collections.length > 0) && (
         <ul className="shared-list" aria-label="Also put in the pack">
+          {books.map((b) => (
+            <li key={b.key} className="shared-row">
+              <label className="field inline grow">
+                <input
+                  type="checkbox"
+                  aria-label={`Put ${b.name} in the pack`}
+                  checked={bookKeys.includes(b.key)}
+                  onChange={(e) => setBookKeys((l) => toggle(l, b.key, e.target.checked))}
+                />
+                {b.name}
+              </label>
+              {b.userContent && <span className="badge">user content</span>}
+            </li>
+          ))}
           {sources.map((s) => (
             <li key={s.id} className="shared-row">
               <label className="field inline grow">
