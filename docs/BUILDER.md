@@ -8,18 +8,19 @@ A player makes a 2024-rules character in a few minutes by choosing, not typing: 
 
 ## Where the rules come from
 
-Ground rule 3: no game text but the SRD fetched at build time. The builder reads only bundled SRD 5.2.1 records and parses them at build time; nothing is hand-written into the repo.
+Ground rule 3: no game text but the SRD fetched at build time. The builder's game text (class and species features, background traits, equipment lists, spell lists) comes only from bundled SRD 5.2.1 records, parsed at build time. Rules arithmetic lives in `packages/rules` as tables, as the CR and XP tables do: spell slots per level by caster type (Open5e's class table has no slot columns for full and half casters, only the caster type), the point-buy costs and the standard array.
 
 What the snapshot holds today, and what it needs:
 
 | Needed | Today | Change |
 | --- | --- | --- |
 | Class: hit die, saving throws, level features, ASI levels, subclass | In the class records | none |
-| Class: skill choices ("Choose 2: …"), weapon and armour training, starting equipment (A/B) | Dropped: Open5e has them in a `CORE_TRAITS_TABLE` feature the normaliser skips | Keep it, parsed into `data.core` (checked against the API for all 12 classes) |
-| Class table columns: cantrips, prepared spells, spell slots per level, Rages, Weapon Mastery… | Dropped: `CLASS_TABLE_DATA` features | Keep them as `data.table: { column → value per level }` |
+| Class: skill choices ("Choose 2: …"), weapon and armour training, starting equipment (A/B) | Dropped: Open5e has them in a `CORE_TRAITS_TABLE` feature the normaliser skipped | `proficiency`, `numSkills`, `armor`, `weapons`, `tools`, `extra.equipment` (#108) |
+| Class table columns: cantrips, prepared spells, Warlock slots, Rages, Weapon Mastery… | Dropped: `CLASS_TABLE_DATA` features | `extra["table:<column>"]`, one value per level (#108) |
+| Spell slots for full and half casters | Not in the class table; the caster type is | A rules table by caster type in `packages/rules` |
 | Background: three ability scores, feat, two skills, tool, equipment A/B | In the background traits, as text | Parse the traits at build time into typed fields |
 | Species: size, speed, traits, choices (such as Draconic Ancestry) | In the species traits | Typed size and speed; traits stay text, with their choices offered as a pick where the text lists them |
-| Standard array and point-buy costs | In the rules record "Step 3: Ability Scores" | Parse its tables at build time |
+| Standard array and point-buy costs | In the rules record "Step 3: Ability Scores" | Rules tables in `packages/rules`, checked against that record in a test |
 | Spells by class | Spell records carry `classes` | none |
 | Origin feats, fighting style feats | Feat records carry a prerequisite | Read the category from it |
 
