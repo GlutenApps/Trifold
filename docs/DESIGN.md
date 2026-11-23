@@ -174,7 +174,7 @@ Spell, item, feat, species, background, class, condition and rule records keep t
 
 **NPC**: `{ id, name, recordRef? (stat block), portrait?, role, location, notes, isAlive, hp?: { current, max, temp }, conditions?, playerControllable?, companionOf? }`. `hp` is what the last fight left. `playerControllable` lets players claim it; `companionOf` names the PC it is a companion of.
 
-**PCCard**: `{ id, name, playerName, classText, level, maxHp, currentHp?, tempHp?, conditions?, ac, initiativeBonus, speed, passives: { perception, insight, investigation }, spellSaveDc?, saves, portrait?, dndBeyondUrl?, notes, tokenStyleOverride?, playerControllable? }`. No `currentHp` means full HP; current and temp HP carry between fights. A PC can be claimed unless `playerControllable` is false.
+**PCCard**: `{ id, name, playerName, classText, level, maxHp, currentHp?, tempHp?, conditions?, ac, initiativeBonus, speed, passives: { perception, insight, investigation }, spellSaveDc?, saves, portrait?, sheetUrl?, notes, tokenStyleOverride?, playerControllable? }`. No `currentHp` means full HP; current and temp HP carry between fights. A PC can be claimed unless `playerControllable` is false.
 
 **CampaignCounter**: `{ id, name, initial, value, min?, max?, step (default 1), altStep?, showOnTv?, order }`. Whole numbers; `min ≤ max`, and `value` is held inside the bounds. Not the combatant `Counter`, which lives inside a fight.
 

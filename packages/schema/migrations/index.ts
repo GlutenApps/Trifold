@@ -48,7 +48,7 @@ export const CURRENT_SCHEMA_VERSION: VersionTable = {
   source: 1,
   record: 1,
   campaign: 1,
-  pc: 1,
+  pc: 2,
   encounter: 1,
   adventure: 1,
   note: 1,
@@ -104,7 +104,18 @@ export const MIGRATIONS: MigrationRegistry = {
   source: [],
   record: [],
   campaign: [],
-  pc: [],
+  pc: [
+    {
+      from: 1,
+      to: 2,
+      // ADR 0070: the sheet link is any sheet's, not one site's. A value that is not a web
+      // address is dropped rather than kept where nothing could open it.
+      migrate: ({ dndBeyondUrl, ...doc }) =>
+        typeof dndBeyondUrl === 'string' && /^https?:\/\/\S+$/i.test(dndBeyondUrl)
+          ? { ...doc, sheetUrl: dndBeyondUrl }
+          : doc,
+    },
+  ],
   encounter: [],
   adventure: [],
   note: [],

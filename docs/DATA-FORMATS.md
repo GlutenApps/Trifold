@@ -275,7 +275,7 @@ Library/
   logs/                        main-process logs and icon-misses.txt
 ```
 
-Schema versions: `library.json` is at 5; every other Library file is at 1. Settings that belong to the computer rather than to a Library (which Library is open, window positions, the audio source, the update check, the table server's port) are in `config.json` in the app's user-data folder.
+Schema versions: `library.json` is at 5 and PC cards (`campaigns/<slug>/pcs/<id>.json`) at 2, since `dndBeyondUrl` became `sheetUrl` (ADR 0070); every other Library file is at 1. Settings that belong to the computer rather than to a Library (which Library is open, window positions, the audio source, the update check, the table server's port) are in `config.json` in the app's user-data folder.
 
 Backups are zips named by date (`2026-11-16.zip`, with `-quit` or `-pre-restore` variants) holding the whole Library except `backups/`, `logs/` and `index.sqlite`.
 

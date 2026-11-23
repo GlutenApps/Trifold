@@ -81,6 +81,40 @@ describe('PcEditor', () => {
   });
 });
 
+describe('PcEditor sheet link (ADR 0070)', () => {
+  it('keeps a web address as the sheet link, and holds Save until a bad one is fixed', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(<PcEditor pc={thora} onSave={onSave} onCancel={() => undefined} />);
+    const link = screen.getByRole('textbox', { name: 'Character sheet link' });
+    await user.type(link, 'ftp://x');
+    expect(screen.getByRole('alert')).toHaveTextContent('starting with http:// or https://');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    await user.clear(link);
+    await user.type(link, '  https://example.test/thora  ');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ sheetUrl: 'https://example.test/thora' }),
+      false,
+    );
+  });
+
+  it('drops an emptied link', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <PcEditor
+        pc={{ ...thora, sheetUrl: 'https://example.test/thora' }}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+    await user.clear(screen.getByRole('textbox', { name: 'Character sheet link' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSave.mock.calls[0]![0]).not.toHaveProperty('sheetUrl');
+  });
+});
+
 describe('NpcEditor', () => {
   it('needs only a name, and links a stat block picked from the compendium', async () => {
     const row = {

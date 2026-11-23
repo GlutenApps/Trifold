@@ -13,6 +13,7 @@ import {
 import { normalizeKey } from '@trifold/rules';
 import {
   CAMPAIGN_SCHEMA_VERSION,
+  PC_SCHEMA_VERSION,
   nowIso,
   type CombatantTemplate,
   type CompendiumRecord,
@@ -47,7 +48,7 @@ export interface CampaignImportContext {
 function pcFromImport(q: ImportedPc, existing?: PCCard): PCCard {
   const now = nowIso();
   return {
-    schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+    schemaVersion: PC_SCHEMA_VERSION,
     id: existing?.id ?? ulid(),
     name: q.name,
     playerName: q.playerName ?? existing?.playerName ?? '',

@@ -6,6 +6,12 @@ import { RecordRef } from './record';
 
 export const CAMPAIGN_SCHEMA_VERSION = 1;
 
+/**
+ * PC cards have their own version since `dndBeyondUrl` became `sheetUrl` (ADR 0070): the other
+ * campaign files are still at `CAMPAIGN_SCHEMA_VERSION`.
+ */
+export const PC_SCHEMA_VERSION = 2;
+
 const int = z.number().int();
 
 export const PlayerOverlays = z.object({
@@ -97,7 +103,7 @@ export const ConditionInstance = z.object({
 export type ConditionInstance = z.infer<typeof ConditionInstance>;
 
 export const PCCard = z.object({
-  schemaVersion: z.literal(CAMPAIGN_SCHEMA_VERSION),
+  schemaVersion: z.literal(PC_SCHEMA_VERSION),
   id: z.string().min(1),
   name: z.string().min(1),
   playerName: z.string().default(''),
@@ -125,7 +131,15 @@ export const PCCard = z.object({
   spellSaveDc: int.optional(),
   saves: z.partialRecord(Ability, int).default({}),
   portrait: z.string().optional(),
-  dndBeyondUrl: z.string().optional(),
+  /**
+   * The player's character sheet, as a web address (ADR 0070; PLAYER-MODE.md, Way 1): it opens
+   * as a web tab. Was `dndBeyondUrl`, which nothing read.
+   */
+  sheetUrl: z
+    .string()
+    .max(2000)
+    .regex(/^https?:\/\/\S+$/i)
+    .optional(),
   notes: z.string().default(''),
   tokenStyleOverride: z.enum(['engraved', 'flat', 'twoTone', 'plain']).optional(),
   /** Offered to players at the table to claim (ADR 0043); absent means on, false means not. */

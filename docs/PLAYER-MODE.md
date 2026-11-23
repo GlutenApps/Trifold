@@ -40,7 +40,7 @@ Facts from the repo that the first draft did not have.
 6. **The table is not advertised as a service.** `mdns.ts` answers A and AAAA for `trifold.local` and nothing else, so the network can give a name's address but not the port or the campaign.
 7. **`QuickNotesTool`, `PinnedRolls` and `CompendiumPage` read `useCampaignStore`.** Quick notes file into the GM's notes tree, pinned rolls are per campaign, and the compendium applies per-campaign sources (ADR 0036) and offers campaign actions.
 8. **Schema versions are per file kind in the migrator but shared in the schemas.** `CURRENT_SCHEMA_VERSION` has `pc`, `players` and `campaign` separately, all at 1, while `PCCard`, `PlayersFile` and the rest share one `CAMPAIGN_SCHEMA_VERSION` literal. Additive fields with defaults take no bump in this repo (see `sourcePriority` in `library.ts`).
-9. **`dndBeyondUrl` exists only in the `PCCard` schema and DESIGN §5.2.** No form, importer or exporter reads or writes it.
+9. **`dndBeyondUrl` existed only in the `PCCard` schema and DESIGN §5.2.** No form, importer or exporter read or wrote it. It is now `sheetUrl` (ADR 0070).
 10. **`trifold-media://` is the one custom scheme**, registered in a single `registerSchemesAsPrivileged` call before `app.whenReady()` and routed by host (`icons`, `track`, `library`).
 11. **Campaign search ranks in memory.** Only the compendium half of global search asks SQLite (ADR 0017).
 12. **Releases are cut from `main`, and the installed Windows build updates itself** (ADR 0045).
@@ -381,7 +381,7 @@ The player owns the character sheet; the GM's console owns table state. Three wa
 
 ## Where characters live and are edited
 
-Characters belong to the Library, not to a campaign: one character can be linked from several joined campaigns. The Library gets a **Characters** page, where a character is made, opened, exported and deleted. Built (ADR 0068): the page, behind the flag, with **New character** offering an **External character** (Way 1: the table numbers and a sheet link) or a **Trifold character** (Way 3's sheet, filled in by hand until the builder lands), the one-way switch from External to Trifold, export and import as a JSON file, and a typed DELETE. Since built (ADR 0069): the Sheets tab and linking in a joined campaign. Still to come in phase 5: the `sheetUrl` migration and sheet updates. Inside a joined campaign a character can be started or edited too (My characters, Sheets); it is the same file either way.
+Characters belong to the Library, not to a campaign: one character can be linked from several joined campaigns. The Library gets a **Characters** page, where a character is made, opened, exported and deleted. Built (ADR 0068): the page, behind the flag, with **New character** offering an **External character** (Way 1: the table numbers and a sheet link) or a **Trifold character** (Way 3's sheet, filled in by hand until the builder lands), the one-way switch from External to Trifold, export and import as a JSON file, and a typed DELETE. Since built: the Sheets tab and linking in a joined campaign (ADR 0069), and the `sheetUrl` migration (ADR 0070). Still to come in phase 5: sheet updates. Inside a joined campaign a character can be started or edited too (My characters, Sheets); it is the same file either way.
 
 A player can edit a character at any time, connected or not. Edits are saved to the character's file at once. When a linked character's table numbers have changed since the GM last took them, the next connection to that GM's table sends the offer (see Sheet updates), so a level-up done at home reaches the table when the player next sits down.
 
@@ -408,7 +408,7 @@ A GM can also create a PC card from a player's offered sheet: **New PC from play
 
 The player fills a short **Table numbers** form (the PC card fields) and adds a **Character sheet link**, which opens as a web tab. Nothing else is needed. The UI never names a site (ground rule 1).
 
-On the GM side, rename the PC card's `dndBeyondUrl` to `sheetUrl`. Nothing reads the field today, so this is the schema, a `pc` migration from 1 to 2 (with the PC card's own version constant instead of `CAMPAIGN_SCHEMA_VERSION`), DESIGN §5.2 and then a new field on the PC form. Campaign packages (`.trifold-campaign`) carry PC files: check that package import runs the migrator. The schema-bump checklist applies: the tests that hard-code version numbers change, and the migration test's fixture table keeps its own.
+Built (ADR 0070): `sheetUrl` on the PC card, PC files at version 2, the Character sheet link field on the PC form and Open character sheet on the party row. On the GM side, rename the PC card's `dndBeyondUrl` to `sheetUrl`. Nothing reads the field today, so this is the schema, a `pc` migration from 1 to 2 (with the PC card's own version constant instead of `CAMPAIGN_SCHEMA_VERSION`), DESIGN §5.2 and then a new field on the PC form. Campaign packages (`.trifold-campaign`) carry PC files: check that package import runs the migrator. The schema-bump checklist applies: the tests that hard-code version numbers change, and the migration test's fixture table keeps its own.
 
 ## Way 2: import an exported PDF sheet
 

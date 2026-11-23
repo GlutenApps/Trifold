@@ -209,6 +209,21 @@ function PartyTab() {
                 />
               ) : (
                 <span className="row-actions">
+                  {pc.sheetUrl && (
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-label={`Open ${pc.name}’s character sheet`}
+                      title="Open the character sheet in a web tab"
+                      onClick={() =>
+                        useShellStore
+                          .getState()
+                          .addWebTab({ url: pc.sheetUrl!, title: `${pc.name}’s sheet` })
+                      }
+                    >
+                      <Icon name="external" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="chrome-btn xs"

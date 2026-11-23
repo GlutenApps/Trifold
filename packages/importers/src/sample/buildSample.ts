@@ -4,6 +4,7 @@ import { glyphForCreature, maskedNameFor, numberedNames, type IconTableSet } fro
 import {
   Adventure,
   CAMPAIGN_SCHEMA_VERSION,
+  PC_SCHEMA_VERSION,
   Campaign,
   CampaignSettings,
   Encounter,
@@ -252,7 +253,9 @@ export function buildSampleCampaign(input: SampleInput): SampleBuild {
   );
   const npcBySlug = new Map(src.npcs.map((n, i) => [n.id, { source: n, npc: npcs[i]! }]));
 
-  const pcs = src.pcs.map((p) => PCCard.parse({ ...p, ...stamp, id: id(p.id) }));
+  const pcs = src.pcs.map((p) =>
+    PCCard.parse({ ...p, ...stamp, schemaVersion: PC_SCHEMA_VERSION, id: id(p.id) }),
+  );
 
   // Encounters, and the tokens their placed combatants put on the scene they name.
   const sceneSlugs = new Set(src.scenes.map((s) => s.id));

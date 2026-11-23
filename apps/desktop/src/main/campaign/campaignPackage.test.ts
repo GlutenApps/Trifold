@@ -77,7 +77,7 @@ describe('CampaignPackager', () => {
     await writeFile(join(a.root, 'campaigns', slug, 'tokens', 'thora.png'), 'png-thora');
     await writeFile(join(a.root, 'campaigns', slug, 'images', 'bridge.png'), 'png-bridge');
     await a.campaigns.savePc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       id: 'PC1',
       name: 'Thora',
       playerName: '',

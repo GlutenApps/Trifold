@@ -6,6 +6,7 @@ import { carriedOut, normalizeKey, sortCounters } from '@trifold/rules';
 import {
   Adventure,
   CAMPAIGN_SCHEMA_VERSION,
+  PC_SCHEMA_VERSION,
   Campaign,
   CampaignCounter,
   CampaignTimer,
@@ -452,7 +453,7 @@ export class CampaignRepository {
     const slug = this.requireSlug();
     const pc = PCCard.parse({
       ...input,
-      schemaVersion: CAMPAIGN_SCHEMA_VERSION,
+      schemaVersion: PC_SCHEMA_VERSION,
       id: input.id || ulid(),
       createdAt: input.createdAt || nowIso(),
       updatedAt: nowIso(),
@@ -512,7 +513,7 @@ export class CampaignRepository {
     const schema: ZodType<PCCard | NPC> = kind === 'pc' ? PCCard : NPC;
     const slug = await this.slugFor(campaignId);
     const value = await this.store.readJson(this.dir(slug, folder, `${id}.json`), schema, kind);
-    const { portrait: _old, ...rest } = value as PCCard & NPC;
+    const { portrait: _old, ...rest } = value as { portrait?: string } & Record<string, unknown>;
     await this.store.writeJson(this.dir(slug, folder, `${id}.json`), {
       ...rest,
       ...(portrait ? { portrait } : {}),
