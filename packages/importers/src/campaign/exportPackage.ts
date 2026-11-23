@@ -72,14 +72,41 @@ export function freshStart(parts: CampaignParts): CampaignParts {
 }
 
 /**
+ * The campaign with its party left out: the PC cards, and everything that only makes sense with
+ * them, so nothing in the file points at a character that is not there. That is each PC's
+ * tokens on the maps, the creatures a PC summoned, PCs listed in an encounter, and the link from
+ * an NPC companion to its PC (the NPC stays). A fight in progress that a PC is in cannot go on
+ * without them, so it is put away; the encounter stays.
+ */
+export function withoutParty(parts: CampaignParts): CampaignParts {
+  return {
+    ...parts,
+    pcs: [],
+    npcs: parts.npcs.map((npc) => {
+      const { companionOf: _pc, ...rest } = npc;
+      return rest;
+    }),
+    encounters: parts.encounters.map((e) => ({
+      ...e,
+      combatants: e.combatants.filter((c) => c.ref.kind !== 'pc'),
+      state: e.state?.combatants.some((c) => c.ref.kind === 'pc') ? null : e.state,
+    })),
+    scenes: parts.scenes.map((s) => ({
+      ...s,
+      tokens: s.tokens.filter((t) => t.ref.kind !== 'pc' && t.summon?.ownerKind !== 'pc'),
+    })),
+  };
+}
+
+/**
  * What goes into the file: fresh start when asked, the party only when asked, and never the
  * scene music, which points at this Library's music.
  */
 export function prepareExport(parts: CampaignParts, options: CampaignExportOptions): CampaignParts {
-  const base = options.state === 'fresh' ? freshStart(parts) : parts;
+  const kept = options.state === 'fresh' ? freshStart(parts) : parts;
+  const base = options.party ? kept : withoutParty(kept);
   return {
     ...base,
-    pcs: options.party ? base.pcs : [],
     scenes: base.scenes.map((s) => {
       const { audio: _audio, ...rest } = s;
       return rest;
