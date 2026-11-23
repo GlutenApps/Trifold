@@ -26,4 +26,4 @@ Stars (ADR 0061) set which books lead in general. Some clashes still need a GM's
 
 - ADR 0027's saved order is gone from every path; saving `sourcePriority` no longer reorders anything.
 - A large compendium can have well over a thousand duplicates. Most need nothing: stars and the usual order decide them. The tab is for the ones a GM cares about.
-- Two copies can share a label when the bundled SRD and an imported file name the same book; the imported one adds its file's name.
+- The bundled SRD's copy is labelled "SRD" whatever book it names, so it never shares a label with an imported file's copy of the same book (ADR 0065).

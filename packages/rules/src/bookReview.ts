@@ -1,4 +1,4 @@
-import { normalizeKey } from './normalizeKey';
+import { bookKey as keyOfBook } from './books';
 
 /**
  * The books an imported compendium file names, and the clash that says some of them need
@@ -25,7 +25,7 @@ export function reviewBooks(records: Iterable<ReviewableRecord>): BookReview {
   for (const r of records) {
     const book = r.sourceBook?.trim();
     if (!book) continue;
-    const bookKey = normalizeKey(book);
+    const bookKey = keyOfBook(book);
     const entry = books.get(bookKey) ?? { name: book, records: 0 };
     entry.records += 1;
     books.set(bookKey, entry);
@@ -44,10 +44,4 @@ export function reviewBooks(records: Iterable<ReviewableRecord>): BookReview {
     ),
     duplicates,
   };
-}
-
-/** True when `book` is one of `marked` (matched as the importer matches, by normalized key). */
-export function isMarked2024(book: string, marked: readonly string[]): boolean {
-  const key = normalizeKey(book);
-  return marked.some((m) => normalizeKey(m) === key);
 }

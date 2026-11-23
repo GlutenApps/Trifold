@@ -24,6 +24,7 @@ import type { TableHub } from './table/hub';
 import { canLimitToCampaigns } from './sources/campaignScope';
 import { importXmlSource, isStale, reimportSource } from './sources/importXml';
 import { listBooks, with2024Books, withBookSettings } from './sources/books';
+import { deleteBooks, withoutDeletedChoices } from './sources/deleteBooks';
 import { PLAYER_PACK_EXTENSION } from './table/playerPack';
 import { campaignBooks } from '@trifold/rules';
 import { listDuplicates } from './sources/duplicates';
@@ -719,6 +720,47 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           void ctx.joined.ownSourcesChanged();
         }
         index.applyBookSettings(store.getSettings().books);
+        return listBooks(index, store.getSettings().books);
+      },
+      async delete(keys) {
+        if (importing) throw new Error('An import is already running');
+        const { store, sources, index } = ctx.session.require();
+        const wanted = new Set(keys);
+        const before = listBooks(index, store.getSettings().books).filter((b) => wanted.has(b.key));
+        const fileIds = [...new Set(before.flatMap((b) => b.files.map((f) => f.id)))];
+        importing = true;
+        let result: Awaited<ReturnType<typeof deleteBooks>>;
+        try {
+          result = await deleteBooks({ sources, index }, keys, fileIds);
+        } finally {
+          importing = false;
+        }
+        // A book still in another place (an opted-in document) keeps its settings.
+        const left = new Set(listBooks(index, store.getSettings().books).map((b) => b.key));
+        const gone = keys.filter((k) => !left.has(k));
+        const settings = store.getSettings();
+        const books = { ...settings.books };
+        for (const k of gone) delete books[k];
+        await store.updateSettings({
+          books,
+          collections: settings.collections.map((c) => ({
+            ...c,
+            bookKeys: c.bookKeys.filter((k) => !gone.includes(k)),
+          })),
+          duplicateChoices: withoutDeletedChoices(
+            settings.duplicateChoices,
+            keys,
+            result.files,
+            result.removedFiles,
+          ),
+        });
+        markLibraryChoices(index, store);
+        void ctx.joined.ownSourcesChanged();
+        // What a table shares may have held those books.
+        ctx.table.sharedChanged();
+        ctx.logger.info(
+          `deleted ${keys.length} book(s): ${result.records} records, ${result.removedFiles.length} file(s) emptied and removed`,
+        );
         return listBooks(index, store.getSettings().books);
       },
     },

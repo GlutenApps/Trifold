@@ -96,6 +96,9 @@ describe('DuplicatesView (ADR 0063)', () => {
     expect(copyLabel({ ...ward.copies[0]!, homebrew: true })).toBe(
       'Homebrew (Big file) · legacy · starred',
     );
+    expect(
+      copyLabel({ ...ward.copies[0]!, srd: true, sourceName: 'SRD 5.2.1', edition: '2024' }),
+    ).toBe('SRD · 2024 · starred');
   });
 });
 

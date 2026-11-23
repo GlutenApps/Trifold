@@ -2713,6 +2713,15 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   margin: 0 0 6px;
 }
 
+/* Deleting books asks for DELETE (ADR 0065): under the toolbar, or under its row. */
+.book-delete-row {
+  padding: 0 4px 8px;
+}
+
+.book-delete p {
+  margin: 0 0 6px;
+}
+
 /* Sharing a homebrew record made from user content asks first (ADR 0060). */
 .share-ask {
   display: inline-flex;

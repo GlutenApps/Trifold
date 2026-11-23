@@ -70,6 +70,7 @@ An architecture decision record (ADR) is a short file about one choice that refi
 | [0062](0062-collections.md) | Collections: named groups of books in library.json. A campaign that uses collections shows only their books from the imported files (the SRD and homebrew always show); a campaign can share a collection with its players. Managed on the Books tab and the campaign's Shared sources tab. |
 | [0063](0063-duplicates.md) | Duplicates: a record in more than one file or book; a GM picks the copy for one record (Always use this copy, or the Duplicates tab), kept in library.json. A chosen copy beats homebrew and stars; the rest go homebrew, starred, imported, SRD 2024, SRD legacy. |
 | [0064](0064-player-packs.md) | Player packs: Export for players writes a `.trifold-players` file of a campaign's shared content (homebrew and companions always; imported sources and collections only when ticked). A player opens it to join the campaign offline before the first session; an older pack never replaces newer content. |
+| [0065](0065-deleting-books.md) | Deleting books: a book is deleted from the imported files that hold it, after a typed DELETE; `source.json` remembers it so Re-parse leaves it out, and importing the file again brings it back. Also: a 2024 mark names one printing, and the SRD's duplicate copy is labelled SRD. |
 
 ## Decision log
 
@@ -114,4 +115,5 @@ Product-level decisions by area, as they were settled. Rationale is in the ADRs 
 | Collections | Group books into collections on the Books tab. A campaign that uses collections shows only their books; one that uses none shows every book. A collection can be shared with a campaign's players, from the Books tab or the campaign's Shared sources tab. See ADR 0062. |
 | Duplicates | A record in more than one file or book shows one copy: the GM's choice for that record, then homebrew, a starred book, imported files, then the SRD. Settle one with Always use this copy on its page, or on Sources › Duplicates. See ADR 0063. |
 | Player packs | A campaign's Shared sources tab exports a player pack for before the first session; players open it from Join a campaign. See ADR 0064. |
+| Deleting books | Sources › Books deletes a book, or a selection, after a typed DELETE; Re-parse keeps it out and importing its file again brings it back. See ADR 0065. |
 | Web tabs | The stage `+` menu adds a web tab: an address the DM typed, hosted in a sandboxed Electron webview in one persistent session, so a hosted document or sheet sits beside the console as a tab and reopens where it was left at the next launch. Library-wide list stored with the layouts; close parks, remove forgets; modifier hotkeys reach through the page; every tab has Open in system browser. See ADR 0011. |

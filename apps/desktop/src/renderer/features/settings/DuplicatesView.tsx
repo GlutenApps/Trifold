@@ -35,8 +35,10 @@ const REASONS: Record<DuplicateGroup['reason'], string> = {
 
 /** "Book · legacy" or "File · 2024": where a copy is, as its option says. */
 export function copyLabel(copy: DuplicateCopy): string {
-  const where = copy.homebrew ? 'Homebrew' : copy.book || copy.sourceName;
-  const extra = copy.book && copy.book !== copy.sourceName ? ` (${copy.sourceName})` : '';
+  // The SRD's copy says so: an imported file can name the same book.
+  const where = copy.homebrew ? 'Homebrew' : copy.srd ? 'SRD' : copy.book || copy.sourceName;
+  const extra =
+    !copy.srd && copy.book && copy.book !== copy.sourceName ? ` (${copy.sourceName})` : '';
   const edition = copy.edition === '2014' ? 'legacy' : copy.edition;
   return `${where}${extra} · ${edition}${copy.starred ? ' · starred' : ''}`;
 }

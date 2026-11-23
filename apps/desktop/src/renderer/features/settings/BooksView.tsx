@@ -66,6 +66,73 @@ export function bookMatches(
   return true;
 }
 
+/**
+ * Typed-DELETE confirm for deleting books (ADR 0065), as a campaign's delete asks: the records
+ * leave the Library, so a click is not enough.
+ */
+export function DeleteBooksConfirm({
+  books,
+  xmlIds,
+  onDelete,
+  onCancel,
+}: {
+  books: readonly BookSummary[];
+  /** The imported XML files: only their copies are deleted. */
+  xmlIds: ReadonlySet<string>;
+  onDelete(): void;
+  onCancel(): void;
+}) {
+  const [typed, setTyped] = useState('');
+  const ready = typed === 'DELETE';
+  const label = books.length === 1 ? books[0]!.name : `${books.length} books`;
+  const records = books.reduce(
+    (n, b) => n + b.files.filter((f) => xmlIds.has(f.id)).reduce((m, f) => m + f.records, 0),
+    0,
+  );
+  const files = [
+    ...new Set(books.flatMap((b) => b.files.filter((f) => xmlIds.has(f.id)).map((f) => f.name))),
+  ];
+  return (
+    <form
+      className="campaign-delete book-delete"
+      data-testid="delete-books"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (ready) onDelete();
+      }}
+    >
+      <p className="small">
+        Delete <strong>{label}</strong>: {records.toLocaleString()}{' '}
+        {records === 1 ? 'record leaves' : 'records leave'} your Library, from {files.join(', ')}.
+        Campaigns that use them lose them, and Re-parse leaves them out; importing the file again
+        brings them back. Type DELETE to confirm.
+      </p>
+      <div className="row">
+        <input
+          type="text"
+          aria-label={`Type DELETE to delete ${label}`}
+          placeholder="DELETE"
+          autoFocus
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              onCancel();
+            }
+          }}
+        />
+        <button type="submit" className="btn danger" disabled={!ready}>
+          {books.length === 1 ? 'Delete book' : 'Delete books'}
+        </button>
+        <button type="button" className="btn" onClick={onCancel}>
+          Keep
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export function BooksView({
   files,
   onBrowse,
@@ -94,6 +161,14 @@ export function BooksView({
   const [fileId, setFileId] = useState('');
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const importing = useSourcesStore((s) => s.importing);
+  /** The books a typed-DELETE confirm is open for, beside one row or under the toolbar. */
+  const [deleting, setDeleting] = useState<{ keys: string[]; inRow: boolean } | null>(null);
+  // Only an imported XML file's books can be deleted; bundled documents come back on sync.
+  const xmlIds = useMemo(
+    () => new Set(files.filter((f) => f.kind === 'xml').map((f) => f.id)),
+    [files],
+  );
+  const deletable = (b: BookSummary) => b.files.some((f) => xmlIds.has(f.id));
 
   const load = useCallback(async () => {
     try {
@@ -127,6 +202,16 @@ export function BooksView({
     run(async () => {
       const next = await window.trifold.books.setRules(keys, use2024);
       // A re-read file's records changed: the Files tab's counts follow.
+      void useSourcesStore.getState().load();
+      return next;
+    });
+
+  const remove = (keys: string[]) =>
+    run(async () => {
+      const next = await window.trifold.books.delete(keys);
+      setDeleting(null);
+      setSelected(new Set());
+      // A file lost records, or was emptied and removed: the Files tab follows.
       void useSourcesStore.getState().load();
       return next;
     });
@@ -198,7 +283,7 @@ export function BooksView({
       <p className="muted small">
         Every book in your imported files. When a record is in more than one book, a starred book’s
         copy is shown first, after your homebrew. A book that is off leaves the compendium; its file
-        keeps it.
+        keeps it. Deleting a book takes its records out of the file.
       </p>
       {attention.length > 0 && (
         <p className="books-attention small" role="status" data-testid="books-attention">
@@ -364,12 +449,36 @@ export function BooksView({
                 Remove from {picked.name}
               </button>
             )}
+            {chosen.some((k) => all.some((b) => b.key === k && deletable(b))) && (
+              <button
+                type="button"
+                className="btn danger"
+                disabled={busy || importing}
+                onClick={() =>
+                  setDeleting({
+                    keys: chosen.filter((k) => all.some((b) => b.key === k && deletable(b))),
+                    inRow: false,
+                  })
+                }
+              >
+                Delete…
+              </button>
+            )}
             <button type="button" className="btn ghost" onClick={() => setSelected(new Set())}>
               Clear
             </button>
           </>
         )}
       </div>
+
+      {deleting && !deleting.inRow && (
+        <DeleteBooksConfirm
+          books={all.filter((b) => deleting.keys.includes(b.key))}
+          xmlIds={xmlIds}
+          onDelete={() => void remove(deleting.keys)}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
 
       {books === null ? (
         <p className="muted">Reading your books…</p>
@@ -379,7 +488,7 @@ export function BooksView({
         <p className="muted">No book matches.</p>
       ) : (
         <ul className="books-table" aria-label="Books">
-          {shown.map((b) => (
+          {shown.flatMap((b) => [
             <li
               key={b.key}
               className={`book-row${b.off ? ' off' : ''}${selected.has(b.key) ? ' selected' : ''}`}
@@ -438,6 +547,18 @@ export function BooksView({
                 >
                   <Icon name="compendium" />
                 </button>
+                {deletable(b) && (
+                  <button
+                    type="button"
+                    className="chrome-btn xs danger"
+                    aria-label={`Delete ${b.name}`}
+                    title="Delete this book from your imported files"
+                    disabled={busy || importing}
+                    onClick={() => setDeleting({ keys: [b.key], inRow: true })}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                )}
               </span>
               <label className="book-on" title={b.off ? 'Off: left out of the compendium' : 'On'}>
                 <input
@@ -448,8 +569,18 @@ export function BooksView({
                   onChange={(e) => void update([b.key], { off: !e.target.checked })}
                 />
               </label>
-            </li>
-          ))}
+            </li>,
+            deleting?.inRow && deleting.keys[0] === b.key ? (
+              <li key={`${b.key}-delete`} className="book-delete-row">
+                <DeleteBooksConfirm
+                  books={[b]}
+                  xmlIds={xmlIds}
+                  onDelete={() => void remove([b.key])}
+                  onCancel={() => setDeleting(null)}
+                />
+              </li>
+            ) : null,
+          ])}
         </ul>
       )}
     </div>

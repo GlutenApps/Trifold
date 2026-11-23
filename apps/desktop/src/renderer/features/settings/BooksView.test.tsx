@@ -129,3 +129,71 @@ describe('BooksView', () => {
     expect(onBrowse).toHaveBeenCalledWith(codex);
   });
 });
+
+describe('Deleting books (ADR 0065)', () => {
+  const files = [
+    { id: 'F1', name: 'Big file', kind: 'xml', stale: false, warnings: [] },
+    { id: 'F2', name: 'Manual file', kind: 'open5e', stale: false, warnings: [] },
+  ] as unknown as SourceSummary[];
+  const only2 = book('only open', 'Only Open', {
+    files: [{ id: 'F2', name: 'Manual file', records: 3 }],
+  });
+
+  beforeEach(() => {
+    vi.mocked(window.trifold.books.list).mockResolvedValue([codex, manual, only2]);
+    vi.mocked(window.trifold.books.delete).mockClear();
+    vi.mocked(window.trifold.books.delete).mockResolvedValue([manual, only2]);
+  });
+
+  it('asks for DELETE beside the row, then deletes only that book', async () => {
+    const user = userEvent.setup();
+    render(<BooksView files={files} onBrowse={() => undefined} />);
+    await screen.findAllByTestId('book-row');
+    // A book only in an opted-in document has no delete.
+    expect(screen.queryByRole('button', { name: 'Delete Only Open' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Delete Example Codex (Third Party)' }));
+    const confirm = screen.getByTestId('delete-books');
+    expect(confirm).toHaveTextContent('10 records leave your Library, from Big file');
+    const button = within(confirm).getByRole('button', { name: 'Delete book' });
+    expect(button).toBeDisabled();
+    await user.type(
+      within(confirm).getByRole('textbox', {
+        name: 'Type DELETE to delete Example Codex (Third Party)',
+      }),
+      'DELETE',
+    );
+    await user.click(button);
+    await waitFor(() =>
+      expect(window.trifold.books.delete).toHaveBeenCalledWith(['example codex third party']),
+    );
+    await waitFor(() => expect(screen.queryByTestId('delete-books')).toBeNull());
+  });
+
+  it('deletes a selection, counting only the copies in imported files, and Keep cancels', async () => {
+    const user = userEvent.setup();
+    render(<BooksView files={files} onBrowse={() => undefined} />);
+    await screen.findAllByTestId('book-row');
+    await user.click(screen.getByRole('checkbox', { name: 'Select every book shown' }));
+    await user.click(screen.getByRole('button', { name: 'Delete…' }));
+    const confirm = screen.getByTestId('delete-books');
+    // The codex's 10 and the manual's 6 in Big file; the open document's copies stay.
+    expect(confirm).toHaveTextContent('Delete 2 books: 16 records leave your Library');
+    await user.click(within(confirm).getByRole('button', { name: 'Keep' }));
+    expect(screen.queryByTestId('delete-books')).toBeNull();
+    expect(window.trifold.books.delete).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Delete…' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'Type DELETE to delete 2 books' }),
+      'DELETE',
+    );
+    await user.click(screen.getByRole('button', { name: 'Delete books' }));
+    await waitFor(() =>
+      expect(window.trifold.books.delete).toHaveBeenCalledWith([
+        'example codex third party',
+        'example manual 2025',
+      ]),
+    );
+  });
+});

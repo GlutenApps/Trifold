@@ -143,6 +143,8 @@ test('console, Library, import, search, stat block and player window all work en
     const abolethDup = console_.getByTestId('duplicate-row').filter({ hasText: 'Aboleth' });
     await expect(abolethDup).toHaveCount(1);
     await expect(abolethDup).toContainText('The same in');
+    // The bundled SRD's copy is labelled SRD, whatever book the test file names.
+    await expect(abolethDup.getByRole('radio', { name: /^SRD · 2024/ })).toHaveCount(1);
     await abolethDup
       .getByRole('radio', {
         name: /^System Reference Document 5\.1 \(compendium-sample\) · legacy/,
@@ -832,6 +834,41 @@ test('console, Library, import, search, stat block and player window all work en
       'Smoke Campaign (copy)',
     );
     expect(await readdir(join(copyDir, 'pcs'))).toEqual([]);
+
+    // Deleting a book (ADR 0065) asks for DELETE, then takes its records out of the file and
+    // remembers it, so Re-parse leaves it out. Last, since the steps above use the test file.
+    await libNav('Compendium').click();
+    await console_.getByRole('button', { name: 'Sources', exact: true }).click();
+    await console_.getByRole('tab', { name: 'Books' }).click();
+    await bookRows
+      .filter({ hasText: 'System Reference Document 5.1' })
+      .getByRole('button', { name: 'Delete System Reference Document 5.1' })
+      .click();
+    const deleteBook = console_.getByTestId('delete-books');
+    await expect(deleteBook).toContainText('6 records leave your Library');
+    await deleteBook
+      .getByRole('textbox', { name: 'Type DELETE to delete System Reference Document 5.1' })
+      .fill('DELETE');
+    await deleteBook.getByRole('button', { name: 'Delete book' }).click();
+    await expect(bookRows).toHaveCount(2);
+    const sourceFile = JSON.parse(
+      await readFile(join(library, 'sources', report.sourceId, 'source.json'), 'utf8'),
+    );
+    expect(sourceFile.deletedBooks).toEqual(['system reference document 5 1']);
+    // Re-read, as marking a book's rules does: the deleted book stays out.
+    await bookRows
+      .filter({ hasText: 'System Reference Document 5.2.1' })
+      .getByRole('checkbox', { name: 'Select System Reference Document 5.2.1' })
+      .click();
+    await console_
+      .getByRole('combobox', { name: 'Rules for the selected books' })
+      .selectOption('2024');
+    await expect(bookRows).toHaveCount(2);
+    const lines = await readFile(
+      join(library, 'sources', report.sourceId, 'records.jsonl'),
+      'utf8',
+    );
+    expect(lines).not.toContain('"sourceBook":"System Reference Document 5.1"');
 
     // Bundled glyphs are served to the player over the media scheme (only when fetched).
     if (existsSync(join(__dirname, '..', '..', '..', 'resources', 'icons', 'glyphs.json'))) {
