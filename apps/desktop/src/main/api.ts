@@ -405,6 +405,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       setSheetAutoAccept(on) {
         return ctx.table.setSheetAutoAccept(on);
       },
+      grantNewPc(requestId, pcId) {
+        return ctx.table.grantNewPc(requestId, pcId);
+      },
     },
     presenter: {
       async push(state) {
