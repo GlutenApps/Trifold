@@ -5,6 +5,8 @@ import type {
   ClientMessage,
   ChangeAddressResult,
   FoundTableSummary,
+  OpenPackResult,
+  PlayerPackInfo,
   JoinedSummary,
   LastTableView,
   PlayerLink,
@@ -26,6 +28,7 @@ import {
   type TableEndpoint,
 } from './lanClient';
 import { cleanShared, JoinedStore, sharedSourceId } from './store';
+import { readPlayerPack, type PlayerPackManifest } from '../table/playerPack';
 
 /**
  * What the renderer may do about joined campaigns (docs/PLAYER-MODE.md): list them, look for
@@ -129,6 +132,18 @@ async function fetchShared(
   } | null;
   if (!body || typeof body.hash !== 'string' || !Array.isArray(body.records)) return null;
   return { hash: body.hash, records: body.records as unknown[] };
+}
+
+/**
+ * A pack is older than what a Library holds when the content differs and the Library's was made
+ * later: the table's sync, or a newer pack.
+ */
+export function packIsOlder(
+  held: { hash: string; at: string } | null,
+  pack: Pick<PlayerPackManifest, 'hash' | 'createdAt'>,
+): boolean {
+  if (!held || held.hash === pack.hash) return false;
+  return Date.parse(held.at) > Date.parse(pack.createdAt);
 }
 
 /** The one joined campaign that is open, and its connection. */
@@ -333,6 +348,69 @@ export class JoinedService {
     }
     this.opts.logger.info(`joined: left campaign ${campaignId}`);
     if (this.searching) this.opts.onTables(this.tables());
+  }
+
+  // ---------- player packs (ADR 0064): files only, no network ----------
+
+  /** A pack read but not opened: what the Join panel shows before the player says yes. */
+  async inspectPack(path: string): Promise<PlayerPackInfo> {
+    const { manifest } = await readPlayerPack(path);
+    const store = this.store();
+    const held = await store.sharedInfo(manifest.campaignId);
+    return {
+      path,
+      campaignId: manifest.campaignId,
+      campaignName: manifest.campaignName,
+      records: manifest.records,
+      createdAt: manifest.createdAt,
+      sourcesNotIncluded: manifest.sourcesNotIncluded,
+      joined: !!(await store.get(manifest.campaignId)),
+      older: packIsOlder(held, manifest),
+    };
+  }
+
+  /**
+   * Opens a pack: joins its campaign if this Library has not, and keeps its shared content as
+   * the campaign's read-only source, every record checked first. A pack older than what this
+   * Library holds is refused, so a stale file never undoes what the table sent.
+   */
+  async openPack(path: string, displayName: string): Promise<OpenPackResult> {
+    let pack: Awaited<ReturnType<typeof readPlayerPack>>;
+    try {
+      pack = await readPlayerPack(path);
+    } catch (err) {
+      return { ok: false, reason: 'unreadable', message: errorMessage(err) };
+    }
+    const { manifest } = pack;
+    const store = this.store();
+    if (packIsOlder(await store.sharedInfo(manifest.campaignId), manifest)) {
+      return {
+        ok: false,
+        reason: 'older',
+        message: 'You already have newer content from your GM for this campaign.',
+      };
+    }
+    await this.writes;
+    const existing = await store.get(manifest.campaignId);
+    const joined =
+      existing ??
+      (await store.join({
+        campaignId: manifest.campaignId,
+        campaignName: manifest.campaignName.trim().slice(0, 200),
+        displayName,
+      }));
+    this.joinedIds.add(joined.campaignId);
+    const records = cleanShared(manifest.campaignId, pack.records);
+    await store.writeShared(
+      manifest.campaignId,
+      { hash: manifest.hash, records },
+      manifest.createdAt,
+    );
+    await this.opts.onShared?.(manifest.campaignId, records.length);
+    this.opts.logger.info(
+      `joined: opened a player pack for campaign ${manifest.campaignId}, ${records.length} records`,
+    );
+    return { ok: true, campaign: summarize(joined), records: records.length };
   }
 
   // ---------- the player's own notes and pinned rolls: files only, no network ----------

@@ -626,6 +626,33 @@ export interface DuplicateQuery {
   limit?: number;
 }
 
+/** What Export for players puts in a pack beyond homebrew and creatures (ADR 0064). */
+export interface PlayerPackOptions {
+  /** Shared imported sources to include; the rest are listed by name only. */
+  sourceIds: string[];
+  /** Shared collections to include. */
+  collectionIds: string[];
+}
+
+/** A player pack, read but not opened yet (ADR 0064). */
+export interface PlayerPackInfo {
+  path: string;
+  campaignId: string;
+  campaignName: string;
+  records: number;
+  createdAt: string;
+  /** Imported sources the campaign uses that the pack leaves out, by name. */
+  sourcesNotIncluded: string[];
+  /** This Library has joined the campaign already. */
+  joined: boolean;
+  /** This Library holds newer shared content for the campaign than the pack's. */
+  older: boolean;
+}
+
+export type OpenPackResult =
+  | { ok: true; campaign: JoinedSummary; records: number }
+  | { ok: false; reason: 'older' | 'unreadable'; message: string };
+
 /** Shared sources across the Library (ADR 0060), for Library › Compendium › Sources. */
 export interface SharingOverview {
   /** Imported source id → the ids of the campaigns that share it with their players. */
@@ -1109,6 +1136,13 @@ export interface TrifoldApi {
     close(campaignId: string): Promise<void>;
     /** A request to the open campaign's table, the same messages a phone sends. */
     send(campaignId: string, message: ClientMessage): Promise<void>;
+    /** Native picker for a `.trifold-players` pack (ADR 0064); read, not opened. Null when cancelled. */
+    choosePack(): Promise<PlayerPackInfo | null>;
+    /**
+     * Opens a pack: joins its campaign when this Library has not, with `displayName`, and keeps
+     * its shared content as the campaign's read-only source. No network is used.
+     */
+    openPack(path: string, displayName: string): Promise<OpenPackResult>;
     /**
      * Change address: asks the table at a typed address which campaign it is and, when it is
      * this one, keeps the address and connects there. For a network that blocks the search.
@@ -1222,6 +1256,11 @@ export interface TrifoldApi {
     ): Promise<CampaignExportPreview>;
     /** Native save dialog, then writes `<name>.trifold-campaign`; null when cancelled. */
     exportTo(campaignId: string, options: CampaignExportOptions): Promise<string | null>;
+    /**
+     * Export for players (ADR 0064): a `.trifold-players` pack of what the open campaign shares
+     * with its players, for before the first session. Native save dialog; null when cancelled.
+     */
+    exportForPlayers(options: PlayerPackOptions): Promise<{ path: string; records: number } | null>;
     /** Native picker for a `.trifold-campaign`; read but not imported. Null when cancelled. */
     choosePackage(): Promise<CampaignPackageInfo | null>;
     /**
@@ -1543,6 +1582,8 @@ export const API_METHODS = {
     'open',
     'close',
     'send',
+    'choosePack',
+    'openPack',
     'changeAddress',
     'lastView',
     'notes',
@@ -1581,6 +1622,7 @@ export const API_METHODS = {
     'importXml',
     'exportPreview',
     'exportTo',
+    'exportForPlayers',
     'choosePackage',
     'importPackage',
     'sample',

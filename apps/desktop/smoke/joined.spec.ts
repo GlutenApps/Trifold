@@ -319,6 +319,17 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     );
     await gmPage.getByRole('tab', { name: 'Compendium', exact: true }).first().click();
     await expect(page.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(0);
+    // Export for players (ADR 0064): while the lantern is shared, the GM writes a player pack.
+    // The native save dialog answers with a set path.
+    const packPath = join(playerLibrary, '..', `greyford-${Date.now()}.trifold-players`);
+    await gm.evaluate(({ dialog }, target) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: target });
+    }, packPath);
+    const exported = (await gmPage.evaluate(
+      'window.trifold.campaigns.exportForPlayers({ sourceIds: [], collectionIds: [] })',
+    )) as { records: number } | null;
+    expect(exported?.records).toBeGreaterThanOrEqual(1);
+
     // Unshared, it leaves the player's Library at once.
     await gmPage.getByRole('button', { name: 'Share with players' }).click();
     await expect(async () => {
@@ -389,6 +400,23 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await card.getByRole('button', { name: 'Leave The Lantern at Greyford…' }).click();
     await card.getByRole('button', { name: 'Leave', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Playing' })).toHaveCount(0);
+
+    // A player pack brings the campaign back without any table (ADR 0064): Join a campaign ›
+    // Open a player pack, the name the GM will see, and the shared lantern is there again.
+    await player.evaluate(({ dialog }, picked) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] });
+    }, packPath);
+    await page.getByRole('button', { name: 'Join a campaign' }).click();
+    await page.getByRole('button', { name: 'Open a player pack…' }).click();
+    const fromPack = page.getByTestId('join-from-pack');
+    await expect(fromPack).toContainText('Join The Lantern at Greyford from a file');
+    await fromPack.getByRole('textbox', { name: 'Your name at the table' }).fill('Sam');
+    await fromPack.getByRole('button', { name: 'Join', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Playing' })).toBeVisible({ timeout: 10_000 });
+    await expect(async () => {
+      const text = await readFile(join(own, 'shared', 'records.jsonl'), 'utf8');
+      expect(text).toContain('Greyford Lantern');
+    }).toPass({ timeout: 10_000 });
   } finally {
     await player?.close();
     // Already closed when the test got as far as the offline view.
