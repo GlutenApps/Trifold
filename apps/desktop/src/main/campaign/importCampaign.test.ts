@@ -17,6 +17,9 @@ const logger: Logger = { log: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.f
 function fakeIndex() {
   const records: CompendiumRecord[] = [];
   const index = {
+    // Starred books, books that are off and chosen copies are marked after each write.
+    applyBookSettings: vi.fn(),
+    applyChoices: vi.fn(),
     replaceSource: vi.fn((_source: unknown, rows: Iterable<CompendiumRecord>) => {
       let n = 0;
       for (const r of rows) {

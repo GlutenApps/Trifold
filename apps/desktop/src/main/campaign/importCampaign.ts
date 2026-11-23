@@ -1,3 +1,4 @@
+import { markLibraryChoices } from '../index/sync';
 import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { ulid } from 'ulid';
@@ -161,6 +162,7 @@ export async function importCampaignXml(
     await ctx.sources.writeRecords(statBlockSourceId, parsed.statBlocks);
     await ctx.sources.write(source);
     ctx.index.replaceSource(source, parsed.statBlocks);
+    markLibraryChoices(ctx.index, ctx.store);
   }
 
   const findRecord = async (nameOrKey: string): Promise<MonsterRecord | null> => {

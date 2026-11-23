@@ -14,6 +14,7 @@ import { ReplaceInCampaign } from './ReplaceInCampaign';
 import { UsedBy } from './UsedBy';
 import { ShareToggle } from '../players/SharedTab';
 import { SummonableToggle } from '../players/SummonableToggle';
+import { UseThisCopy } from './UseThisCopy';
 
 /**
  * One open compendium record (DESIGN.md §6.1): a bar with Back, the edition dropdown, the source
@@ -486,6 +487,7 @@ export function RecordDetail({
           </span>
         )}
         <span className="spacer" />
+        <UseThisCopy record={record} copies={editions} />
         <SummonableToggle record={record} />
         <ShareToggle record={record} />
         {/* SRD rules are read, not copied: house rules belong in notes (ADR 0041). */}

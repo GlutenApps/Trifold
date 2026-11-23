@@ -1,7 +1,7 @@
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { app, dialog, shell } from 'electron';
-import { reviewBooks, sourceOrder, type BookReview } from '@trifold/rules';
+import { reviewBooks, type BookReview } from '@trifold/rules';
 import { TEXT_SIZE_ZOOM, type Source } from '@trifold/schema';
 import { reopenLibrary } from './libraryOpen';
 import type { SharingOverview } from '@trifold/api';
@@ -25,6 +25,7 @@ import { canLimitToCampaigns } from './sources/campaignScope';
 import { importXmlSource, isStale, reimportSource } from './sources/importXml';
 import { listBooks, with2024Books, withBookSettings } from './sources/books';
 import { campaignBooks } from '@trifold/rules';
+import { listDuplicates } from './sources/duplicates';
 import { systemPageUrl } from './systemPages';
 import { isWebUrl } from './webTabs';
 import type { SaveFlush } from './saveFlush';
@@ -270,9 +271,10 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async updateSettings(patch) {
         const settings = await requireStore().updateSettings(patch);
         if (patch.theme) ctx.windows.setTheme(settings.theme);
-        if (patch.sourcePriority) {
-          const { index, catalog } = ctx.session.require();
-          index.applySourceOrder(sourceOrder(await catalog.list(), settings.sourcePriority));
+        // Books and settled duplicates are marked on the index's records (ADR 0061, ADR 0063).
+        if (patch.books) ctx.session.require().index.applyBookSettings(settings.books);
+        if (patch.duplicateChoices) {
+          ctx.session.require().index.applyChoices(settings.duplicateChoices);
         }
         return settings;
       },
@@ -612,6 +614,18 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       },
     },
 
+    duplicates: {
+      async list(query = {}) {
+        const { index, store } = ctx.session.require();
+        const prefer = (await ctx.session.campaigns?.bundle().catch(() => null))?.campaign
+          .preferredEdition;
+        return listDuplicates(
+          index.duplicateRows(prefer === '2014' ? '2014' : '2024'),
+          store.getSettings().duplicateChoices,
+          query,
+        );
+      },
+    },
     books: {
       async shareCollection(collectionId, campaignIds) {
         const repo = ctx.session.campaigns;

@@ -33,5 +33,5 @@ The DM decided (Ian, 2026-11-23): books are the main unit, files are secondary; 
 ## Next
 
 - **Collections:** built, ADR 0062.
-- **Duplicates:** every record in more than one place, which copy answers, and an override.
+- **Duplicates:** built, ADR 0063.
 - Sharing and "shows in" by book, replacing the per-file choices on Files.

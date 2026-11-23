@@ -43,7 +43,7 @@ const SUGGEST_TIERS: Record<number, CompendiumSuggestion['tier']> = {
  * decides which sources need it from their file hash and enabled flag.
  */
 /** Bump when the derived table layout changes; the tables are dropped and rebuilt from files. */
-export const INDEX_VERSION = 5;
+export const INDEX_VERSION = 6;
 
 /** DATA-FORMATS.md §5.6. Every row is derived from `sources/<id>/records.jsonl`. */
 const SCHEMA = `
@@ -82,6 +82,11 @@ CREATE TABLE IF NOT EXISTS records (
   -- From library.json's books, set by applyBookSettings after every sync.
   starred INTEGER NOT NULL DEFAULT 0,
   book_off INTEGER NOT NULL DEFAULT 0,
+  -- The copy the GM chose for its record (ADR 0063), from library.json's duplicateChoices.
+  chosen INTEGER NOT NULL DEFAULT 0,
+  -- What the record says (ADR 0063): its deciding numbers, and its rules text as words.
+  content_numbers TEXT NOT NULL DEFAULT '',
+  content_words TEXT NOT NULL DEFAULT '',
   json TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS records_book ON records(book_key, source_id);
@@ -162,8 +167,8 @@ export class IndexDb {
   /** Replaces every row of a source in one transaction. Returns the number of records written. */
   replaceSource(source: Source, records: Iterable<CompendiumRecord>): number {
     const insertRecord = this.db.prepare(
-      `INSERT INTO records (id, kind, key, name, display_name, source_id, edition, cr, cr_num, type, size, environment, is_npc, level, type_code, rarity, book_key, book, json)
-       VALUES (@id, @kind, @key, @name, @display_name, @source_id, @edition, @cr, @cr_num, @type, @size, @environment, @is_npc, @level, @type_code, @rarity, @book_key, @book, @json)`,
+      `INSERT INTO records (id, kind, key, name, display_name, source_id, edition, cr, cr_num, type, size, environment, is_npc, level, type_code, rarity, book_key, book, content_numbers, content_words, json)
+       VALUES (@id, @kind, @key, @name, @display_name, @source_id, @edition, @cr, @cr_num, @type, @size, @environment, @is_npc, @level, @type_code, @rarity, @book_key, @book, @content_numbers, @content_words, @json)`,
     );
     const insertFts = this.db.prepare('INSERT INTO records_fts (id, name, text) VALUES (?, ?, ?)');
     const upsertSource = this.db.prepare(
@@ -308,6 +313,69 @@ export class IndexDb {
           .run(b.starred ? 1 : 0, b.off ? 1 : 0, ...filter.params);
       }
     })();
+  }
+
+  /**
+   * Duplicates the GM settled (ADR 0063): marks each chosen copy, from library.json's
+   * `duplicateChoices`. Run after every sync, since replaced rows start unmarked.
+   */
+  applyChoices(choices: Readonly<Record<string, string>>): void {
+    const mark = this.db.prepare(
+      'UPDATE records SET chosen = 1 WHERE kind = ? AND key = ? AND source_id = ? AND book_key = ? AND edition = ?',
+    );
+    this.db.transaction(() => {
+      this.db.exec('UPDATE records SET chosen = 0 WHERE chosen = 1');
+      for (const [group, copy] of Object.entries(choices)) {
+        const at = group.indexOf('|');
+        const parts = copy.split('|');
+        if (at < 0 || parts.length !== 3) continue;
+        mark.run(group.slice(0, at), group.slice(at + 1), parts[0], parts[1], parts[2]);
+      }
+    })();
+  }
+
+  /**
+   * Every copy of each record that is in more than one place (ADR 0063), with the copy that
+   * answers now marked by `rn = 1`. A place is a file and a book; copies that are only the
+   * bundled SRD's two editions are not a duplicate, since the preferred edition settles them.
+   * Campaign creatures belong to their campaign and are left out.
+   */
+  duplicateRows(preferEdition: '2024' | '2014' = '2024'): Array<{
+    id: string;
+    kind: string;
+    key: string;
+    display_name: string;
+    source_id: string;
+    source_name: string;
+    source_kind: string;
+    book_key: string;
+    book: string;
+    edition: string;
+    starred: number;
+    chosen: number;
+    content_numbers: string;
+    content_words: string;
+    rn: number;
+  }> {
+    return this.db
+      .prepare(
+        `WITH copies AS (
+           SELECT r.id, r.kind, r.key, r.display_name, r.source_id, s.name AS source_name, s.kind AS source_kind,
+                  r.book_key, r.book, r.edition, r.starred, r.chosen, r.content_numbers, r.content_words,
+                  ${PRIORITY} AS pr
+           FROM records r JOIN sources s ON s.id = r.source_id
+           WHERE s.enabled = 1 AND r.book_off = 0 AND s.kind != 'campaign'
+         ), groups AS (
+           SELECT kind, key FROM copies GROUP BY kind, key
+           HAVING COUNT(DISTINCT source_id || char(31) || book_key) > 1 AND SUM(source_kind != 'srd') > 0
+         )
+         SELECT c.id, c.kind, c.key, c.display_name, c.source_id, c.source_name, c.source_kind, c.book_key, c.book,
+                c.edition, c.starred, c.chosen, c.content_numbers, c.content_words,
+                ROW_NUMBER() OVER (PARTITION BY c.kind, c.key ORDER BY c.pr, (c.edition = ?) DESC, c.edition DESC, c.source_name COLLATE NOCASE, c.id) AS rn
+         FROM copies c JOIN groups g ON g.kind = c.kind AND g.key = c.key
+         ORDER BY c.display_name COLLATE NOCASE, c.kind, rn`,
+      )
+      .all(preferEdition) as never;
   }
 
   /**

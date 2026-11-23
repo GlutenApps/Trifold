@@ -2713,6 +2713,61 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   margin: 0 0 6px;
 }
 
+/* The Duplicates tab (ADR 0063). */
+.duplicates-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.duplicates-view > p {
+  margin: 0;
+}
+
+.duplicates-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.duplicate-row {
+  padding: 6px 4px;
+  border-top: 1px solid var(--border);
+}
+
+.duplicate-row:first-child {
+  border-top: 0;
+}
+
+.duplicate-why {
+  margin: 2px 0 0;
+}
+
+.duplicate-copies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.duplicate-copies label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Read by screen readers, not shown. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Collections on the Books tab (ADR 0062). */
 .collections {
   display: flex;

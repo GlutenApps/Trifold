@@ -73,3 +73,30 @@ export function booksInCollections(
   const wanted = new Set(ids);
   return [...new Set(collections.filter((c) => wanted.has(c.id)).flatMap((c) => c.bookKeys))];
 }
+
+/**
+ * Duplicates (ADR 0063): a record that is in more than one place. A group is a kind and a record
+ * key; a copy is one place it is in, by file, book and edition. A GM's choice of copy is kept in
+ * the Library as group → copy, so it survives Re-parse.
+ */
+export function duplicateGroupKey(kind: string, key: string): string {
+  return `${kind}|${key}`;
+}
+
+/** One copy of a record: the file, the book (`bookKey`, '' for none) and the edition. */
+export function copyKey(sourceId: string, book: string, edition: string): string {
+  return `${sourceId}|${book}|${edition}`;
+}
+
+/** A record's copy key, from the record itself. */
+export function copyKeyOf(record: {
+  sourceId: string;
+  sourceBook?: string;
+  edition: string;
+}): string {
+  return copyKey(
+    record.sourceId,
+    record.sourceBook ? bookKey(record.sourceBook) : '',
+    record.edition,
+  );
+}

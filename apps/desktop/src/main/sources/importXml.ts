@@ -1,3 +1,4 @@
+import { markLibraryChoices } from '../index/sync';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { copyFile, mkdir, open, rename, stat, unlink } from 'node:fs/promises';
@@ -240,6 +241,7 @@ export async function importXmlSource(
   progress('indexing');
   if (ctx.index) {
     ctx.index.replaceSource(source, records);
+    markLibraryChoices(ctx.index, ctx.store);
   } else {
     ctx.logger.warn('index unavailable; source written to disk only');
   }

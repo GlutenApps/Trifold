@@ -29,6 +29,7 @@ describe('LibrarySettings', () => {
       edition2024Books: [],
       books: {},
       collections: [],
+      duplicateChoices: {},
       disabledSourceIds: [],
       sourcePriority: [],
       backups: { enabled: true, keepDays: 14 },
