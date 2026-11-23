@@ -14,12 +14,16 @@ import { useCampaignStore } from './campaignStore';
  */
 export type Filters = Omit<CompendiumQuery, 'kind' | 'limit' | 'offset'>;
 
-/** A new kind's filters: the edition, and the book being browsed (ADR 0061), carried over. */
+/** A new kind's filters: the edition, and the book or source picked (ADR 0061), carried over. */
 const keepBook = (filters: Filters): Filters => ({
   edition: filters.edition,
   npc: 'any',
   ...(filters.bookKeys ? { bookKeys: filters.bookKeys } : {}),
+  ...(filters.sourceIds ? { sourceIds: filters.sourceIds } : {}),
 });
+
+/** What the Book filter can pick: a source that is not a book, a collection, or a book. */
+export type BookPick = '' | `source:${string}` | `collection:${string}` | `book:${string}`;
 
 interface CompendiumState {
   kind: RecordKind;
@@ -38,10 +42,12 @@ interface CompendiumState {
 
   setKind(kind: RecordKind): Promise<void>;
   setFilters(patch: Partial<Filters>): void;
-  /** The book the list is limited to (ADR 0061), by name, for its chip; null for none. */
-  bookLabel: string | null;
-  /** Limits the list to one book, or lifts the limit with null. Kept across the kind tabs. */
-  browseBook(book: { key: string; name: string } | null): void;
+  /** What the Book filter picked (ADR 0066); '' for every book. Kept across the kind tabs. */
+  pick: BookPick;
+  /** Limits the list to what was picked, with the filters it stands for. */
+  pickBooks(pick: BookPick, scope: { sourceIds?: string[]; bookKeys?: string[] }): void;
+  /** Limits the list to one book (Browse on the Books tab), or lifts the limit with null. */
+  browseBook(book: { key: string } | null): void;
   search(): Promise<void>;
   loadFacets(): Promise<void>;
   select(recordId: string): Promise<void>;
@@ -109,16 +115,24 @@ export const useCompendiumStore = create<CompendiumState>((set, get) => ({
     await Promise.all([get().search(), get().loadFacets()]);
   },
 
-  bookLabel: null,
+  pick: '',
 
-  browseBook(book) {
-    const { bookKeys: _old, ...rest } = get().filters;
+  pickBooks(pick, scope) {
+    const { bookKeys: _books, sourceIds: _sources, ...rest } = get().filters;
     set({
-      filters: book ? { ...rest, bookKeys: [book.key] } : rest,
-      bookLabel: book?.name ?? null,
+      filters: {
+        ...rest,
+        ...(scope.bookKeys ? { bookKeys: scope.bookKeys } : {}),
+        ...(scope.sourceIds ? { sourceIds: scope.sourceIds } : {}),
+      },
+      pick,
       selected: null,
     });
     void get().search();
+  },
+
+  browseBook(book) {
+    get().pickBooks(book ? `book:${book.key}` : '', book ? { bookKeys: [book.key] } : {});
   },
 
   setFilters(patch) {

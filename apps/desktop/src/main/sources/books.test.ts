@@ -98,7 +98,7 @@ describe('book SQL (ADR 0061)', () => {
   it('filters named books and a file’s unnamed records', () => {
     expect(bookFilter(undefined)).toBeNull();
     expect(bookFilter(['a book', 'file:F1'])).toEqual({
-      sql: "(r.book_key IN (?) OR (r.book_key = '' AND r.source_id IN (?)))",
+      sql: "(r.source_id IN (SELECT id FROM sources WHERE kind IN ('xml', 'open5e')) AND (r.book_key IN (?) OR (r.book_key = '' AND r.source_id IN (?))))",
       params: ['a book', 'F1'],
     });
   });
@@ -122,7 +122,7 @@ describe('book SQL (ADR 0061)', () => {
   it('limits imported files to the open campaign’s books, and leaves the SRD and homebrew alone', () => {
     expect(campaignBooksFilter(null)).toBeNull();
     expect(campaignBooksFilter(['a book'])).toEqual({
-      sql: "(s.kind NOT IN ('xml', 'open5e') OR (r.book_key IN (?)))",
+      sql: "(s.kind NOT IN ('xml', 'open5e') OR (r.source_id IN (SELECT id FROM sources WHERE kind IN ('xml', 'open5e')) AND (r.book_key IN (?))))",
       params: ['a book'],
     });
     // Collections with no books: no imported records at all.

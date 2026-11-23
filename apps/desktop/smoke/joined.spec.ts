@@ -308,7 +308,7 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     // it, and the GM's tab says what players have now.
     await expect(page.getByTestId('shared-status')).toContainText('Your GM shares 1 record');
     await expect(
-      page.getByRole('combobox', { name: 'Source' }).getByRole('option', {
+      page.getByRole('combobox', { name: 'Book' }).getByRole('option', {
         name: 'Shared in The Lantern at Greyford',
       }),
     ).toBeAttached();

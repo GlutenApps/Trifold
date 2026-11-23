@@ -3,9 +3,9 @@ import { CR_ORDER, crToNumber } from '@trifold/rules';
 import type { RecordKind } from '@trifold/schema';
 import { landOn, navKey, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
+import { BookFilter } from './BookFilter';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useJoinedStore } from '../../stores/joinedStore';
-import { Icon } from '../shell/icons';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { itemTypeName, shortSourceName } from './formatting';
 import { CreatureEditor } from './CreatureEditor';
@@ -78,8 +78,6 @@ export function CompendiumPage() {
   const finishEdit = useCompendiumStore((s) => s.finishEdit);
   const removeHomebrew = useCompendiumStore((s) => s.removeHomebrew);
   const addToLibrary = useCompendiumStore((s) => s.addToLibrary);
-  const bookLabel = useCompendiumStore((s) => s.bookLabel);
-  const browseBook = useCompendiumStore((s) => s.browseBook);
   const sources = useSourcesStore((s) => s.sources);
   const loadSources = useSourcesStore((s) => s.load);
   // In a player console: how much the campaign's GM shares (ADR 0060); 0 anywhere else.
@@ -134,7 +132,6 @@ export function CompendiumPage() {
     setBackedOut(false);
     void select(id);
   };
-  const sourceId = filters.sourceIds?.[0] ?? '';
 
   return (
     <section className="compendium">
@@ -161,24 +158,10 @@ export function CompendiumPage() {
         <p className="muted small shared-status" role="status" data-testid="shared-status">
           Your GM shares {sharedRecords.toLocaleString()}{' '}
           {sharedRecords === 1 ? 'record' : 'records'} with this campaign. Pick “
-          {sources.find((s) => s.kind === 'shared')?.name ?? 'Shared'}” under sources to see only
+          {sources.find((s) => s.kind === 'shared')?.name ?? 'Shared'}” under Book to see only
           those.
           {ownCopies > 0 &&
             ` ${ownCopies.toLocaleString()} of them ${ownCopies === 1 ? 'is' : 'are'} in your own books, so your copies are used.`}
-        </p>
-      )}
-      {bookLabel && (
-        <p className="row book-chip" role="status" data-testid="book-chip">
-          <span className="badge on">Book: {bookLabel}</span>
-          <button
-            type="button"
-            className="chrome-btn xs"
-            aria-label={`Show every book, not only ${bookLabel}`}
-            title="Show every book"
-            onClick={() => browseBook(null)}
-          >
-            <Icon name="close" />
-          </button>
         </p>
       )}
       <div className="row filters">
@@ -189,19 +172,7 @@ export function CompendiumPage() {
           value={filters.text ?? ''}
           onChange={(e) => update({ text: e.target.value })}
         />
-        <select
-          aria-label="Source"
-          value={sourceId}
-          onChange={(e) => update({ sourceIds: e.target.value ? [e.target.value] : undefined })}
-        >
-          <option value="">All sources</option>
-          {sources.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-              {s.enabled ? '' : ' (disabled)'}
-            </option>
-          ))}
-        </select>
+        <BookFilter />
         <select
           aria-label="Edition"
           value={filters.edition ?? 'all'}
