@@ -2,7 +2,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PlayerLink, ServerMessage } from '@trifold/api';
+import type { PlayerLink, ServerMessage, SheetOffer } from '@trifold/api';
+import { TableNumbers } from '@trifold/schema';
 import { LibraryStore } from '../library/LibraryStore';
 import type { LibrarySession } from '../library/session';
 import type { FoundTable } from '../table/mdns';
@@ -67,7 +68,13 @@ describe('JoinedService: an open campaign', () => {
   let sharedAnswer: { hash: string; records: unknown[] } | null = null;
   const fetchShared = vi.fn(async (_url: string, _token: string) => sharedAnswer);
 
-  async function setup(options: { enabled?: boolean; fetched?: Uint8Array | null } = {}) {
+  async function setup(
+    options: {
+      enabled?: boolean;
+      fetched?: Uint8Array | null;
+      characterOffer?: (id: string) => Promise<SheetOffer | null>;
+    } = {},
+  ) {
     const store = await LibraryStore.open(root);
     await new JoinedStore(store).join({
       campaignId: 'c1',
@@ -97,6 +104,7 @@ describe('JoinedService: an open campaign', () => {
       fetchPicture,
       fetchShared,
       onShared: (campaignId, records) => void shared.push(`${campaignId}:${records}`),
+      ...(options.characterOffer ? { characterOffer: options.characterOffer } : {}),
     });
     made.push(service);
     const file = async () =>
@@ -161,6 +169,69 @@ describe('JoinedService: an open campaign', () => {
     service.close('c1');
     expect(net.all[0]!.closed).toBe(true);
     expect(discovery.stop).toHaveBeenCalledOnce();
+  });
+
+  it('offers the linked sheet’s numbers for the PC held, once, and not again once answered (ADR 0071)', async () => {
+    let offer: SheetOffer = {
+      name: 'Bren',
+      numbers: TableNumbers.parse({ classText: 'Rogue 3', level: 3 }),
+    };
+    const { service, net, file } = await setup({ characterOffer: async () => offer });
+    await service.open('c1');
+    await service.linkCharacter('c1', 'K1');
+    const ws = net.all[0]!;
+    const offers = () => ws.sent.filter((m) => m.type === 'sheetOffer');
+    const state = (mine: string[]): ServerMessage => ({
+      type: 'state',
+      campaignName: 'Greyford',
+      live: true,
+      mine: mine.map((id) => ({
+        kind: 'pc' as const,
+        id,
+        name: 'Brannoc',
+        hp: { current: 20, max: 24, temp: 0 },
+        ac: 16,
+        conditions: [],
+        inFight: false,
+        needsInitiative: false,
+        editable: { hp: true, maxHp: true, ac: true, conditions: true },
+        movementLocked: false,
+      })),
+      picker: [],
+      map: null,
+      reclaimMode: 'open',
+    });
+    ws.receive(campaign);
+    // Holding nothing, nothing is offered.
+    ws.receive(state([]));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(offers()).toEqual([]);
+    ws.receive(state(['p1']));
+    await vi.waitFor(() => expect(offers()).toHaveLength(1));
+    expect(offers()[0]).toEqual({ type: 'sheetOffer', creatureId: 'p1', offer });
+    // Waiting for the GM: the same view, or the same numbers saved again, sends nothing more.
+    ws.receive(state(['p1']));
+    service.characterChanged('K1');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(offers()).toHaveLength(1);
+    // Answered: kept in joined.json, so not offered again even after a restart.
+    ws.receive({ type: 'sheetAnswer', accepted: false });
+    await vi.waitFor(async () =>
+      expect((await file()) as { sheetAnswered?: string }).toMatchObject({
+        sheetAnswered: expect.stringContaining('Rogue 3'),
+      }),
+    );
+    service.characterChanged('K1');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(offers()).toHaveLength(1);
+    // A level-up is new numbers: offered at once.
+    offer = { ...offer, numbers: { ...offer.numbers, classText: 'Rogue 4', level: 4 } };
+    service.characterChanged('K1');
+    await vi.waitFor(() => expect(offers()).toHaveLength(2));
+    // Another character changing is not this campaign's business.
+    service.characterChanged('K2');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(offers()).toHaveLength(2);
   });
 
   it('goes where the search finds the table when the old address stops answering', async () => {

@@ -3,6 +3,7 @@ import { useCharacterStore } from '../../stores/characterStore';
 import { useJoinedStore } from '../../stores/joinedStore';
 import { useShellStore } from '../../stores/shellStore';
 import { NewCharacterPanel } from '../character/CharactersPage';
+import { usePlayerTable } from './PlayerTable';
 
 /**
  * Which of the player's characters is linked to this joined campaign (docs/PLAYER-MODE.md, "My
@@ -38,12 +39,21 @@ export function CharacterLink() {
   const { characterId, character, characters, loaded } = useLinkedCharacter();
   const linkCharacter = useJoinedStore((s) => s.linkCharacter);
   const [making, setMaking] = useState(false);
+  // The GM's answer to the sheet's numbers (ADR 0071), sent by main when they change.
+  const answer = usePlayerTable().conn.sheetAnswer;
 
   if (characterId && character) {
     return (
       <div className="row character-link" data-testid="character-link">
         <span className="muted small grow">
           Your sheet: <strong>{character.name}</strong>
+          {answer && (
+            <span role="status" data-testid="sheet-answer">
+              {answer.accepted
+                ? ' · Your GM took its numbers.'
+                : ' · Your GM kept the numbers they have.'}
+            </span>
+          )}
         </span>
         <button
           type="button"

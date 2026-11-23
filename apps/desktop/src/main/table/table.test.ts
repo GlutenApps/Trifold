@@ -145,6 +145,14 @@ describe('PlayersStore', () => {
     const again = await PlayersStore.open(store, 'campaigns/g/players.json');
     expect(again.reclaimMode).toBe('approval');
   });
+
+  it('saves Accept sheet updates automatically, off until turned on (ADR 0071)', async () => {
+    const players = await PlayersStore.open(store, 'campaigns/g/players.json');
+    expect(players.sheets).toEqual({ autoAccept: false });
+    await players.setSheetAutoAccept(true);
+    const again = await PlayersStore.open(store, 'campaigns/g/players.json');
+    expect(again.sheets).toEqual({ autoAccept: true });
+  });
 });
 
 describe('lanAddresses', () => {

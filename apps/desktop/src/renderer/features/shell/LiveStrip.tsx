@@ -122,7 +122,9 @@ function TvSection() {
   const undo = usePresenterStore((s) => s.undo);
   const playerOpen = useAppStore((s) => s.playerOpen);
   const openMajor = useShellStore((s) => s.openMajor);
-  const playersWaiting = useTableStore((s) => s.status?.approvals.length ?? 0);
+  const playersWaiting = useTableStore(
+    (s) => (s.status?.approvals.length ?? 0) + (s.status?.sheetOffers?.length ?? 0),
+  );
   return (
     <div className="strip-sec" data-strip="tv">
       <Icon name="tv" size={15} />

@@ -39,6 +39,7 @@ import type {
   TableTokenEvent,
   TableSummonEvent,
   SummonMode,
+  SheetOffer,
 } from '@trifold/rules';
 
 export type {
@@ -64,6 +65,7 @@ export type {
   SummonMode,
   SummonOption,
   SummonRequest,
+  SheetOffer,
 } from '@trifold/rules';
 
 /**
@@ -954,6 +956,19 @@ export interface TableStatus {
   }>;
   /** Player summoning: on, on with approval, or off, and the cap per character. */
   summoning: { mode: SummonMode; cap: number };
+  /**
+   * Sheet updates waiting for the DM (ADR 0071), oldest first: a player's linked character's
+   * numbers for the PC card they hold.
+   */
+  sheetOffers?: Array<{
+    requestId: string;
+    label: string;
+    pcId: string;
+    creatureName: string;
+    offer: SheetOffer;
+  }>;
+  /** Accept sheet updates automatically: saved in players.json, off by default. */
+  sheets?: { autoAccept: boolean };
   /** Lock movement: everyone's, and `kind:id` of single creatures. */
   movement: { all: boolean; creatures: string[] };
 }
@@ -968,6 +983,13 @@ export interface TableIntentEvent {
 }
 
 export type TableReleaseTarget = { kind: CreatureKind; id: string } | 'all';
+
+/** A sheet update the DM accepted, or that was accepted automatically, for the console to apply. */
+export interface TableSheetEvent {
+  deviceLabel: string;
+  pcId: string;
+  offer: SheetOffer;
+}
 
 export interface TrifoldApi {
   app: {
@@ -1088,6 +1110,10 @@ export interface TrifoldApi {
     ): Promise<TableStatus>;
     /** Player summoning's mode and cap per character. */
     setSummoning(summoning: { mode: SummonMode; cap: number }): Promise<TableStatus>;
+    /** Accept or Dismiss a player's sheet update (ADR 0071). */
+    answerSheet(requestId: string, accept: boolean): Promise<TableStatus>;
+    /** Accept sheet updates automatically, saved in the campaign's players.json. */
+    setSheetAutoAccept(on: boolean): Promise<TableStatus>;
   };
   /** Records in more than one place (ADR 0063). */
   duplicates: {
@@ -1607,6 +1633,8 @@ export const API_METHODS = {
     'give',
     'setMovementLock',
     'setSummoning',
+    'answerSheet',
+    'setSheetAutoAccept',
   ],
   joined: [
     'list',
@@ -1808,6 +1836,8 @@ export interface TrifoldEvents {
   tableToken: TableTokenEvent;
   /** A player summoning, dismissing or keeping a summon. */
   tableSummon: TableSummonEvent;
+  /** A sheet update to write to a PC card (ADR 0071). */
+  tableSheet: TableSheetEvent;
   /** The tables found on the local network, while Join a campaign is searching. */
   joinedTables: FoundTableSummary[];
   /** The open joined campaign's link to its table changed. */
@@ -1841,6 +1871,7 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   tableRoll: 'trifold:event:table-roll',
   tableToken: 'trifold:event:table-token',
   tableSummon: 'trifold:event:table-summon',
+  tableSheet: 'trifold:event:table-sheet',
   joinedTables: 'trifold:event:joined-tables',
   joinedLink: 'trifold:event:joined-link',
   joinedMessage: 'trifold:event:joined-message',

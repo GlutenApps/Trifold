@@ -753,5 +753,7 @@ export const PlayersFile = z.object({
       cap: z.number().int().min(1).max(20).default(8),
     })
     .prefault({}),
+  /** Sheet updates from players' characters (ADR 0071): taken without asking, or not. */
+  sheets: z.object({ autoAccept: z.boolean().default(false) }).prefault({}),
 });
 export type PlayersFile = z.infer<typeof PlayersFile>;

@@ -131,6 +131,8 @@ export interface Connection {
   clearReleased(): void;
   /** The last drag that ended without a move (refused, lapsed, or taken by the DM). */
   dragEnded: { tokenId: string; n: number } | null;
+  /** The GM's answer to the last sheet update (ADR 0071); only a player's Trifold sends them. */
+  sheetAnswer: { accepted: boolean; at: number } | null;
   send(msg: ClientMessage): void;
 }
 
@@ -151,6 +153,7 @@ export function useConnection(
   const [waiting, setWaiting] = useState<string | null>(null);
   const [released, setReleased] = useState<Connection['released']>(null);
   const [dragEnded, setDragEnded] = useState<Connection['dragEnded']>(null);
+  const [sheetAnswer, setSheetAnswer] = useState<Connection['sheetAnswer']>(null);
 
   useEffect(
     () =>
@@ -191,6 +194,9 @@ export function useConnection(
             case 'rolled':
               onRolled.current?.(msg.roll);
               break;
+            case 'sheetAnswer':
+              setSheetAnswer({ accepted: msg.accepted, at: Date.now() });
+              break;
           }
         },
       }),
@@ -206,6 +212,7 @@ export function useConnection(
     released,
     clearReleased: () => setReleased(null),
     dragEnded,
+    sheetAnswer,
     send: (msg) => client.send(msg),
   };
 }

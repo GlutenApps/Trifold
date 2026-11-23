@@ -45,12 +45,14 @@ import type {
   ServerMessage,
   TableIntent,
   TableIntentEvent,
+  TableSheetEvent,
   TableTokenEvent,
+  SheetOffer,
   TableReleaseTarget,
   TableSnapshot,
   TableStatus,
 } from '@trifold/api';
-import type { PlayerDevice } from '@trifold/schema';
+import { SheetUrl, TableNumbers, type PlayerDevice } from '@trifold/schema';
 import type { AppConfigStore } from '../appConfig';
 import type { IconResources } from '../icons';
 import type { LibrarySession } from '../library/session';
@@ -134,6 +136,16 @@ const ClientMessageSchema: z.ZodType<ClientMessage> = z.discriminatedUnion('type
     type: z.literal('roll'),
     expression: z.string().min(1).max(TABLE_ROLL_MAX_LENGTH),
   }),
+  // Checked like an intent (ADR 0071): every number in the range the PC card takes.
+  z.object({
+    type: z.literal('sheetOffer'),
+    creatureId: z.string().min(1).max(64),
+    offer: z.object({
+      name: z.string().trim().min(1).max(80),
+      numbers: TableNumbers,
+      sheetUrl: SheetUrl.optional(),
+    }),
+  }),
 ]);
 
 /** More than this many messages in a second from one browser are dropped (previews included). */
@@ -172,6 +184,16 @@ interface Client {
   window: { start: number; count: number };
 }
 
+/** A sheet update waiting for the DM (ADR 0071), held in memory only. */
+interface SheetOfferRequest {
+  requestId: string;
+  deviceId: string;
+  pcId: string;
+  offer: SheetOffer;
+  /** The offer as text: the same offer again is answered as before. */
+  key: string;
+}
+
 /** A device waiting for the DM in Approval mode (held in memory only). */
 interface ApprovalRequest {
   requestId: string;
@@ -201,6 +223,8 @@ export interface TableHubOptions {
   onSummon(event: TableSummonEvent): void;
   /** A roll made at the table, for the DM's roll log. */
   onRoll?(roll: TableRoll): void;
+  /** A sheet update accepted, by the DM or automatically, for the console to write (ADR 0071). */
+  onSheet?(event: TableSheetEvent): void;
   /**
    * Reads what the open campaign shares with its players (ADR 0060); `heldNpcIds` are the NPCs
    * some device holds now. Absent, nothing is shared.
@@ -238,6 +262,9 @@ export class TableHub {
   private timers: NodeJS.Timeout[] = [];
   private broadcastTimer: NodeJS.Timeout | null = null;
   private approvals: ApprovalRequest[] = [];
+  private sheetOffers: SheetOfferRequest[] = [];
+  /** The DM's last answer for each PC this session, so a resent offer is answered at once. */
+  private sheetAnswers = new Map<string, { key: string; accepted: boolean }>();
   private pinTries = new Map<string, PinTries>();
   /** Switch character's undo: what each device released, until when. */
   private grace = new Map<string, { keys: Set<string>; until: number }>();
@@ -304,6 +331,14 @@ export class TableHub {
           : {}),
       })),
       summoning: this.players?.summoning ?? { mode: 'on', cap: 8 },
+      sheetOffers: this.sheetOffers.map((o) => ({
+        requestId: o.requestId,
+        label: this.players?.devices.find((d) => d.deviceId === o.deviceId)?.label || 'A player',
+        pcId: o.pcId,
+        creatureName: this.nameOf('pc', o.pcId),
+        offer: o.offer,
+      })),
+      sheets: this.players?.sheets ?? { autoAccept: false },
     };
   }
 
@@ -503,6 +538,8 @@ export class TableHub {
     const wasOn = this.state !== 'off';
     this.players = null;
     this.approvals = [];
+    this.sheetOffers = [];
+    this.sheetAnswers.clear();
     this.pinTries.clear();
     this.grace.clear();
     this.locks.clear();
@@ -796,6 +833,84 @@ export class TableHub {
         return this.summonAction(client, msg.type === 'dismiss' ? 'dismiss' : 'keep', msg.tokenId);
       case 'roll':
         return this.roll(client, msg.expression);
+      case 'sheetOffer':
+        return this.sheetOffer(client, msg.creatureId, msg.offer);
+    }
+  }
+
+  // ---------- sheet updates (ADR 0071) ----------
+
+  /**
+   * A player's linked character offers new numbers for the PC card it holds: checked like an
+   * intent (the device holds that PC; the numbers were checked on arrival), then held for the DM,
+   * or written at once when the campaign accepts sheet updates automatically.
+   */
+  private sheetOffer(client: Client, pcId: string, offer: SheetOffer): void {
+    const players = this.players!;
+    if (!this.snapshot?.creatures.some((c) => c.kind === 'pc' && c.id === pcId)) {
+      return this.reject(client, 'That character isn’t on the table right now.');
+    }
+    const held = players.claimOf('pc', pcId);
+    if (!client.deviceId || !held || held.deviceId !== client.deviceId) {
+      return this.reject(client, 'That character isn’t yours on this device.');
+    }
+    const key = JSON.stringify(offer);
+    const before = this.sheetAnswers.get(pcId);
+    if (before?.key === key) {
+      return this.send(client, { type: 'sheetAnswer', accepted: before.accepted });
+    }
+    const request: SheetOfferRequest = {
+      requestId: ulid(),
+      deviceId: client.deviceId,
+      pcId,
+      offer,
+      key,
+    };
+    if (players.sheets.autoAccept) {
+      this.settleSheet(request, true);
+    } else {
+      this.sheetOffers = [...this.sheetOffers.filter((o) => o.pcId !== pcId), request];
+      this.opts.logger.info(`table server: sheet update offered for pc ${pcId}`);
+    }
+    this.emit();
+  }
+
+  /** Accept or Dismiss a sheet update. */
+  async answerSheet(requestId: string, accept: boolean): Promise<TableStatus> {
+    const request = this.sheetOffers.find((o) => o.requestId === requestId);
+    this.sheetOffers = this.sheetOffers.filter((o) => o.requestId !== requestId);
+    if (request) this.settleSheet(request, accept);
+    this.emit();
+    return this.status();
+  }
+
+  async setSheetAutoAccept(on: boolean): Promise<TableStatus> {
+    if (this.players) {
+      await this.players.setSheetAutoAccept(on);
+      this.opts.logger.info(
+        `table server: sheet updates ${on ? 'accepted automatically' : 'asked'}`,
+      );
+    }
+    this.emit();
+    return this.status();
+  }
+
+  /** Writes an accepted update through the console, and tells the device either way. */
+  private settleSheet(request: SheetOfferRequest, accepted: boolean): void {
+    this.sheetAnswers.set(request.pcId, { key: request.key, accepted });
+    if (accepted) {
+      this.opts.onSheet?.({
+        deviceLabel:
+          this.players?.devices.find((d) => d.deviceId === request.deviceId)?.label || 'A player',
+        pcId: request.pcId,
+        offer: request.offer,
+      });
+    }
+    this.opts.logger.info(
+      `table server: sheet update for pc ${request.pcId} ${accepted ? 'accepted' : 'dismissed'}`,
+    );
+    for (const c of this.clients) {
+      if (c.deviceId === request.deviceId) this.send(c, { type: 'sheetAnswer', accepted });
     }
   }
 

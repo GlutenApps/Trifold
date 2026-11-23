@@ -8,6 +8,7 @@ import {
 } from '@trifold/api';
 import { errorMessage } from '@trifold/schema';
 import { applyTableIntent } from '../features/players/applyIntent';
+import { applyTableSheet } from '../features/players/sheetOffer';
 import { fogMapJpeg } from '../features/players/fogImage';
 import { handleSummonEvent, installSummonUpkeep } from '../features/players/summons';
 import { tableSnapshotFrom } from '../features/players/snapshot';
@@ -48,6 +49,9 @@ interface TableState {
     locked: boolean,
   ): Promise<void>;
   setSummoning(summoning: { mode: 'on' | 'approval' | 'off'; cap: number }): Promise<void>;
+  /** Accept or Dismiss a player's sheet update (ADR 0071). */
+  answerSheet(requestId: string, accept: boolean): Promise<void>;
+  setSheetAutoAccept(on: boolean): Promise<void>;
   setJoinOnTv(on: boolean): void;
   receive(status: TableStatus): void;
 }
@@ -77,6 +81,9 @@ export const useTableStore = create<TableState>((set) => {
     setMovementLock: (target, locked) =>
       run(() => window.trifold.table.setMovementLock(target, locked)),
     setSummoning: (summoning) => run(() => window.trifold.table.setSummoning(summoning)),
+    answerSheet: (requestId, accept) =>
+      run(() => window.trifold.table.answerSheet(requestId, accept)),
+    setSheetAutoAccept: (on) => run(() => window.trifold.table.setSheetAutoAccept(on)),
     setJoinOnTv: (joinOnTv) => set({ joinOnTv }),
     receive: (status) => set({ status }),
   };
@@ -190,6 +197,8 @@ export function installTableSync(): () => void {
     window.trifold.on('tableStatus', (status) => useTableStore.getState().receive(status)),
     // A player's change main has checked: applied like a DM's own.
     window.trifold.on('tableIntent', (event) => applyTableIntent(event)),
+    // A sheet update the DM accepted, or that was accepted automatically (ADR 0071).
+    window.trifold.on('tableSheet', (event) => applyTableSheet(event)),
     // A roll main made for a player (ADR 0059): into the DM's roll log, as it is into theirs.
     window.trifold.on('tableRoll', (roll) => logTableRoll(roll)),
     // Summons: placed, dismissed or kept as the player asks; upkeep runs here too.

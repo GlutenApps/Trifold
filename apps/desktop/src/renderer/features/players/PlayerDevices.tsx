@@ -5,6 +5,7 @@ import { tableOn, useTableStore } from '../../stores/tableStore';
 import { Icon } from '../shell/icons';
 import { MapPop } from '../presenter/MapPop';
 import { JoinQr } from './JoinQr';
+import { sheetChanges } from './sheetOffer';
 
 /** How long with nobody connected before the pop-up suggests the firewall or the Wi-Fi. */
 const QUIET_MS = 60_000;
@@ -28,6 +29,8 @@ export function PlayerDevicesPop({
   const campaignId = useCampaignStore((s) => s.current?.campaign.id);
   const on = tableOn(status, campaignId);
   const online = on ? (status?.devices.filter((d) => d.online).length ?? 0) : 0;
+  // Requests and sheet updates (ADR 0071) both put the dot on the button.
+  const waiting = on ? (status?.approvals.length ?? 0) + (status?.sheetOffers?.length ?? 0) : 0;
   return (
     <MapPop
       open={open}
@@ -42,7 +45,7 @@ export function PlayerDevicesPop({
           aria-haspopup="dialog"
           aria-expanded={open}
           title={
-            on && status?.approvals.length
+            waiting
               ? 'Player devices: a player is waiting for you'
               : on
                 ? `Player devices: players can join (${online} connected)`
@@ -51,7 +54,7 @@ export function PlayerDevicesPop({
           onClick={onToggle}
         >
           <Icon name="phone" />
-          {on && (status?.approvals.length ?? 0) > 0 ? (
+          {waiting > 0 ? (
             <span
               className="pip alert chrome-pip"
               data-testid="devices-waiting"
@@ -79,7 +82,10 @@ function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boo
     setReclaimMode,
     answer,
     setMovementLock,
+    answerSheet,
+    setSheetAutoAccept,
   } = useTableStore();
+  const pcs = useCampaignStore((s) => s.current?.pcs);
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -197,6 +203,44 @@ function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boo
               ))}
             </ul>
           )}
+          {(status!.sheetOffers?.length ?? 0) > 0 && (
+            <ul className="device-list approvals" aria-label="Sheet updates">
+              {status!.sheetOffers!.map((o) => {
+                const pc = pcs?.find((p) => p.id === o.pcId);
+                const changes = pc ? sheetChanges(pc, o.offer) : [];
+                return (
+                  <li
+                    key={o.requestId}
+                    className="approval-row sheet-offer"
+                    data-testid="sheet-offer"
+                  >
+                    <span className="grow">
+                      {o.label} offers new numbers for {o.creatureName}
+                      <span className="muted small sheet-changes">
+                        {changes.length ? changes.join(' · ') : 'Nothing on the card would change.'}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn primary"
+                      aria-label={`Accept ${o.creatureName}’s new numbers`}
+                      onClick={() => void answerSheet(o.requestId, true)}
+                    >
+                      Accept
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      aria-label={`Dismiss ${o.creatureName}’s new numbers`}
+                      onClick={() => void answerSheet(o.requestId, false)}
+                    >
+                      Dismiss
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
           <label className="field inline">
             <input
               type="checkbox"
@@ -222,6 +266,17 @@ function PlayerDevicesBody({ status, on }: { status: TableStatus | null; on: boo
             </select>
           </label>
           <SummoningSettings status={status!} />
+          <label
+            className="field inline"
+            title="Players’ sheet updates go on their PC cards without asking"
+          >
+            <input
+              type="checkbox"
+              checked={status!.sheets?.autoAccept ?? false}
+              onChange={(e) => void setSheetAutoAccept(e.target.checked)}
+            />
+            Accept sheet updates automatically
+          </label>
           <div className="row player-devices-actions">
             <button
               type="button"

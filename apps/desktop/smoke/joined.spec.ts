@@ -225,6 +225,33 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
           ).characterId as string | null,
       )
       .toBeTruthy();
+    // Sheet updates (ADR 0071): linking offered the sheet's numbers for the PC held. The GM sees
+    // what would change and dismisses it; the player is told. Then the player names the
+    // character as the card is named, the new numbers are offered, and the GM accepts them.
+    const gmMod = process.platform === 'darwin' ? 'Meta' : 'Control';
+    await gmPage.keyboard.press(`${gmMod}+t`);
+    await gmPage.getByRole('button', { name: 'Player devices', exact: true }).click();
+    const offerRow = pop.getByTestId('sheet-offer');
+    await expect(offerRow).toContainText('offers new numbers for Brannoc Hale', {
+      timeout: 15_000,
+    });
+    await expect(offerRow).toContainText('Name Brannoc Hale → Sam’s rogue');
+    await expect(offerRow).toContainText(/AC \d+ → 13/);
+    await offerRow.getByRole('button', { name: 'Dismiss Brannoc Hale’s new numbers' }).click();
+    await expect(page.getByTestId('sheet-answer')).toContainText('kept the numbers they have');
+    await page.getByRole('button', { name: 'Edit Sam’s rogue' }).click();
+    await page
+      .getByTestId('sheet-editing')
+      .getByRole('textbox', { name: 'Character name' })
+      .fill('Brannoc Hale');
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(offerRow).toContainText(/AC \d+ → 13/, { timeout: 15_000 });
+    await expect(offerRow).not.toContainText('Name Brannoc');
+    await offerRow.getByRole('button', { name: 'Accept Brannoc Hale’s new numbers' }).click();
+    await expect(offerRow).toHaveCount(0);
+    await expect(page.getByTestId('sheet-answer')).toContainText('took its numbers');
+    await expect(row).toContainText('AC 13', { timeout: 10_000 });
+    await gmPage.keyboard.press('Escape');
     await page.getByRole('tab', { name: 'VTT', exact: true }).click();
 
     // With the dock collapsed to its icons, a tool opens as a fly-out and still reads the table.

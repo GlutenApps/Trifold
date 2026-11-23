@@ -165,6 +165,7 @@ a connection dot.
 | `releaseOne {creatureKind, creatureId}` | Release one companion |
 | `summon {…}`, `dismiss {tokenId}`, `keepSummon {tokenId}` | Summoning |
 | `roll {expression}` | A Table roll from a player's Trifold: the DM's Trifold makes it (ADR 0059) |
+| `sheetOffer {creatureId, offer}` | A player's Trifold offers its linked character's table numbers for the PC it holds (ADR 0071): checked like an intent, then held for the DM or accepted automatically |
 
 | Server sends | Meaning |
 | --- | --- |
@@ -178,9 +179,11 @@ a connection dot.
 | `closed` | The DM stopped the server or closed the campaign |
 | `rolled {roll}` | A roll made at the table, to every device holding a creature (ADR 0059). The phone page ignores it |
 | `shared {hash}` | What the campaign shares with its players now (ADR 0060), to every known device. A player's Trifold holding another hash fetches `GET /shared` with its device token as a bearer token. The phone page ignores it |
+| `sheetAnswer {accepted}` | The DM accepted or dismissed the device's last `sheetOffer` (ADR 0071) |
 
-Main hands the console three kinds of event: `tableIntent` (a checked edit), token events
-(preview, preview end, move) and summon events (spawn, dismiss, keep).
+Main hands the console four kinds of event: `tableIntent` (a checked edit), token events
+(preview, preview end, move), summon events (spawn, dismiss, keep) and `tableSheet` (a sheet
+update to write to a PC card, ADR 0071).
 
 ## What can be claimed
 
