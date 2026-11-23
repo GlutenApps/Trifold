@@ -247,6 +247,12 @@ export class JoinedStore {
     return (await this.sharedSource(campaignId))?.fileHash ?? '';
   }
 
+  /** The shared content this Library holds for a campaign: its hash and when it was made. */
+  async sharedInfo(campaignId: string): Promise<{ hash: string; at: string } | null> {
+    const source = await this.sharedSource(campaignId);
+    return source ? { hash: source.fileHash ?? '', at: source.importedAt } : null;
+  }
+
   /** How many shared records this Library holds for a campaign. */
   async sharedCount(campaignId: string): Promise<number> {
     const counts = (await this.sharedSource(campaignId))?.recordCounts ?? {};
@@ -273,6 +279,8 @@ export class JoinedStore {
   async writeShared(
     campaignId: string,
     content: { hash: string; records: readonly CompendiumRecord[] },
+    /** When the content was made: a pack's date; now when it came from the table. */
+    at: string = nowIso(),
   ): Promise<Source> {
     const joined = await this.get(campaignId);
     if (!joined) throw new Error('This Library has not joined that campaign');
@@ -292,7 +300,7 @@ export class JoinedStore {
         attribution: null,
         nonSrd: content.records.some((r) => r.sharedFrom?.nonSrd),
       },
-      importedAt: nowIso(),
+      importedAt: at,
       recordCounts: counts,
     });
     await mkdir(this.store.resolvePath(dir), { recursive: true });

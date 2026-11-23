@@ -40,6 +40,11 @@ interface JoinedState {
   stopSearch(): Promise<void>;
   /** Asks a typed address which campaign it is. */
   peek(address: string): Promise<TablePeekResult>;
+  /**
+   * Opens a player pack (ADR 0064): joins its campaign if this Library has not, and keeps its
+   * shared content. Resolves to the problem, or null when it worked.
+   */
+  openPack(path: string, displayName: string): Promise<string | null>;
   /** Joins the campaign at a table. Resolves to whether it worked. */
   join(table: FoundTableSummary, displayName: string): Promise<boolean>;
   leave(campaignId: string): Promise<void>;
@@ -112,6 +117,17 @@ export const useJoinedStore = create<JoinedState>((set, get) => ({
       return await window.trifold.joined.peek(address);
     } catch {
       return { ok: false, reason: 'noAnswer' };
+    }
+  },
+
+  async openPack(path, displayName) {
+    try {
+      const result = await window.trifold.joined.openPack(path, displayName);
+      if (!result.ok) return result.message;
+      await get().load();
+      return null;
+    } catch (err) {
+      return errorMessage(err);
     }
   },
 

@@ -153,6 +153,12 @@ export function installBridgeMock(): TrifoldBridge {
       open: vi.fn(async () => null),
       close: vi.fn(async () => undefined),
       send: vi.fn(async () => undefined),
+      choosePack: vi.fn(async () => null),
+      openPack: vi.fn(async () => ({
+        ok: false as const,
+        reason: 'unreadable' as const,
+        message: '',
+      })),
       changeAddress: vi.fn(async () => ({ ok: true as const })),
       lastView: vi.fn(async () => null),
       notes: vi.fn(async () => []),
@@ -316,6 +322,7 @@ export function installBridgeMock(): TrifoldBridge {
       }),
       exportPreview: vi.fn(async () => ({ pcs: 0, homebrew: 0, importedRecords: 0 })),
       exportTo: vi.fn(async () => null),
+      exportForPlayers: vi.fn(async () => null),
       choosePackage: vi.fn(async () => null),
       importPackage: vi.fn(async () => {
         throw new Error('not mocked');

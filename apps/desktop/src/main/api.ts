@@ -24,6 +24,7 @@ import type { TableHub } from './table/hub';
 import { canLimitToCampaigns } from './sources/campaignScope';
 import { importXmlSource, isStale, reimportSource } from './sources/importXml';
 import { listBooks, with2024Books, withBookSettings } from './sources/books';
+import { PLAYER_PACK_EXTENSION } from './table/playerPack';
 import { campaignBooks } from '@trifold/rules';
 import { listDuplicates } from './sources/duplicates';
 import { systemPageUrl } from './systemPages';
@@ -331,6 +332,16 @@ export function createApi(ctx: ApiContext): TrifoldApi {
       async send(campaignId, message) {
         ctx.joined.send(campaignId, message);
       },
+      async choosePack() {
+        const result = await dialog.showOpenDialog({
+          title: 'Open a player pack',
+          properties: ['openFile'],
+          filters: [{ name: 'Trifold player pack', extensions: [PLAYER_PACK_EXTENSION] }],
+        });
+        const path = result.canceled ? null : (result.filePaths[0] ?? null);
+        return path ? ctx.joined.inspectPack(path) : null;
+      },
+      openPack: (path, displayName) => ctx.joined.openPack(path, displayName.trim().slice(0, 40)),
       changeAddress: (campaignId, address) => ctx.joined.changeAddress(campaignId, address),
       lastView: (campaignId) => ctx.joined.lastView(campaignId),
       notes: (campaignId) => ctx.joined.notes(campaignId),

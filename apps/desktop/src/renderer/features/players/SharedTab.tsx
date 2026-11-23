@@ -9,6 +9,7 @@ import type {
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { tableOn, useTableStore } from '../../stores/tableStore';
+import { ExportForPlayers } from './ExportForPlayers';
 import { Icon } from '../shell/icons';
 
 /**
@@ -66,6 +67,7 @@ export function SharedTab() {
   const campaign = useCampaignStore((s) => s.current?.campaign);
   const update = useCampaignStore((s) => s.update);
   const status = useTableStore((s) => s.status);
+  const npcCompanions = useCampaignStore((s) => (s.current?.npcs ?? []).some((n) => n.companionOf));
   const collections = useAppStore((s) => s.library?.settings?.collections ?? NO_COLLECTIONS);
   const [sources, setSources] = useState<SourceSummary[] | null>(null);
   const [homebrew, setHomebrew] = useState<Array<{ id: string; name: string | null }>>([]);
@@ -271,6 +273,18 @@ export function SharedTab() {
         Players see the stat blocks of creatures on the Companions list and of NPCs they hold, and
         no others. Nothing comes from your encounters.
       </p>
+
+      <ExportForPlayers
+        sources={offered.filter((s) => on.has(s.id))}
+        collections={collections.filter((c) => shared.collectionIds.includes(c.id))}
+        nothingShared={
+          shared.sourceIds.length === 0 &&
+          shared.homebrewIds.length === 0 &&
+          shared.collectionIds.length === 0 &&
+          (campaign.settings.summonable ?? []).length === 0 &&
+          !npcCompanions
+        }
+      />
     </div>
   );
 }

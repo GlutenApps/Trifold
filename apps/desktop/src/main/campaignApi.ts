@@ -1,4 +1,4 @@
-import { dialog } from 'electron';
+import { app, dialog } from 'electron';
 import type { TrifoldApi } from '@trifold/api';
 import { CampaignEntities } from './campaign/entities';
 import { importSceneImage } from './campaign/images';
@@ -8,6 +8,8 @@ import { CAMPAIGN_SCHEMA_VERSION } from '@trifold/schema';
 import { bringStatBlock, ownStatBlock, shareUsedSources } from './sources/campaignScope';
 import type { LibrarySession } from './library/session';
 import { errorMessage, type Logger } from './log';
+import { exportPlayerPack } from './table/exportPack';
+import { PLAYER_PACK_EXTENSION } from './table/playerPack';
 
 /**
  * Campaign, PC card, encounter, note, NPC, scene, counter, timer and pinned-roll namespaces, backed by `CampaignRepository`,
@@ -109,6 +111,23 @@ export function createCampaignApi(
         if (result.canceled || !result.filePath) return null;
         await packager().exportTo(campaignId, options, result.filePath);
         return result.filePath;
+      },
+      async exportForPlayers(options) {
+        const { campaign } = await repo().bundle();
+        const result = await dialog.showSaveDialog({
+          title: 'Export for players',
+          defaultPath: `${campaign.name.replace(/[\\/:*?"<>|]/g, '')} (players).${PLAYER_PACK_EXTENSION}`,
+          filters: [{ name: 'Trifold player pack', extensions: [PLAYER_PACK_EXTENSION] }],
+        });
+        if (result.canceled || !result.filePath) return null;
+        const { records } = await exportPlayerPack(
+          session,
+          options,
+          result.filePath,
+          app.getVersion(),
+        );
+        logger.info(`campaign ${campaign.id}: player pack written, ${records} records`);
+        return { path: result.filePath, records };
       },
       async choosePackage() {
         const result = await dialog.showOpenDialog({

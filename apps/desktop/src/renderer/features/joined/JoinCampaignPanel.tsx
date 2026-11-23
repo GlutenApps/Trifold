@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { FoundTableSummary } from '@trifold/api';
+import type { FoundTableSummary, PlayerPackInfo } from '@trifold/api';
 import { useJoinedStore } from '../../stores/joinedStore';
 
 /**
@@ -30,6 +30,9 @@ export function JoinCampaignPanel({ onClose }: { onClose: () => void }) {
   const [chosen, setChosen] = useState<FoundTableSummary | null>(null);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  /** A player pack chosen from a file (ADR 0064): the name step for it. */
+  const [pack, setPack] = useState<PlayerPackInfo | null>(null);
+  const openPack = useJoinedStore((s) => s.openPack);
 
   useEffect(() => {
     void startSearch();
@@ -64,6 +67,97 @@ export function JoinCampaignPanel({ onClose }: { onClose: () => void }) {
       );
     }
   };
+
+  const choosePack = async () => {
+    setProblem(null);
+    try {
+      const info = await window.trifold.joined.choosePack();
+      if (!info) return;
+      setName(
+        joined.find((j) => j.campaignId === info.campaignId)?.displayName ??
+          joined[0]?.displayName ??
+          '',
+      );
+      setPack(info);
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  if (pack) {
+    const title = pack.campaignName || 'this campaign';
+    return (
+      <form
+        className="card campaign-create"
+        data-testid="join-campaign"
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setPack(null);
+        }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setBusy(true);
+          setProblem(null);
+          void openPack(pack.path, name).then((failed) => {
+            setBusy(false);
+            if (failed) setProblem(failed);
+            else onClose();
+          });
+        }}
+      >
+        <div className="campaign-create-way" data-testid="join-from-pack">
+          <strong>
+            {pack.joined ? `Update ${title} from a file` : `Join ${title} from a file`}
+          </strong>
+          <p className="muted small">
+            {pack.records > 0
+              ? `${pack.records.toLocaleString()} ${pack.records === 1 ? 'record' : 'records'} your GM shares, from ${new Date(pack.createdAt).toLocaleDateString()}.`
+              : 'Your GM shares nothing in this file yet; it adds the campaign to your Playing list.'}{' '}
+            You connect to the table at your first session.
+          </p>
+          {pack.sourcesNotIncluded.length > 0 && (
+            <p className="muted small" data-testid="pack-not-included">
+              Not in the file: {pack.sourcesNotIncluded.join(', ')}. If you own one, import it in
+              your Library.
+            </p>
+          )}
+          {pack.older && (
+            <p className="small join-problem" role="alert">
+              You already have newer content from your GM for this campaign, so this file would not
+              be used.
+            </p>
+          )}
+          {!pack.joined && (
+            <>
+              <p className="muted small">Your GM sees this name beside the character you pick.</p>
+              <input
+                type="text"
+                aria-label="Your name at the table"
+                placeholder="Your name"
+                className="wide-input"
+                maxLength={40}
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </>
+          )}
+          {problem && (
+            <p className="small join-problem" role="alert">
+              {problem}
+            </p>
+          )}
+          <div className="row">
+            <button type="submit" className="btn primary" disabled={busy || pack.older}>
+              {pack.joined ? 'Update' : 'Join'}
+            </button>
+            <button type="button" className="btn" onClick={() => setPack(null)}>
+              Back
+            </button>
+          </div>
+        </div>
+      </form>
+    );
+  }
 
   if (chosen) {
     return (
@@ -184,6 +278,23 @@ export function JoinCampaignPanel({ onClose }: { onClose: () => void }) {
               Enter an address instead
             </button>
           </div>
+        )}
+      </div>
+      <div className="campaign-create-way">
+        <strong>From a file</strong>
+        <p className="muted small">
+          Your GM can send a player pack before the first session, with the campaign’s homebrew and
+          companions.
+        </p>
+        <div className="row">
+          <button type="button" className="btn" onClick={() => void choosePack()}>
+            Open a player pack…
+          </button>
+        </div>
+        {problem && !byAddress && (
+          <p className="small join-problem" role="alert">
+            {problem}
+          </p>
         )}
       </div>
     </div>

@@ -96,7 +96,7 @@ const ENTITIES: readonly { folder: EntityFolder; kind: FileKind; schema: ZodType
 ];
 
 /** Every file in a zip, by entry name, read into memory (campaigns are small; maps are a few MB). */
-function readAllEntries(zipPath: string): Promise<Map<string, Buffer>> {
+export function readAllEntries(zipPath: string): Promise<Map<string, Buffer>> {
   return new Promise((done, fail) => {
     yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
       if (err || !zipfile) return fail(err ?? new Error('could not open the file'));
