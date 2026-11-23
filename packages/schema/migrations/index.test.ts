@@ -22,6 +22,7 @@ const versions = {
   session: 1,
   players: 1,
   joined: 1,
+  character: 1,
 };
 const registry: MigrationRegistry = {
   appConfig: [],
@@ -48,6 +49,7 @@ const registry: MigrationRegistry = {
   session: [],
   players: [],
   joined: [],
+  character: [],
 };
 const run = createMigrator(registry, versions);
 

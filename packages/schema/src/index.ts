@@ -10,3 +10,4 @@ export * from '../migrations/index';
 export * from './icons';
 export * from './music';
 export * from './noteTemplate';
+export * from './character';

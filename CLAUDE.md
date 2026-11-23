@@ -23,20 +23,20 @@ apps/desktop/            Electron main + preload + renderer (hash routes #/conso
   src/main/              index.ts (entry), api.ts + campaignApi.ts + musicApi.ts (IPC implementations), ipc.ts,
                          library/ (LibraryStore, atomic writes, session), index/ (sqlite + FTS5), sources/ (bundled SRD,
                          XML import, homebrew), campaign/ (repository, entities, GM-export import, images, packages),
-                         music/, phoneAudio/ (receiver + helper.ps1), backups.ts, backupCopy.ts, windows.ts, menu.ts,
+                         music/, phoneAudio/ (receiver + helper.ps1), characters.ts, backups.ts, backupCopy.ts, windows.ts, menu.ts,
                          media.ts (trifold-media:// scheme), webTabs.ts, systemPages.ts, log.ts,
                          table/ (player connector server: hub, LAN listeners, mDNS, players.json, ADR 0043),
                          joined/ (player mode, ADR 0058: joined-campaign files, table discovery, the connection to a GM's table)
   src/web/               player connector browser client (React), built to out/web by vite.web.config.ts
   src/preload/           typed bridge → window.trifold (generated from packages/api)
-  src/renderer/          React app: features/{shell,library,compendium,campaign,counters,timers,encounters,presenter,players,joined,music,dice,settings},
+  src/renderer/          React app: features/{shell,library,compendium,campaign,counters,timers,encounters,presenter,players,joined,character,music,dice,settings},
                          stores/ (Zustand), styles/ (global.css tokens, shell, compendium, map, responsive), hotkeys.ts, platform.ts,
                          navigate.ts (deep links, ADR 0017: navigate/useNavTarget/landOn; see docs/DEEP-LINKS.md)
   smoke/                 Playwright specs that drive the real app (app.spec.ts, webtabs.spec.ts, players.spec.ts, …)
   build/                 icon.icns/.png/.ico, installer and DMG art, copied unchanged from the brand kit's build/ (docs/brand/BRAND.md)
 packages/schema/         Zod schemas + TS types for every stored object (src/), migrations/
 packages/api/            the single TypeScript interface between renderer and main
-packages/rules/          pure functions: dice, CR/XP tables, 2024 budgets, combat/ (turns, damage, rolls), fog, table/ (player connector views), statblock/ parsers
+packages/rules/          pure functions: dice, CR/XP tables, 2024 budgets, combat/ (turns, damage, rolls), fog, table/ (player connector views), character/ (sheet numbers), statblock/ parsers
                          (regexes from DATA-FORMATS.md §2.5), art/ (glyph matching), tree, noteSearch, normalizeKey
 packages/importers/      xml/ (stream parser), compendium/ (Lion's Den XML), campaign/ (campaign XML, GM export, package export),
                          open5e/ (build-time SRD normalisation)

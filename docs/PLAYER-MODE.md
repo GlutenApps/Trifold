@@ -381,7 +381,7 @@ The player owns the character sheet; the GM's console owns table state. Three wa
 
 ## Where characters live and are edited
 
-Characters belong to the Library, not to a campaign: one character can be linked from several joined campaigns. The Library gets a **Characters** page, where a character is made, opened, exported and deleted. Inside a joined campaign a character can be started or edited too (My characters, Sheets); it is the same file either way.
+Characters belong to the Library, not to a campaign: one character can be linked from several joined campaigns. The Library gets a **Characters** page, where a character is made, opened, exported and deleted. Built (ADR 0068): the page, behind the flag, with **New character** offering an **External character** (Way 1: the table numbers and a sheet link) or a **Trifold character** (Way 3's sheet, filled in by hand until the builder lands), the one-way switch from External to Trifold, export and import as a JSON file, and a typed DELETE. Still to come in phase 5: the Sheets tab and linking in a joined campaign, the `sheetUrl` migration, and sheet updates. Inside a joined campaign a character can be started or edited too (My characters, Sheets); it is the same file either way.
 
 A player can edit a character at any time, connected or not. Edits are saved to the character's file at once. When a linked character's table numbers have changed since the GM last took them, the next connection to that GM's table sends the offer (see Sheet updates), so a level-up done at home reaches the table when the player next sits down.
 

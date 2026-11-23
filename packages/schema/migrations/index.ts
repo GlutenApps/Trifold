@@ -23,7 +23,8 @@ export type FileKind =
   | 'pinnedRoll'
   | 'session'
   | 'players'
-  | 'joined';
+  | 'joined'
+  | 'character';
 
 export type JsonObject = Record<string, unknown>;
 
@@ -62,6 +63,7 @@ export const CURRENT_SCHEMA_VERSION: VersionTable = {
   session: 1,
   players: 1,
   joined: 1,
+  character: 1,
 };
 
 /** Registered migrations, oldest first. Add an entry whenever a schema version is bumped. */
@@ -117,6 +119,7 @@ export const MIGRATIONS: MigrationRegistry = {
   session: [],
   players: [],
   joined: [],
+  character: [],
 };
 
 /** Removes one minor tool from every saved layout's dock (presets and per-campaign consoles). */

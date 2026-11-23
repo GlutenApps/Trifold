@@ -84,6 +84,27 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     // The player's Trifold: its own computer's worth of user data and Library.
     player = await launch(playerData, playerLibrary, { TRIFOLD_PLAYER_MODE: '1' });
     const page = await player.firstWindow();
+
+    // Characters (ADR 0068): the player makes a Trifold character in their Library; its sheet
+    // works its numbers out, and the file lands in characters/.
+    await page
+      .getByRole('navigation', { name: 'Library' })
+      .getByRole('button', { name: 'Characters', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'New character' }).click();
+    await page.getByTestId('new-character').getByLabel('Character name').fill('Sam’s rogue');
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+    await page.getByRole('spinbutton', { name: 'Dexterity', exact: true }).fill('16');
+    await expect(page.getByRole('spinbutton', { name: 'AC', exact: true })).toHaveValue('13');
+    await expect(async () => {
+      const [file] = await readdir(join(playerLibrary, 'characters'));
+      const saved = JSON.parse(await readFile(join(playerLibrary, 'characters', file!), 'utf8'));
+      expect(saved).toMatchObject({ name: 'Sam’s rogue', kind: 'trifold' });
+      expect(saved.sheet.abilities.dex).toBe(16);
+    }).toPass({ timeout: 10_000 });
+    await page.getByRole('button', { name: 'Back to characters' }).click();
+    await expect(page.getByTestId('character-row')).toContainText('Level 1 · AC 13 · 10 HP');
+
     await campaignsPage(page);
     await page.getByRole('button', { name: 'Join a campaign' }).click();
     const panel = page.getByTestId('join-campaign');
