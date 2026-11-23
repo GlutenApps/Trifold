@@ -13,7 +13,7 @@ const monster = (name: string): MonsterRecord => {
 };
 
 const pc: PCCard = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   id: 'pc1',
   name: 'Thora',
   playerName: 'Sam',

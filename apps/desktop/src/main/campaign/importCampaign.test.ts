@@ -135,7 +135,7 @@ describe('importCampaignXml', () => {
   it('merges PCs by name into the open campaign', async () => {
     await campaigns.create('Existing');
     await campaigns.savePc({
-      schemaVersion: 1,
+      schemaVersion: 2,
       id: '',
       name: 'Thora',
       playerName: 'Sam',

@@ -99,7 +99,7 @@ type PcDraft = Omit<PCCard, 'maxHp' | 'ac'> & { maxHp?: number; ac?: number };
 /** A blank card for the form: no id (main assigns one), nothing invented for HP or AC. */
 export function blankPc(): PCCard {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: '',
     name: '',
     playerName: '',
@@ -144,6 +144,7 @@ export function PcEditor({
         pc.level > 1 ||
         pc.initiativeBonus ||
         pc.speed !== 30 ||
+        pc.sheetUrl ||
         pc.playerControllable,
       ),
     senses:
@@ -162,7 +163,11 @@ export function PcEditor({
   const patch = (p: Partial<PcDraft>) => setDraft((d) => ({ ...d, ...p }));
   const passives = (p: Partial<PCCard['passives']>) =>
     setDraft((d) => ({ ...d, passives: { ...d.passives, ...p } }));
+  // The sheet link opens as a web tab (ADR 0070): a web address or nothing.
+  const sheetUrl = draft.sheetUrl?.trim() ?? '';
+  const sheetUrlOk = sheetUrl === '' || /^https?:\/\/\S+$/i.test(sheetUrl);
   const canSave =
+    sheetUrlOk &&
     draft.name.trim() !== '' &&
     draft.maxHp !== undefined &&
     draft.maxHp >= 1 &&
@@ -170,9 +175,11 @@ export function PcEditor({
 
   const save = (another: boolean) => {
     if (!canSave) return;
+    const { sheetUrl: _typed, ...rest } = draft;
     onSave(
       {
-        ...draft,
+        ...rest,
+        ...(sheetUrl ? { sheetUrl } : {}),
         name: draft.name.trim(),
         maxHp: int(draft.maxHp, 1),
         ac: int(draft.ac, 10),
@@ -239,6 +246,18 @@ export function PcEditor({
           value={draft.speed}
           onChange={(v) => patch({ speed: int(v, 30) })}
         />
+        <TextField
+          label="Character sheet link"
+          placeholder="https://"
+          span={2}
+          value={draft.sheetUrl}
+          onChange={(v) => patch({ sheetUrl: v })}
+        />
+        {!sheetUrlOk && (
+          <p className="small join-problem span-all" role="alert">
+            A character sheet link is a web address starting with http:// or https://.
+          </p>
+        )}
         <PlayerAccess
           kind="pc"
           id={pc.id}

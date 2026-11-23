@@ -82,7 +82,7 @@ function parts(): CampaignParts {
     }),
     pcs: [
       PCCard.parse({
-        schemaVersion: 1,
+        schemaVersion: 2,
         id: 'PC1',
         name: 'Thora',
         maxHp: 30,

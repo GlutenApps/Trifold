@@ -16,6 +16,7 @@ import {
 } from './library';
 import { NPC, PCCard, Scene } from './campaign';
 import { Source } from './source';
+import { migrate } from '../migrations/index';
 
 describe('LibrarySettings', () => {
   it('fills every default from just a schemaVersion', () => {
@@ -278,13 +279,26 @@ describe('what a fight leaves behind (ADR 0012)', () => {
   const now = '2026-09-27T00:00:00.000Z';
 
   it('reads a PC card saved before current HP existed, and keeps one with it', () => {
-    const base = { schemaVersion: 1, id: 'p', name: 'Thora', createdAt: now, updatedAt: now };
+    const base = { schemaVersion: 2, id: 'p', name: 'Thora', createdAt: now, updatedAt: now };
     expect(PCCard.parse(base)).toMatchObject({ maxHp: 10 });
     expect(PCCard.parse(base).currentHp).toBeUndefined();
     expect(PCCard.parse({ ...base, currentHp: 4, tempHp: 2 })).toMatchObject({
       currentHp: 4,
       tempHp: 2,
     });
+  });
+
+  it('brings a PC card from version 1 forward: dndBeyondUrl becomes sheetUrl (ADR 0070)', () => {
+    const v1 = { schemaVersion: 1, id: 'p', name: 'Thora', createdAt: now, updatedAt: now };
+    const moved = PCCard.parse(migrate('pc', { ...v1, dndBeyondUrl: 'https://example.test/c/1' }));
+    expect(moved).toMatchObject({ schemaVersion: 2, sheetUrl: 'https://example.test/c/1' });
+    expect(moved).not.toHaveProperty('dndBeyondUrl');
+    // Something that is not a web address is dropped, not kept where nothing could open it.
+    expect(PCCard.parse(migrate('pc', { ...v1, dndBeyondUrl: 'not a link' }))).not.toHaveProperty(
+      'sheetUrl',
+    );
+    expect(PCCard.parse(migrate('pc', v1)).schemaVersion).toBe(2);
+    expect(() => PCCard.parse({ ...v1, schemaVersion: 2, sheetUrl: 'file:///C:/x' })).toThrow();
   });
 
   it('keeps an NPC’s HP block only once it has fought', () => {

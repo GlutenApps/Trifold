@@ -11,7 +11,7 @@ import { CampaignRepository } from './repository';
 /** A PC card as the editor sends it: no id, so the repository creates it. */
 function card(name: string, extra: Partial<PCCard> = {}): PCCard {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: '',
     name,
     playerName: '',
