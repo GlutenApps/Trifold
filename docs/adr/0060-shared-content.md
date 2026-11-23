@@ -33,10 +33,13 @@ A shared source marked as user content shows a warning beside the list.
 - A homebrew change, a claim or a release makes the server look again; the GM does nothing.
 - `PinnedRoll`, notes and the player's own homebrew are untouched: nothing of the player's is replaced by shared content.
 
-## Not built yet
+## Built since
 
-- **Player packs** (`.trifold-players`), for content before the first session.
-- A player's own copy of a source standing in for the shared one, matched by source name and key.
-- The warning on sharing a single homebrew record made from a source marked as user content; the record carries the flag, and the list warns only for sources.
+- **Player packs** (`.trifold-players`): ADR 0064.
+- **A player's own copy stands in for a shared one.** When a player's own imported file (switched on, the book on) holds the same record and edition from the same book, or from a source of the same name as the GM's, the shared copy steps aside: it is marked like a book that is off, after every sync, import, re-parse and book change, so every query uses the player's copy. The player's Compendium says how many of the shared records are in their own books.
+- **Sharing one homebrew record made from user content asks first**: a copy of an imported record carries its text, so the record page's Share with players shows the same warning as a shared source, with Share and Keep private.
+
+## Still open
+
 - Character sheets that keep working after the campaign is left (Part 3).
 - A legal review of sharing imported sources, noted as open when this was planned.

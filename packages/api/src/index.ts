@@ -1781,7 +1781,12 @@ export interface TrifoldEvents {
    * How many records a joined campaign's GM shares with it now (ADR 0060): sent when the
    * campaign opens and whenever the shared content was synced, removed or left behind.
    */
-  joinedShared: { campaignId: string; records: number };
+  joinedShared: {
+    campaignId: string;
+    records: number;
+    /** Of those, how many step aside for the player's own copies of the same books. */
+    ownCopies?: number;
+  };
 }
 
 export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {

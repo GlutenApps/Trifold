@@ -7,6 +7,7 @@ import type {
   RecordKind,
 } from '@trifold/schema';
 import { useAppStore } from '../../stores/appStore';
+import { useSourcesStore } from '../../stores/sourcesStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { tableOn, useTableStore } from '../../stores/tableStore';
 import { ExportForPlayers } from './ExportForPlayers';
@@ -58,6 +59,18 @@ export function sharedOf(
 /** How many of a source's records players would get. */
 export const playerFacingCount = (source: Pick<SourceSummary, 'recordCounts'>): number =>
   PLAYER_FACING.reduce((n, kind) => n + (source.recordCounts[kind] ?? 0), 0);
+
+/**
+ * The name of the user-content source a homebrew record was made from, or null: a copy of an
+ * imported record carries that record's text, so sharing it warns as sharing the source does.
+ */
+export function madeFromUserContent(
+  record: Pick<CompendiumRecord, 'basedOn'>,
+  sources: readonly Pick<SourceSummary, 'id' | 'name' | 'license'>[],
+): string | null {
+  const from = record.basedOn ? sources.find((s) => s.id === record.basedOn!.sourceId) : undefined;
+  return from?.license.nonSrd ? from.name : null;
+}
 
 /** Whether a homebrew record can be shared by itself: any kind but a creature. */
 export const canShareRecord = (record: Pick<CompendiumRecord, 'sourceId' | 'kind'>): boolean =>
@@ -296,9 +309,48 @@ export function SharedTab() {
 export function ShareToggle({ record }: { record: CompendiumRecord }) {
   const campaign = useCampaignStore((s) => s.current?.campaign);
   const update = useCampaignStore((s) => s.update);
+  const sources = useSourcesStore((s) => s.sources);
+  const [asking, setAsking] = useState(false);
   if (!campaign || !canShareRecord(record)) return null;
   const shared = sharedOf(campaign.settings);
   const on = shared.homebrewIds.includes(record.id);
+  // Homebrew made from an imported record carries that record's text (ADR 0060).
+  const from = madeFromUserContent(record, sources);
+  const setShared = (share: boolean) =>
+    void update({
+      settings: {
+        ...campaign.settings,
+        shared: {
+          ...shared,
+          homebrewIds: share
+            ? [...shared.homebrewIds, record.id]
+            : shared.homebrewIds.filter((id) => id !== record.id),
+        },
+      },
+    });
+  if (asking) {
+    return (
+      <span className="share-ask" role="group" aria-label={`Share ${record.displayName}?`}>
+        <span className="warn-text small">
+          Made from {from}, marked as user content: it may hold text from outside the SRD. Share it
+          only with players who are entitled to it.
+        </span>
+        <button
+          type="button"
+          className="btn small"
+          onClick={() => {
+            setAsking(false);
+            setShared(true);
+          }}
+        >
+          Share
+        </button>
+        <button type="button" className="btn small" onClick={() => setAsking(false)}>
+          Keep private
+        </button>
+      </span>
+    );
+  }
   return (
     <button
       type="button"
@@ -310,19 +362,10 @@ export function ShareToggle({ record }: { record: CompendiumRecord }) {
           ? `${campaign.name}’s players have ${record.displayName}. Click to stop sharing`
           : `Share ${record.displayName} with ${campaign.name}’s players`
       }
-      onClick={() =>
-        void update({
-          settings: {
-            ...campaign.settings,
-            shared: {
-              ...shared,
-              homebrewIds: on
-                ? shared.homebrewIds.filter((id) => id !== record.id)
-                : [...shared.homebrewIds, record.id],
-            },
-          },
-        })
-      }
+      onClick={() => {
+        if (!on && from) setAsking(true);
+        else setShared(!on);
+      }}
     >
       <Icon name="party" />
     </button>

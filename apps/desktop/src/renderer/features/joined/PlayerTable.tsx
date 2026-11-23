@@ -75,7 +75,10 @@ export function PlayerTableProvider({
     () =>
       window.trifold.on('joinedShared', (event) => {
         if (event.campaignId !== campaignId) return;
-        useJoinedStore.setState({ sharedRecords: event.records });
+        useJoinedStore.setState({
+          sharedRecords: event.records,
+          ownCopies: event.ownCopies ?? 0,
+        });
         void useSourcesStore.getState().load();
         void useCompendiumStore.getState().search();
         void useCompendiumStore.getState().loadFacets();

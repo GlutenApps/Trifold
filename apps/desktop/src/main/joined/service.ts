@@ -200,6 +200,17 @@ export class JoinedService {
 
   private sharedSync: Promise<void> = Promise.resolve();
 
+  /**
+   * The player's own sources changed (an import, a re-parse, a book turned on or off): which
+   * shared records step aside for their own copies may have too, so the console hears again.
+   */
+  async ownSourcesChanged(): Promise<void> {
+    const current = this.current;
+    if (!current) return;
+    const count = await this.store().sharedCount(current.campaignId);
+    await this.opts.onShared?.(current.campaignId, count);
+  }
+
   /** The open joined campaign's shared source, which the compendium shows while it is open. */
   openSharedSourceId(): string | null {
     return this.current ? sharedSourceId(this.current.campaignId) : null;
