@@ -93,6 +93,7 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
       .click();
     await page.getByRole('button', { name: 'New character' }).click();
     await page.getByTestId('new-character').getByLabel('Character name').fill('Sam’s rogue');
+    await page.getByRole('radio', { name: /Blank sheet/ }).click();
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     await page.getByRole('spinbutton', { name: 'Dexterity', exact: true }).fill('16');
     await expect(page.getByRole('spinbutton', { name: 'AC', exact: true })).toHaveValue('13');
@@ -104,6 +105,47 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     }).toPass({ timeout: 10_000 });
     await page.getByRole('button', { name: 'Back to characters' }).click();
     await expect(page.getByTestId('character-row')).toContainText('Level 1 · AC 13 · 10 HP');
+
+    // The guided builder (docs/BUILDER.md) on the bundled SRD 5.2.1: a Fighter, a Soldier, a
+    // Human, the standard array; nothing is written until Finish.
+    await page.getByRole('button', { name: 'New character' }).click();
+    await page.getByTestId('new-character').getByLabel('Character name').fill('Tamsin');
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    const builder = page.getByTestId('guided-builder');
+    await builder.getByRole('radio', { name: /^Fighter/ }).click();
+    await builder.getByRole('checkbox', { name: 'Athletics' }).click();
+    await builder.getByRole('checkbox', { name: 'Perception' }).click();
+    await builder.getByRole('button', { name: 'Next' }).click();
+    await builder.getByRole('radio', { name: /^Soldier/ }).click();
+    await builder.getByRole('radio', { name: /^Human/ }).click();
+    await builder.getByRole('button', { name: 'Next' }).click();
+    for (const [ability, value] of [
+      ['Strength', '15'],
+      ['Constitution', '14'],
+      ['Dexterity', '13'],
+      ['Wisdom', '12'],
+      ['Charisma', '10'],
+      ['Intelligence', '8'],
+    ] as const) {
+      await builder
+        .getByRole('combobox', { name: ability, exact: true })
+        .selectOption({ label: value });
+    }
+    await builder.getByRole('combobox', { name: 'Plus 2' }).selectOption('str');
+    await builder.getByRole('combobox', { name: 'Plus 1' }).selectOption('con');
+    await builder.getByRole('button', { name: 'Next' }).click();
+    // Hit die maximum (d10) plus Con (15: +2) at 1st level.
+    await expect(builder.getByTestId('builder-review').getByLabel('Numbers')).toContainText('12');
+    await builder.getByRole('button', { name: 'Finish' }).click();
+    await expect(page.getByTestId('trifold-sheet')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Class 1', exact: true })).toHaveValue(
+      'Fighter',
+    );
+    await page.getByRole('button', { name: 'Back to characters' }).click();
+    await expect(page.getByTestId('character-row')).toHaveCount(2);
+    await expect(page.getByTestId('character-row').filter({ hasText: 'Tamsin' })).toContainText(
+      'Fighter 1 · AC 11 · 12 HP',
+    );
 
     await campaignsPage(page);
     await page.getByRole('button', { name: 'Join a campaign' }).click();

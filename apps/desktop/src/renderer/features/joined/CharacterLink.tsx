@@ -70,9 +70,12 @@ export function CharacterLink() {
   if (making) {
     return (
       <NewCharacterPanel
+        forJoined
         onCreated={(made) => {
           void linkCharacter(made.id).then(() => openSheet(true));
         }}
+        // The guided builder opens on the Sheets tab; Finish links what it made.
+        onGuided={() => openSheet(false)}
         onClose={() => setMaking(false)}
       />
     );

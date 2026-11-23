@@ -219,6 +219,37 @@ export const SheetUrl = z
   .max(2000)
   .regex(/^https?:\/\/\S+$/i);
 
+/**
+ * The choices the guided builder made (docs/BUILDER.md), kept so Level up can follow them.
+ * Records are named by kind, key and name. Editing the sheet by hand never needs it.
+ */
+export const CharacterBuild = z.object({
+  edition: CharacterEdition,
+  class: SheetRef,
+  background: SheetRef,
+  species: SheetRef,
+  size: z.enum(['Small', 'Medium']).default('Medium'),
+  abilityMethod: z.enum(['standard', 'pointBuy', 'rolled']),
+  /** The scores before the background's increase. */
+  baseScores: z.object({
+    str: int.min(1).max(30),
+    dex: int.min(1).max(30),
+    con: int.min(1).max(30),
+    int: int.min(1).max(30),
+    wis: int.min(1).max(30),
+    cha: int.min(1).max(30),
+  }),
+  increase: z.union([
+    z.object({ plus2: Ability, plus1: Ability }),
+    z.object({ all: z.array(Ability).length(3) }),
+  ]),
+  /** The class skills picked (the background's come with it). */
+  classSkills: z.array(Skill).default([]),
+  /** Hit points gained at each level after the first, in order. */
+  hitPoints: z.array(int.min(1).max(30)).default([]),
+});
+export type CharacterBuild = z.infer<typeof CharacterBuild>;
+
 export const Character = z.object({
   schemaVersion: z.literal(CHARACTER_SCHEMA_VERSION),
   id: z.string().regex(/^[0-9A-Za-z_-]{1,64}$/),
@@ -232,6 +263,8 @@ export const Character = z.object({
   /** A Trifold character's sheet; absent on an External one. */
   sheet: Sheet.optional(),
   notes: z.string().max(50_000).default(''),
+  /** What the guided builder chose (docs/BUILDER.md); absent on a character made by hand. */
+  build: CharacterBuild.optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });

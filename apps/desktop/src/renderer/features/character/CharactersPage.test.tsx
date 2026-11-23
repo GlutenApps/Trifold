@@ -61,10 +61,31 @@ describe('CharactersPage (ADR 0068)', () => {
     const panel = within(screen.getByTestId('new-character'));
     await user.type(panel.getByRole('textbox', { name: 'Character name' }), 'Bren');
     expect(panel.getByRole('radio', { name: /Trifold character/ })).toBeChecked();
+    await user.click(panel.getByRole('radio', { name: /Blank sheet/ }));
     await user.click(panel.getByRole('button', { name: 'Create' }));
     expect(await screen.findByTestId('trifold-sheet')).toBeInTheDocument();
     expect(lastSaved()).toMatchObject({ name: 'Bren', kind: 'trifold' });
     expect(lastSaved().sheet).toEqual(blankSheet());
+  });
+
+  it('opens the guided builder for a Trifold character by default, and cancels back', async () => {
+    vi.mocked(window.trifold.characters.list).mockResolvedValue([]);
+    vi.mocked(window.trifold.compendium.search).mockResolvedValue({
+      rows: [],
+      total: 0,
+      tookMs: 0,
+    } as never);
+    const user = userEvent.setup();
+    render(<CharactersPage />);
+    await user.click(await screen.findByRole('button', { name: 'New character' }));
+    const panel = within(screen.getByTestId('new-character'));
+    await user.type(panel.getByRole('textbox', { name: 'Character name' }), 'Wren');
+    expect(panel.getByRole('radio', { name: /Guided builder/ })).toBeChecked();
+    await user.click(panel.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('switched off or missing');
+    expect(window.trifold.characters.save).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(await screen.findByText(/No characters yet/)).toBeInTheDocument();
   });
 
   it('edits an External character’s numbers and link, saved a moment later', async () => {

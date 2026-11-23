@@ -4,6 +4,7 @@ import type { Character } from '@trifold/schema';
 import { useCharacterStore } from '../../stores/characterStore';
 import { Icon } from '../shell/icons';
 import { CharacterEditor } from './CharacterEditor';
+import { GuidedBuilder } from './builder/GuidedBuilder';
 
 /**
  * Library › Characters (docs/PLAYER-MODE.md, Part 3; ADR 0068): the player's characters, shared
@@ -21,14 +22,23 @@ export function characterLine(character: Character): string {
 
 export function NewCharacterPanel({
   onCreated,
+  onGuided,
   onClose,
+  forJoined = false,
 }: {
   onCreated?(character: Character): void;
+  /** The guided builder was chosen and opened (docs/BUILDER.md). */
+  onGuided?(): void;
   onClose(): void;
+  /** Made from a joined campaign: the builder's result is linked to it. */
+  forJoined?: boolean;
 }) {
   const create = useCharacterStore((s) => s.create);
+  const startBuilding = useCharacterStore((s) => s.startBuilding);
   const [name, setName] = useState('');
   const [kind, setKind] = useState<Character['kind']>('trifold');
+  /** How a Trifold character starts (docs/BUILDER.md): the guided builder or a blank sheet. */
+  const [start, setStart] = useState<'guided' | 'blank'>('guided');
   const [busy, setBusy] = useState(false);
   return (
     <form
@@ -39,6 +49,12 @@ export function NewCharacterPanel({
       }}
       onSubmit={(e) => {
         e.preventDefault();
+        if (kind === 'trifold' && start === 'guided') {
+          startBuilding(name.trim() || 'Unnamed character', forJoined);
+          onGuided?.();
+          onClose();
+          return;
+        }
         setBusy(true);
         void create(kind, name).then((made) => {
           setBusy(false);
@@ -94,9 +110,41 @@ export function NewCharacterPanel({
             </span>
           </label>
         </fieldset>
+        {kind === 'trifold' && (
+          <fieldset className="character-kinds character-starts">
+            <legend className="small">Start with</legend>
+            <label className="character-kind">
+              <input
+                type="radio"
+                name="character-start"
+                checked={start === 'guided'}
+                onChange={() => setStart('guided')}
+              />
+              <span>
+                <strong>Guided builder</strong>
+                <span className="muted small">
+                  Choose a class, background, species and ability scores; Trifold fills the sheet
+                  in.
+                </span>
+              </span>
+            </label>
+            <label className="character-kind">
+              <input
+                type="radio"
+                name="character-start"
+                checked={start === 'blank'}
+                onChange={() => setStart('blank')}
+              />
+              <span>
+                <strong>Blank sheet</strong>
+                <span className="muted small">Fill the sheet in yourself.</span>
+              </span>
+            </label>
+          </fieldset>
+        )}
         <div className="row">
           <button type="submit" className="btn primary" disabled={busy}>
-            Create
+            {kind === 'trifold' && start === 'guided' ? 'Start' : 'Create'}
           </button>
           <button type="button" className="btn" onClick={onClose}>
             Cancel
@@ -116,6 +164,9 @@ export function CharactersPage() {
   const open = useCharacterStore((s) => s.open);
   const importFile = useCharacterStore((s) => s.importFile);
   const clearError = useCharacterStore((s) => s.clearError);
+  const building = useCharacterStore((s) => s.building);
+  const cancelBuilding = useCharacterStore((s) => s.cancelBuilding);
+  const createBuilt = useCharacterStore((s) => s.createBuilt);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
@@ -123,6 +174,17 @@ export function CharactersPage() {
   }, [load]);
 
   const current = characters.find((c) => c.id === openId) ?? null;
+  if (building && !building.forJoined) {
+    return (
+      <GuidedBuilder
+        name={building.name}
+        onCancel={cancelBuilding}
+        onFinish={(sheet, build) =>
+          void createBuilt(building.name, sheet, build).then((made) => made && open(made.id))
+        }
+      />
+    );
+  }
   if (current) return <CharacterEditor character={current} onBack={() => open(null)} />;
 
   return (

@@ -5,6 +5,8 @@ import { useCharacterStore } from '../../stores/characterStore';
 import { ExternalForm } from '../character/ExternalForm';
 import { SheetView } from '../character/SheetView';
 import { TrifoldSheet } from '../character/TrifoldSheet';
+import { GuidedBuilder } from '../character/builder/GuidedBuilder';
+import { useJoinedStore } from '../../stores/joinedStore';
 import { HeldConditions } from '../campaign/HeldConditions';
 import { HpChip, HpEditor } from '../campaign/HpBetweenFights';
 import { useLinkedCharacter } from './CharacterLink';
@@ -106,6 +108,10 @@ export function SheetsPage() {
   const setEditing = useCharacterStore((s) => s.setEditingSheet);
   const change = useCharacterStore((s) => s.change);
   const flush = useCharacterStore((s) => s.flush);
+  const building = useCharacterStore((s) => s.building);
+  const cancelBuilding = useCharacterStore((s) => s.cancelBuilding);
+  const createBuilt = useCharacterStore((s) => s.createBuilt);
+  const linkCharacter = useJoinedStore((s) => s.linkCharacter);
   const view = conn.link === 'open' ? conn.view : null;
   const mine = useMemo(
     () => orderMine(view?.mine ?? last?.view.mine ?? []),
@@ -120,6 +126,23 @@ export function SheetsPage() {
     if (!characterId) return;
     return () => void flush(characterId);
   }, [flush, characterId]);
+
+  // The guided builder, opened from My characters (docs/BUILDER.md): Finish links what it made.
+  if (building?.forJoined) {
+    return (
+      <div className="sheets-page" data-testid="sheets-page">
+        <GuidedBuilder
+          name={building.name}
+          onCancel={cancelBuilding}
+          onFinish={(sheet, build) =>
+            void createBuilt(building.name, sheet, build).then(
+              (made) => made && linkCharacter(made.id),
+            )
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="sheets-page" data-testid="sheets-page">
