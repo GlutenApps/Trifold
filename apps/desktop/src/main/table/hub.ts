@@ -139,7 +139,8 @@ const ClientMessageSchema: z.ZodType<ClientMessage> = z.discriminatedUnion('type
   // Checked like an intent (ADR 0071): every number in the range the PC card takes.
   z.object({
     type: z.literal('sheetOffer'),
-    creatureId: z.string().min(1).max(64),
+    creatureId: z.string().min(1).max(64).optional(),
+    label: z.string().max(40).optional(),
     offer: z.object({
       name: z.string().trim().min(1).max(80),
       numbers: TableNumbers,
@@ -187,11 +188,16 @@ interface Client {
 /** A sheet update waiting for the DM (ADR 0071), held in memory only. */
 interface SheetOfferRequest {
   requestId: string;
-  deviceId: string;
-  pcId: string;
+  /** Null for a device that holds nothing yet asking for a new PC (ADR 0072). */
+  deviceId: string | null;
+  /** Null for a new PC. */
+  pcId: string | null;
   offer: SheetOffer;
   /** The offer as text: the same offer again is answered as before. */
   key: string;
+  /** A new PC's asker, and the name its device will carry. */
+  client?: Client;
+  label?: string;
 }
 
 /** A device waiting for the DM in Approval mode (held in memory only). */
@@ -263,6 +269,8 @@ export class TableHub {
   private broadcastTimer: NodeJS.Timeout | null = null;
   private approvals: ApprovalRequest[] = [];
   private sheetOffers: SheetOfferRequest[] = [];
+  /** New PCs accepted, waiting for the console to make their cards (ADR 0072). */
+  private newPcs = new Map<string, SheetOfferRequest>();
   /** The DM's last answer for each PC this session, so a resent offer is answered at once. */
   private sheetAnswers = new Map<string, { key: string; accepted: boolean }>();
   private pinTries = new Map<string, PinTries>();
@@ -333,9 +341,12 @@ export class TableHub {
       summoning: this.players?.summoning ?? { mode: 'on', cap: 8 },
       sheetOffers: this.sheetOffers.map((o) => ({
         requestId: o.requestId,
-        label: this.players?.devices.find((d) => d.deviceId === o.deviceId)?.label || 'A player',
+        label:
+          o.label ||
+          this.players?.devices.find((d) => d.deviceId === o.deviceId)?.label ||
+          'A player',
         pcId: o.pcId,
-        creatureName: this.nameOf('pc', o.pcId),
+        creatureName: o.pcId ? this.nameOf('pc', o.pcId) : o.offer.name,
         offer: o.offer,
       })),
       sheets: this.players?.sheets ?? { autoAccept: false },
@@ -540,6 +551,7 @@ export class TableHub {
     this.approvals = [];
     this.sheetOffers = [];
     this.sheetAnswers.clear();
+    this.newPcs.clear();
     this.pinTries.clear();
     this.grace.clear();
     this.locks.clear();
@@ -740,6 +752,8 @@ export class TableHub {
     socket.on('close', () => {
       this.clients.delete(client);
       this.approvals = this.approvals.filter((a) => a.client !== client);
+      // A new PC asked for by this browser has nobody to go to now (ADR 0072).
+      this.sheetOffers = this.sheetOffers.filter((o) => o.client !== client);
       if (client.deviceId) this.players?.touch(client.deviceId);
       // A drag dies with its page (when no other page of that device is open).
       if (client.deviceId && !this.clientsOf(client.deviceId).length) {
@@ -810,6 +824,7 @@ export class TableHub {
         return this.undo(client);
       case 'cancel':
         this.approvals = this.approvals.filter((r) => r.client !== client);
+        this.sheetOffers = this.sheetOffers.filter((o) => o.client !== client);
         this.emit();
         return;
       case 'grab':
@@ -834,7 +849,9 @@ export class TableHub {
       case 'roll':
         return this.roll(client, msg.expression);
       case 'sheetOffer':
-        return this.sheetOffer(client, msg.creatureId, msg.offer);
+        return msg.creatureId
+          ? this.sheetOffer(client, msg.creatureId, msg.offer)
+          : this.newPcOffer(client, msg.offer, msg.label ?? '');
     }
   }
 
@@ -875,6 +892,48 @@ export class TableHub {
     this.emit();
   }
 
+  /**
+   * New PC from player sheet (ADR 0072): a device holding nothing asks the DM to add its
+   * player's character. It always waits for the DM, whatever Accept sheet updates
+   * automatically says: a new card is the DM's to make.
+   */
+  private newPcOffer(client: Client, offer: SheetOffer, label: string): void {
+    const holds = (this.players?.claims ?? []).some(
+      (c) => !!client.deviceId && c.deviceId === client.deviceId,
+    );
+    if (holds) return this.reject(client, 'You already have a character at this table.');
+    this.sheetOffers = [
+      ...this.sheetOffers.filter((o) => o.client !== client),
+      {
+        requestId: ulid(),
+        deviceId: client.deviceId,
+        pcId: null,
+        offer,
+        key: JSON.stringify(offer),
+        client,
+        label: label.trim() || this.device(client)?.label || '',
+      },
+    ];
+    this.send(client, { type: 'waiting', creatureName: offer.name });
+    this.opts.logger.info('table server: a player asked for a new PC from their sheet');
+    this.emit();
+  }
+
+  /** The console made the card a player asked for: it goes to that device as a claim. */
+  async grantNewPc(requestId: string, pcId: string): Promise<TableStatus> {
+    const request = this.newPcs.get(requestId);
+    this.newPcs.delete(requestId);
+    const client = request?.client;
+    if (request && client && client.socket.readyState === client.socket.OPEN) {
+      await this.grant(client, 'pc', pcId, request.label ?? '');
+      // The device will offer the same numbers for its new PC: they are already on the card.
+      this.sheetAnswers.set(pcId, { key: request.key, accepted: true });
+      this.send(client, { type: 'sheetAnswer', accepted: true });
+    }
+    this.emit();
+    return this.status();
+  }
+
   /** Accept or Dismiss a sheet update. */
   async answerSheet(requestId: string, accept: boolean): Promise<TableStatus> {
     const request = this.sheetOffers.find((o) => o.requestId === requestId);
@@ -897,6 +956,26 @@ export class TableHub {
 
   /** Writes an accepted update through the console, and tells the device either way. */
   private settleSheet(request: SheetOfferRequest, accepted: boolean): void {
+    if (!request.pcId) {
+      // A new PC: the console makes the card, then hands it back (grantNewPc).
+      const client = request.client;
+      if (accepted) {
+        this.newPcs.set(request.requestId, request);
+        this.opts.onSheet?.({
+          deviceLabel: request.label || 'A player',
+          pcId: null,
+          offer: request.offer,
+          requestId: request.requestId,
+        });
+      } else if (client && client.socket.readyState === client.socket.OPEN) {
+        this.send(client, {
+          type: 'error',
+          message: `The DM didn’t add ${request.offer.name} as a new character.`,
+        });
+      }
+      this.opts.logger.info(`table server: new PC ${accepted ? 'accepted' : 'dismissed'}`);
+      return;
+    }
     this.sheetAnswers.set(request.pcId, { key: request.key, accepted });
     if (accepted) {
       this.opts.onSheet?.({

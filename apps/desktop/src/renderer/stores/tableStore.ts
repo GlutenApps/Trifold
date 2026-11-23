@@ -198,7 +198,7 @@ export function installTableSync(): () => void {
     // A player's change main has checked: applied like a DM's own.
     window.trifold.on('tableIntent', (event) => applyTableIntent(event)),
     // A sheet update the DM accepted, or that was accepted automatically (ADR 0071).
-    window.trifold.on('tableSheet', (event) => applyTableSheet(event)),
+    window.trifold.on('tableSheet', (event) => void applyTableSheet(event)),
     // A roll main made for a player (ADR 0059): into the DM's roll log, as it is into theirs.
     window.trifold.on('tableRoll', (roll) => logTableRoll(roll)),
     // Summons: placed, dismissed or kept as the player asks; upkeep runs here too.

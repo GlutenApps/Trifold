@@ -963,7 +963,8 @@ export interface TableStatus {
   sheetOffers?: Array<{
     requestId: string;
     label: string;
-    pcId: string;
+    /** Null when the player asks for a new PC from their sheet (ADR 0072). */
+    pcId: string | null;
     creatureName: string;
     offer: SheetOffer;
   }>;
@@ -987,8 +988,13 @@ export type TableReleaseTarget = { kind: CreatureKind; id: string } | 'all';
 /** A sheet update the DM accepted, or that was accepted automatically, for the console to apply. */
 export interface TableSheetEvent {
   deviceLabel: string;
-  pcId: string;
+  /**
+   * The PC card to write; null to make a new one from the offer (ADR 0072), after which the
+   * console hands the new card's id back with `table.grantNewPc(requestId, pcId)`.
+   */
+  pcId: string | null;
   offer: SheetOffer;
+  requestId?: string;
 }
 
 export interface TrifoldApi {
@@ -1114,6 +1120,11 @@ export interface TrifoldApi {
     answerSheet(requestId: string, accept: boolean): Promise<TableStatus>;
     /** Accept sheet updates automatically, saved in the campaign's players.json. */
     setSheetAutoAccept(on: boolean): Promise<TableStatus>;
+    /**
+     * The console made the PC card a player asked for (ADR 0072): it goes to the device that
+     * asked, as a claim.
+     */
+    grantNewPc(requestId: string, pcId: string): Promise<TableStatus>;
   };
   /** Records in more than one place (ADR 0063). */
   duplicates: {
@@ -1635,6 +1646,7 @@ export const API_METHODS = {
     'setSummoning',
     'answerSheet',
     'setSheetAutoAccept',
+    'grantNewPc',
   ],
   joined: [
     'list',

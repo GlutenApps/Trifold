@@ -3190,3 +3190,9 @@ button.chrome-btn:disabled:not(.primary, .tally) {
 .sheet-changes {
   display: block;
 }
+
+/* New PC from player sheet (ADR 0072), under the player console's picker. */
+.ask-new-pc {
+  justify-content: center;
+  padding: 8px 12px;
+}

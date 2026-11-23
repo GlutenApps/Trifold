@@ -2,6 +2,7 @@ import type { SheetOffer, TableSheetEvent } from '@trifold/api';
 import type { Ability, PCCard } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
+import { blankPc } from '../campaign/CharacterEditors';
 
 /**
  * Sheet updates on the GM's side (docs/PLAYER-MODE.md, Sheet updates; ADR 0071): what an offer
@@ -62,9 +63,19 @@ export function sheetChanges(pc: PCCard, offer: SheetOffer): string[] {
   return out;
 }
 
-/** An accepted offer: written to the PC card, and to its combatant when it is in a fight. */
-export function applyTableSheet(event: TableSheetEvent): void {
+/**
+ * An accepted offer: written to the PC card, and to its combatant when it is in a fight. With no
+ * PC, a new card is made from the offer and handed to the player who asked (ADR 0072).
+ */
+export async function applyTableSheet(event: TableSheetEvent): Promise<void> {
   const campaign = useCampaignStore.getState();
+  if (event.pcId === null) {
+    const made = await campaign.savePc(
+      withSheetOffer({ ...blankPc(), maxHp: 10, ac: 10 }, event.offer),
+    );
+    if (made && event.requestId) await window.trifold.table.grantNewPc(event.requestId, made.id);
+    return;
+  }
   const pc = campaign.current?.pcs.find((p) => p.id === event.pcId);
   if (!pc) return;
   const next = withSheetOffer(pc, event.offer);

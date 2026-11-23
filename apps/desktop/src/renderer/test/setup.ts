@@ -205,6 +205,7 @@ export function installBridgeMock(): TrifoldBridge {
       setSummoning: vi.fn(async () => TABLE_OFF),
       answerSheet: vi.fn(async () => TABLE_OFF),
       setSheetAutoAccept: vi.fn(async () => TABLE_OFF),
+      grantNewPc: vi.fn(async () => TABLE_OFF),
     },
     backups: {
       list: vi.fn(async () => []),
