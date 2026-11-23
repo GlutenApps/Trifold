@@ -43,7 +43,7 @@ const SUGGEST_TIERS: Record<number, CompendiumSuggestion['tier']> = {
  * decides which sources need it from their file hash and enabled flag.
  */
 /** Bump when the derived table layout changes; the tables are dropped and rebuilt from files. */
-export const INDEX_VERSION = 6;
+export const INDEX_VERSION = 7;
 
 /** DATA-FORMATS.md §5.6. Every row is derived from `sources/<id>/records.jsonl`. */
 const SCHEMA = `
@@ -84,6 +84,8 @@ CREATE TABLE IF NOT EXISTS records (
   book_off INTEGER NOT NULL DEFAULT 0,
   -- The copy the GM chose for its record (ADR 0063), from library.json's duplicateChoices.
   chosen INTEGER NOT NULL DEFAULT 0,
+  -- A shared record's source name in the GM's Library (ADR 0060), '' otherwise.
+  shared_from TEXT NOT NULL DEFAULT '',
   -- What the record says (ADR 0063): its deciding numbers, and its rules text as words.
   content_numbers TEXT NOT NULL DEFAULT '',
   content_words TEXT NOT NULL DEFAULT '',
@@ -167,8 +169,8 @@ export class IndexDb {
   /** Replaces every row of a source in one transaction. Returns the number of records written. */
   replaceSource(source: Source, records: Iterable<CompendiumRecord>): number {
     const insertRecord = this.db.prepare(
-      `INSERT INTO records (id, kind, key, name, display_name, source_id, edition, cr, cr_num, type, size, environment, is_npc, level, type_code, rarity, book_key, book, content_numbers, content_words, json)
-       VALUES (@id, @kind, @key, @name, @display_name, @source_id, @edition, @cr, @cr_num, @type, @size, @environment, @is_npc, @level, @type_code, @rarity, @book_key, @book, @content_numbers, @content_words, @json)`,
+      `INSERT INTO records (id, kind, key, name, display_name, source_id, edition, cr, cr_num, type, size, environment, is_npc, level, type_code, rarity, book_key, book, shared_from, content_numbers, content_words, json)
+       VALUES (@id, @kind, @key, @name, @display_name, @source_id, @edition, @cr, @cr_num, @type, @size, @environment, @is_npc, @level, @type_code, @rarity, @book_key, @book, @shared_from, @content_numbers, @content_words, @json)`,
     );
     const insertFts = this.db.prepare('INSERT INTO records_fts (id, name, text) VALUES (?, ?, ?)');
     const upsertSource = this.db.prepare(
@@ -312,7 +314,27 @@ export class IndexDb {
           .prepare(`UPDATE records AS r SET starred = ?, book_off = ? WHERE ${filter.sql}`)
           .run(b.starred ? 1 : 0, b.off ? 1 : 0, ...filter.params);
       }
+      // A shared record steps aside for the player's own copy (ADR 0060): the same record and
+      // edition in one of their imported files that are on, from the same book or a source of
+      // the same name. It is left out like a book that is off; their copy answers.
+      this.db.exec(
+        `UPDATE records AS r SET book_off = 1
+         WHERE r.source_id LIKE 'shared:%' AND EXISTS (
+           SELECT 1 FROM records o JOIN sources os ON os.id = o.source_id
+           WHERE os.kind IN ('xml', 'open5e') AND os.enabled = 1 AND o.book_off = 0
+             AND o.kind = r.kind AND o.key = r.key AND o.edition = r.edition
+             AND ((r.book_key != '' AND o.book_key = r.book_key) OR (r.shared_from != '' AND os.name = r.shared_from))
+         )`,
+      );
     })();
+  }
+
+  /** How many of a shared source's records step aside for the player's own copies (ADR 0060). */
+  standInCount(sharedSourceId: string): number {
+    const row = this.db
+      .prepare('SELECT COUNT(*) AS n FROM records WHERE source_id = ? AND book_off = 1')
+      .get(sharedSourceId) as { n: number };
+    return row.n;
   }
 
   /**

@@ -230,7 +230,11 @@ async function main(): Promise<void> {
       const { index, catalog, store } = activeSession.require();
       await syncIndex(index, catalog, store, logger);
       // After the index, so a search the console runs on hearing this finds the records.
-      windows.sendToConsole(EVENT_CHANNELS.joinedShared, { campaignId, records });
+      windows.sendToConsole(EVENT_CHANNELS.joinedShared, {
+        campaignId,
+        records,
+        ownCopies: index.standInCount(`shared:${campaignId}`),
+      });
     },
     // Pictures from a GM's table are derived data: beside the app's settings, not in the Library.
     cacheDir: join(app.getPath('userData'), 'table-cache'),

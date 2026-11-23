@@ -2713,6 +2713,15 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   margin: 0 0 6px;
 }
 
+/* Sharing a homebrew record made from user content asks first (ADR 0060). */
+.share-ask {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 40em;
+}
+
 /* The Duplicates tab (ADR 0063). */
 .duplicates-view {
   display: flex;

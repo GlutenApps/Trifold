@@ -35,6 +35,8 @@ export interface RecordColumns {
   book_key: string;
   /** That book's name as the file writes it; '' when none. */
   book: string;
+  /** A shared record's source name in the GM's Library (ADR 0060); '' for any other. */
+  shared_from: string;
   /** What the record says, for telling real duplicates from reprints (ADR 0063). */
   content_numbers: string;
   content_words: string;
@@ -66,6 +68,7 @@ export function recordColumns(record: CompendiumRecord): RecordColumns {
     rarity: null,
     book_key: record.sourceBook ? bookKey(record.sourceBook) : '',
     book: record.sourceBook ?? '',
+    shared_from: record.sharedFrom?.sourceName ?? '',
     content_numbers: recordNumbers(record),
     content_words: recordWords(record).join(' '),
     json: JSON.stringify(record),

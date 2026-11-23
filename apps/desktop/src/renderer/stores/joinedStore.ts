@@ -31,6 +31,8 @@ interface JoinedState {
   pins: PinnedRoll[];
   /** How many records the open joined campaign's GM shares with it (ADR 0060). */
   sharedRecords: number;
+  /** Of those, how many step aside for the player's own copies. */
+  ownCopies: number;
   tables: FoundTableSummary[];
   searching: boolean;
   error: string | null;
@@ -78,6 +80,7 @@ export const useJoinedStore = create<JoinedState>((set, get) => ({
   notes: [],
   pins: [],
   sharedRecords: 0,
+  ownCopies: 0,
   tables: [],
   searching: false,
   error: null,

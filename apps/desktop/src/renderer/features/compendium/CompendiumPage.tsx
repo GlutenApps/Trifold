@@ -84,6 +84,7 @@ export function CompendiumPage() {
   const loadSources = useSourcesStore((s) => s.load);
   // In a player console: how much the campaign's GM shares (ADR 0060); 0 anywhere else.
   const sharedRecords = useJoinedStore((s) => (s.current ? s.sharedRecords : 0));
+  const ownCopies = useJoinedStore((s) => (s.current ? s.ownCopies : 0));
   // The open campaign's preferred edition heads each collapsed row; a change re-runs the search.
   const preferredEdition = useCampaignStore((s) => s.current?.campaign.preferredEdition);
 
@@ -162,6 +163,8 @@ export function CompendiumPage() {
           {sharedRecords === 1 ? 'record' : 'records'} with this campaign. Pick “
           {sources.find((s) => s.kind === 'shared')?.name ?? 'Shared'}” under sources to see only
           those.
+          {ownCopies > 0 &&
+            ` ${ownCopies.toLocaleString()} of them ${ownCopies === 1 ? 'is' : 'are'} in your own books, so your copies are used.`}
         </p>
       )}
       {bookLabel && (

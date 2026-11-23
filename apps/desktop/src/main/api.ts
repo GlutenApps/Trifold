@@ -16,7 +16,7 @@ import { createNoteTemplatesApi } from './noteTemplates';
 import { createPhoneAudioApi } from './phoneAudio/phoneAudioApi';
 import type { PhoneAudioReceiver } from './phoneAudio/receiver';
 import type { IconResources } from './icons';
-import { syncIndex } from './index/sync';
+import { markLibraryChoices, syncIndex } from './index/sync';
 import type { LibrarySession } from './library/session';
 import type { Logger } from './log';
 import type { PresenterHub } from './presenter';
@@ -452,6 +452,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           );
         } finally {
           importing = false;
+          // A player's own copies may now stand in for shared ones (ADR 0060).
+          void ctx.joined.ownSourcesChanged();
         }
       },
       async setEdition2024Books(sourceId, books) {
@@ -472,6 +474,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           );
         } finally {
           importing = false;
+          // A player's own copies may now stand in for shared ones (ADR 0060).
+          void ctx.joined.ownSourcesChanged();
         }
       },
       async reimport(sourceId) {
@@ -491,6 +495,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           );
         } finally {
           importing = false;
+          // A player's own copies may now stand in for shared ones (ADR 0060).
+          void ctx.joined.ownSourcesChanged();
         }
       },
       async setEnabled(sourceId, enabled) {
@@ -512,6 +518,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         const next = { ...source, enabled };
         await sources.write(next);
         index.setSourceEnabled(sourceId, enabled);
+        // A file switched off no longer stands in for shared copies, and one switched on does.
+        markLibraryChoices(index, store);
+        void ctx.joined.ownSourcesChanged();
         return next;
       },
       async setCampaigns(sourceId, campaignIds) {
@@ -567,6 +576,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           throw new Error('Bundled SRD content can be switched off but not removed');
         await sources.remove(sourceId);
         index.removeSource(sourceId);
+        void ctx.joined.ownSourcesChanged();
         ctx.logger.info(`source ${sourceId} removed`);
       },
       async rebuildIndex() {
@@ -670,6 +680,7 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         const books = withBookSettings(store.getSettings().books, keys, patch);
         await store.updateSettings({ books });
         index.applyBookSettings(books);
+        void ctx.joined.ownSourcesChanged();
         return listBooks(index, books);
       },
       async setRules(keys, use2024) {
@@ -704,6 +715,8 @@ export function createApi(ctx: ApiContext): TrifoldApi {
           }
         } finally {
           importing = false;
+          // A player's own copies may now stand in for shared ones (ADR 0060).
+          void ctx.joined.ownSourcesChanged();
         }
         index.applyBookSettings(store.getSettings().books);
         return listBooks(index, store.getSettings().books);

@@ -4,7 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CampaignBundle, SourceSummary } from '@trifold/api';
 import type { CompendiumRecord } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
-import { canShareRecord, playerFacingCount, SharedTab, ShareToggle } from './SharedTab';
+import { useSourcesStore } from '../../stores/sourcesStore';
+import {
+  canShareRecord,
+  madeFromUserContent,
+  playerFacingCount,
+  SharedTab,
+  ShareToggle,
+} from './SharedTab';
 
 const source = (id: string, extra: Partial<SourceSummary> = {}): SourceSummary =>
   ({
@@ -103,6 +110,33 @@ describe('SharedTab', () => {
 });
 
 describe('ShareToggle', () => {
+  it('asks before sharing a record made from a source marked as user content', async () => {
+    const user = userEvent.setup();
+    open();
+    useSourcesStore.setState({ sources: [source('S1')] });
+    const copy = {
+      ...lantern,
+      basedOn: { recordId: 'S1:item:lantern', sourceId: 'S1' },
+    } as CompendiumRecord;
+    expect(madeFromUserContent(copy, [source('S1')])).toBe('Book S1');
+    expect(madeFromUserContent(lantern, [source('S1')])).toBeNull();
+    render(<ShareToggle record={copy} />);
+    await user.click(screen.getByRole('button', { name: 'Share with players' }));
+    const ask = screen.getByRole('group', { name: 'Share Greyford Lantern?' });
+    expect(ask).toHaveTextContent('Made from Book S1, marked as user content');
+    expect(update).not.toHaveBeenCalled();
+    await user.click(within(ask).getByRole('button', { name: 'Keep private' }));
+    expect(update).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Share with players' }));
+    await user.click(screen.getByRole('button', { name: 'Share' }));
+    expect(update).toHaveBeenLastCalledWith({
+      settings: expect.objectContaining({
+        shared: { sourceIds: [], homebrewIds: ['hb-lantern'], collectionIds: [] },
+      }),
+    });
+    useSourcesStore.setState({ sources: [] });
+  });
+
   it('shares a homebrew record with the open campaign’s players, and stops', async () => {
     open();
     const { rerender } = render(<ShareToggle record={lantern} />);
