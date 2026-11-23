@@ -128,7 +128,10 @@ describe('MyCharactersTool', () => {
     expect(rows[0]).toHaveTextContent('HP 20/24');
     expect(rows[0]).toHaveTextContent('Prone');
     expect(rows[1]).toHaveTextContent('Wolf');
-    expect(screen.queryAllByRole('button')).toEqual([]);
+    // Nothing that changes the table: only opening a sheet, and linking one (ADR 0069).
+    expect(
+      screen.queryAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent),
+    ).toEqual(['Open Brannoc’s sheet', 'Open Wolf’s sheet', 'New character']);
 
     // The table comes up: the live rows take over by themselves.
     table.link('open');

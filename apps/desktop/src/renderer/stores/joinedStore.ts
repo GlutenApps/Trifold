@@ -50,6 +50,8 @@ interface JoinedState {
   /** Joins the campaign at a table. Resolves to whether it worked. */
   join(table: FoundTableSummary, displayName: string): Promise<boolean>;
   leave(campaignId: string): Promise<void>;
+  /** Links one of the player's characters to the open campaign (ADR 0068), or unlinks. */
+  linkCharacter(characterId: string | null): Promise<void>;
   /**
    * Opens a joined campaign's player console, or goes back to it when it is the open one. A
    * campaign this Library is running is closed first, unless something of it is live.
@@ -199,6 +201,20 @@ export const useJoinedStore = create<JoinedState>((set, get) => ({
       await get().load();
     } catch (err) {
       set({ error: errorMessage(err) });
+    }
+  },
+
+  async linkCharacter(characterId) {
+    const current = get().current;
+    if (!current) return;
+    try {
+      const next = await window.trifold.joined.linkCharacter(current.campaignId, characterId);
+      set((s) => ({
+        current: s.current?.campaignId === next.campaignId ? next : s.current,
+        joined: s.joined.map((j) => (j.campaignId === next.campaignId ? next : j)),
+      }));
+    } catch (err) {
+      fail(err);
     }
   },
 

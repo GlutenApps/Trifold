@@ -205,6 +205,28 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(row.getByText('Prone')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('initiative-tool')).toContainText('No fight is running.');
 
+    // Sheets (ADR 0069): the player links the character made in their Library to this campaign
+    // and reads it on the Sheets tab, worked out, with the table's live HP above it.
+    await page
+      .getByTestId('my-characters')
+      .getByRole('combobox', { name: 'Link a character' })
+      .selectOption({ label: 'Sam’s rogue' });
+    await expect(page.getByTestId('character-link')).toContainText('Your sheet: Sam’s rogue');
+    await row.getByRole('button', { name: 'Open Brannoc Hale’s sheet' }).click();
+    const sheet = page.getByTestId('sheet-view');
+    await expect(sheet).toContainText('Sam’s rogue');
+    await expect(sheet.getByLabel('Numbers')).toContainText('13');
+    await expect(page.getByTestId('sheet-live')).toContainText('Prone');
+    await expect
+      .poll(
+        async () =>
+          JSON.parse(
+            await readFile(join(playerLibrary, 'joined', campaign.id, 'joined.json'), 'utf8'),
+          ).characterId as string | null,
+      )
+      .toBeTruthy();
+    await page.getByRole('tab', { name: 'VTT', exact: true }).click();
+
     // With the dock collapsed to its icons, a tool opens as a fly-out and still reads the table.
     await page.getByRole('button', { name: 'Collapse dock to icons' }).click();
     await page.getByRole('button', { name: 'My characters tool' }).click();
@@ -439,7 +461,9 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(table.locator('.pc-map')).toBeVisible();
     const lastRow = page.getByTestId('my-characters').getByTestId('my-character');
     await expect(lastRow).toContainText('Brannoc Hale');
-    await expect(lastRow.getByRole('button')).toHaveCount(0);
+    // Nothing to change while away; only opening its sheet (ADR 0069).
+    await expect(lastRow.getByRole('button')).toHaveCount(1);
+    await expect(lastRow.getByRole('button')).toHaveAccessibleName('Open Brannoc Hale’s sheet');
     // After closing and opening the campaign it comes from main's cache, the picture included.
     await page.getByRole('button', { name: 'Close campaign' }).click();
     await card.getByRole('button', { name: 'Open The Lantern at Greyford' }).click();

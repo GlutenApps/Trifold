@@ -17,6 +17,9 @@ interface CharacterState {
   loaded: boolean;
   /** The character open in an editor, by id; null for the list. */
   openId: string | null;
+  /** The player console's Sheets tab shows the linked character's editor, not its sheet. */
+  editingSheet: boolean;
+  setEditingSheet(on: boolean): void;
   error: string | null;
   load(): Promise<void>;
   open(id: string | null): void;
@@ -56,7 +59,12 @@ export const useCharacterStore = create<CharacterState>((set, get) => {
     characters: [],
     loaded: false,
     openId: null,
+    editingSheet: false,
     error: null,
+
+    setEditingSheet(on) {
+      set({ editingSheet: on });
+    },
 
     async load() {
       try {
