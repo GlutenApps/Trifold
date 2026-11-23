@@ -1,6 +1,6 @@
 # Character builder (2024): short spec
 
-Status: draft for review, 2026-11-23. `docs/PLAYER-MODE.md`, Part 3, Way 3 and phase 7 ask for this spec before the builder is built. It writes the same sheet a Trifold character already has (ADR 0068); everything here is about getting a correct sheet with fewer keystrokes.
+Status: agreed, 2026-11-23 (Ian's answers are under Decisions). `docs/PLAYER-MODE.md`, Part 3, Way 3 and phase 7 ask for this spec before the builder is built. It writes the same sheet a Trifold character already has (ADR 0068); everything here is about getting a correct sheet with fewer keystrokes.
 
 ## Goal
 
@@ -27,7 +27,7 @@ Parsing lives in `packages/importers/src/open5e/` (build time) and the typed rea
 
 ## The flow
 
-The SRD's own five steps, on the Sheets tab or Library › Characters. **New character** gains a third choice: **Build a character** (name to be agreed). Each step can be revisited until Finish; nothing is written before Finish, then the result is a Trifold character.
+The SRD's own five steps, on the Sheets tab or Library › Characters. **New character** keeps its two kinds; a **Trifold character** then starts one of three ways: **Guided builder** (this flow), **Blank sheet** (the sheet filled in by hand, as today) or **Import from PDF** (phase 6, hidden until built). Each step can be revisited until Finish; nothing is written before Finish, then the result is a Trifold character.
 
 1. **Class.** The 12 classes with hit die, primary ability and a one-line summary. Picks: skills (the class's "Choose n"), weapon mastery where the class has it, and a fighting style where it has one. A subclass is picked at the level that grants it (Level up), not here.
 2. **Origin.** Background (its feat comes with it; a choice inside the feat, such as Magic Initiate's spell list, is offered), then species and its choices, then languages (Common plus two from the SRD list).
@@ -64,9 +64,9 @@ With a campaign's `allowLegacy` on, the background and species steps also list S
 5. Level up.
 6. Legacy options.
 
-## Questions for Ian
+## Decisions (Ian, 2026-11-23)
 
-1. The third choice's name in New character: **Build a character**, **Guided character**, or something else?
-2. Multiclassing left out of the first version: agreed?
-3. Rolled ability scores allowed (with the DM free to ignore them), or array and point buy only?
-4. Level up HP: offer both fixed and roll, or fixed only?
+1. Names: **New character** offers External character or Trifold character; a Trifold character starts as **Guided builder**, **Blank sheet** or **Import from PDF**.
+2. Multiclassing waits for a later version.
+3. Ability scores: standard array, point buy and rolled.
+4. Level up HP: fixed by default, or rolled.
