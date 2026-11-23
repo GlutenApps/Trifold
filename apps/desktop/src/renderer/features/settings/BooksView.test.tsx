@@ -197,3 +197,83 @@ describe('Deleting books (ADR 0065)', () => {
     );
   });
 });
+
+describe('Sharing books (ADR 0067)', () => {
+  const files = [
+    { id: 'F1', name: 'Big file', kind: 'xml', license: { nonSrd: true }, warnings: [] },
+    { id: 'F2', name: 'Manual file', kind: 'xml', license: { nonSrd: false }, warnings: [] },
+  ] as unknown as SourceSummary[];
+  const campaigns = [
+    { id: 'C1', name: 'Greyford', slug: 'g', updatedAt: '', pcCount: 0, encounterCount: 0 },
+    { id: 'C2', name: 'Silt Springs', slug: 's', updatedAt: '', pcCount: 0, encounterCount: 0 },
+  ];
+  const sharing = {
+    bySource: {},
+    byCollection: {},
+    byBook: { 'example manual 2025': ['C1'] },
+    homebrewByCampaign: {},
+  };
+
+  beforeEach(() => {
+    vi.mocked(window.trifold.books.list).mockResolvedValue([codex, manual]);
+    vi.mocked(window.trifold.books.share).mockClear();
+    vi.mocked(window.trifold.books.share).mockResolvedValue({
+      ...sharing,
+      byBook: { 'example manual 2025': ['C1', 'C2'] },
+    });
+  });
+
+  it('shows what a book is shared in, and shares it from its row', async () => {
+    const user = userEvent.setup();
+    const onShared = vi.fn();
+    render(
+      <BooksView
+        files={files}
+        onBrowse={() => undefined}
+        campaigns={campaigns}
+        sharing={sharing}
+        onShared={onShared}
+      />,
+    );
+    await screen.findAllByTestId('book-row');
+    const button = screen.getByRole('button', { name: 'Share Example Manual (2025) with players' });
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(button).toHaveAttribute('title', 'Shared in Greyford');
+    await user.click(button);
+    const panel = within(screen.getByTestId('share-books'));
+    expect(panel.getByRole('checkbox', { name: 'Greyford' })).toBeChecked();
+    // Part of the book is in a file marked as user content.
+    expect(panel.getByRole('note')).toHaveTextContent('Marked as user content');
+    await user.click(panel.getByRole('checkbox', { name: 'Silt Springs' }));
+    expect(window.trifold.books.share).toHaveBeenCalledWith(['example manual 2025'], 'C2', true);
+    await waitFor(() => expect(onShared).toHaveBeenCalled());
+  });
+
+  it('shares a selection, ticking a campaign only when every book is shared there', async () => {
+    const user = userEvent.setup();
+    render(
+      <BooksView
+        files={files}
+        onBrowse={() => undefined}
+        campaigns={campaigns}
+        sharing={sharing}
+      />,
+    );
+    await screen.findAllByTestId('book-row');
+    await user.click(screen.getByRole('checkbox', { name: 'Select every book shown' }));
+    await user.click(screen.getByRole('button', { name: 'Share…' }));
+    const panel = within(screen.getByRole('region', { name: 'Share 2 books with players' }));
+    const greyford = panel.getByRole('checkbox', { name: /Greyford/ }) as HTMLInputElement;
+    expect(greyford.checked).toBe(false);
+    expect(greyford.indeterminate).toBe(true);
+    await user.click(greyford);
+    expect(window.trifold.books.share).toHaveBeenCalledWith(
+      ['example codex third party', 'example manual 2025'],
+      'C1',
+      true,
+    );
+    // Shared with players, as a filter.
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Show' }), 'shared');
+    expect(screen.getAllByTestId('book-row')).toHaveLength(1);
+  });
+});

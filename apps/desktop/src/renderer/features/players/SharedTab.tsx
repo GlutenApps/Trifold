@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { SourceSummary } from '@trifold/api';
+import type { BookSummary, SourceSummary } from '@trifold/api';
+import { campaignBooks } from '@trifold/rules';
 import type {
   CampaignSettings,
   CompendiumRecord,
@@ -18,8 +19,9 @@ import { Icon } from '../shell/icons';
  * campaign's players are given to build and play their characters. Nothing is shared until the
  * GM turns it on here.
  *
- * - An imported source the campaign uses: its spells, items, feats, species, backgrounds,
- *   classes, conditions and rules. Never its creatures.
+ * - A book (ADR 0067) or collection the campaign uses: its spells, items, feats, species,
+ *   backgrounds, classes, conditions and rules. Never its creatures. A campaign that shared
+ *   whole files before books keeps them until the GM stops sharing them.
  * - Homebrew, record by record, turned on from the record's page in the Compendium.
  * - The stat blocks of the Companions list and of NPCs a player holds go by themselves.
  *
@@ -53,8 +55,13 @@ export function sharedOf(
     sourceIds: shared?.sourceIds ?? [],
     homebrewIds: shared?.homebrewIds ?? [],
     collectionIds: shared?.collectionIds ?? [],
+    bookKeys: shared?.bookKeys ?? [],
   };
 }
+
+/** How many of a book's records players would get. */
+export const bookPlayerFacing = (book: Pick<BookSummary, 'counts'>): number =>
+  PLAYER_FACING.reduce((n, kind) => n + (book.counts[kind] ?? 0), 0);
 
 /** How many of a source's records players would get. */
 export const playerFacingCount = (source: Pick<SourceSummary, 'recordCounts'>): number =>
@@ -83,6 +90,7 @@ export function SharedTab() {
   const npcCompanions = useCampaignStore((s) => (s.current?.npcs ?? []).some((n) => n.companionOf));
   const collections = useAppStore((s) => s.library?.settings?.collections ?? NO_COLLECTIONS);
   const [sources, setSources] = useState<SourceSummary[] | null>(null);
+  const [books, setBooks] = useState<BookSummary[] | null>(null);
   const [homebrew, setHomebrew] = useState<Array<{ id: string; name: string | null }>>([]);
   const campaignId = campaign?.id;
   // The ids as text: the effect below runs when the list changes, not on every render.
@@ -97,6 +105,14 @@ export function SharedTab() {
       })
       .catch(() => {
         if (!stale) setSources([]);
+      });
+    void window.trifold.books
+      .list()
+      .then((all) => {
+        if (!stale) setBooks(all);
+      })
+      .catch(() => {
+        if (!stale) setBooks([]);
       });
     return () => {
       stale = true;
@@ -126,16 +142,31 @@ export function SharedTab() {
   const save = (next: CampaignSettings['shared']) =>
     update({ settings: { ...campaign.settings, shared: next } });
 
-  // Imported sources this campaign sees and that are switched on in the Library.
-  const offered = (sources ?? []).filter(
-    (s) =>
-      !s.bundled &&
-      (s.kind === 'xml' || s.kind === 'open5e') &&
-      s.enabled &&
-      (!s.campaignIds || s.campaignIds.includes(campaign.id)),
+  // Books this campaign sees (on, and in its collections when it uses some) that hold anything
+  // for players, not shared yet.
+  const usedKeys = campaignBooks(collections, campaign.id);
+  const sharedKeys = new Set(shared.bookKeys);
+  const offered = (books ?? []).filter(
+    (b) =>
+      !b.off &&
+      (!usedKeys || usedKeys.includes(b.key)) &&
+      bookPlayerFacing(b) > 0 &&
+      !sharedKeys.has(b.key),
   );
-  const on = new Set(shared.sourceIds);
-  const sharingUserContent = offered.some((s) => on.has(s.id) && s.license.nonSrd);
+  const sharedBooks = shared.bookKeys.map((key) => ({
+    key,
+    book: (books ?? []).find((b) => b.key === key) ?? null,
+  }));
+  // Whole files shared before books (ADR 0067): kept until the GM stops sharing them.
+  const sharedFiles = shared.sourceIds.map((id) => ({
+    id,
+    source: (sources ?? []).find((s) => s.id === id) ?? null,
+  }));
+  const userContent = (book: BookSummary) =>
+    book.files.some((f) => (sources ?? []).find((s) => s.id === f.id)?.license.nonSrd);
+  const sharingUserContent =
+    sharedBooks.some((x) => x.book && userContent(x.book)) ||
+    sharedFiles.some((x) => x.source?.license.nonSrd);
 
   return (
     <div className="shared-tab" data-testid="shared-tab">
@@ -153,50 +184,97 @@ export function SharedTab() {
           : 'Players receive this once you let them join and they are at the table.'}
       </p>
 
-      <h2>Sources</h2>
+      <h2>Books</h2>
       <p className="muted small">
-        A shared source gives players its spells, items, feats, species, backgrounds, classes,
-        conditions and rules. Its creatures are never shared.
+        A shared book gives players its spells, items, feats, species, backgrounds, classes,
+        conditions and rules. Its creatures are never shared. Library › Compendium › Sources › Books
+        can share many at once.
       </p>
-      {sources !== null && offered.length === 0 && (
-        <p className="muted">This campaign uses no imported sources.</p>
+      {sharedBooks.length === 0 && sharedFiles.length === 0 ? (
+        <p className="muted">No books are shared.</p>
+      ) : (
+        <ul className="shared-list" aria-label="Books shared with players">
+          {sharedBooks.map(({ key, book }) => {
+            const name = book?.name ?? 'A book that is no longer in your Library';
+            const count = book ? bookPlayerFacing(book) : 0;
+            return (
+              <li key={key} className="shared-row">
+                <span className="grow">{book ? name : <span className="muted">{name}</span>}</span>
+                {book && userContent(book) && <span className="badge">user content</span>}
+                {book && (
+                  <span className="muted small">
+                    {count} {count === 1 ? 'record' : 'records'} for players
+                  </span>
+                )}
+                <span className="row-actions">
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-label={`Stop sharing ${name}`}
+                    title="Stop sharing"
+                    onClick={() =>
+                      void save({ ...shared, bookKeys: shared.bookKeys.filter((k) => k !== key) })
+                    }
+                  >
+                    <Icon name="close" />
+                  </button>
+                </span>
+              </li>
+            );
+          })}
+          {sharedFiles.map(({ id, source }) => {
+            const name = source ? `All of ${source.name}` : 'A file that is no longer imported';
+            return (
+              <li key={id} className="shared-row">
+                <span className="grow">{name}</span>
+                <span className="muted small">shared as a whole file</span>
+                <span className="row-actions">
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-label={`Stop sharing ${name}`}
+                    title="Stop sharing"
+                    onClick={() =>
+                      void save({
+                        ...shared,
+                        sourceIds: shared.sourceIds.filter((x) => x !== id),
+                      })
+                    }
+                  >
+                    <Icon name="close" />
+                  </button>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       )}
-      <ul className="shared-list" aria-label="Sources shared with players">
-        {offered.map((s) => {
-          const count = playerFacingCount(s);
-          return (
-            <li key={s.id} className="shared-row">
-              <label className="field inline grow">
-                <input
-                  type="checkbox"
-                  aria-label={`Share ${s.name} with players`}
-                  checked={on.has(s.id)}
-                  disabled={count === 0}
-                  onChange={(e) =>
-                    void save({
-                      ...shared,
-                      sourceIds: e.target.checked
-                        ? [...shared.sourceIds, s.id]
-                        : shared.sourceIds.filter((id) => id !== s.id),
-                    })
-                  }
-                />
-                {s.name}
-              </label>
-              {s.license.nonSrd && <span className="badge">user content</span>}
-              <span className="muted small">
-                {count === 0
-                  ? 'nothing for players in it'
-                  : `${count} ${count === 1 ? 'record' : 'records'} for players`}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+      {books !== null && (
+        <div className="row">
+          <select
+            aria-label="Share a book with players"
+            value=""
+            disabled={offered.length === 0}
+            onChange={(e) => {
+              if (e.target.value)
+                void save({ ...shared, bookKeys: [...shared.bookKeys, e.target.value] });
+            }}
+          >
+            <option value="">
+              {offered.length === 0 ? 'No other book has anything for players' : 'Share a book…'}
+            </option>
+            {offered.map((b) => (
+              <option key={b.key} value={b.key}>
+                {b.name} ({bookPlayerFacing(b)} for players)
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       {sharingUserContent && (
         <div className="banner warn wraps" role="note" aria-label="Sharing user content">
           <span>
-            <strong>You are sharing a source marked as user content.</strong> It may hold text from
+            <strong>You are sharing a book marked as user content.</strong> It may hold text from
             outside the SRD. Share it only with players who are entitled to it; what a player has
             read cannot be taken back.
           </span>
@@ -288,10 +366,14 @@ export function SharedTab() {
       </p>
 
       <ExportForPlayers
-        sources={offered.filter((s) => on.has(s.id))}
+        sources={sharedFiles.flatMap((x) => (x.source ? [x.source] : []))}
+        books={sharedBooks.flatMap((x) =>
+          x.book ? [{ key: x.key, name: x.book.name, userContent: userContent(x.book) }] : [],
+        )}
         collections={collections.filter((c) => shared.collectionIds.includes(c.id))}
         nothingShared={
           shared.sourceIds.length === 0 &&
+          shared.bookKeys.length === 0 &&
           shared.homebrewIds.length === 0 &&
           shared.collectionIds.length === 0 &&
           (campaign.settings.summonable ?? []).length === 0 &&

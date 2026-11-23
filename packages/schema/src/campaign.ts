@@ -47,6 +47,11 @@ export const CampaignSettings = z.object({
       homebrewIds: z.array(z.string()).default([]),
       /** Collections (ADR 0062) whose books' player-facing records are shared, by id. */
       collectionIds: z.array(z.string()).default([]),
+      /**
+       * Books (ADR 0067) whose player-facing records are shared, by book key. `sourceIds`
+       * shares whole files, as campaigns did before; nothing writes it any more.
+       */
+      bookKeys: z.array(z.string()).default([]),
     })
     .prefault({}),
 });

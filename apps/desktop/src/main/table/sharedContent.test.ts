@@ -149,7 +149,7 @@ describe('loadShared', () => {
     ({
       id: 'C1',
       settings: {
-        shared: { sourceIds: [], homebrewIds: [], ...shared },
+        shared: { sourceIds: [], homebrewIds: [], collectionIds: [], bookKeys: [], ...shared },
         summonable: summonable.map((recordId) => ({ ref: { recordId } })),
       },
     }) as never;
@@ -199,6 +199,27 @@ describe('loadShared', () => {
     expect(shared.records.map((r) => [r.id, r.sharedFrom?.sourceName])).toEqual([
       ['shared:C1:S2:feat:bold', 'Book S2'],
     ]);
+  });
+
+  it('shares a book by itself, and a book in a shared collection once (ADR 0067)', async () => {
+    const on = {
+      ...from,
+      catalog: { ...from.catalog, list: async () => all.map((s) => ({ ...s, enabled: true })) },
+    };
+    const collections = [
+      { id: 'K1', name: 'Table books', bookKeys: ['tome two'], campaignIds: [] },
+    ];
+    const alone = await loadShared(on, campaign({ bookKeys: ['tome two'] }), view, [], new Set());
+    expect(alone.records.map((r) => r.id)).toEqual(['shared:C1:S2:feat:bold']);
+    const both = await loadShared(
+      on,
+      campaign({ bookKeys: ['tome two'], collectionIds: ['K1'] }),
+      view,
+      [],
+      new Set(),
+      collections,
+    );
+    expect(both.records.map((r) => r.id)).toEqual(['shared:C1:S2:feat:bold']);
   });
 
   it('shares the stat blocks of the companion list, of NPC companions and of held NPCs', async () => {

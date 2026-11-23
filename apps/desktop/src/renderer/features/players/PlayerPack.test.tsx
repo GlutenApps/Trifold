@@ -21,10 +21,12 @@ describe('Export for players (ADR 0064)', () => {
     render(
       <ExportForPlayers
         sources={[source('S1', 'Big compendium', true), source('S2', 'Open book', false)]}
+        books={[{ key: 'tome', name: 'Tome', userContent: true }]}
         collections={[{ id: 'K1', name: 'Core', bookKeys: [], campaignIds: [] }]}
       />,
     );
     expect(screen.queryByRole('note')).toBeNull();
+    await user.click(screen.getByRole('checkbox', { name: 'Put Tome in the pack' }));
     await user.click(screen.getByRole('checkbox', { name: 'Put Big compendium in the pack' }));
     expect(screen.getByRole('note')).toHaveTextContent(
       'A pack can be passed on and never expires.',
@@ -34,6 +36,7 @@ describe('Export for players (ADR 0064)', () => {
     expect(window.trifold.campaigns.exportForPlayers).toHaveBeenCalledWith({
       sourceIds: ['S1'],
       collectionIds: ['K1'],
+      bookKeys: ['tome'],
     });
     expect(await screen.findByTestId('export-players-done')).toHaveTextContent(
       'Saved 12 records to C:\\Packs\\Greyford (players).trifold-players.',

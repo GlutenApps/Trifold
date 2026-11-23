@@ -51,6 +51,7 @@ beforeEach(() => {
   vi.mocked(window.trifold.books.shareCollection).mockResolvedValue({
     bySource: {},
     byCollection: { K1: ['C2'] },
+    byBook: {},
     homebrewByCampaign: {},
   });
   useCampaignStore.setState({ current: null });
@@ -97,7 +98,7 @@ describe('collections on the Books tab (ADR 0062)', () => {
         files={[]}
         onBrowse={() => undefined}
         campaigns={campaigns}
-        sharing={{ bySource: {}, byCollection: {}, homebrewByCampaign: {} }}
+        sharing={{ bySource: {}, byCollection: {}, byBook: {}, homebrewByCampaign: {} }}
         onShared={onShared}
       />,
     );
@@ -153,7 +154,7 @@ describe('collections on a campaign’s Shared sources tab', () => {
     await user.click(list.getByRole('checkbox', { name: 'Share Core with players' }));
     expect(update).toHaveBeenCalledWith({
       settings: expect.objectContaining({
-        shared: { sourceIds: [], homebrewIds: [], collectionIds: ['K1'] },
+        shared: { sourceIds: [], homebrewIds: [], collectionIds: ['K1'], bookKeys: [] },
       }),
     });
   });

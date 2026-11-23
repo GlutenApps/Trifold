@@ -26,9 +26,13 @@ export async function exportPlayerPack(
   const shared = bundle.campaign.settings.shared;
   const sourceIds = shared.sourceIds.filter((id) => options.sourceIds.includes(id));
   const collectionIds = shared.collectionIds.filter((id) => options.collectionIds.includes(id));
+  const bookKeys = shared.bookKeys.filter((k) => (options.bookKeys ?? []).includes(k));
   const campaign = {
     ...bundle.campaign,
-    settings: { ...bundle.campaign.settings, shared: { ...shared, sourceIds, collectionIds } },
+    settings: {
+      ...bundle.campaign.settings,
+      shared: { ...shared, sourceIds, collectionIds, bookKeys },
+    },
   };
   // No table, so no NPC is held: creatures go only from the companion list and NPC companions.
   const content = await loadShared(
