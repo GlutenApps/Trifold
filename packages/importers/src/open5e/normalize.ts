@@ -19,6 +19,7 @@ import type {
   Size,
 } from '@trifold/schema';
 import { RECORD_SCHEMA_VERSION } from '@trifold/schema';
+import { equipmentOptions } from '@trifold/rules';
 import { attackFromText } from '../compendium/feature';
 import type {
   O5eAction,
@@ -640,15 +641,6 @@ export function skillChoice(
     .filter(Boolean)
     .map((s) => known.get(squash(s)) ?? s);
   return { choose: Number(m[1]), from };
-}
-
-/** Starting equipment options: "Choose A or B: (A) …; or (B) 75 GP" → ["A: …", "B: 75 GP"]. */
-export function equipmentOptions(text: string): string[] {
-  const out: string[] = [];
-  for (const m of text.matchAll(/\(([A-Z])\)\s*([^;]+?)\s*(?:;\s*(?:or\s*)?|$)/g)) {
-    out.push(`${m[1]}: ${m[2]!.replace(/\.$/, '').trim()}`);
-  }
-  return out.length ? out : text ? [text] : [];
 }
 
 /** The skills a core traits table can name, as the SRD writes them. */

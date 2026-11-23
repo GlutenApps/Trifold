@@ -26,3 +26,4 @@ export * from './areaShapes';
 export * from './books';
 export * from './recordContent';
 export * from './character/derive';
+export * from './character/build2024';

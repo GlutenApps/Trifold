@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CompendiumRecord } from '@trifold/schema';
+import { equipmentOptions } from '@trifold/rules';
 import { describe, expect, it } from 'vitest';
 import {
   describesDocument,
@@ -9,7 +10,6 @@ import {
   normalizeRulesets,
   rulesetDocument,
   type Open5eContext,
-  equipmentOptions,
   skillChoice,
   tableRows,
 } from './normalize';
