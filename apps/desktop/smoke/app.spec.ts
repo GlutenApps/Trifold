@@ -155,10 +155,11 @@ test('console, Library, import, search, stat block and player window all work en
     await expect.poll(abolethEdition).toBe('2024');
     await console_.getByRole('tab', { name: 'Books' }).click();
     await book51.getByRole('button', { name: 'Browse System Reference Document 5.1' }).click();
-    await expect(console_.getByTestId('book-chip')).toContainText(
-      'Book: System Reference Document 5.1',
+    // Browse picks the book in the compendium's Book filter (ADR 0066).
+    await expect(console_.getByRole('combobox', { name: 'Book' })).toHaveValue(
+      'book:system reference document 5 1',
     );
-    await console_.getByRole('button', { name: /^Show every book/ }).click();
+    await console_.getByRole('combobox', { name: 'Book' }).selectOption({ label: 'Every book' });
     await console_.getByRole('button', { name: 'Sources', exact: true }).click();
     await console_.getByRole('tab', { name: /^Files/ }).click();
     const importedRow = console_.getByTestId('source-row').filter({ hasText: 'compendium-sample' });
@@ -215,11 +216,14 @@ test('console, Library, import, search, stat block and player window all work en
     expect(again.status).toBe('unchanged');
 
     // Search with FTS and filters, open a stat block, follow a spell link, switch editions.
-    // The sample has six monsters, but its 2024 and legacy Aboleth collapse to one row (§7.2).
-    await console_
-      .getByLabel('Source', { exact: true })
-      .selectOption({ label: 'compendium-sample' });
-    await expect(console_.getByRole('listbox', { name: 'Results' })).toContainText('5 results');
+    // The Book filter lists books, not files (ADR 0066): the test file's SRD 5.1 book holds
+    // four monsters. Every book again, its 2024 and legacy Aboleth collapse to one row (§7.2).
+    const bookFilter = console_.getByRole('combobox', { name: 'Book' });
+    await bookFilter.selectOption({ label: 'System Reference Document 5.1' });
+    await expect(console_.getByRole('listbox', { name: 'Results' })).toContainText('4 results');
+    // The bundled SRD is not a book of the file: it is picked by name.
+    await expect(bookFilter.getByRole('option', { name: /^SRD/ }).first()).toBeAttached();
+    await bookFilter.selectOption({ label: 'Every book' });
     await console_.getByLabel('Search', { exact: true }).fill('abol');
     const abolethRow = console_.getByRole('option', { name: /Aboleth/ });
     await expect(abolethRow).toHaveCount(1);
@@ -227,9 +231,10 @@ test('console, Library, import, search, stat block and player window all work en
     await expect(abolethRow).toContainText('compendium-sample');
     await expect(abolethRow).not.toContainText('legacy');
     await expect(abolethRow.getByTestId('more-versions')).toHaveCount(1);
+    // 2024 only: the legacy copies drop out; the SRD's 2024 copy is still another version.
     await console_.getByLabel('Edition', { exact: true }).selectOption('2024');
     await expect(abolethRow).toHaveCount(1);
-    await expect(abolethRow.getByTestId('more-versions')).toHaveCount(0);
+    await expect(abolethRow.getByTestId('more-versions')).not.toHaveAttribute('title', /legacy/i);
     await abolethRow.click();
     await expect(console_.getByRole('heading', { name: 'Aboleth' })).toBeVisible();
     await expect(console_.getByRole('combobox', { name: 'Switch edition' })).toContainText(
@@ -269,6 +274,8 @@ test('console, Library, import, search, stat block and player window all work en
 
     await console_.getByLabel('Search', { exact: true }).fill('');
     await console_.getByLabel('Edition', { exact: true }).selectOption('all');
+    // The test file's Mage, from its SRD 5.1 book: its spells link to records.
+    await bookFilter.selectOption({ label: 'System Reference Document 5.1' });
     await console_.getByRole('option', { name: /^Mage/ }).click();
     await console_.getByRole('button', { name: 'Fireball' }).click();
     await expect(console_.getByRole('heading', { name: 'Fireball' })).toBeVisible();
@@ -278,7 +285,7 @@ test('console, Library, import, search, stat block and player window all work en
 
     // Conditions come with the bundled SRD snapshot (DESIGN.md §7.3): a Conditions kind with
     // one record per edition whose bulleted text renders as a list.
-    await console_.getByLabel('Source', { exact: true }).selectOption({ label: 'All sources' });
+    await bookFilter.selectOption({ label: 'Every book' });
     await console_.getByRole('tab', { name: 'Conditions', exact: true }).click();
     await console_.getByRole('option', { name: /^Blinded/ }).click();
     await expect(console_.getByRole('heading', { name: 'Blinded' })).toBeVisible();
@@ -324,9 +331,6 @@ test('console, Library, import, search, stat block and player window all work en
     ).toBeVisible();
     await libNav('Compendium').click();
     await console_.getByRole('tab', { name: 'Monsters', exact: true }).click();
-    await console_
-      .getByLabel('Source', { exact: true })
-      .selectOption({ label: 'compendium-sample' });
 
     // The search budget (DESIGN.md §9) is what a DM typing sees, so it is checked on the fastest
     // of five runs: one cold or descheduled query on a shared CI machine is not a regression,

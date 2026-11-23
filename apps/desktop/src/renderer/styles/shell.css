@@ -2709,8 +2709,9 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   }
 }
 
-.book-chip {
-  margin: 0 0 6px;
+/* The compendium's Book filter (ADR 0066): long book names must not widen the filter row. */
+.book-filter {
+  max-width: 18em;
 }
 
 /* Deleting books asks for DELETE (ADR 0065): under the toolbar, or under its row. */

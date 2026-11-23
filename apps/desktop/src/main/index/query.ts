@@ -195,7 +195,12 @@ export function bookFilter(
   if (named.length) parts.push(`r.book_key IN (${named.map(() => '?').join(', ')})`);
   if (files.length)
     parts.push(`(r.book_key = '' AND r.source_id IN (${files.map(() => '?').join(', ')}))`);
-  return { sql: `(${parts.join(' OR ')})`, params: [...named, ...files] };
+  // A book is part of the imported files (ADR 0061): the bundled SRD's records can cite the same
+  // book name, and are never starred, turned off or filtered as one.
+  return {
+    sql: `(r.source_id IN (SELECT id FROM sources WHERE kind IN ('xml', 'open5e')) AND (${parts.join(' OR ')}))`,
+    params: [...named, ...files],
+  };
 }
 
 /**

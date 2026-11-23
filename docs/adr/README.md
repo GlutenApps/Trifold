@@ -71,6 +71,7 @@ An architecture decision record (ADR) is a short file about one choice that refi
 | [0063](0063-duplicates.md) | Duplicates: a record in more than one file or book; a GM picks the copy for one record (Always use this copy, or the Duplicates tab), kept in library.json. A chosen copy beats homebrew and stars; the rest go homebrew, starred, imported, SRD 2024, SRD legacy. |
 | [0064](0064-player-packs.md) | Player packs: Export for players writes a `.trifold-players` file of a campaign's shared content (homebrew and companions always; imported sources and collections only when ticked). A player opens it to join the campaign offline before the first session; an older pack never replaces newer content. |
 | [0065](0065-deleting-books.md) | Deleting books: a book is deleted from the imported files that hold it, after a typed DELETE; `source.json` remembers it so Re-parse leaves it out, and importing the file again brings it back. Also: a 2024 mark names one printing, and the SRD's duplicate copy is labelled SRD. |
+| [0066](0066-book-filter.md) | The compendium filters by book, not file: the bundled SRD, homebrew, campaign creatures and shared content by name, then collections, starred books and the other books that are on. A book's settings and filter cover only the imported files, never the SRD's records of the same book name. |
 
 ## Decision log
 
@@ -116,4 +117,5 @@ Product-level decisions by area, as they were settled. Rationale is in the ADRs 
 | Duplicates | A record in more than one file or book shows one copy: the GM's choice for that record, then homebrew, a starred book, imported files, then the SRD. Settle one with Always use this copy on its page, or on Sources › Duplicates. See ADR 0063. |
 | Player packs | A campaign's Shared sources tab exports a player pack for before the first session; players open it from Join a campaign. See ADR 0064. |
 | Deleting books | Sources › Books deletes a book, or a selection, after a typed DELETE; Re-parse keeps it out and importing its file again brings it back. See ADR 0065. |
+| Book filter | The compendium's Book filter picks a book, a collection, or the SRD, homebrew or shared content by name; Browse on the Books tab picks the book there. See ADR 0066. |
 | Web tabs | The stage `+` menu adds a web tab: an address the DM typed, hosted in a sandboxed Electron webview in one persistent session, so a hosted document or sheet sits beside the console as a tab and reopens where it was left at the next launch. Library-wide list stored with the layouts; close parks, remove forgets; modifier hotkeys reach through the page; every tab has Open in system browser. See ADR 0011. |
