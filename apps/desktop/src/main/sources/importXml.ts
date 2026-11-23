@@ -10,6 +10,7 @@ import { nowIso, type CompendiumRecord, type Source } from '@trifold/schema';
 import type { IndexDb } from '../index/IndexDb';
 import type { LibraryStore } from '../library/LibraryStore';
 import type { Logger } from '../log';
+import { bookOfRecord, countsOf } from './deleteBooks';
 import type { SourceRepository } from './repository';
 
 /**
@@ -121,7 +122,10 @@ export async function importXmlSource(
   const name = target?.name ?? basename(filePath, extname(filePath));
   const existing =
     target ?? (await ctx.sources.list()).find((s) => s.kind === 'xml' && s.name === name);
-  if (existing && !retag && existing.fileHash === fileHash && !isStale(existing)) {
+  // Books the DM deleted (ADR 0065) stay out on Re-parse; importing the file again brings them back.
+  const deletedBooks = target ? (existing?.deletedBooks ?? []) : [];
+  const restoring = !target && (existing?.deletedBooks?.length ?? 0) > 0;
+  if (existing && !retag && !restoring && existing.fileHash === fileHash && !isStale(existing)) {
     ctx.logger.info(`source "${name}" unchanged (hash match); nothing to do`);
     progress('done');
     return {
@@ -172,6 +176,8 @@ export async function importXmlSource(
     : (existing?.edition2024Books ?? settings.edition2024Books);
   const records: CompendiumRecord[] = [];
   const occurrences = new Map<string, number>();
+  const deleted = new Set(deletedBooks);
+  let skipped = 0;
   const importer = createCompendiumImporter(
     {
       sourceId,
@@ -179,6 +185,11 @@ export async function importXmlSource(
       edition2024Books,
     },
     (record) => {
+      // Left out before ids are matched, as the records.jsonl it is matched against left it out.
+      if (deleted.size > 0 && deleted.has(bookOfRecord(record, sourceId))) {
+        skipped += 1;
+        return;
+      }
       const keyed = keyOf(record);
       const n = occurrences.get(keyed) ?? 0;
       occurrences.set(keyed, n + 1);
@@ -229,10 +240,11 @@ export async function importXmlSource(
     ...(existing?.campaignIds !== undefined ? { campaignIds: existing.campaignIds } : {}),
     defaultEdition: existing?.defaultEdition ?? '2014',
     edition2024Books,
+    ...(deletedBooks.length > 0 ? { deletedBooks: [...deletedBooks] } : {}),
     license: existing?.license ?? { nonSrd: true, attribution: null },
     importedAt: nowIso(),
     importerVersion: IMPORTER_VERSION,
-    recordCounts: stats.counts,
+    recordCounts: skipped > 0 ? countsOf(records) : stats.counts,
     warnings: stats.warnings,
   };
   await ctx.sources.writeRecords(sourceId, records);

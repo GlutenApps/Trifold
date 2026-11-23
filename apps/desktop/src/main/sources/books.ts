@@ -1,5 +1,5 @@
 import type { BookSummary } from '@trifold/api';
-import { bookTags, normalizeKey, unnamedBookKey } from '@trifold/rules';
+import { bookTags, isMarked2024, unnamedBookKey } from '@trifold/rules';
 import type { RecordKind } from '@trifold/schema';
 import type { IndexDb } from '../index/IndexDb';
 
@@ -68,16 +68,15 @@ export function withBookSettings(
 }
 
 /**
- * A file's list of 2024 books (ADR 0028) with some of its books added or taken out. Names are
- * compared as the importer compares them (`isMarked2024`), so taking a book out drops every
- * entry that would still mark it.
+ * A file's list of 2024 books (ADR 0028) with some of its books added or taken out. A book is
+ * added by its exact name, so it marks that printing only; taking one out drops every entry
+ * that would still mark it, matched as the importer matches (`isMarked2024`).
  */
 export function with2024Books(
   marked: readonly string[],
   names: readonly string[],
   use2024: boolean,
 ): string[] {
-  const keys = new Set(names.map(normalizeKey));
-  const kept = marked.filter((m) => !keys.has(normalizeKey(m)));
+  const kept = marked.filter((m) => !names.some((name) => isMarked2024(name, [m])));
   return use2024 ? [...kept, ...names] : kept;
 }

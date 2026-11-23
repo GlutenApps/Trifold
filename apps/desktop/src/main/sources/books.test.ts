@@ -84,6 +84,14 @@ describe('with2024Books', () => {
     // The importer compares by record key, so a differently written entry still matches.
     expect(with2024Books(['old book!', 'Kept'], ['Old Book'], false)).toEqual(['Kept']);
   });
+
+  it('takes out one printing and leaves the other marked', () => {
+    expect(
+      with2024Books(['Old Book (2014)', 'Old Book (2025)'], ['Old Book (2014)'], false),
+    ).toEqual(['Old Book (2025)']);
+    // A typed entry with no year marks both printings it can, so unmarking one drops it.
+    expect(with2024Books(['old book'], ['Old Book (2025)'], false)).toEqual([]);
+  });
 });
 
 describe('book SQL (ADR 0061)', () => {

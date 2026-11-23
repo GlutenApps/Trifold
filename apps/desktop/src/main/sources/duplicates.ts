@@ -59,6 +59,7 @@ export function listDuplicates(
       book: row.book,
       edition: row.edition,
       homebrew,
+      ...(row.source_kind === 'srd' ? { srd: true } : {}),
       starred: row.starred === 1,
     });
     if (row.rn === 1) {

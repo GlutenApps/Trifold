@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isMarked2024, reviewBooks } from './bookReview';
+import { reviewBooks } from './bookReview';
+import { isMarked2024 } from './statblock/edition';
 
 const r = (kind: string, key: string, edition: string, sourceBook?: string) => ({
   kind,
@@ -32,5 +33,27 @@ describe('reviewBooks', () => {
   it('matches a marked book loosely, as the importer does', () => {
     expect(isMarked2024('Gloomwood Bestiary, Revised', ['gloomwood bestiary revised'])).toBe(true);
     expect(isMarked2024('Gloomwood Bestiary', ['Gloomwood Bestiary, Revised'])).toBe(false);
+  });
+
+  it('marks one printing of a book, not the other', () => {
+    // As the Books tab writes an entry: the exact name, brackets and all.
+    expect(isMarked2024('Gloomwood Bestiary (2025)', ['Gloomwood Bestiary (2025)'])).toBe(true);
+    expect(isMarked2024('Gloomwood Bestiary (2014)', ['Gloomwood Bestiary (2025)'])).toBe(false);
+    // As a DM may type one: no brackets, so any printing but one from before 2024.
+    expect(isMarked2024('Gloomwood Bestiary (2025)', ['gloomwood bestiary'])).toBe(true);
+    expect(isMarked2024('Gloomwood Bestiary (2014)', ['gloomwood bestiary'])).toBe(false);
+    expect(isMarked2024('Gloomwood Bestiary (Third Party)', ['gloomwood bestiary'])).toBe(true);
+  });
+
+  it('keeps two printings apart as books', () => {
+    const review = reviewBooks([
+      r('monster', 'wolf', '2014', 'Gloomwood Bestiary (2014)'),
+      r('monster', 'wolf', '2014', 'Gloomwood Bestiary (2025)'),
+    ]);
+    expect(review.books.map((b) => b.name)).toEqual([
+      'Gloomwood Bestiary (2014)',
+      'Gloomwood Bestiary (2025)',
+    ]);
+    expect(review.duplicates).toEqual({ monster: 1 });
   });
 });

@@ -591,6 +591,8 @@ export interface DuplicateCopy {
   book: string;
   edition: string;
   homebrew: boolean;
+  /** A copy in the bundled SRD, labelled "SRD" whatever book it names. */
+  srd?: boolean;
   starred: boolean;
 }
 
@@ -1101,6 +1103,12 @@ export interface TrifoldApi {
      */
     setRules(keys: string[], use2024: boolean): Promise<BookSummary[]>;
     /**
+     * Deletes books from the imported files that hold them (ADR 0065): their records leave the
+     * Library, and Re-parse leaves them out. A file left with no records is removed. Importing
+     * the file again brings them back. Bundled content cannot be deleted.
+     */
+    delete(keys: string[]): Promise<BookSummary[]>;
+    /**
      * The campaigns that share a collection with their players (ADR 0062), written to each
      * campaign's file: each named campaign gains it, every other loses it.
      */
@@ -1593,7 +1601,7 @@ export const API_METHODS = {
     'savePinnedRoll',
     'removePinnedRoll',
   ],
-  books: ['list', 'update', 'setRules', 'shareCollection'],
+  books: ['list', 'update', 'setRules', 'delete', 'shareCollection'],
   duplicates: ['list'],
   sources: [
     'list',

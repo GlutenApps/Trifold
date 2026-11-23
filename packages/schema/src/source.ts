@@ -36,6 +36,12 @@ export const Source = z.object({
   campaignIds: z.array(z.string()).nullable().optional(),
   defaultEdition: Edition.default('2014'),
   edition2024Books: z.array(z.string()).default([]),
+  /**
+   * Books the DM deleted from this file (ADR 0065), by book key (`bookKey`, or `file:<id>` for
+   * the records that name no book). Re-parse leaves their records out; importing the file again
+   * clears the list. Absent means none.
+   */
+  deletedBooks: z.array(z.string()).optional(),
   license: SourceLicense,
   importedAt: IsoDateTime,
   /** Version of the importer that produced records.jsonl; older sources are re-parsed on demand. */

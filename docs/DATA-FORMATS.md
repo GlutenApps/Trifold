@@ -169,7 +169,7 @@ The book is the first group with the bracketed tag after it, so every page of a 
 
 - A trailing `[5.5e]` on `name` marks a 2024 record. It is stripped from `displayName`, and `edition` is `2024`.
 - `(Legacy)`, `(UA)` and `(TP)` in a name are stripped into `tags`: `legacy`, `unearthed-arcana`, `third-party`.
-- A record whose source book is in the source's 2024 list (`edition2024Books` in `source.json`) is `2024` even without the suffix. Book names are compared by key. The list is chosen per imported file on Library › Compendium › Sources; a newly imported file starts from the Library-wide list in `library.json`. Typical entries are `Monster Manual (2025)`, `Player's Handbook (2024)` and `Dungeon Master's Guide (2024)`. `init` is not an edition signal: some 2024 monsters lack it and some older ones have it.
+- A record whose source book is in the source's 2024 list (`edition2024Books` in `source.json`) is `2024` even without the suffix. An entry with brackets names one book exactly, as the Books tab writes it, so marking one printing (`… (2025)`) leaves another (`… (2014)`) alone; an entry without brackets, as a DM may type it in Settings, matches any printing of that title except one whose bracketed year is before 2024 (`isMarked2024`, ADR 0065). The list is chosen per imported file on Library › Compendium › Sources; a newly imported file starts from the Library-wide list in `library.json`. Typical entries are `Monster Manual (2025)`, `Player's Handbook (2024)` and `Dungeon Master's Guide (2024)`. `init` is not an edition signal: some 2024 monsters lack it and some older ones have it.
 - Otherwise the record takes the source's `defaultEdition` (`2014` for imported files). The edition values are `2024`, `2014` and `unknown`.
 - The same creature often exists twice (`Aboleth` and `Aboleth [5.5e]`). Both have `key = "aboleth"`, and the compendium shows them as one entry with an edition switch.
 
@@ -292,6 +292,7 @@ Backups are zips named by date (`2026-11-16.zip`, with `-quit` or `-pre-restore`
   "campaignIds": null,
   "defaultEdition": "2014",
   "edition2024Books": ["Monster Manual (2025)", "Player's Handbook (2024)"],
+  "deletedBooks": ["example book third party"],
   "license": { "nonSrd": true, "attribution": null },
   "importedAt": "2026-09-27T18:42:00Z",
   "importerVersion": 3,
@@ -300,7 +301,7 @@ Backups are zips named by date (`2026-11-16.zip`, with `-quit` or `-pre-restore`
 }
 ```
 
-Sources in the Library have `kind: "xml"`: an imported compendium file, whose original is copied in as `original.xml`, or the stat blocks from a campaign file (§3.2), which have no original. The bundled SRD sources (`srd-2024`, `srd-2014`) ship with the app rather than living in the Library, and homebrew and campaign creatures are virtual sources (§5.3). `campaignIds` is null or absent when the source shows in every campaign, or the ids of the only campaigns that show it; a campaign file's stat blocks start with just their own campaign. `license` may also carry an `spdx` id; `nonSrd` marks a source that may hold content outside the SRD. `importerVersion` is the importer that wrote `records.jsonl`; a compendium file parsed by an older importer is re-parsed from `original.xml`.
+Sources in the Library have `kind: "xml"`: an imported compendium file, whose original is copied in as `original.xml`, or the stat blocks from a campaign file (§3.2), which have no original. The bundled SRD sources (`srd-2024`, `srd-2014`) ship with the app rather than living in the Library, and homebrew and campaign creatures are virtual sources (§5.3). `campaignIds` is null or absent when the source shows in every campaign, or the ids of the only campaigns that show it; a campaign file's stat blocks start with just their own campaign. `license` may also carry an `spdx` id; `nonSrd` marks a source that may hold content outside the SRD. `importerVersion` is the importer that wrote `records.jsonl`; a compendium file parsed by an older importer is re-parsed from `original.xml`. `deletedBooks` (optional) lists the books the DM deleted from the file (ADR 0065), by book key, or `file:<id>` for its records that name no book: they are gone from `records.jsonl`, and Re-parse leaves them out; importing the file again clears the list.
 
 ### 5.2 `sources/<id>/records.jsonl`
 
