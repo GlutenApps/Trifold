@@ -443,8 +443,9 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(dice.getByTestId('latest-roll')).toContainText('3d4');
     await expect(page.getByTestId('roll-mode')).toHaveText('Private');
     await gmPage.waitForTimeout(1_000);
+    // Two table rolls: the Stealth check from the sheet and the 2d6+1; not the private 3d4.
     await expect(gmDice.getByRole('list', { name: 'Roll log' }).getByRole('listitem')).toHaveCount(
-      1,
+      2,
     );
     await gmPage.keyboard.press('Escape');
     await dice.getByRole('button', { name: 'Table' }).click();
