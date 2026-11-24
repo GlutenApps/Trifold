@@ -363,6 +363,7 @@ describe('LanClient', () => {
       campaignId,
       campaignName: 'Greyford',
       now: 1,
+      protocol: 1,
     });
     return { client, sockets, links, messages, tokens, timers, campaign };
   }
@@ -414,6 +415,23 @@ describe('LanClient', () => {
     expect(h.links).toEqual(['otherCampaign']);
     expect(h.messages).toEqual([]);
     expect(h.timers[0]?.ms).toBe(5000);
+  });
+
+  it('says nothing to a table on another protocol, says who must update, and looks again slowly', () => {
+    const h = harness({ token: 'secret' });
+    h.client.start();
+    h.sockets[0]!.open();
+    h.sockets[0]!.receive({ ...h.campaign(), protocol: 99, appVersion: '9.0.0' } as ServerMessage);
+    expect(h.sockets[0]!.sent).toEqual([]);
+    expect(h.links).toEqual(['playerUpdate']);
+    expect(h.timers[0]?.ms).toBe(30_000);
+    h.timers[0]!.run();
+    h.sockets[1]!.open();
+    // A table older than the check sends no protocol: the GM has to update.
+    const { protocol: _old, ...older } = h.campaign() as ServerMessage & { protocol?: number };
+    h.sockets[1]!.receive(older as ServerMessage);
+    expect(h.links).toEqual(['playerUpdate', 'gmUpdate']);
+    expect(h.sockets[1]!.sent).toEqual([]);
   });
 
   it('sends and passes on nothing before the table has named the campaign', () => {

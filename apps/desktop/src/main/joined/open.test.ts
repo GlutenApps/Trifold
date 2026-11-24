@@ -62,6 +62,7 @@ describe('JoinedService: an open campaign', () => {
     campaignId: 'c1',
     campaignName: 'Greyford, renamed',
     now: 1,
+    protocol: 1,
   };
 
   const shared: string[] = [];

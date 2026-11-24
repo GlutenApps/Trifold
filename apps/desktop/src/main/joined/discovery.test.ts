@@ -126,6 +126,20 @@ describe('parseTableServices', () => {
     });
   });
 
+  it('reads the table’s protocol and app version when it advertises them (ADR 0076)', () => {
+    const packet = offer();
+    const withVersion: Packet = {
+      ...packet,
+      additionals: packet.additionals!.map((a) =>
+        a.type === 'TXT' ? { ...a, data: [...(a.data as string[]), 'p=1', 'app=0.7.0'] } : a,
+      ),
+    };
+    expect(parseTableServices(withVersion).found[0]).toMatchObject({
+      protocol: 1,
+      appVersion: '0.7.0',
+    });
+  });
+
   it('reads TXT strings that arrive as buffers, as they do off the wire', () => {
     const packet = offer();
     const wire: Packet = {

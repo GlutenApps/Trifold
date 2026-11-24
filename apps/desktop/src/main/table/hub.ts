@@ -24,6 +24,7 @@ import {
   controller,
   summonProblem,
   rollForTable,
+  TABLE_PROTOCOL,
   TABLE_ROLL_MAX_LENGTH,
   type TableRoll,
   type AnyCreatureKind,
@@ -227,6 +228,8 @@ export interface TableHubOptions {
   icons: IconResources;
   /** The built player client (`out/web`). */
   webDir: string;
+  /** This app's version, which the table tells players' Trifolds (ADR 0076). */
+  appVersion?: string;
   onStatus(status: TableStatus): void;
   /** A checked player change for the console to apply. */
   onIntent(intent: TableIntentEvent): void;
@@ -517,6 +520,8 @@ export class TableHub {
                 port: this.port,
                 campaignId: this.campaignId,
                 campaignName: this.snapshot?.campaignName ?? '',
+                protocol: TABLE_PROTOCOL,
+                ...(this.opts.appVersion ? { appVersion: this.opts.appVersion } : {}),
               }
             : null,
       );
@@ -777,6 +782,8 @@ export class TableHub {
         campaignId: this.campaignId,
         campaignName: this.snapshot?.campaignName ?? '',
         now: Date.now(),
+        protocol: TABLE_PROTOCOL,
+        ...(this.opts.appVersion ? { appVersion: this.opts.appVersion } : {}),
       });
     }
     this.emit();

@@ -170,5 +170,24 @@ export function linkText(link: Connection['link']): string {
       return 'Your GM is running another campaign';
     case 'refused':
       return 'That address is not on your local network';
+    // Another protocol (ADR 0076): nothing is sent until one side updates.
+    case 'gmUpdate':
+      return 'Your GM’s Trifold needs an update before you can play';
+    case 'playerUpdate':
+      return 'Update Trifold to play at your GM’s table';
   }
+}
+
+/**
+ * Why a table cannot be joined from here (ADR 0076): the side that has to update, with the
+ * table's version when it says. Null when it can.
+ */
+export function updateText(update: 'gm' | 'player' | undefined, version?: string): string | null {
+  if (update === 'gm') {
+    return `This table runs an older Trifold${version ? ` (${version})` : ''}. Your GM needs to update it before you can join.`;
+  }
+  if (update === 'player') {
+    return `This table runs a newer Trifold${version ? ` (${version})` : ''}. Update yours to join.`;
+  }
+  return null;
 }

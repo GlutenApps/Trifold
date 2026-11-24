@@ -1823,14 +1823,26 @@ export interface FoundTableSummary {
   address: string;
   /** This Library has joined the campaign already. */
   joined: boolean;
+  /** The table's app version, when it says (ADR 0076). */
+  appVersion?: string;
+  /** The table and this Trifold do not speak the same protocol: which side has to update. */
+  update?: 'gm' | 'player';
 }
 
 /**
  * A player console's link to its GM's table. The first four are the phone page's; then a table
- * that is up with another campaign, and an address that is not one to connect to.
+ * that is up with another campaign, an address that is not one to connect to, and a table on
+ * another protocol (ADR 0076): the GM's Trifold or this one needs an update.
  */
 export type PlayerLink =
-  'connecting' | 'open' | 'reconnecting' | 'stopped' | 'otherCampaign' | 'refused';
+  | 'connecting'
+  | 'open'
+  | 'reconnecting'
+  | 'stopped'
+  | 'otherCampaign'
+  | 'refused'
+  | 'gmUpdate'
+  | 'playerUpdate';
 
 /** A joined campaign's table as this player last saw it, and when (PLAYER-MODE.md, "Not live"). */
 export interface LastTableView {
@@ -1875,7 +1887,7 @@ export interface TrifoldEvents {
   /** The tables found on the local network, while Join a campaign is searching. */
   joinedTables: FoundTableSummary[];
   /** The open joined campaign's link to its table changed. */
-  joinedLink: { campaignId: string; link: PlayerLink };
+  joinedLink: { campaignId: string; link: PlayerLink; tableVersion?: string };
   /** The open joined campaign's table sent something (never the device token). */
   joinedMessage: { campaignId: string; message: ServerMessage };
   /**

@@ -15,7 +15,7 @@ import type {
   TablePeekResult,
 } from '@trifold/api';
 import { JoinedCampaignId, type JoinedCampaign, type Note, type PinnedRoll } from '@trifold/schema';
-import { tableUrl } from '@trifold/rules';
+import { tableUrl, whoMustUpdate } from '@trifold/rules';
 import type { LibrarySession } from '../library/session';
 import { errorMessage, type Logger } from '../log';
 import type { FoundTable } from '../table/mdns';
@@ -48,7 +48,7 @@ export interface JoinedServiceOptions {
   /** The list of tables changed while Join a campaign is searching. */
   onTables(tables: FoundTableSummary[]): void;
   /** The open campaign's link changed. */
-  onLink?(event: { campaignId: string; link: PlayerLink }): void;
+  onLink?(event: { campaignId: string; link: PlayerLink; tableVersion?: string }): void;
   /** The open campaign's table sent something. */
   onMessage?(event: { campaignId: string; message: ServerMessage }): void;
   /** Where pictures fetched from tables are kept: derived data, outside the Library. */
@@ -158,6 +158,8 @@ interface OpenCampaign {
   client: LanClient | null;
   endpoint: TableEndpoint | null;
   link: PlayerLink;
+  /** The table's app version, as it last said (ADR 0076). */
+  tableVersion?: string;
   failures: number;
   /** Addresses that worked before, from `joined.json`. */
   saved: TableEndpoint[];
@@ -297,6 +299,9 @@ export class JoinedService {
         campaignName: table.campaignName,
         address: formatTableAddress({ host, port: table.port }),
         joined: this.joinedIds.has(table.campaignId),
+        ...(table.appVersion ? { appVersion: table.appVersion } : {}),
+        // A search hears the table's protocol before anything connects (ADR 0076).
+        ...(whoMustUpdate(table.protocol) ? { update: whoMustUpdate(table.protocol)! } : {}),
       });
     }
     return out;
@@ -331,6 +336,8 @@ export class JoinedService {
         campaignName: answer.campaignName,
         address: formatTableAddress(endpoint),
         joined: this.joinedIds.has(answer.campaignId),
+        ...(answer.appVersion ? { appVersion: answer.appVersion } : {}),
+        ...(answer.update ? { update: answer.update } : {}),
       },
     };
   }
@@ -669,7 +676,8 @@ export class JoinedService {
         current.token = token;
         this.save('the claim', (store) => store.update(current.campaignId, { deviceToken: token }));
       },
-      onCampaign: (campaignName) => {
+      onCampaign: (campaignName, appVersion) => {
+        current.tableVersion = appVersion;
         this.save('the campaign’s name', (store) =>
           store.update(current.campaignId, { campaignName: campaignName.trim().slice(0, 200) }),
         );
@@ -687,7 +695,11 @@ export class JoinedService {
       current.offerPc = null;
       current.offered = null;
     }
-    this.opts.onLink?.({ campaignId: current.campaignId, link });
+    this.opts.onLink?.({
+      campaignId: current.campaignId,
+      link,
+      ...(current.tableVersion ? { tableVersion: current.tableVersion } : {}),
+    });
   }
 
   /**
