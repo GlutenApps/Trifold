@@ -3175,6 +3175,27 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   cursor: pointer;
 }
 
+/* Resources on a Trifold sheet (ADR 0074): a name, then its boxes or button. */
+.resource-rows {
+  display: grid;
+  gap: 4px;
+}
+
+.resource-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resource-name {
+  min-width: min(180px, 100%);
+}
+
+.resource-pips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 /* A row linked to a compendium record opens to show its text (ADR 0073). */
 .sheet-view-list li.sheet-view-linked-row {
   display: block;

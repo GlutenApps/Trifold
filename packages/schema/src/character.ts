@@ -148,6 +148,14 @@ export const SheetFeature = z.object({
   from: z.string().max(80).default(''),
   text: z.string().max(20_000).default(''),
   ref: SheetRef.optional(),
+  /** Limited uses (ADR 0074): how many, how many are spent, and the rest that brings them back. */
+  uses: z
+    .object({
+      max: int.min(1).max(99),
+      used: int.min(0).max(99).default(0),
+      reset: z.enum(['short', 'long']).default('long'),
+    })
+    .optional(),
 });
 export type SheetFeature = z.infer<typeof SheetFeature>;
 
@@ -206,6 +214,14 @@ export const Sheet = z.object({
   spellcastingAbility: Ability.nullable().default(null),
   /** Spell slots by slot level, 1st first (docs/BUILDER.md); empty for none. */
   slots: z.array(int.min(0).max(9)).max(9).default([]),
+  /** Resources (ADR 0074): slots spent, by slot level like `slots`. */
+  slotsUsed: z.array(int.min(0).max(9)).max(9).optional(),
+  /** The slots come back on a short rest too (Pact Magic). */
+  slotsOnShortRest: z.boolean().optional(),
+  /** Hit dice spent, by die size ("8" for d8). */
+  hitDiceUsed: z.partialRecord(z.enum(['6', '8', '10', '12']), int.min(0).max(20)).optional(),
+  /** Heroic Inspiration. */
+  inspiration: z.boolean().optional(),
   attacks: z.array(SheetAttack).max(100).default([]),
   features: z.array(SheetFeature).max(300).default([]),
   spells: z.array(SheetSpell).max(500).default([]),

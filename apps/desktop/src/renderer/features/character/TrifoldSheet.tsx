@@ -17,6 +17,7 @@ import { DerivedField, NumField, signed } from './fields';
 import { LevelUpPanel } from './builder/LevelUpPanel';
 import { LinkedText } from './LinkedRow';
 import { PdfImport } from './PdfImport';
+import { ResourcesSection } from './Resources';
 
 /**
  * A Trifold character's sheet (PLAYER-MODE.md, Way 3; ADR 0068): who they are, abilities, saves
@@ -165,6 +166,11 @@ export function TrifoldSheet({ character }: { character: Character }) {
           </button>
         </div>
       )}
+      <ResourcesSection
+        sheet={sheet}
+        edition={character.edition}
+        onChange={(next) => change(id, { sheet: next })}
+      />
       <section className="sheet-section" aria-label="Who they are">
         <h2>Who they are</h2>
         <div className="sheet-grid">
@@ -596,6 +602,14 @@ export function TrifoldSheet({ character }: { character: Character }) {
               />
             </label>
           ))}
+          <label className="field inline">
+            <input
+              type="checkbox"
+              checked={!!sheet.slotsOnShortRest}
+              onChange={(e) => set({ slotsOnShortRest: e.target.checked })}
+            />
+            Slots come back on a short rest (Pact Magic)
+          </label>
         </div>
         <ul className="sheet-rows" aria-label="Spells">
           {spells.rows.map((s, i) => (
@@ -675,6 +689,40 @@ export function TrifoldSheet({ character }: { character: Character }) {
                   value={f.from}
                   onChange={(e) => features.patch(i, { from: e.target.value })}
                 />
+                {/* Limited uses (ADR 0074): blank for none. */}
+                <NumField
+                  label={`${f.name || `Feature ${i + 1}`} uses`}
+                  value={f.uses?.max}
+                  min={1}
+                  max={99}
+                  optional
+                  onChange={(v) =>
+                    features.patch(i, {
+                      uses:
+                        v === undefined
+                          ? undefined
+                          : {
+                              max: v,
+                              used: Math.min(v, f.uses?.used ?? 0),
+                              reset: f.uses?.reset ?? 'long',
+                            },
+                    })
+                  }
+                />
+                {f.uses && (
+                  <select
+                    aria-label={`${f.name || `Feature ${i + 1}`} comes back on`}
+                    value={f.uses.reset}
+                    onChange={(e) =>
+                      features.patch(i, {
+                        uses: { ...f.uses!, reset: e.target.value as 'short' | 'long' },
+                      })
+                    }
+                  >
+                    <option value="short">Short rest</option>
+                    <option value="long">Long rest</option>
+                  </select>
+                )}
                 {f.ref && (
                   <ReadButton
                     name={f.name || f.ref.name}

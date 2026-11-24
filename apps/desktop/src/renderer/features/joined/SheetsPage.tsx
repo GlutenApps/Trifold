@@ -306,6 +306,21 @@ export function SheetsPage() {
             character={character}
             onEdit={() => setEditing(true)}
             live={view && me ? <LiveStatus creature={me} /> : undefined}
+            // Resources (ADR 0074): a hit die's healing goes to the table as an HP change.
+            resources={{
+              onChange: (next) => change(character.id, { sheet: next }),
+              ...(view && me
+                ? {
+                    onHeal: (amount: number) =>
+                      conn.send({
+                        type: 'intent',
+                        creatureKind: me.kind,
+                        creatureId: me.id,
+                        intent: { kind: 'hp', delta: amount },
+                      }),
+                  }
+                : {}),
+            }}
           />
         )
       ) : (

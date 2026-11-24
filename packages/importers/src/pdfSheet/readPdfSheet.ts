@@ -457,7 +457,7 @@ export function readPdfSheet(pdfFields: readonly PdfField[]): PdfSheetResult {
     className: classes[0]?.name ?? '',
     subclass: classes[0]?.subclass ?? '',
     species: sheet.species,
-  });
+  }).map(withUses);
   sheet.equipment = readEquipment(byKey, text('equipment'));
 
   // Coins, as gold.
@@ -769,6 +769,22 @@ function readFeatures(
     }
   }
   return out.slice(0, 300);
+}
+
+/**
+ * A feature whose name says its uses, "Channel Divinity (2 / short rest)", gets them as limited
+ * uses (ADR 0074), and the note leaves the name.
+ */
+function withUses(f: SheetFeature): SheetFeature {
+  const m = /\s*\((\d{1,2})\s*\/\s*(short|long)\s*rest\)/i.exec(f.name);
+  if (!m || f.uses) return f;
+  const max = Number(m[1]);
+  if (max < 1) return f;
+  return {
+    ...f,
+    name: f.name.replace(m[0], '').trim().slice(0, 120),
+    uses: { max, used: 0, reset: m[2]!.toLowerCase() === 'short' ? 'short' : 'long' },
+  };
 }
 
 /**

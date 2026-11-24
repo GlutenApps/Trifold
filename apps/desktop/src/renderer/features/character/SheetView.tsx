@@ -7,10 +7,11 @@ import {
   SKILL_NAMES,
   tableNumbers,
 } from '@trifold/rules';
-import type { Ability, Character, Skill } from '@trifold/schema';
+import type { Ability, Character, Sheet, Skill } from '@trifold/schema';
 import { useShellStore } from '../../stores/shellStore';
 import { Icon } from '../shell/icons';
 import { LinkedRow } from './LinkedRow';
+import { ResourcesSection } from './Resources';
 import { signed } from './fields';
 
 /**
@@ -57,10 +58,13 @@ export function SheetView({
   character,
   onEdit,
   live,
+  resources,
 }: {
   character: Character;
   /** Absent for a preview (Import from PDF), which has nothing to edit yet. */
   onEdit?(): void;
+  /** Resources to track at the table (ADR 0074): saves the sheet, and sends a hit die's healing. */
+  resources?: { onChange(sheet: Sheet): void; onHeal?(amount: number): void };
   live?: ReactNode;
 }) {
   const t = tableNumbers(character);
@@ -116,6 +120,15 @@ export function SheetView({
         {t.spellSaveDc !== undefined && <Stat label="Spell save DC" value={t.spellSaveDc} />}
         {n?.spellAttack && <Stat label="Spell attack" value={signed(n.spellAttack.value)} />}
       </div>
+
+      {sheet && resources && (
+        <ResourcesSection
+          sheet={sheet}
+          edition={character.edition}
+          onChange={resources.onChange}
+          {...(resources.onHeal ? { onHeal: resources.onHeal } : {})}
+        />
+      )}
 
       <section className="sheet-view-section" aria-label="Abilities and saves">
         <h3>{n ? 'Abilities and saving throws' : 'Saving throws'}</h3>
