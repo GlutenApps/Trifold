@@ -1,6 +1,6 @@
 # Trifold user guide
 
-Trifold is a desktop console for a Dungeon Master running 5e-compatible games at a physical table. It brings together a compendium, campaign notes, an encounter builder and combat tracker, a second screen (the "TV") for the players, a page players can follow on their phones, and a music player. It runs on Windows and macOS and keeps everything on your computer.
+Trifold is a desktop console for a Dungeon Master running 5e-compatible games at a physical table. It brings together a compendium, campaign notes, an encounter builder and combat tracker, a second screen (the "TV") for the players, a page players can follow on their phones, and a music player. Players can also run Trifold themselves, to keep their characters and join the table (see [Playing from your own Trifold](#playing-from-your-own-trifold)). It runs on Windows and macOS and keeps everything on your computer.
 
 This guide walks through installing Trifold, each of its tools in the order you are likely to meet them, the hotkeys, backups, and what to do when something goes wrong. Hotkeys are written `Ctrl+…` throughout; on macOS, Ctrl means the Command key and Alt means Option.
 
@@ -213,6 +213,63 @@ A player who switches phones, clears their browser or wants to swap characters t
 Taking over a character another connected phone holds works the same way, and that phone drops back to the picker. **Switch** on a phone releases its characters, with a few seconds to **Undo**.
 
 If nobody can connect, the firewall may be blocking Trifold, or the Wi-Fi may keep devices apart (guest and school networks often do). A phone hotspot works.
+
+## Playing from your own Trifold
+
+*Player mode is being finished. Until a release switches it on, the pages below are hidden; testers turn them on with the `TRIFOLD_PLAYER_MODE` environment variable.*
+
+A player can run Trifold too. Your characters live in your own Library, and at the table your Trifold joins your GM's on the same network: you see the live map, keep your sheet beside it, move your token, track your HP and conditions, and roll. Your GM's Trifold stays in charge of the table; yours only ever gets what your GM would show on a phone.
+
+**First launch.** A new Library asks **How will you use Trifold?** Choose **Player**: you get no sample campaign, and Trifold opens on **Join a campaign**. A GM chooses **Game master**. **Settings › Appearance › How you use Trifold** changes it later.
+
+### Your characters
+
+**Library › Characters** holds every character you have, for every campaign you join. **New character** offers two kinds:
+
+- **External character**: your sheet lives in another app. Enter the numbers the table needs (class and level, HP, AC, initiative, speed, passives, saves) and a link to your sheet, which opens as a web tab.
+- **Trifold character**: your sheet lives here, with every number worked out from your abilities, proficiencies and gear. Start it one of three ways:
+  - **Guided builder**: pick a class, background and species, then ability scores (standard array, point buy or rolled), equipment and spells, from the bundled 2024 SRD. **Include legacy (2014) backgrounds and species** adds the older ones. Nothing is saved until **Finish**.
+  - **Blank sheet**: fill it in yourself.
+  - **Import from PDF**: pick a character sheet PDF exported from another app (the official 2014 and 2024 sheets and the usual exports read best). Trifold reads its fields on your computer and shows you the sheet before **Create character**. A printed or scanned PDF has nothing to read; export a fillable one instead.
+
+On a Trifold sheet, any number can be set by hand and shows as set by hand, with a reset. Spells, items and features that Trifold found in your compendium have a **Read** button (the book) that shows their text. **Level up** adds a level to a character the builder made: hit points fixed or rolled, new features, the subclass at its level, an ability score improvement or a feat. **Update from PDF…** replaces the sheet with a newer export, after the same preview.
+
+**Resources.** Every Trifold sheet has a Resources section:
+
+- **Heroic Inspiration**.
+- **Spell slots** and **limited-use features** as rows of boxes: tick one to spend it, untick it to get it back. Set a feature's uses beside it in the sheet, and tick **Slots come back on a short rest** for Pact Magic.
+- **Hit dice**, with **Spend a d8** (and so on). Spending one rolls it with your Constitution; at the table the healing goes straight to your HP.
+- **Short rest** and **Long rest** bring back what each rest restores, and say what came back, with **Undo**. Your HP and death saves are your GM's to track.
+
+**Forms.** For a wild shape or any other transformation, add creatures under **Forms** on the character, or press **Pin as a form** (the paw) on a creature's page in the compendium while you are in a campaign. Each form is a tab on the Sheets tab, beside your character, to read; your HP and token stay your own.
+
+The export button (the send icon) beside a character's name saves it as a file, and **Import character…** on the Characters page reads one back, in this Library or another.
+
+### Joining a table
+
+1. Your GM presses **Let players join** in their Player devices panel.
+2. In **Library › Campaigns**, press **Join a campaign**. Tables on your network are listed by campaign name; press **Join**. If none shows (some networks block the search), type the address your GM's Trifold shows, such as `trifold.local`, and press **Find**.
+3. Enter **Your name at the table** and press **Join**.
+
+The campaign is now under **Playing** on the Campaigns page, with **Open** and **Leave**. If your Trifold and your GM's cannot play together, Join a campaign says which one needs an update instead of offering Join. A GM can also send you a **player pack** before the first session: **Join a campaign › From a file** opens it, with what your GM shares.
+
+### The player console
+
+**Open** a campaign under Playing for the player console. Its tabs and tools work like a GM's console, arranged for a player:
+
+- **VTT**: pick your character the first time, then the map or whatever the TV shows, with its overlays. Drag your token, or use **Move**, as on a phone.
+- **Sheets**: your character's sheet, with the table's live HP and conditions above it, and **Edit**. Click a save, a skill, initiative, an attack, its damage or your spell attack to roll it; **Roll with** gives the next roll advantage or disadvantage. When the fight is waiting for your initiative, rolling it enters it. A companion's tab shows its stat block, and your forms have tabs too.
+- **My characters**: your character and your companions, with HP and conditions to change, **Add a companion**, **Switch character**, and **Link a character** to choose which of your characters this campaign uses. Linking offers your sheet's numbers to your GM, who accepts or dismisses them; if your GM has no card for you yet, **Ask your GM to add** your character.
+- **Initiative**: the order as the TV shows it, and the box to type your roll. The strip says **Your turn** and **You're next**.
+- **Quick notes**: your own notes for this campaign, never sent to the table.
+- **Dice**: the roller, pinned rolls and the roll log. **Table** rolls are made on your GM's computer and shown in every roll log at the table; **Private** ones stay on yours.
+- **Compendium**: the bundled SRD, your own sources, and what your GM shares with the campaign, marked **Shared by your GM**.
+
+When your GM's table isn't up, the console shows the map and characters as you last saw them, and goes live by itself when the table comes back. **Change address** helps if your GM's computer moved.
+
+### For the GM: players with Trifold
+
+A player's Trifold shows in **Player devices** like a phone, and obeys the same claims, movement locks, **Give to…** and **Release**. When a player offers their sheet's numbers, the panel lists what would change, with **Accept** and **Dismiss**; **Accept sheet updates automatically** skips the question. A player with no card asks to be added, and **Add PC** makes the card for them. **Campaign › Shared sources** chooses what their Trifolds receive (see Compendium), and **Export for players** saves a player pack.
 
 ## Music
 

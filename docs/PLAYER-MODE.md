@@ -515,7 +515,7 @@ What is left of Parts 1 to 3, and what a player needs beyond them, in order. Ite
 | **D** | **Ready for players who are not the GM** | | |
 | 8 | *Added:* a version check between the GM's and the player's Trifold, with a plain message to update on a mismatch | S–M | Built (ADR 0076) |
 | 9 | *Added:* a first-run choice for a new Library (running games or playing); the playing path leads with Join a campaign and Characters | S–M | Built (ADR 0077) |
-| 10 | The user guide's player section and the docs pass in phase 9 | M | |
+| 10 | The user guide's player section and the docs pass in phase 9 | M | Built: USER-GUIDE "Playing from your own Trifold"; DESIGN §1, §1.1, §1.2, §3, §4.2, §6.10, §8 and §10; docs/README |
 | **E** | **Acceptance and release** | | |
 | 11 | The acceptance checks below on two computers, Windows and macOS | | Ian runs; fixes follow |
 | 12 | The `TRIFOLD_PLAYER_MODE` flag removed, and a release | S | |
