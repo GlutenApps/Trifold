@@ -398,6 +398,35 @@ A player's character (docs/PLAYER-MODE.md, Part 3; ADR 0068), schema `Character`
 
 `kind` is `external` (the sheet is kept elsewhere: `numbers` holds the table numbers as entered, and `sheet` is absent) or `trifold` (`sheet` holds the sheet, and the table numbers are worked out from it by `tableNumbers` in `packages/rules/src/character/`; `numbers` is left as it was). `overrides` holds numbers set by hand over what the sheet works out, by key (`ac`, `initiative`, `save.dex`, `skill.stealth`, …). A sheet's attacks, features, spells and items may carry `ref: { kind, key, name }`, a compendium record by kind and key with its name kept for when the record is gone. `gp` is the character's coins in gold pieces, and `slots` its spell slots by slot level, 1st first. `sheetUrl` is an `http` or `https` address only. A character made by the guided builder (docs/BUILDER.md) also has `build`: the edition, the class, background and species by `ref`, the size, the ability method, the scores before the background's increase, the increase (`{plus2, plus1}` or `{all}`), the class skills picked, the hit points gained at each later level, the subclass once picked, and each ability score improvement or feat taken (`improvements`, by level); Level up follows it. A character exported from the Library is this same JSON; importing one whose id is taken gives it a new id.
 
+### 5.8 Character sheet PDFs (Import from PDF)
+
+Read, never written (ADR 0073). Main takes every page's widget annotations with pdf.js, whether or not the PDF has a form dictionary, as `{ page, name, kind, value, checked, rect }`, and `readPdfSheet` (`packages/importers/src/pdfSheet/`) turns them into a sheet, warnings and a layout, or a problem (`noFields`, `unknownLayout`, `empty`). Field names match with case and runs of spaces ignored; the first filled field of a name wins, as headers repeat on every page.
+
+| Sheet field | Field names |
+| --- | --- |
+| Name, class line, species, background | `CharacterName`; `CLASS  LEVEL` or `ClassLevel`; `RACE`/`Race `/`Species`; `BACKGROUND` |
+| Ability scores | `STR` and `STRmod` (… `CHA` and `CHamod`), or `StrDropdown` ("14: +2") |
+| Proficiency bonus, AC, initiative, speed, max HP | `ProfBonus`; `AC`; `Init`/`Initiative`/`InitiativeBonus`; `Speed`/`Speeds` (first number); `MaxHP`/`HPMax` |
+| Saves and skills | `ST Strength` …; `Acrobatics`, `Animal`, … `SleightofHand`, `Stealth`, `Survival` |
+| Proficiency marks | `ConProf`, `AcrobaticsProf` … (`•`/`P` proficient, `E` expertise, `H` half), or the check box (`Check Box 11` …) left of the value on its line |
+| Passives | `Passive1`/`2`/`3` (perception, insight, investigation) in the export; `Passive` (perception) otherwise |
+| Spellcasting | `spellCastingAbility0` or `SpellcastingAbility 2` (first ability of "INT / CHA"); `spellSaveDC0`/`SpellSaveDC  2`; `spellAtkBonus0`/`SpellAtkBonus 2` |
+| Spells and slots | `spellName0` … under `spellHeader0` … ("=== 1st LEVEL ===", with `spellSlotHeader0` "4 Slots OOOO"), prepared when `spellPrepared0` is `P`; or `Spells 1014` … under `SlotsTotal 19` … (19 is 1st level), prepared by the check box beside it |
+| Attacks | `Wpn Name`, `Wpn Name 2` … with `Wpn1 AtkBonus` and `Wpn1 Damage` |
+| Features | `FeaturesTraits1` … as "=== CLASS FEATURES ===" sections of "* Name • source" entries; or `Features and Traits` free text, a feature per line (or per paragraph, named by its first line, when lines are long) |
+| Equipment, coins | `Eq Name0`/`Eq Qty0` …, or `Equipment` free text split on commas and lines (not inside brackets, "2 daggers" is 2); `PP`, `GP`, `EP`, `SP`, `CP` summed into `gp` |
+| Other proficiencies, notes | `ProficienciesLang`; personality, ideals, bonds, flaws, backstory, allies, alignment, faith and appearance into the character's notes |
+
+Conventions:
+
+- **Score or modifier by value.** A plain number from 1 to 30 is the score and a signed one the modifier, whichever field holds it (the 2014 sheet prints its big box for the modifier and apps fill it both ways); two plain numbers are told apart by mod = ⌊(score − 10) / 2⌋. Minus signs may be `-`, `−` or `–`.
+- **Class lines** read "Wizard 3 / Cleric 2", "Cleric 2 (Life)", "Fighter (Champion) 3" and "Rogue LVL 4"; a line that does not read is a warning.
+- **Marks by position.** A check box or a mark letter counts for a save or skill when it is on the same line (centres within 4 pt) and ends at most 20 pt left of the value. A check box cannot say expertise: a skill whose number is the modifier plus twice the proficiency bonus is expertise. `H` (half proficiency) is not proficiency; its number is kept as an override.
+- **Spell levels by position.** A spell takes the level of the nearest header or slot box above it that overlaps its column. In the export a level runs onto the next page; on the 2014 sheet a spell with no box above it is a cantrip. A trailing `[R]` is dropped, and a spell listed twice at one level is kept once.
+- **Overrides.** Proficiency bonus, AC, initiative, passives, saves, skills, spell save DC and spell attack are kept as overrides where the page's number differs from what the sheet works out.
+- **Edition** is 2024 when any field mentions 2024; otherwise 2014. The player can change it in the preview.
+- **A blank template** (no name, class or hit points, whatever its defaults) is `empty`; `--` and similar placeholders count as blank.
+
 ---
 
 ## 6. Token art mapping tables (`resources/icons/mapping.json`)

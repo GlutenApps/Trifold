@@ -1,7 +1,8 @@
-import { mkdtemp, readdir, readFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Page } from '@playwright/test';
+import { fieldPdf } from './fieldPdf';
 
 /**
  * Join a campaign (docs/PLAYER-MODE.md) with two real copies of the app on one machine: a GM's
@@ -156,6 +157,43 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(page.getByTestId('character-row')).toHaveCount(2);
     await expect(page.getByTestId('character-row').filter({ hasText: 'Tamsin' })).toContainText(
       'Fighter 2 · AC 16 · 20 HP',
+    );
+
+    // Import from PDF (ADR 0073): a fillable sheet, made here with SRD content and without the
+    // form dictionary the app export also lacks, read by pdf.js in main and previewed first.
+    const sheetPdf = join(playerData, 'orrin.pdf');
+    await writeFile(
+      sheetPdf,
+      fieldPdf(
+        [
+          { name: 'CharacterName', value: 'Orrin Vale', rect: [48, 710, 221, 731] },
+          { name: 'ClassLevel', value: 'Wizard 1', rect: [270, 728, 376, 744] },
+          { name: 'Race ', value: 'Dwarf', rect: [269, 702, 376, 718] },
+          { name: 'Background', value: 'Sage', rect: [384, 728, 470, 744] },
+          { name: 'INT', value: '+3', rect: [37, 397, 78, 423] },
+          { name: 'INTmod', value: '16', rect: [46, 377, 68, 390] },
+          { name: 'AC', value: '12', rect: [234, 626, 261, 651] },
+          { name: 'HPMax', value: '8', rect: [291, 585, 380, 595] },
+          { name: 'Spells 1014', value: 'Fire Bolt', rect: [40, 607, 199, 620], page: 3 },
+        ],
+        { withForm: false },
+      ),
+    );
+    await player.evaluate(({ dialog }, picked) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [picked] });
+    }, sheetPdf);
+    await page.getByRole('button', { name: 'New character' }).click();
+    await page.getByRole('radio', { name: /Import from PDF/ }).click();
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    const pdfImport = page.getByTestId('pdf-import');
+    await pdfImport.getByRole('button', { name: 'Choose PDF…' }).click();
+    await expect(pdfImport.getByRole('textbox', { name: 'Name' })).toHaveValue('Orrin Vale');
+    await expect(pdfImport.getByTestId('sheet-view')).toContainText('Wizard 1 · Dwarf · Sage');
+    await pdfImport.getByRole('button', { name: 'Create character' }).click();
+    await expect(page.getByTestId('trifold-sheet')).toBeVisible();
+    await page.getByRole('button', { name: 'Back to characters' }).click();
+    await expect(page.getByTestId('character-row').filter({ hasText: 'Orrin Vale' })).toContainText(
+      'Wizard 1 · AC 12 · 8 HP',
     );
 
     await campaignsPage(page);

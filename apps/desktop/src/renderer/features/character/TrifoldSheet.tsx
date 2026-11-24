@@ -14,6 +14,7 @@ import { useCharacterStore } from '../../stores/characterStore';
 import { Icon } from '../shell/icons';
 import { DerivedField, NumField, signed } from './fields';
 import { LevelUpPanel } from './builder/LevelUpPanel';
+import { PdfImport } from './PdfImport';
 
 /**
  * A Trifold character's sheet (PLAYER-MODE.md, Way 3; ADR 0068): who they are, abilities, saves
@@ -57,6 +58,8 @@ export function TrifoldSheet({ character }: { character: Character }) {
   const sheet = character.sheet!;
   const id = character.id;
   const [levelling, setLevelling] = useState(false);
+  /** Update from PDF (ADR 0073): the sheet replaced by one read from a PDF, after a preview. */
+  const [updating, setUpdating] = useState(false);
   const n: SheetNumbers = deriveSheet(sheet);
   const set = (patch: Partial<Sheet>) => change(id, { sheet: { ...sheet, ...patch } });
   const override = (key: DerivedKey, value: number | undefined) => {
@@ -83,27 +86,46 @@ export function TrifoldSheet({ character }: { character: Character }) {
 
   return (
     <div className="character-body trifold-sheet" data-testid="trifold-sheet">
-      {/* Level up (docs/BUILDER.md): only on a character the guided builder made. */}
-      {character.build &&
-        (levelling ? (
-          <LevelUpPanel
-            character={character}
-            onApply={(next, build) => {
-              change(id, { sheet: next, build });
-              setLevelling(false);
-            }}
-            onClose={() => setLevelling(false)}
-          />
-        ) : (
-          builtLevel(sheet) < 20 && (
-            <div className="row">
-              <button type="button" className="btn" onClick={() => setLevelling(true)}>
-                <Icon name="up" />
-                Level up
-              </button>
-            </div>
-          )
-        ))}
+      {/* Level up (docs/BUILDER.md) only on a character the guided builder made. */}
+      {levelling && character.build ? (
+        <LevelUpPanel
+          character={character}
+          onApply={(next, build) => {
+            change(id, { sheet: next, build });
+            setLevelling(false);
+          }}
+          onClose={() => setLevelling(false)}
+        />
+      ) : updating ? (
+        <PdfImport
+          name={character.name}
+          mode="replace"
+          onCancel={() => setUpdating(false)}
+          onDone={(preview, _name, edition) => {
+            // A sheet from a PDF is no longer the builder's: Level up no longer follows it.
+            change(id, {
+              sheet: preview.sheet,
+              edition,
+              build: undefined,
+              ...(character.notes.trim() ? {} : { notes: preview.notes }),
+            });
+            setUpdating(false);
+          }}
+        />
+      ) : (
+        <div className="row">
+          {character.build && builtLevel(sheet) < 20 && (
+            <button type="button" className="btn" onClick={() => setLevelling(true)}>
+              <Icon name="up" />
+              Level up
+            </button>
+          )}
+          <button type="button" className="btn" onClick={() => setUpdating(true)}>
+            <Icon name="scroll" />
+            Update from PDF…
+          </button>
+        </div>
+      )}
       <section className="sheet-section" aria-label="Who they are">
         <h2>Who they are</h2>
         <div className="sheet-grid">

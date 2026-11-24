@@ -412,6 +412,8 @@ Built (ADR 0070): `sheetUrl` on the PC card, PC files at version 2, the Characte
 
 ## Way 2: import an exported PDF sheet
 
+Built (ADR 0073): **Import from PDF** and **Update from PDF…**. The current D&D Beyond export turned out to keep named, filled widgets without a form dictionary, so fields are read from each page's widgets; printed, scanned and typeset PDFs get a message, with no OCR. The field rules are in `DATA-FORMATS.md` §5.8. The plan as written:
+
 - **Import PDF sheet** reads the PDF's form fields locally with a pure JavaScript library (no native deps; pin the version and check its licence against GPL-3.0-or-later for the third-party notices). Main reads the file; the parsing and the field mapping are pure functions in `packages/importers/src/pdfSheet/`, returning `{ sheet, warnings }` like the other importers.
 - Map by known field names per export layout, with a manual fallback where the player matches unmapped fields. Verify against real exports before committing to mappings (ADR 0029 asks for this); ask Ian for real files and keep them out of the repo (`fixtures/local/`).
 - Encrypted or flattened PDFs (no form fields) get a plain message and nothing is imported. Never strip protection.
@@ -487,7 +489,7 @@ One feature per PR (`CLAUDE.md`), and each phase updates its own docs and ADR as
 3. **Table rolls.** The Table and Private switch, `roll` and `rolled`, table rolls in both roll logs. Its ADR.
 4. **Shared content and player packs.** The Shared sources list, the shared source in a joined campaign, sync on connect, Export for players and opening a pack. Its ADR, with the `DESIGN.md` §8 change.
 5. **Character foundation.** The sheet schema (marked by edition, linked records by key and name) and derived-number functions in `packages/rules/src/character/`, the Library's Characters page, the Sheets tab for the PC, the Table numbers form, the `sheetUrl` migration, and the `sheetOffer` flow with Accept, Dismiss and auto-accept. Its ADR.
-6. **PDF sheet import** (parallel with 7). Real exports first, then field mapping, the preview, manual matching and re-import.
+6. **PDF sheet import** (parallel with 7). Real exports first, then field mapping, the preview, manual matching and re-import. Built (ADR 0073), without manual matching: the preview shows what was read and warns about what was not, and the sheet is edited afterwards.
 7. **Character builder, 2024** (parallel with 6). Its own short spec first, then the SRD 5.2.1 rules data, legacy options, the creation flow and the Level up flow.
 8. **Character builder, 2014.** The SRD 5.1 rules data and the 2014 branches of both flows.
 9. **Docs and tests throughout.** The ADRs with their index and decision log rows (the Players and User content rows change); `DESIGN.md` §1 (it opens by calling the app a DM console), §1.1, §1.2, §4.1, §4.2, §4.4, §5.2, §6.5, §8 and §10 (the PDF import leaves Later); `PLAYER-CONNECTOR.md`; `CLAUDE.md` ground rule 1 and the repo layout; `docs/README.md`; and the user guide (joining from the app, the player console, characters). A smoke spec runs a second app instance with its own user-data folder and Library against the first one's table server.

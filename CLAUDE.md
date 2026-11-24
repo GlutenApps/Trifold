@@ -14,7 +14,7 @@ Trifold is a local desktop app for Windows and macOS (Electron + React + TypeScr
 
 ## Stack (pin versions in package.json; do not add native deps beyond better-sqlite3 without asking)
 
-Electron (current LTS) · electron-vite · electron-builder (NSIS + portable on Windows, dmg + zip on macOS) · electron-updater (installed Windows build only, ADR 0045) · Vite · React 18 · TypeScript strict · Zustand · Zod · Tiptap (notes editor, ADR 0010) · better-sqlite3 (FTS5) · music-metadata · yauzl/yazl (backup and package zips) · ulid · Vitest + @testing-library/react · Playwright (Electron) for smoke tests · ESLint + Prettier.
+Electron (current LTS) · electron-vite · electron-builder (NSIS + portable on Windows, dmg + zip on macOS) · electron-updater (installed Windows build only, ADR 0045) · Vite · React 18 · TypeScript strict · Zustand · Zod · Tiptap (notes editor, ADR 0010) · better-sqlite3 (FTS5) · music-metadata · yauzl/yazl (backup and package zips) · pdf.js (`pdfjs-dist`, reading character sheet PDFs in main, ADR 0073; its optional native canvas package stays out) · ulid · Vitest + @testing-library/react · Playwright (Electron) for smoke tests · ESLint + Prettier.
 
 ## Repo layout
 
@@ -23,7 +23,7 @@ apps/desktop/            Electron main + preload + renderer (hash routes #/conso
   src/main/              index.ts (entry), api.ts + campaignApi.ts + musicApi.ts (IPC implementations), ipc.ts,
                          library/ (LibraryStore, atomic writes, session), index/ (sqlite + FTS5), sources/ (bundled SRD,
                          XML import, homebrew), campaign/ (repository, entities, GM-export import, images, packages),
-                         music/, phoneAudio/ (receiver + helper.ps1), characters.ts, backups.ts, backupCopy.ts, windows.ts, menu.ts,
+                         music/, phoneAudio/ (receiver + helper.ps1), characters.ts, pdfFields.ts (pdf.js: a PDF's widget fields), backups.ts, backupCopy.ts, windows.ts, menu.ts,
                          media.ts (trifold-media:// scheme), webTabs.ts, systemPages.ts, log.ts,
                          table/ (player connector server: hub, LAN listeners, mDNS, players.json, ADR 0043),
                          joined/ (player mode, ADR 0058: joined-campaign files, table discovery, the connection to a GM's table)
@@ -39,7 +39,7 @@ packages/api/            the single TypeScript interface between renderer and ma
 packages/rules/          pure functions: dice, CR/XP tables, 2024 budgets, combat/ (turns, damage, rolls), fog, table/ (player connector views), character/ (sheet numbers), statblock/ parsers
                          (regexes from DATA-FORMATS.md §2.5), art/ (glyph matching), tree, noteSearch, normalizeKey
 packages/importers/      xml/ (stream parser), compendium/ (Lion's Den XML), campaign/ (campaign XML, GM export, package export),
-                         open5e/ (build-time SRD normalisation)
+                         open5e/ (build-time SRD normalisation), pdfSheet/ (character sheet PDF fields → sheet, ADR 0073)
 resources/               built at build time: srd-2024.jsonl, srd-2014.jsonl (git-ignored), srd-manifest.json,
                          sample/ (git-ignored), icons/ (glyphs.json and credits.json git-ignored; mapping.json and manifest.json committed)
 scripts/                 dev.mjs, fetch-content.ts (runs fetch-open5e.ts + fetch-game-icons.ts + verify-mapping.ts
@@ -49,7 +49,7 @@ scripts/                 dev.mjs, fetch-content.ts (runs fetch-open5e.ts + fetch
                          cr-audit/ (fight simulation of the CR scaler and hordes, SRD data only, ADR 0051)
 samples/greyford/        source of the bundled sample campaign (ADR 0016): campaign.json, notes/*.md, images/ + CREDITS.md;
                          built into resources/sample/ (git-ignored) by scripts/build-sample.ts
-fixtures/                small SRD-only XML/JSON samples used by tests (fixtures/local/ is git-ignored)
+fixtures/                small SRD-only XML/JSON samples used by tests (fixtures/local/ is git-ignored; real character sheet PDFs go in fixtures/local/pdf-sheets/)
 docs/                    README.md (index), brand/ (logo kit and BRAND.md: which version goes where), DESIGN.md, DATA-FORMATS.md, UI-GUIDELINES.md, USER-GUIDE.md, RELEASING.md,
                          PLAYER-MODE.md (the plan for player mode, in progress),
                          TOKENS.md, adr/, design-brief/ (frozen 2026-09 shell brief)

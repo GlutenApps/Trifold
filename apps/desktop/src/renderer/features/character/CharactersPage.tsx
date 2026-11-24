@@ -5,6 +5,7 @@ import { useCharacterStore } from '../../stores/characterStore';
 import { Icon } from '../shell/icons';
 import { CharacterEditor } from './CharacterEditor';
 import { GuidedBuilder } from './builder/GuidedBuilder';
+import { PdfImport } from './PdfImport';
 
 /**
  * Library › Characters (docs/PLAYER-MODE.md, Part 3; ADR 0068): the player's characters, shared
@@ -37,8 +38,8 @@ export function NewCharacterPanel({
   const startBuilding = useCharacterStore((s) => s.startBuilding);
   const [name, setName] = useState('');
   const [kind, setKind] = useState<Character['kind']>('trifold');
-  /** How a Trifold character starts (docs/BUILDER.md): the guided builder or a blank sheet. */
-  const [start, setStart] = useState<'guided' | 'blank'>('guided');
+  /** How a Trifold character starts (docs/BUILDER.md): guided builder, blank sheet or a PDF. */
+  const [start, setStart] = useState<'guided' | 'blank' | 'pdf'>('guided');
   const [busy, setBusy] = useState(false);
   return (
     <form
@@ -49,6 +50,13 @@ export function NewCharacterPanel({
       }}
       onSubmit={(e) => {
         e.preventDefault();
+        if (kind === 'trifold' && start === 'pdf') {
+          // Import from PDF (ADR 0073): an empty name takes the sheet's.
+          startBuilding(name.trim(), forJoined, 'pdf');
+          onGuided?.();
+          onClose();
+          return;
+        }
         if (kind === 'trifold' && start === 'guided') {
           startBuilding(name.trim() || 'Unnamed character', forJoined);
           onGuided?.();
@@ -140,11 +148,25 @@ export function NewCharacterPanel({
                 <span className="muted small">Fill the sheet in yourself.</span>
               </span>
             </label>
+            <label className="character-kind">
+              <input
+                type="radio"
+                name="character-start"
+                checked={start === 'pdf'}
+                onChange={() => setStart('pdf')}
+              />
+              <span>
+                <strong>Import from PDF</strong>
+                <span className="muted small">
+                  Read a character sheet PDF another app exported, then check it over.
+                </span>
+              </span>
+            </label>
           </fieldset>
         )}
         <div className="row">
           <button type="submit" className="btn primary" disabled={busy}>
-            {kind === 'trifold' && start === 'guided' ? 'Start' : 'Create'}
+            {kind === 'trifold' && start !== 'blank' ? 'Start' : 'Create'}
           </button>
           <button type="button" className="btn" onClick={onClose}>
             Cancel
@@ -167,6 +189,7 @@ export function CharactersPage() {
   const building = useCharacterStore((s) => s.building);
   const cancelBuilding = useCharacterStore((s) => s.cancelBuilding);
   const createBuilt = useCharacterStore((s) => s.createBuilt);
+  const createImported = useCharacterStore((s) => s.createImported);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
@@ -174,6 +197,17 @@ export function CharactersPage() {
   }, [load]);
 
   const current = characters.find((c) => c.id === openId) ?? null;
+  if (building && !building.forJoined && building.way === 'pdf') {
+    return (
+      <PdfImport
+        name={building.name}
+        onCancel={cancelBuilding}
+        onDone={(preview, name, edition) =>
+          void createImported(name, preview, edition).then((made) => made && open(made.id))
+        }
+      />
+    );
+  }
   if (building && !building.forJoined) {
     return (
       <GuidedBuilder

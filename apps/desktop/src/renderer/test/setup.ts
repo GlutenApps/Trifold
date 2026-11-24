@@ -375,6 +375,7 @@ export function installBridgeMock(): TrifoldBridge {
       remove: vi.fn(async () => undefined),
       exportFile: vi.fn(async () => null),
       importFile: vi.fn(async () => null),
+      readPdf: vi.fn(async () => null),
     },
     noteTemplates: {
       list: vi.fn(async () => []),

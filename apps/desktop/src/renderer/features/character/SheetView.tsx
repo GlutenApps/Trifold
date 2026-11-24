@@ -58,7 +58,8 @@ export function SheetView({
   live,
 }: {
   character: Character;
-  onEdit(): void;
+  /** Absent for a preview (Import from PDF), which has nothing to edit yet. */
+  onEdit?(): void;
   live?: ReactNode;
 }) {
   const t = tableNumbers(character);
@@ -78,15 +79,17 @@ export function SheetView({
           </span>
         </div>
         <SheetLink character={character} />
-        <button
-          type="button"
-          className="btn"
-          aria-label={`Edit ${character.name}`}
-          onClick={onEdit}
-        >
-          <Icon name="pencil" />
-          Edit
-        </button>
+        {onEdit && (
+          <button
+            type="button"
+            className="btn"
+            aria-label={`Edit ${character.name}`}
+            onClick={onEdit}
+          >
+            <Icon name="pencil" />
+            Edit
+          </button>
+        )}
       </div>
       {live}
 

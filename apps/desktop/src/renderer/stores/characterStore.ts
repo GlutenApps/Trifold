@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { ulid } from 'ulid';
 import { blankSheet, sheetFromNumbers } from '@trifold/rules';
+import type { PdfSheetPreview } from '@trifold/api';
 import {
   errorMessage,
   nowIso,
   type Character,
   type CharacterBuild,
+  type CharacterEdition,
   type Sheet,
 } from '@trifold/schema';
 
@@ -32,14 +34,21 @@ interface CharacterState {
   /** Makes a character and opens it. */
   create(kind: Character['kind'], name: string): Promise<Character | null>;
   /**
-   * The guided builder open for a new character (docs/BUILDER.md), by the name it was given;
-   * `forJoined` links the result to the open joined campaign. Null when none is.
+   * A new Trifold character being made (docs/BUILDER.md), by the name it was given: in the
+   * guided builder, or by Import from PDF (ADR 0073). `forJoined` links the result to the open
+   * joined campaign. Null when none is.
    */
-  building: { name: string; forJoined: boolean } | null;
-  startBuilding(name: string, forJoined: boolean): void;
+  building: { name: string; forJoined: boolean; way: 'guided' | 'pdf' } | null;
+  startBuilding(name: string, forJoined: boolean, way?: 'guided' | 'pdf'): void;
   cancelBuilding(): void;
   /** The builder's Finish: a Trifold character with the sheet and build record it made. */
   createBuilt(name: string, sheet: Sheet, build: CharacterBuild): Promise<Character | null>;
+  /** Import from PDF's Create: a Trifold character with the sheet, rules and notes read. */
+  createImported(
+    name: string,
+    preview: PdfSheetPreview,
+    edition: CharacterEdition,
+  ): Promise<Character | null>;
   /** Changes a character at once and writes it a moment later. */
   change(id: string, patch: Partial<Character>): void;
   /** Writes a character's pending change now. */
@@ -70,6 +79,25 @@ export const useCharacterStore = create<CharacterState>((set, get) => {
     }
   };
 
+  /** A new Trifold character made with what the builder or Import from PDF gives it. */
+  const createWith = async (name: string, patch: Partial<Character>) => {
+    const made = await get().create('trifold', name);
+    if (!made) return null;
+    const next: Character = { ...made, ...patch };
+    set((s) => ({
+      characters: s.characters.map((c) => (c.id === made.id ? next : c)),
+      building: null,
+    }));
+    try {
+      const saved = await window.trifold.characters.save(next);
+      set((s) => ({ characters: s.characters.map((c) => (c.id === saved.id ? saved : c)) }));
+      return saved;
+    } catch (err) {
+      set({ error: errorMessage(err) });
+      return next;
+    }
+  };
+
   return {
     characters: [],
     loaded: false,
@@ -77,30 +105,20 @@ export const useCharacterStore = create<CharacterState>((set, get) => {
     editingSheet: false,
     building: null,
 
-    startBuilding(name, forJoined) {
-      set({ building: { name, forJoined } });
+    startBuilding(name, forJoined, way = 'guided') {
+      set({ building: { name, forJoined, way } });
     },
 
     cancelBuilding() {
       set({ building: null });
     },
 
-    async createBuilt(name, sheet, build) {
-      const made = await get().create('trifold', name);
-      if (!made) return null;
-      const next: Character = { ...made, sheet, build };
-      set((s) => ({
-        characters: s.characters.map((c) => (c.id === made.id ? next : c)),
-        building: null,
-      }));
-      try {
-        const saved = await window.trifold.characters.save(next);
-        set((s) => ({ characters: s.characters.map((c) => (c.id === saved.id ? saved : c)) }));
-        return saved;
-      } catch (err) {
-        set({ error: errorMessage(err) });
-        return next;
-      }
+    createBuilt(name, sheet, build) {
+      return createWith(name, { sheet, build });
+    },
+
+    createImported(name, preview, edition) {
+      return createWith(name, { sheet: preview.sheet, edition, notes: preview.notes });
     },
     error: null,
 

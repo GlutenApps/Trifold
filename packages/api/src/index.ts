@@ -15,6 +15,7 @@ import type {
   Note,
   NoteTemplate,
   Character,
+  CharacterEdition,
   NPC,
   PCCard,
   PinnedRoll,
@@ -22,6 +23,7 @@ import type {
   Playlist,
   RecordKind,
   Scene,
+  Sheet,
   SceneImage,
   Source,
   TextSize,
@@ -81,6 +83,20 @@ export type {
  * (CLAUDE.md ground rule 7). Every flag is off unless its environment variable turns it on, so a
  * released build never shows a half-built feature and dev and smoke runs can.
  */
+/** A character sheet read from a PDF (ADR 0073), before the player confirms it. */
+export interface PdfSheetPreview {
+  /** The file's name, without its folder. */
+  fileName: string;
+  /** The character's name on the sheet; empty when it had none. */
+  name: string;
+  edition: CharacterEdition;
+  sheet: Sheet;
+  /** Personality, backstory and appearance, for the character's notes. */
+  notes: string;
+  /** What could not be read, to show beside the preview. */
+  warnings: string[];
+}
+
 export interface FeatureFlags {
   /** Player mode (docs/PLAYER-MODE.md): Join a campaign, the Playing list, the player console. */
   playerMode: boolean;
@@ -1368,6 +1384,12 @@ export interface TrifoldApi {
      * its id is taken; null when cancelled. Throws on a file that is not a character.
      */
     importFile(): Promise<Character | null>;
+    /**
+     * Import from PDF (ADR 0073): reads a character sheet PDF the player picks, locally, into a
+     * sheet to preview; nothing is written. Null when cancelled. Throws, with a message to show,
+     * on a PDF with no fields (printed or scanned), unknown fields, empty fields or a password.
+     */
+    readPdf(): Promise<PdfSheetPreview | null>;
   };
   /** Starting bodies for new notes, shared by every campaign in the Library (ADR 0010). */
   noteTemplates: {
@@ -1706,7 +1728,7 @@ export const API_METHODS = {
   ],
   notes: ['save', 'remove', 'move', 'capture'],
   noteTemplates: ['list', 'save', 'remove'],
-  characters: ['list', 'save', 'remove', 'exportFile', 'importFile'],
+  characters: ['list', 'save', 'remove', 'exportFile', 'importFile', 'readPdf'],
   npcs: ['save', 'remove', 'copyFrom', 'fromRecord'],
   scenes: ['save', 'remove', 'importImage'],
   counters: ['save', 'remove', 'move'],

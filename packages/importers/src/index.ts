@@ -36,3 +36,4 @@ export {
   type RecordStreamHandlers,
 } from './xml/recordStream';
 export type { XmlNode } from './xml/tree';
+export * from './pdfSheet/readPdfSheet';
