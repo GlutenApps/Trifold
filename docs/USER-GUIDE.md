@@ -228,7 +228,7 @@ A player can run Trifold too. Your characters live in your own Library, and at t
 
 - **External character**: your sheet lives in another app. Enter the numbers the table needs (class and level, HP, AC, initiative, speed, passives, saves) and a link to your sheet, which opens as a web tab.
 - **Trifold character**: your sheet lives here, with every number worked out from your abilities, proficiencies and gear. Start it one of three ways:
-  - **Guided builder**: pick a class, background and species, then ability scores (standard array, point buy or rolled), equipment and spells, from the bundled 2024 SRD. **Include legacy (2014) backgrounds and species** adds the older ones. Nothing is saved until **Finish**.
+  - **Guided builder**: pick a class, background and species, then ability scores (standard array, point buy or rolled), equipment and spells, from the bundled 2024 SRD. **Include legacy (2014) backgrounds and species** adds the older ones. Set **Rules** to **Legacy rules (2014)** for a character under the 2014 rules instead: race and subrace with their increases, a background without one, equipment line by line, and spells known or prepared. Nothing is saved until **Finish**.
   - **Blank sheet**: fill it in yourself.
   - **Import from PDF**: pick a character sheet PDF exported from another app (the official 2014 and 2024 sheets and the usual exports read best). Trifold reads its fields on your computer and shows you the sheet before **Create character**. A printed or scanned PDF has nothing to read; export a fillable one instead.
 
