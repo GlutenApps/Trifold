@@ -14,8 +14,14 @@ import type {
   ServerMessage,
   TablePeekResult,
 } from '@trifold/api';
-import { JoinedCampaignId, type JoinedCampaign, type Note, type PinnedRoll } from '@trifold/schema';
-import { tableUrl, whoMustUpdate } from '@trifold/rules';
+import {
+  JoinedCampaignId,
+  type JoinedCampaign,
+  type Note,
+  type PinnedRoll,
+  type PlayerSheet,
+} from '@trifold/schema';
+import { fitSheetShare, tableUrl, whoMustUpdate } from '@trifold/rules';
 import type { LibrarySession } from '../library/session';
 import { errorMessage, type Logger } from '../log';
 import type { FoundTable } from '../table/mdns';
@@ -43,7 +49,7 @@ import { readPlayerPack, type PlayerPackManifest } from '../table/playerPack';
 export interface JoinedServiceOptions {
   session: LibrarySession;
   logger: Logger;
-  /** Player mode's feature flag. Off, nothing here searches or connects. */
+  /** Off (in tests), nothing here searches or connects. */
   enabled: boolean;
   /** The list of tables changed while Join a campaign is searching. */
   onTables(tables: FoundTableSummary[]): void;
@@ -64,6 +70,13 @@ export interface JoinedServiceOptions {
    * PC the player holds; null when the character is gone.
    */
   characterOffer?(characterId: string): Promise<SheetOffer | null>;
+  /**
+   * One of the Library's characters as its sheet shows it (ADR 0078), shared with the GM to read
+   * on the PC card the player holds; null when the character is gone.
+   */
+  characterSheet?(characterId: string): Promise<PlayerSheet | null>;
+  /** How long after a change the sheet is shared; tests shorten it. */
+  shareDelayMs?: number;
   /** Tests replace the search, the socket and the fetches. */
   discovery?: (
     onChange: (tables: FoundTable[]) => void,
@@ -170,7 +183,13 @@ interface OpenCampaign {
   /** The PC this connection holds, and the update sent for it and not answered yet. */
   offerPc: string | null;
   offered: string | null;
+  /** The last sheet shared on this connection (ADR 0078), and the share waiting to go. */
+  shared: string | null;
+  shareTimer: ReturnType<typeof setTimeout> | null;
 }
+
+/** A sheet is shared this long after its last change, so one being edited goes once. */
+const SHARE_DELAY_MS = 1500;
 
 export class JoinedService {
   private readonly discovery: Pick<TableDiscovery, 'start' | 'stop' | 'list'>;
@@ -366,7 +385,46 @@ export class JoinedService {
   /** A character of the Library changed (ADR 0071): if it is the one linked, offer its numbers. */
   characterChanged(characterId: string): void {
     const current = this.current;
-    if (current && current.characterId === characterId) void this.offerSheet(current);
+    if (current && current.characterId === characterId) {
+      void this.offerSheet(current);
+      this.queueShare(current);
+    }
+  }
+
+  /**
+   * Shares the linked character's sheet for the PC held (ADR 0078), a moment after the last
+   * change; when the player unlinks it, takes it back.
+   */
+  private queueShare(current: OpenCampaign): void {
+    if (current.shareTimer) clearTimeout(current.shareTimer);
+    current.shareTimer = setTimeout(() => {
+      current.shareTimer = null;
+      void this.shareSheet(current);
+    }, this.opts.shareDelayMs ?? SHARE_DELAY_MS);
+  }
+
+  private async shareSheet(current: OpenCampaign): Promise<void> {
+    const pcId = current.offerPc;
+    const characterId = current.characterId;
+    if (this.current !== current || current.link !== 'open' || !pcId) return;
+    if (!this.opts.characterSheet) return;
+    const whole = characterId
+      ? await this.opts.characterSheet(characterId).catch(() => null)
+      : null;
+    if (this.current !== current || current.offerPc !== pcId) return;
+    if (current.characterId !== characterId) return;
+    const character = whole ? fitSheetShare(whole) : null;
+    if (whole && !character) {
+      this.opts.logger.warn(`joined: the sheet for pc ${pcId} is too large to share`);
+      return;
+    }
+    // Nothing shared on this connection and nothing to share: nothing to take back either.
+    if (!character && current.shared === null) return;
+    const key = JSON.stringify({ pcId, character });
+    if (key === current.shared) return;
+    current.shared = key;
+    current.client?.send({ type: 'sheetShare', creatureId: pcId, character });
+    this.opts.logger.info(`joined: ${character ? 'shared' : 'took back'} the sheet for pc ${pcId}`);
   }
 
   /**
@@ -399,6 +457,7 @@ export class JoinedService {
       current.characterId = characterId;
       current.offered = null;
       void this.offerSheet(current);
+      this.queueShare(current);
     }
     return summarize(next);
   }
@@ -532,6 +591,8 @@ export class JoinedService {
       sheetAnswered: joined.sheetAnswered,
       offerPc: null,
       offered: null,
+      shared: null,
+      shareTimer: null,
     };
     // What the campaign's GM shared last time is here before the table is found.
     this.sharedSync = this.sharedSync
@@ -578,6 +639,7 @@ export class JoinedService {
     const current = this.current;
     if (!current || current.campaignId !== campaignId) return;
     this.current = null;
+    if (current.shareTimer) clearTimeout(current.shareTimer);
     current.client?.stop();
     this.flushView();
     this.syncDiscovery();
@@ -658,7 +720,9 @@ export class JoinedService {
           if (pc !== current.offerPc) {
             current.offerPc = pc;
             current.offered = null;
+            current.shared = null;
             void this.offerSheet(current);
+            this.queueShare(current);
           }
         }
         if (message.type === 'sheetAnswer' && current.offered) {
@@ -694,6 +758,9 @@ export class JoinedService {
     if (link !== 'open') {
       current.offerPc = null;
       current.offered = null;
+      current.shared = null;
+      if (current.shareTimer) clearTimeout(current.shareTimer);
+      current.shareTimer = null;
     }
     this.opts.onLink?.({
       campaignId: current.campaignId,

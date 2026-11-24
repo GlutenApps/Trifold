@@ -19,6 +19,7 @@ import type {
   NPC,
   PCCard,
   PinnedRoll,
+  PlayerSheet,
   Session,
   Playlist,
   RecordKind,
@@ -1003,6 +1004,16 @@ export interface TableSheetEvent {
   requestId?: string;
 }
 
+/**
+ * A player's sheet for the PC card they hold (ADR 0078), for the console to keep on the card;
+ * null when the player unlinked it.
+ */
+export interface TableSheetShareEvent {
+  deviceLabel: string;
+  pcId: string;
+  character: PlayerSheet | null;
+}
+
 export interface TrifoldApi {
   app: {
     getInfo(): Promise<AppInfo>;
@@ -1880,6 +1891,8 @@ export interface TrifoldEvents {
   tableSummon: TableSummonEvent;
   /** A sheet update to write to a PC card (ADR 0071). */
   tableSheet: TableSheetEvent;
+  /** A player's sheet to keep on a PC card, to read (ADR 0078). */
+  tableSheetShare: TableSheetShareEvent;
   /** The tables found on the local network, while Join a campaign is searching. */
   joinedTables: FoundTableSummary[];
   /** The open joined campaign's link to its table changed. */
@@ -1914,6 +1927,7 @@ export const EVENT_CHANNELS: { [E in keyof TrifoldEvents]: string } = {
   tableToken: 'trifold:event:table-token',
   tableSummon: 'trifold:event:table-summon',
   tableSheet: 'trifold:event:table-sheet',
+  tableSheetShare: 'trifold:event:table-sheet-share',
   joinedTables: 'trifold:event:joined-tables',
   joinedLink: 'trifold:event:joined-link',
   joinedMessage: 'trifold:event:joined-message',

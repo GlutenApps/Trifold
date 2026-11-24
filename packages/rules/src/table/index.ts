@@ -8,3 +8,4 @@ export * from './summons';
 export * from './rolls';
 export * from './statBlock';
 export * from './version';
+export * from './sheetShare';

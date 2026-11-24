@@ -8,7 +8,9 @@ import { useMovePlan } from '../../../playerUi/useMovePlan';
 import { rulerLabel } from '../presenter/ruler';
 import { tableNumbers } from '@trifold/rules';
 import { ChangeAddress } from './ChangeAddress';
+import { useState } from 'react';
 import { useLinkedCharacter } from './CharacterLink';
+import { SheetSetup } from './SheetSetup';
 import { creatureKeyOf, lastSeenText, linkSentence, linkText, usePlayerTable } from './PlayerTable';
 import '../../../playerUi/web.css';
 
@@ -63,22 +65,60 @@ export function TablePage() {
       ) : view.mine.length === 0 ? (
         <>
           <Picker view={view} conn={conn} deviceName={campaign.displayName} />
-          {!conn.waiting && <AskForNewPc conn={conn} label={campaign.displayName} />}
+          {!conn.waiting && <BringNewCharacter conn={conn} label={campaign.displayName} />}
         </>
       ) : (
-        <Table view={view} conn={conn} />
+        <>
+          <SetUpSheet campaignId={campaign.campaignId} view={view} />
+          <Table view={view} conn={conn} />
+        </>
       )}
     </div>
   );
 }
 
+/** Whether the player said Not now to setting up a sheet in this campaign, this session. */
+const skipKey = (campaignId: string) => `trifold.sheetSetupSkipped.${campaignId}`;
+function skippedSetup(campaignId: string): boolean {
+  try {
+    return sessionStorage.getItem(skipKey(campaignId)) === '1';
+  } catch {
+    return false;
+  }
+}
+
 /**
- * New PC from player sheet (ADR 0072): holding nothing, a player whose character is linked here
- * asks the GM to add it as a new PC. The GM makes the card from its numbers and hands it over.
+ * Holding a PC with no sheet linked (ADR 0078): the player is asked for one above the map, until
+ * they link one or say Not now. My characters keeps the same choices for later.
  */
-function AskForNewPc({ conn, label }: { conn: Connection; label: string }) {
-  const { character } = useLinkedCharacter();
-  if (!character) return null;
+function SetUpSheet({ campaignId, view }: { campaignId: string; view: ClientView }) {
+  const { characterId, loaded } = useLinkedCharacter();
+  const [skipped, setSkipped] = useState(() => skippedSetup(campaignId));
+  const pc = view.mine.find((c) => c.kind === 'pc');
+  if (!pc || !loaded || characterId || skipped) return null;
+  return (
+    <SheetSetup
+      pcName={pc.name}
+      onNotNow={() => {
+        try {
+          sessionStorage.setItem(skipKey(campaignId), '1');
+        } catch {
+          // Not remembered: it is asked again next time the tab opens.
+        }
+        setSkipped(true);
+      }}
+    />
+  );
+}
+
+/**
+ * Holding nothing (ADR 0072, ADR 0078): a player bringing their own character links or makes it,
+ * then asks the GM to add it as a new PC. The GM makes the card from its numbers and hands it
+ * over.
+ */
+function BringNewCharacter({ conn, label }: { conn: Connection; label: string }) {
+  const { character, loaded } = useLinkedCharacter();
+  if (!character) return loaded ? <SheetSetup /> : null;
   return (
     <div className="row ask-new-pc" data-testid="ask-new-pc">
       <span className="muted small grow">Not on the list?</span>

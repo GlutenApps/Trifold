@@ -3389,3 +3389,30 @@ button.chrome-btn:disabled:not(.primary, .tally) {
 .sheet-slots .num-field {
   width: 4em;
 }
+
+/* Setting up a character at the table (ADR 0078): above the map, under the picker, or on the
+   Sheets tab's empty page. It never takes the map's height for good: it scrolls on its own. */
+.sheet-setup {
+  flex: none;
+  max-height: 60%;
+  overflow-y: auto;
+  margin: 8px;
+}
+
+.sheet-setup h3 {
+  margin: 0 0 4px;
+}
+
+.sheet-setup-choices {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sheets-empty .sheet-setup {
+  max-height: none;
+}
+
+.player-sheet-view .sheet-view {
+  margin-top: 8px;
+}

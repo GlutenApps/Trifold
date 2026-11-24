@@ -124,13 +124,13 @@ function mount(node: React.ReactNode, v?: ClientView) {
 }
 
 describe('Sheets (ADR 0069)', () => {
-  it('points to My characters when none is linked, and shows one once it is', async () => {
+  it('offers the setup choices when none is linked (ADR 0078), and shows one once it is', async () => {
     mount(<SheetsPage />);
-    expect(await screen.findByText(/No character is linked/)).toHaveTextContent(
-      'under My characters',
-    );
-    // Linking lives in My characters, not here too.
-    expect(screen.queryByRole('combobox', { name: 'Link a character' })).toBeNull();
+    const setup = await screen.findByTestId('sheet-setup');
+    expect(within(setup).getByRole('button', { name: 'Build one' })).toBeInTheDocument();
+    expect(
+      within(setup).getByRole('combobox', { name: 'Use a character from your Library' }),
+    ).toBeInTheDocument();
     await act(() => useJoinedStore.getState().linkCharacter('K1'));
     expect(window.trifold.joined.linkCharacter).toHaveBeenCalledWith('c1', 'K1');
     expect(await screen.findByTestId('sheet-view')).toHaveTextContent('Bren');
@@ -329,13 +329,72 @@ describe('New PC from player sheet, the player’s side (ADR 0072)', () => {
     expect(sent).not.toHaveProperty('creatureId');
   });
 
-  it('offers nothing without a linked character', async () => {
+  it('without a linked character, offers to bring one instead (ADR 0078)', async () => {
+    const user = userEvent.setup();
     mount(<TablePage />, {
       ...view([]),
       picker: [{ kind: 'pc', id: 'p1', name: 'Brannoc', inUse: false, holderOnline: false }],
     });
     await screen.findByRole('heading', { name: /Pick your character/ });
     expect(screen.queryByTestId('ask-new-pc')).toBeNull();
+    const bring = await screen.findByRole('region', { name: 'Bringing a new character?' });
+    // Nothing is held, so there is no PC to name a character after, and no Not now.
+    expect(within(bring).queryByRole('button', { name: /^Use / })).toBeNull();
+    expect(within(bring).queryByRole('button', { name: 'Not now' })).toBeNull();
+    await user.selectOptions(
+      within(bring).getByRole('combobox', { name: 'Use a character from your Library' }),
+      'K1',
+    );
+    expect(window.trifold.joined.linkCharacter).toHaveBeenCalledWith('c1', 'K1');
+  });
+});
+
+describe('Setting up a sheet at the table (ADR 0078)', () => {
+  it('asks for a sheet above the map while the PC held has none, and links one named like it', async () => {
+    vi.mocked(window.trifold.characters.list).mockResolvedValue([
+      bren,
+      { ...bren, id: 'K2', name: 'Brannoc' },
+    ]);
+    const user = userEvent.setup();
+    mount(<TablePage />, view([creature()]));
+    const setup = await screen.findByRole('region', { name: 'Your sheet for Brannoc' });
+    await user.click(within(setup).getByRole('button', { name: 'Use Brannoc' }));
+    expect(window.trifold.joined.linkCharacter).toHaveBeenCalledWith('c1', 'K2');
+  });
+
+  it('builds one with the PC’s name, or imports one, from the same card', async () => {
+    const user = userEvent.setup();
+    mount(<TablePage />, view([creature()]));
+    const setup = await screen.findByRole('region', { name: 'Your sheet for Brannoc' });
+    // No character is named like the PC: Build one leads.
+    expect(within(setup).getByRole('button', { name: 'Build one' })).toHaveClass('primary');
+    await user.click(within(setup).getByRole('button', { name: 'Build one' }));
+    const panel = screen.getByTestId('new-character');
+    expect(within(panel).getByRole('textbox', { name: 'Character name' })).toHaveValue('Brannoc');
+    expect(within(panel).getByRole('radio', { name: /Guided builder/ })).toBeChecked();
+    await user.keyboard('{Escape}');
+    await user.click(
+      within(screen.getByTestId('sheet-setup')).getByRole('button', { name: 'Import from PDF' }),
+    );
+    expect(
+      within(screen.getByTestId('new-character')).getByRole('radio', { name: /Import from PDF/ }),
+    ).toBeChecked();
+  });
+
+  it('goes for the session on Not now, and never shows once a sheet is linked', async () => {
+    const user = userEvent.setup();
+    mount(<TablePage />, view([creature()]));
+    const setup = await screen.findByRole('region', { name: 'Your sheet for Brannoc' });
+    await user.click(within(setup).getByRole('button', { name: 'Not now' }));
+    expect(screen.queryByTestId('sheet-setup')).toBeNull();
+    sessionStorage.clear();
+  });
+
+  it('is not asked when a sheet is linked', async () => {
+    useJoinedStore.setState({ current: campaign('K1') });
+    mount(<TablePage />, view([creature()]));
+    await waitFor(() => expect(useCharacterStore.getState().loaded).toBe(true));
+    expect(screen.queryByTestId('sheet-setup')).toBeNull();
   });
 });
 

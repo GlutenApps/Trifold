@@ -1,4 +1,4 @@
-import type { SheetOffer, TableSheetEvent } from '@trifold/api';
+import type { SheetOffer, TableSheetEvent, TableSheetShareEvent } from '@trifold/api';
 import type { Ability, PCCard } from '@trifold/schema';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
@@ -89,4 +89,27 @@ export async function applyTableSheet(event: TableSheetEvent): Promise<void> {
     if (fighter.hp.max !== next.maxHp) combat.setMaxHp(fighter.id, next.maxHp);
     if (fighter.ac !== next.ac) combat.setAc(fighter.id, next.ac);
   });
+}
+
+/**
+ * A player's sheet shared for the PC card they hold (ADR 0078): kept on the card for the DM to
+ * read, changing nothing else on it. Null takes it off, when the player unlinked it.
+ */
+export async function applyTableSheetShare(event: TableSheetShareEvent): Promise<void> {
+  const campaign = useCampaignStore.getState();
+  const pc = campaign.current?.pcs.find((p) => p.id === event.pcId);
+  if (!pc) return;
+  const { playerSheet: _old, ...rest } = pc;
+  await campaign.savePc(
+    event.character
+      ? {
+          ...rest,
+          playerSheet: {
+            character: event.character,
+            from: event.deviceLabel.slice(0, 80),
+            sharedAt: new Date().toISOString(),
+          },
+        }
+      : rest,
+  );
 }

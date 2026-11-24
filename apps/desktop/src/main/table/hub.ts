@@ -24,6 +24,7 @@ import {
   controller,
   summonProblem,
   rollForTable,
+  SHEET_SHARE_BYTES,
   TABLE_PROTOCOL,
   TABLE_ROLL_MAX_LENGTH,
   type TableRoll,
@@ -47,13 +48,14 @@ import type {
   TableIntent,
   TableIntentEvent,
   TableSheetEvent,
+  TableSheetShareEvent,
   TableTokenEvent,
   SheetOffer,
   TableReleaseTarget,
   TableSnapshot,
   TableStatus,
 } from '@trifold/api';
-import { SheetUrl, TableNumbers, type PlayerDevice } from '@trifold/schema';
+import { PlayerSheet, SheetUrl, TableNumbers, type PlayerDevice } from '@trifold/schema';
 import type { AppConfigStore } from '../appConfig';
 import type { IconResources } from '../icons';
 import type { LibrarySession } from '../library/session';
@@ -155,7 +157,18 @@ const ClientMessageSchema: z.ZodType<ClientMessage> = z.discriminatedUnion('type
       sheetUrl: SheetUrl.optional(),
     }),
   }),
+  // A sheet to read on the PC card (ADR 0078): the only message allowed past MESSAGE_BYTES.
+  z.object({
+    type: z.literal('sheetShare'),
+    creatureId: z.string().min(1).max(64),
+    character: PlayerSheet.nullable(),
+  }),
 ]);
+
+/** The most a message may hold (PLAYER-CONNECTOR.md), but for a shared sheet. */
+const MESSAGE_BYTES = 16 * 1024;
+/** A device shares its sheet at most this often; one sent sooner is dropped. */
+const SHEET_SHARE_MS = 1000;
 
 /** More than this many messages in a second from one browser are dropped (previews included). */
 const MESSAGES_PER_SECOND = 30;
@@ -191,6 +204,8 @@ interface Client {
   last: string;
   /** Messages in the current second, for the rate limit. */
   window: { start: number; count: number };
+  /** When this browser last shared a sheet (ADR 0078), for SHEET_SHARE_MS. */
+  sheetSharedAt: number;
 }
 
 /** A sheet update waiting for the DM (ADR 0071), held in memory only. */
@@ -241,6 +256,8 @@ export interface TableHubOptions {
   onRoll?(roll: TableRoll): void;
   /** A sheet update accepted, by the DM or automatically, for the console to write (ADR 0071). */
   onSheet?(event: TableSheetEvent): void;
+  /** A player's sheet for the PC card they hold, for the console to keep (ADR 0078). */
+  onSheetShare?(event: TableSheetShareEvent): void;
   /**
    * Reads what the open campaign shares with its players (ADR 0060); `heldNpcIds` are the NPCs
    * some device holds now. Absent, nothing is shared.
@@ -283,6 +300,8 @@ export class TableHub {
   private newPcs = new Map<string, SheetOfferRequest>();
   /** The DM's last answer for each PC this session, so a resent offer is answered at once. */
   private sheetAnswers = new Map<string, { key: string; accepted: boolean }>();
+  /** The last sheet shared for each PC this session (ADR 0078), so a repeat is not written. */
+  private sheetShares = new Map<string, string>();
   private pinTries = new Map<string, PinTries>();
   /** Switch character's undo: what each device released, until when. */
   private grace = new Map<string, { keys: Set<string>; until: number }>();
@@ -473,7 +492,7 @@ export class TableHub {
         store,
         await campaigns.campaignDir(campaignId, 'players.json'),
       );
-      this.wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+      this.wss = new WebSocketServer({ noServer: true, maxPayload: SHEET_SHARE_BYTES });
       this.addresses = (this.opts.addresses ?? lanAddresses)();
       const saved = config.get().tableServerPort;
       const bound = await listenOnFirstFreePort(
@@ -563,6 +582,7 @@ export class TableHub {
     this.approvals = [];
     this.sheetOffers = [];
     this.sheetAnswers.clear();
+    this.sheetShares.clear();
     this.newPcs.clear();
     this.pinTries.clear();
     this.grace.clear();
@@ -753,6 +773,7 @@ export class TableHub {
       alive: true,
       last: '',
       window: { start: Date.now(), count: 0 },
+      sheetSharedAt: 0,
     };
     this.clients.add(client);
     this.anyConnected = true;
@@ -811,6 +832,13 @@ export class TableHub {
     } catch {
       return this.reject(client, 'bad message');
     }
+    // Only a shared sheet may be larger than an ordinary message (ADR 0078).
+    if (
+      Buffer.byteLength(text) > MESSAGE_BYTES &&
+      (raw as { type?: unknown } | null)?.type !== 'sheetShare'
+    ) {
+      return this.reject(client, 'bad message');
+    }
     const parsed = ClientMessageSchema.safeParse(raw);
     if (!parsed.success) return this.reject(client, 'bad message');
     const msg = parsed.data;
@@ -866,7 +894,37 @@ export class TableHub {
         return msg.creatureId
           ? this.sheetOffer(client, msg.creatureId, msg.offer)
           : this.newPcOffer(client, msg.offer, msg.label ?? '');
+      case 'sheetShare':
+        return this.sheetShare(client, msg.creatureId, msg.character);
     }
+  }
+
+  /**
+   * A player's sheet for the PC card their device holds (ADR 0078): kept on the card to read,
+   * changing nothing on it, so it never waits for the DM. Only from the device holding that PC,
+   * at most once a second, and only when it differs from the last one shared for that PC.
+   */
+  private sheetShare(client: Client, pcId: string, character: PlayerSheet | null): void {
+    const players = this.players!;
+    if (!this.snapshot?.creatures.some((c) => c.kind === 'pc' && c.id === pcId)) return;
+    const held = players.claimOf('pc', pcId);
+    if (!client.deviceId || !held || held.deviceId !== client.deviceId) {
+      return this.reject(client, 'That character isn’t yours on this device.');
+    }
+    const now = Date.now();
+    if (now - client.sheetSharedAt < SHEET_SHARE_MS) return;
+    client.sheetSharedAt = now;
+    const key = JSON.stringify(character);
+    if (this.sheetShares.get(pcId) === key) return;
+    this.sheetShares.set(pcId, key);
+    this.opts.onSheetShare?.({
+      deviceLabel: this.device(client)?.label || 'A player',
+      pcId,
+      character,
+    });
+    this.opts.logger.info(
+      `table server: sheet ${character ? 'shared' : 'unshared'} for pc ${pcId}`,
+    );
   }
 
   // ---------- sheet updates (ADR 0071) ----------

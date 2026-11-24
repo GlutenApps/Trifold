@@ -8,7 +8,7 @@ import {
 } from '@trifold/api';
 import { errorMessage } from '@trifold/schema';
 import { applyTableIntent } from '../features/players/applyIntent';
-import { applyTableSheet } from '../features/players/sheetOffer';
+import { applyTableSheet, applyTableSheetShare } from '../features/players/sheetOffer';
 import { fogMapJpeg } from '../features/players/fogImage';
 import { handleSummonEvent, installSummonUpkeep } from '../features/players/summons';
 import { tableSnapshotFrom } from '../features/players/snapshot';
@@ -199,6 +199,8 @@ export function installTableSync(): () => void {
     window.trifold.on('tableIntent', (event) => applyTableIntent(event)),
     // A sheet update the DM accepted, or that was accepted automatically (ADR 0071).
     window.trifold.on('tableSheet', (event) => void applyTableSheet(event)),
+    // A player's sheet to read on their PC card (ADR 0078).
+    window.trifold.on('tableSheetShare', (event) => void applyTableSheetShare(event)),
     // A roll main made for a player (ADR 0059): into the DM's roll log, as it is into theirs.
     window.trifold.on('tableRoll', (roll) => logTableRoll(roll)),
     // Summons: placed, dismissed or kept as the player asks; upkeep runs here too.

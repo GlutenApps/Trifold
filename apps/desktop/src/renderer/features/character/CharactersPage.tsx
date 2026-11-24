@@ -27,6 +27,8 @@ export function NewCharacterPanel({
   onGuided,
   onClose,
   forJoined = false,
+  initialName = '',
+  initialStart = 'guided',
 }: {
   onCreated?(character: Character): void;
   /** The guided builder was chosen and opened (docs/BUILDER.md). */
@@ -34,13 +36,16 @@ export function NewCharacterPanel({
   onClose(): void;
   /** Made from a joined campaign: the builder's result is linked to it. */
   forJoined?: boolean;
+  /** The name to start with: the PC the player holds, when they set up its sheet (ADR 0078). */
+  initialName?: string;
+  initialStart?: 'guided' | 'blank' | 'pdf';
 }) {
   const create = useCharacterStore((s) => s.create);
   const startBuilding = useCharacterStore((s) => s.startBuilding);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [kind, setKind] = useState<Character['kind']>('trifold');
   /** How a Trifold character starts (docs/BUILDER.md): guided builder, blank sheet or a PDF. */
-  const [start, setStart] = useState<'guided' | 'blank' | 'pdf'>('guided');
+  const [start, setStart] = useState<'guided' | 'blank' | 'pdf'>(initialStart);
   /** The guided builder's rules (docs/BUILDER.md): 2024, or 2014 from the SRD 5.1. */
   const [rules, setRules] = useState<Character['edition']>('2024');
   const [busy, setBusy] = useState(false);

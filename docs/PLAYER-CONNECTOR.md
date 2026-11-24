@@ -39,7 +39,7 @@ is a request the console applies, and the DM can see, change, release or take ba
   is compared in constant time.
 - **Every message is checked.** Client messages are parsed with Zod schemas in `hub.ts`; each
   intent is checked for ownership, field, range, locks and settings before it reaches the console.
-  Messages are capped at 16 KiB and 30 a second per browser.
+  Messages are capped at 16 KiB and 30 a second per browser; a shared sheet (`sheetShare`, ADR 0078) may be up to 256 KiB, at most one a second.
 - **Releasing, reclaiming or disconnecting never changes creature data.**
 
 ## Server and addresses
@@ -166,6 +166,7 @@ a connection dot.
 | `summon {…}`, `dismiss {tokenId}`, `keepSummon {tokenId}` | Summoning |
 | `roll {expression, for?, initiative?}` | A Table roll from a player's Trifold: the DM's Trifold makes it (ADR 0059). From a sheet (ADR 0075), `for` names it ("Stealth check"), and `initiative: {creatureKind, creatureId}` enters its total as that creature's initiative, checked like an `initiative` intent |
 | `sheetOffer {creatureId?, offer, label?}` | A player's Trifold offers its linked character's table numbers for the PC it holds (ADR 0071): checked like an intent, then held for the DM or accepted automatically. Without `creatureId`, a device holding nothing asks for a new PC from the sheet, which always waits for the DM (ADR 0072) |
+| `sheetShare {creatureId, character}` | A player's Trifold shares its linked character, without its private notes or builder choices, for the PC it holds (ADR 0078); null when unlinked. Only from the device holding that PC; kept on the PC card for the DM to read, never waiting for the DM and changing nothing else |
 
 | Server sends | Meaning |
 | --- | --- |
