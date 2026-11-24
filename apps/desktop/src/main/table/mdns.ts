@@ -12,7 +12,7 @@ export interface MdnsResponse {
   answers: Answer[];
   additionals?: Answer[];
 }
-import { isPrivateAddress } from '@trifold/rules';
+import { cleanAppVersion, isPrivateAddress } from '@trifold/rules';
 import type { LanAddress } from './listen';
 
 /**
@@ -137,6 +137,9 @@ export interface TableService {
   port: number;
   campaignId: string;
   campaignName: string;
+  /** The table's protocol and app version (ADR 0076), so a search can say who must update. */
+  protocol?: number;
+  appVersion?: string;
 }
 
 /** `trifold.local` → `trifold._trifold._tcp.local`: one instance per host name, so it is unique. */
@@ -173,6 +176,8 @@ function serviceRecords(
           `v=${TABLE_SERVICE_VERSION}`,
           txtValue('id', service.campaignId),
           txtValue('name', service.campaignName),
+          ...(service.protocol !== undefined ? [`p=${service.protocol}`] : []),
+          ...(service.appVersion ? [txtValue('app', service.appVersion)] : []),
         ],
       },
       ...v4.map((a): Answer => ({ type: 'A', name, ttl, flush, data: a.host })),
@@ -233,6 +238,9 @@ export interface FoundTable {
   addresses: string[];
   campaignId: string;
   campaignName: string;
+  /** Its protocol and app version (ADR 0076); absent from tables older than the check. */
+  protocol?: number;
+  appVersion?: string;
 }
 
 const text = (part: string | Buffer) => (typeof part === 'string' ? part : part.toString('utf8'));
@@ -286,6 +294,8 @@ export function parseTableServices(packet: Pick<Packet, 'answers' | 'additionals
       addresses,
       campaignId,
       campaignName: fields.get('name') ?? '',
+      ...(/^\d{1,4}$/.test(fields.get('p') ?? '') ? { protocol: Number(fields.get('p')) } : {}),
+      ...(cleanAppVersion(fields.get('app')) ? { appVersion: fields.get('app')! } : {}),
     });
   }
   return { found, gone };

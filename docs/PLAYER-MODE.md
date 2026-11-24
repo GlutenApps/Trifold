@@ -513,7 +513,7 @@ What is left of Parts 1 to 3, and what a player needs beyond them, in order. Ite
 | 6 | *Added:* tracking during play on the Trifold sheet: spell slots used, limited-use features, hit dice, death saves and Heroic Inspiration, with Short rest and Long rest for the sheet's own resources (HP stays the table's) | M–L | Built (ADR 0074); death saves stay with the table |
 | 7 | *Added:* rolling from the sheet: a save, skill, attack, spell attack or initiative, following the Table and Private switch; an initiative roll fills the initiative box | M | Built (ADR 0075) |
 | **D** | **Ready for players who are not the GM** | | |
-| 8 | *Added:* a version check between the GM's and the player's Trifold, with a plain message to update on a mismatch | S–M | |
+| 8 | *Added:* a version check between the GM's and the player's Trifold, with a plain message to update on a mismatch | S–M | Built (ADR 0076) |
 | 9 | *Added:* a first-run choice for a new Library (running games or playing); the playing path leads with Join a campaign and Characters | S–M | |
 | 10 | The user guide's player section and the docs pass in phase 9 | M | |
 | **E** | **Acceptance and release** | | |

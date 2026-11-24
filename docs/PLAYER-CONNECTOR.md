@@ -88,7 +88,7 @@ Beside the name, the same responder advertises the table as a DNS-SD service,
 `_trifold._tcp.local`, so a player's Trifold can list the tables on the network and find its own
 again after an address or port change (`docs/PLAYER-MODE.md`, Table discovery). A PTR record
 names the instance (`trifold._trifold._tcp.local`, one per local name); an SRV record gives the
-port and the local name; a TXT record gives a version, the campaign id and the campaign name;
+port and the local name; a TXT record gives a version, the campaign id and the campaign name, and the table's protocol (`p`) and app version (`app`, ADR 0076);
 the addresses ride along. It is announced on start, when the addresses change and when the
 campaign's name is first known or changes, and withdrawn with a goodbye on stop. It tells the
 network nothing the server does not already send to anything that connects.
@@ -169,7 +169,7 @@ a connection dot.
 
 | Server sends | Meaning |
 | --- | --- |
-| `campaign` | Which campaign this is, and the DM's clock (for the break timer) |
+| `campaign` | Which campaign this is, and the DM's clock (for the break timer); also the table's `protocol` and `appVersion` (ADR 0076), which a player's Trifold compares before it says anything |
 | `state` | The device's view |
 | `token` | A new device token, once, after a first claim |
 | `error {message}` | A refusal or notice, shown inline |

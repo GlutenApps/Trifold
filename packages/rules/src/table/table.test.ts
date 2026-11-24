@@ -5,6 +5,7 @@ import { hostAllowed, isPrivateAddress, portsToTry, TABLE_PORTS, tableUrl } from
 import type { Claim, TableSnapshot, TableToken } from './types';
 import { visibleTokenIds, viewFor } from './view';
 import { statBlockRecordId } from './statBlock';
+import { cleanAppVersion, TABLE_PROTOCOL, whoMustUpdate } from './version';
 
 const stats = {
   inFight: false,
@@ -287,5 +288,21 @@ describe('statBlockRecordId', () => {
     expect(statBlockRecordId('c1', { recordId: 'srd-2024:monster:wolf', key: 'wolf' })).toBe(
       'srd-2024:monster:wolf',
     );
+  });
+});
+
+describe('table protocol (ADR 0076)', () => {
+  it('says which side must update, treating a table that sends none as older', () => {
+    expect(whoMustUpdate(TABLE_PROTOCOL)).toBeNull();
+    expect(whoMustUpdate(undefined)).toBe('gm');
+    expect(whoMustUpdate(TABLE_PROTOCOL - 1)).toBe('gm');
+    expect(whoMustUpdate(TABLE_PROTOCOL + 1)).toBe('player');
+    expect(whoMustUpdate('1')).toBe('gm');
+  });
+
+  it('keeps an app version only when it is short and printable', () => {
+    expect(cleanAppVersion('0.7.0-alpha.1')).toBe('0.7.0-alpha.1');
+    expect(cleanAppVersion('<script>')).toBeUndefined();
+    expect(cleanAppVersion(7)).toBeUndefined();
   });
 });

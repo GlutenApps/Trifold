@@ -1,3 +1,5 @@
+import { useJoinedStore } from '../../stores/joinedStore';
+import { useAppStore } from '../../stores/appStore';
 import { hk } from '../../platform';
 import { useShellStore } from '../../stores/shellStore';
 import { useTableRollStore } from '../../stores/tableRollStore';
@@ -23,6 +25,8 @@ export function PlayerStrip() {
   const togglePop = useShellStore((s) => s.togglePop);
   // Whether the pool's Roll is seen by the table or only here (ADR 0059); changed in the Dice pop-up.
   const toTable = useTableRollStore((s) => s.mode === 'table' && !!s.send);
+  const tableVersion = useJoinedStore((s) => s.tableVersion);
+  const mine = useAppStore((s) => s.info?.version ?? null);
   return (
     <footer className="strip player-strip" role="contentinfo" data-testid="player-strip">
       <div className="strip-sections">
@@ -31,6 +35,16 @@ export function PlayerStrip() {
           <span className="strip-text" role="status" data-testid="player-link">
             {linkText(conn.link)}
           </span>
+          {/* The same protocol on another app version plays; a quiet note (ADR 0076). */}
+          {conn.link === 'open' && tableVersion && mine && tableVersion !== mine && (
+            <span
+              className="muted small"
+              data-testid="player-version-note"
+              title={`Your GM’s Trifold is ${tableVersion} and yours is ${mine}. You can play; update when you can.`}
+            >
+              · GM on {tableVersion}
+            </span>
+          )}
         </div>
         {round !== undefined && (
           <div className="strip-sec" data-strip="round">

@@ -46,6 +46,7 @@ describe('peekTable', () => {
       campaignId: 'c1',
       campaignName: 'Greyford',
       now: 1,
+      protocol: 1,
     });
     expect(await peekTable(endpoint, open)).toEqual({ campaignId: 'c1', campaignName: 'Greyford' });
     expect(opened[0]).toMatchObject({
@@ -56,6 +57,30 @@ describe('peekTable', () => {
     });
   });
 
+  it('says which side must update for a table on another protocol, with its version', async () => {
+    const newer = fakeOpen({
+      type: 'campaign',
+      campaignId: 'c1',
+      campaignName: 'Greyford',
+      now: 1,
+      protocol: 99,
+      appVersion: '9.0.0',
+    });
+    expect(await peekTable(endpoint, newer.open)).toEqual({
+      campaignId: 'c1',
+      campaignName: 'Greyford',
+      appVersion: '9.0.0',
+      update: 'player',
+    });
+    const older = fakeOpen({
+      type: 'campaign',
+      campaignId: 'c1',
+      campaignName: 'Greyford',
+      now: 1,
+    });
+    expect(await peekTable(endpoint, older.open)).toMatchObject({ update: 'gm' });
+  });
+
   it('is nothing when the answer is not a table’s, or nothing answers', async () => {
     expect(await peekTable(endpoint, fakeOpen('<html>').open)).toBeNull();
     expect(await peekTable(endpoint, fakeOpen({ type: 'campaign' }).open)).toBeNull();
@@ -64,7 +89,7 @@ describe('peekTable', () => {
 
   it('is nothing when a name resolved to an address outside the local network', async () => {
     const { open } = fakeOpen(
-      { type: 'campaign', campaignId: 'c1', campaignName: 'x', now: 1 },
+      { type: 'campaign', campaignId: 'c1', campaignName: 'x', now: 1, protocol: 1 },
       '203.0.113.5',
     );
     expect(await peekTable({ host: 'trifold.local', port: 80 }, open)).toBeNull();
@@ -85,6 +110,23 @@ describe('JoinedService', () => {
     addresses: [host, 'fd00::23'],
     campaignId,
     campaignName,
+    protocol: 1,
+  });
+
+  it('marks a table on another protocol, from what the search heard, with its version', async () => {
+    const svc = await service();
+    found = [{ ...table('c1', 'Greyford'), protocol: 99, appVersion: '9.0.0' }];
+    expect(await svc.startSearch()).toEqual([
+      {
+        campaignId: 'c1',
+        campaignName: 'Greyford',
+        address: '192.168.1.23:8130',
+        joined: false,
+        appVersion: '9.0.0',
+        update: 'player',
+      },
+    ]);
+    svc.stopSearch();
   });
 
   async function service(enabled = true, reply: object | null = null) {
@@ -194,6 +236,7 @@ describe('JoinedService', () => {
       campaignId: 'c9',
       campaignName: 'Typed',
       now: 1,
+      protocol: 1,
     });
     expect(await joined.peek('http://192.168.1.23:8130/')).toEqual({
       ok: true,
@@ -212,7 +255,7 @@ describe('JoinedService', () => {
   }, 15_000);
 
   it('uses the network for nothing while player mode is off', async () => {
-    const reply = { type: 'campaign', campaignId: 'c1', campaignName: 'x', now: 1 };
+    const reply = { type: 'campaign', campaignId: 'c1', campaignName: 'x', now: 1, protocol: 1 };
     const sockets = fakeOpen(reply);
     const session = { store: await LibraryStore.open(root) } as unknown as LibrarySession;
     const joined = new JoinedService({

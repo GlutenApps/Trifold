@@ -1,3 +1,4 @@
+import { useJoinedStore } from '../../stores/joinedStore';
 import { MEDIA_SCHEME, type ClientView, type ServerMessage } from '@trifold/api';
 import type { TableClient } from '../../../playerUi/connection';
 
@@ -42,7 +43,9 @@ export function createBridgeClient(campaignId: string): TableClient {
     start({ onLink, onMessage }) {
       const offs = [
         window.trifold.on('joinedLink', (event) => {
-          if (event.campaignId === campaignId) onLink(event.link);
+          if (event.campaignId !== campaignId) return;
+          useJoinedStore.setState({ tableVersion: event.tableVersion ?? null });
+          onLink(event.link);
         }),
         window.trifold.on('joinedMessage', (event) => {
           if (event.campaignId !== campaignId) return;

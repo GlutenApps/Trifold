@@ -193,6 +193,7 @@ async function main(): Promise<void> {
     logger,
     icons,
     webDir: join(app.getAppPath(), 'out', 'web'),
+    appVersion: app.getVersion(),
     onStatus: (status) => windows.sendToConsole(EVENT_CHANNELS.tableStatus, status),
     onIntent: (intent) => windows.sendToConsole(EVENT_CHANNELS.tableIntent, intent),
     onSheet: (event) => windows.sendToConsole(EVENT_CHANNELS.tableSheet, event),

@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws';
-import { isPrivateAddress, tableUrl } from '@trifold/rules';
+import { tableUrl, cleanAppVersion, isPrivateAddress, whoMustUpdate } from '@trifold/rules';
 import type { ClientMessage, ServerMessage } from '@trifold/api';
 
 /**
@@ -47,11 +47,29 @@ export function formatTableAddress({ host, port }: TableEndpoint): string {
 }
 
 /**
- * The link as the player console shows it. The first four are the phone page's; the last two
- * are a table that is up with another campaign, and an address that is not one to connect to.
+ * The link as the player console shows it. The first four are the phone page's; then a table
+ * that is up with another campaign, an address that is not one to connect to, and a table on
+ * another protocol (ADR 0076), with the side that has to update.
  */
 export type LanLink =
-  'connecting' | 'open' | 'reconnecting' | 'stopped' | 'otherCampaign' | 'refused';
+  | 'connecting'
+  | 'open'
+  | 'reconnecting'
+  | 'stopped'
+  | 'otherCampaign'
+  | 'refused'
+  | 'gmUpdate'
+  | 'playerUpdate';
+
+/** What a table says about itself on connecting. */
+export interface PeekedTable {
+  campaignId: string;
+  campaignName: string;
+  /** Its app version, when it says (ADR 0076). */
+  appVersion?: string;
+  /** The side that has to update before this Trifold can play there. */
+  update?: 'gm' | 'player';
+}
 
 /** The socket as the client uses it; tests hand in their own. */
 export interface LanSocket {
@@ -102,12 +120,12 @@ export function peekTable(
   endpoint: TableEndpoint,
   open: (url: string, origin: string) => LanSocket = openSocket,
   timeoutMs = HANDSHAKE_MS,
-): Promise<{ campaignId: string; campaignName: string } | null> {
+): Promise<PeekedTable | null> {
   return new Promise((resolve) => {
     const origin = tableUrl(endpoint.host, endpoint.port);
     const socket = open(`${origin.replace(/^http/, 'ws')}/ws`, origin);
     let done = false;
-    const finish = (answer: { campaignId: string; campaignName: string } | null) => {
+    const finish = (answer: PeekedTable | null) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
@@ -128,7 +146,14 @@ export function peekTable(
           typeof msg.campaignId === 'string' &&
           typeof msg.campaignName === 'string'
         ) {
-          finish({ campaignId: msg.campaignId, campaignName: msg.campaignName });
+          const update = whoMustUpdate(msg.protocol);
+          const appVersion = cleanAppVersion(msg.appVersion);
+          finish({
+            campaignId: msg.campaignId,
+            campaignName: msg.campaignName,
+            ...(appVersion ? { appVersion } : {}),
+            ...(update ? { update } : {}),
+          });
           return;
         }
       } catch {
@@ -151,7 +176,8 @@ export interface LanClientOptions {
   /** A new device token, to keep: the claim. */
   onToken(token: string): void;
   /** The table answered and it is this campaign's; its name as the GM has it now. */
-  onCampaign?(campaignName: string): void;
+  /** The table said which campaign it is, and its app version when it says (ADR 0076). */
+  onCampaign?(campaignName: string, appVersion?: string): void;
   open?: (url: string, origin: string) => LanSocket;
   /** Tests replace the timers' clock. */
   setTimer?: (run: () => void, ms: number) => unknown;
@@ -165,7 +191,7 @@ export class LanClient {
   private attempt = 0;
   private token: string | undefined;
   /** The table said it is closed, or is up with another campaign: ask again slowly. */
-  private waiting: 'stopped' | 'otherCampaign' | null = null;
+  private waiting: 'stopped' | 'otherCampaign' | 'gmUpdate' | 'playerUpdate' | null = null;
   private ready = false;
 
   constructor(private readonly opts: LanClientOptions) {
@@ -228,13 +254,21 @@ export class LanClient {
           socket.close();
           return;
         }
+        // Another protocol (ADR 0076): say nothing to it either, and say who has to update.
+        const update = whoMustUpdate(msg.protocol);
+        if (update) {
+          this.waiting = update === 'gm' ? 'gmUpdate' : 'playerUpdate';
+          this.opts.onCampaign?.(msg.campaignName, cleanAppVersion(msg.appVersion));
+          socket.close();
+          return;
+        }
         this.waiting = null;
         this.ready = true;
         socket.send(
           JSON.stringify({ type: 'hello', ...(this.token ? { token: this.token } : {}) }),
         );
         this.opts.onLink('open');
-        this.opts.onCampaign?.(msg.campaignName);
+        this.opts.onCampaign?.(msg.campaignName, cleanAppVersion(msg.appVersion));
       } else if (!this.ready) {
         return;
       } else if (msg.type === 'token') {
@@ -253,7 +287,13 @@ export class LanClient {
       if (!this.started) return;
       this.opts.onLink(this.waiting ?? 'reconnecting');
       this.attempt += 1;
-      const delay = this.waiting ? 5000 : Math.min(5000, 500 * 2 ** Math.min(this.attempt, 4));
+      // An update takes a while: look again less often until one side has it.
+      const delay =
+        this.waiting === 'gmUpdate' || this.waiting === 'playerUpdate'
+          ? 30_000
+          : this.waiting
+            ? 5000
+            : Math.min(5000, 500 * 2 ** Math.min(this.attempt, 4));
       this.timer = (this.opts.setTimer ?? setTimeout)(() => this.connect(), delay);
     });
   }

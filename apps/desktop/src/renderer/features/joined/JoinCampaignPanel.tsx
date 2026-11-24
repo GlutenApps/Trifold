@@ -1,3 +1,4 @@
+import { updateText } from './PlayerTable';
 import { useEffect, useState } from 'react';
 import type { FoundTableSummary, PlayerPackInfo } from '@trifold/api';
 import { useJoinedStore } from '../../stores/joinedStore';
@@ -58,7 +59,9 @@ export function JoinCampaignPanel({ onClose }: { onClose: () => void }) {
     setAsking(true);
     const answer = await peek(address);
     setAsking(false);
-    if (answer.ok) choose(answer.table);
+    if (answer.ok && answer.table.update) {
+      setProblem(updateText(answer.table.update, answer.table.appVersion));
+    } else if (answer.ok) choose(answer.table);
     else {
       setProblem(
         answer.reason === 'address'
@@ -227,14 +230,20 @@ export function JoinCampaignPanel({ onClose }: { onClose: () => void }) {
                 <span className="join-table-name">{t.campaignName || 'Unnamed campaign'}</span>
                 <span className="muted small">{t.address}</span>
                 <span className="spacer" />
-                <button
-                  type="button"
-                  className="btn primary"
-                  aria-label={`Join ${t.campaignName || 'this campaign'}`}
-                  onClick={() => choose(t)}
-                >
-                  {t.joined ? 'Join again' : 'Join'}
-                </button>
+                {t.update ? (
+                  <span className="small join-problem" data-testid="join-update">
+                    {updateText(t.update, t.appVersion)}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn primary"
+                    aria-label={`Join ${t.campaignName || 'this campaign'}`}
+                    onClick={() => choose(t)}
+                  >
+                    {t.joined ? 'Join again' : 'Join'}
+                  </button>
+                )}
               </li>
             ))}
           </ul>

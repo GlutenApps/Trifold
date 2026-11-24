@@ -98,6 +98,22 @@ describe('Join a campaign', () => {
     expect(screen.getByText('Playing as Sam')).toBeInTheDocument();
   });
 
+  it('says which side must update instead of offering Join, for a table on another protocol', async () => {
+    const user = userEvent.setup();
+    render(<CampaignsPage />);
+    await user.click(screen.getByRole('button', { name: 'Join a campaign' }));
+    await waitFor(() => expect(window.trifold.joined.startSearch).toHaveBeenCalled());
+    act(() => tablesFound([{ ...greyford, update: 'player', appVersion: '9.0.0' }]));
+    expect(await screen.findByTestId('join-update')).toHaveTextContent(
+      'This table runs a newer Trifold (9.0.0). Update yours to join.',
+    );
+    expect(screen.queryByRole('button', { name: 'Join The Lantern at Greyford' })).toBeNull();
+    act(() => tablesFound([{ ...greyford, update: 'gm' }]));
+    expect(await screen.findByTestId('join-update')).toHaveTextContent(
+      'Your GM needs to update it before you can join.',
+    );
+  });
+
   it('joins by a typed address, and says why when it cannot', async () => {
     const user = userEvent.setup();
     window.trifold.joined.peek = vi

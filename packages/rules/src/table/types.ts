@@ -358,7 +358,15 @@ export type ServerMessage =
    * Sent on connect, so the browser answers with the token it stored for this campaign. `now` is
    * the DM's clock, so a phone can count down to the DM's times (the break timer) on its own.
    */
-  | { type: 'campaign'; campaignId: string; campaignName: string; now: number }
+  | {
+      type: 'campaign';
+      campaignId: string;
+      campaignName: string;
+      now: number;
+      /** The table's protocol and app version (ADR 0076); absent from tables older than the check. */
+      protocol?: number;
+      appVersion?: string;
+    }
   | ({ type: 'state' } & ClientView)
   /** A new device token, sent once right after a first claim. */
   | { type: 'token'; token: string; campaignId: string }
