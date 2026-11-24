@@ -5,15 +5,17 @@ import {
   attackBonus,
   builtLevel,
   deriveSheet,
+  normalizeKey,
   SKILL_ABILITY,
   SKILL_NAMES,
   type SheetNumbers,
 } from '@trifold/rules';
-import type { Ability, Character, DerivedKey, Sheet, Skill } from '@trifold/schema';
+import type { Ability, Character, DerivedKey, Sheet, SheetRef, Skill } from '@trifold/schema';
 import { useCharacterStore } from '../../stores/characterStore';
 import { Icon } from '../shell/icons';
 import { DerivedField, NumField, signed } from './fields';
 import { LevelUpPanel } from './builder/LevelUpPanel';
+import { LinkedText } from './LinkedRow';
 import { PdfImport } from './PdfImport';
 
 /**
@@ -44,6 +46,34 @@ function RemoveRow({ label, onRemove }: { label: string; onRemove(): void }) {
   );
 }
 
+/**
+ * A linked row's button that shows the record's text under the row (ADR 0073): quiet until the
+ * row is hovered or focused, as row actions are (ADR 0020).
+ */
+function ReadButton({ name, open, onToggle }: { name: string; open: boolean; onToggle(): void }) {
+  return (
+    <span className="row-actions">
+      <button
+        type="button"
+        className={`chrome-btn xs${open ? ' on' : ''}`}
+        aria-label={`Read ${name}`}
+        aria-pressed={open}
+        title="Show its text from the compendium"
+        onClick={onToggle}
+      >
+        <Icon name="tome" />
+      </button>
+    </span>
+  );
+}
+
+/** A new name drops a link to a record with another name; the same name keeps it. */
+function renamed<T extends { ref?: SheetRef }>(row: T, name: string): Partial<T> {
+  return row.ref && normalizeKey(name) !== normalizeKey(row.ref.name)
+    ? ({ name, ref: undefined } as unknown as Partial<T>)
+    : ({ name } as unknown as Partial<T>);
+}
+
 function AddButton({ label, onAdd }: { label: string; onAdd(): void }) {
   return (
     <button type="button" className="btn" onClick={onAdd}>
@@ -58,6 +88,15 @@ export function TrifoldSheet({ character }: { character: Character }) {
   const sheet = character.sheet!;
   const id = character.id;
   const [levelling, setLevelling] = useState(false);
+  /** Linked rows whose compendium text is showing, by row id. */
+  const [reading, setReading] = useState<ReadonlySet<string>>(new Set());
+  const toggleReading = (rowId: string) =>
+    setReading((open) => {
+      const next = new Set(open);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.add(rowId);
+      return next;
+    });
   /** Update from PDF (ADR 0073): the sheet replaced by one read from a PDF, after a preview. */
   const [updating, setUpdating] = useState(false);
   const n: SheetNumbers = deriveSheet(sheet);
@@ -568,7 +607,7 @@ export function TrifoldSheet({ character }: { character: Character }) {
                 placeholder="Spell"
                 maxLength={120}
                 value={s.name}
-                onChange={(e) => spells.patch(i, { name: e.target.value })}
+                onChange={(e) => spells.patch(i, renamed(s, e.target.value))}
               />
               <select
                 aria-label={`${s.name || `Spell ${i + 1}`} level`}
@@ -591,7 +630,19 @@ export function TrifoldSheet({ character }: { character: Character }) {
                 />
                 Prepared
               </label>
+              {s.ref && (
+                <ReadButton
+                  name={s.name || s.ref.name}
+                  open={reading.has(s.id)}
+                  onToggle={() => toggleReading(s.id)}
+                />
+              )}
               <RemoveRow label={s.name || `spell ${i + 1}`} onRemove={() => spells.remove(i)} />
+              {s.ref && reading.has(s.id) && (
+                <div className="sheet-row-record">
+                  <LinkedText sheetRef={s.ref} />
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -614,7 +665,7 @@ export function TrifoldSheet({ character }: { character: Character }) {
                   placeholder="Feature"
                   maxLength={120}
                   value={f.name}
-                  onChange={(e) => features.patch(i, { name: e.target.value })}
+                  onChange={(e) => features.patch(i, renamed(f, e.target.value))}
                 />
                 <input
                   type="text"
@@ -624,11 +675,23 @@ export function TrifoldSheet({ character }: { character: Character }) {
                   value={f.from}
                   onChange={(e) => features.patch(i, { from: e.target.value })}
                 />
+                {f.ref && (
+                  <ReadButton
+                    name={f.name || f.ref.name}
+                    open={reading.has(f.id)}
+                    onToggle={() => toggleReading(f.id)}
+                  />
+                )}
                 <RemoveRow
                   label={f.name || `feature ${i + 1}`}
                   onRemove={() => features.remove(i)}
                 />
               </span>
+              {f.ref && reading.has(f.id) && (
+                <div className="sheet-row-record">
+                  <LinkedText sheetRef={f.ref} />
+                </div>
+              )}
               <textarea
                 aria-label={`${f.name || `Feature ${i + 1}`} text`}
                 rows={2}
@@ -656,7 +719,7 @@ export function TrifoldSheet({ character }: { character: Character }) {
                 placeholder="Item"
                 maxLength={120}
                 value={item.name}
-                onChange={(e) => equipment.patch(i, { name: e.target.value })}
+                onChange={(e) => equipment.patch(i, renamed(item, e.target.value))}
               />
               <NumField
                 label={`${item.name || `Item ${i + 1}`} quantity`}
@@ -665,10 +728,22 @@ export function TrifoldSheet({ character }: { character: Character }) {
                 max={9999}
                 onChange={(v) => v !== undefined && equipment.patch(i, { quantity: v })}
               />
+              {item.ref && (
+                <ReadButton
+                  name={item.name || item.ref.name}
+                  open={reading.has(item.id)}
+                  onToggle={() => toggleReading(item.id)}
+                />
+              )}
               <RemoveRow
                 label={item.name || `item ${i + 1}`}
                 onRemove={() => equipment.remove(i)}
               />
+              {item.ref && reading.has(item.id) && (
+                <div className="sheet-row-record">
+                  <LinkedText sheetRef={item.ref} />
+                </div>
+              )}
             </li>
           ))}
         </ul>

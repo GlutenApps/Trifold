@@ -239,7 +239,8 @@ function Rows({ rows }: { rows: Array<[string, string | undefined | null]> }) {
   );
 }
 
-function Body({
+/** A record's text as the compendium shows it, without the bar above it (a sheet's linked rows use it). */
+export function RecordBody({
   record,
   onOpenSpell,
 }: {
@@ -512,7 +513,7 @@ export function RecordDetail({
       {homebrew && <HomebrewBar record={record} actions={homebrew} />}
       {isOwnRecord(record) && <ReplaceInCampaign record={record} />}
       <LastRoll actor={record.displayName} />
-      <Body record={record} onOpenSpell={onOpenSpell} />
+      <RecordBody record={record} onOpenSpell={onOpenSpell} />
       {record.kind === 'monster' && <UsedBy record={record} />}
     </div>
   );

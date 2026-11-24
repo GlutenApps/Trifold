@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readPdfSheet } from '@trifold/importers';
+import { linkSheetRecords, readPdfSheet } from '@trifold/importers';
 import { deriveSheet } from '@trifold/rules';
 import { readPdfFields } from './pdfFields';
 
@@ -12,6 +12,18 @@ import { readPdfFields } from './pdfFields';
  */
 
 const ROOT = join(__dirname, '../../../../fixtures/local/pdf-sheets');
+
+/** The bundled SRD's records by kind and key, to link against as main does with the index. */
+const SRD = new Map<string, string>();
+for (const file of ['srd-2024.jsonl', 'srd-2014.jsonl']) {
+  const path = join(__dirname, '../../../../resources', file);
+  if (!existsSync(path)) continue;
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (!line.trim()) continue;
+    const r = JSON.parse(line) as { kind: string; key: string; displayName: string };
+    if (!SRD.has(`${r.kind}:${r.key}`)) SRD.set(`${r.kind}:${r.key}`, r.displayName);
+  }
+}
 const pdfs = existsSync(ROOT)
   ? readdirSync(ROOT, { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.pdf'))
   : [];
@@ -25,6 +37,19 @@ describe.skipIf(pdfs.length === 0)('Import from PDF, local sheets', () => {
       return;
     }
     const { imported, warnings } = result;
+    const links = linkSheetRecords(imported.sheet, (kind, key) => {
+      const name = SRD.get(`${kind}:${key}`);
+      return name ? { key, name } : null;
+    });
+    const l = links.sheet;
+    console.log(
+      `  linked to the SRD: ${links.linked} · spells ${l.spells.filter((x) => x.ref).length}/${l.spells.length} · items ${l.equipment.filter((x) => x.ref).length}/${l.equipment.length} · feats ${l.features
+        .filter((x) => x.ref)
+        .map((x) => x.name)
+        .join(
+          ', ',
+        )} · ${l.speciesRef ? 'species' : ''} ${l.backgroundRef ? 'background' : ''} ${l.classes.filter((c) => c.ref).length} classes`,
+    );
     const s = imported.sheet;
     const n = deriveSheet(s);
     console.log(
