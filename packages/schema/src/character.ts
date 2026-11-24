@@ -204,6 +204,8 @@ export const Sheet = z.object({
     .prefault({}),
   speed: int.min(0).max(200).default(30),
   spellcastingAbility: Ability.nullable().default(null),
+  /** Spell slots by slot level, 1st first (docs/BUILDER.md); empty for none. */
+  slots: z.array(int.min(0).max(9)).max(9).default([]),
   attacks: z.array(SheetAttack).max(100).default([]),
   features: z.array(SheetFeature).max(300).default([]),
   spells: z.array(SheetSpell).max(500).default([]),

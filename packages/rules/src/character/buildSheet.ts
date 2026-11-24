@@ -1,6 +1,7 @@
 import type { Ability, CharacterBuild, ItemRecord, Sheet, SheetRef, Skill } from '@trifold/schema';
 import {
   hitPointsAtFirstLevel,
+  spellSlots,
   withBackgroundIncrease,
   type BackgroundOption,
   type ClassOption,
@@ -68,6 +69,8 @@ export interface BuildChoices {
   backgroundEquipment?: string;
   /** The SRD's item records by lowercased name, to link equipment and read armour and weapons. */
   items?: ReadonlyMap<string, ItemRecord>;
+  /** The cantrips and prepared spells picked, by record. */
+  spells?: ReadonlyArray<{ ref: SheetRef; level: number }>;
 }
 
 let nextId = 0;
@@ -111,6 +114,14 @@ export function buildSheet2024(c: BuildChoices): { sheet: Sheet; build: Characte
     speed: c.species.speed,
     spellcastingAbility: spellcastingAbilityOf(c.cls),
     equipment: gear.equipment,
+    slots: spellSlots(c.cls, 1),
+    spells: (c.spells ?? []).map((s) => ({
+      id: id('spell'),
+      name: s.ref.name,
+      level: s.level,
+      prepared: s.level > 0,
+      ref: s.ref,
+    })),
     gp: kit.reduce((n, k) => n + k.gp, 0),
     attacks: gear.attacks,
     ...(gear.armor ? { armor: gear.armor } : {}),

@@ -3282,3 +3282,11 @@ button.chrome-btn:disabled:not(.primary, .tally) {
 .builder-kit {
   align-items: flex-start;
 }
+
+.sheet-slots {
+  gap: 4px 10px;
+}
+
+.sheet-slots .num-field {
+  width: 4em;
+}

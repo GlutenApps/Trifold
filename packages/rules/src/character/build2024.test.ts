@@ -11,6 +11,8 @@ import {
   readClass,
   readSpecies,
   rollAbilityScore,
+  maxSpellLevel,
+  spellCounts,
   spellSlots,
   splitList,
   STANDARD_ARRAY,
@@ -312,6 +314,15 @@ describe('the builder’s rules arithmetic', () => {
     expect(hitPointsAtFirstLevel(6, -9)).toBe(1);
     expect(fixedHitPointsPerLevel(10, 1)).toBe(7);
     expect(fixedHitPointsPerLevel(6, 0)).toBe(4);
+  });
+
+  it('reads cantrip and prepared counts and the highest spell level', () => {
+    const wiz = readClass(wizard)!;
+    expect(spellCounts(wiz, 1)).toEqual({ cantrips: 3, prepared: 0 });
+    expect(spellCounts(wiz, 10).cantrips).toBe(5);
+    expect(maxSpellLevel(wiz, 1)).toBe(1);
+    expect(maxSpellLevel(wiz, 5)).toBe(3);
+    expect(maxSpellLevel({ ...wiz, casterType: 'NONE' }, 5)).toBe(0);
   });
 
   it('gives spell slots by caster type', () => {

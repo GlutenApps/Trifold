@@ -271,6 +271,7 @@ export function sheetFromNumbers(numbers: TableNumbers): Sheet {
     armor: { kind: 'none', base: 11, shield: false, bonus: 0 },
     speed: numbers.speed,
     spellcastingAbility: null,
+    slots: [],
     attacks: [],
     features: [],
     spells: [],

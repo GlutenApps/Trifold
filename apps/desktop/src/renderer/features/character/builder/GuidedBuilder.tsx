@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import {
   ABILITY_NAMES,
   buildSheet2024,
+  maxSpellLevel,
+  spellCounts,
   deriveSheet,
   pointBuySpent,
   POINT_BUY_BUDGET,
@@ -27,13 +29,15 @@ import { useBuilderOptions, type BuilderOptions } from './options';
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 const ALL_SKILLS = Object.keys(SKILL_NAMES) as Skill[];
-type Step = 'class' | 'origin' | 'abilities' | 'equipment' | 'review';
+type Step = 'class' | 'origin' | 'abilities' | 'equipment' | 'spells' | 'review';
+/** The steps in order; Spells only for a class that casts at 1st level. */
 const STEPS: Array<{ id: Step; label: string }> = [
-  { id: 'class', label: '1 Class' },
-  { id: 'origin', label: '2 Origin' },
-  { id: 'abilities', label: '3 Ability scores' },
-  { id: 'equipment', label: '4 Equipment' },
-  { id: 'review', label: '5 Review' },
+  { id: 'class', label: 'Class' },
+  { id: 'origin', label: 'Origin' },
+  { id: 'abilities', label: 'Ability scores' },
+  { id: 'equipment', label: 'Equipment' },
+  { id: 'spells', label: 'Spells' },
+  { id: 'review', label: 'Review' },
 ];
 type Method = CharacterBuild['abilityMethod'];
 
@@ -114,9 +118,25 @@ function BuilderSteps({
   /** The starting equipment options picked ("A: …"); option A until changed. */
   const [classKit, setClassKit] = useState('');
   const [backgroundKit, setBackgroundKit] = useState('');
+  /** The cantrips and prepared spells picked, by record key. */
+  const [spellKeys, setSpellKeys] = useState<string[]>([]);
+  const [spellFilter, setSpellFilter] = useState('');
 
   const cls = options.classes.find((c) => c.option.key === classKey);
   const background = options.backgrounds.find((b) => b.option.key === backgroundKey);
+  // Casters pick cantrips and prepared spells at 1st level, from their class's list.
+  const counts = cls ? spellCounts(cls.option, 1) : { cantrips: 0, prepared: 0 };
+  const topLevel = cls ? maxSpellLevel(cls.option, 1) : 0;
+  const classSpells = cls
+    ? options.spells.filter(
+        (s) =>
+          (s.data.classes ?? []).includes(cls.option.name) &&
+          (s.data.level === 0 ? counts.cantrips > 0 : s.data.level <= topLevel),
+      )
+    : [];
+  const casts = counts.cantrips + counts.prepared > 0 && classSpells.length > 0;
+  const steps = STEPS.filter((x) => x.id !== 'spells' || casts);
+  const order = steps.map((x) => x.id);
   const species = options.species.find((s) => s.option.key === speciesKey);
   const pool = useMemo(
     () => (method === 'standard' ? [...STANDARD_ARRAY] : (rolled?.map((r) => r.score) ?? [])),
@@ -150,12 +170,10 @@ function BuilderSteps({
     origin: !!background && !!species,
     abilities: !!baseScores && !!increase && (method !== 'pointBuy' || spent <= POINT_BUY_BUDGET),
     equipment: true,
+    spells: true,
     review: true,
   };
-  const reachable = (s: Step) => {
-    const order = STEPS.map((x) => x.id);
-    return order.slice(0, order.indexOf(s)).every((x) => ready[x]);
-  };
+  const reachable = (s: Step) => order.slice(0, order.indexOf(s)).every((x) => ready[x]);
 
   const built =
     cls && background && species && baseScores && increase
@@ -180,10 +198,20 @@ function BuilderSteps({
           classEquipment: classKit || cls.option.equipment[0] || '',
           backgroundEquipment: backgroundKit || background.option.equipment[0] || '',
           items: options.items,
+          spells: spellKeys.flatMap((key) => {
+            const r = options.spells.find((x) => x.key === key);
+            return r
+              ? [
+                  {
+                    ref: { kind: 'spell' as const, key: r.key, name: r.displayName },
+                    level: r.data.level,
+                  },
+                ]
+              : [];
+          }),
         })
       : null;
 
-  const order = STEPS.map((x) => x.id);
   const next = order[order.indexOf(step) + 1];
   const prev = order[order.indexOf(step) - 1];
 
@@ -196,7 +224,7 @@ function BuilderSteps({
         </button>
       </div>
       <div className="subtablist" role="tablist" aria-label="Builder steps">
-        {STEPS.map((s) => (
+        {steps.map((s, i) => (
           <button
             key={s.id}
             type="button"
@@ -206,7 +234,7 @@ function BuilderSteps({
             disabled={!reachable(s.id)}
             onClick={() => setStep(s.id)}
           >
-            {s.label}
+            {i + 1} {s.label}
           </button>
         ))}
       </div>
@@ -225,6 +253,7 @@ function BuilderSteps({
                     onChange={() => {
                       setClassKey(c.key);
                       setClassSkills([]);
+                      setSpellKeys([]);
                     }}
                   />
                   <span>
@@ -554,11 +583,73 @@ function BuilderSteps({
         </div>
       )}
 
+      {step === 'spells' && cls && (
+        <div className="builder-step" data-testid="builder-spells">
+          <p className="muted small">
+            From the {cls.option.name} spell list. You can change them later on the sheet.
+          </p>
+          <input
+            type="search"
+            aria-label="Filter spells"
+            placeholder="Filter spells"
+            className="wide-input"
+            value={spellFilter}
+            onChange={(e) => setSpellFilter(e.target.value)}
+          />
+          {(
+            [
+              [
+                'cantrips',
+                'Cantrips',
+                counts.cantrips,
+                classSpells.filter((s) => s.data.level === 0),
+              ],
+              [
+                'prepared',
+                'Prepared spells',
+                counts.prepared,
+                classSpells.filter((s) => s.data.level > 0),
+              ],
+            ] as const
+          )
+            .filter(([, , n]) => n > 0)
+            .map(([id, label, n, list]) => {
+              const picked = list.filter((s) => spellKeys.includes(s.key)).length;
+              const shownList = list.filter((s) =>
+                s.displayName.toLowerCase().includes(spellFilter.trim().toLowerCase()),
+              );
+              return (
+                <fieldset key={id} className="builder-skills builder-spells">
+                  <legend>
+                    {label}: choose {n} ({picked} chosen)
+                  </legend>
+                  {shownList.map((s) => {
+                    const on = spellKeys.includes(s.key);
+                    return (
+                      <label key={s.key} className="field inline">
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          disabled={!on && picked >= n}
+                          onChange={(e) =>
+                            setSpellKeys((keys) =>
+                              e.target.checked ? [...keys, s.key] : keys.filter((k) => k !== s.key),
+                            )
+                          }
+                        />
+                        {s.displayName}
+                      </label>
+                    );
+                  })}
+                </fieldset>
+              );
+            })}
+        </div>
+      )}
+
       {step === 'review' && built && (
         <div className="builder-step" data-testid="builder-review">
-          <p className="muted small">
-            Your sheet as it will be. Spells are added on the sheet for now.
-          </p>
+          <p className="muted small">Your sheet as it will be.</p>
           <SheetView
             character={{
               schemaVersion: 1,
