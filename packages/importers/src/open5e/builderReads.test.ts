@@ -5,6 +5,7 @@ import type {
   BackgroundRecord,
   ClassRecord,
   CompendiumRecord,
+  ItemRecord,
   SpeciesRecord,
 } from '@trifold/schema';
 import {
@@ -12,6 +13,8 @@ import {
   readClass,
   readLegacyBackground,
   readLegacySpecies,
+  buildSheet2014,
+  deriveSheet,
   readRaces2014,
   readSpecies,
   spellCounts2014,
@@ -152,6 +155,47 @@ describe.skipIf(records2014.length === 0)('the 2014 builder reads the bundled SR
       choose: 2,
     });
     expect(races.find((r) => r.name === 'Halfling')!.subraces[0]!.name).toBe('Lightfoot');
+  });
+
+  it('builds a 1st-level fighter from the real records: chain mail is AC 16', () => {
+    const fighter = readClass(classes().find((c) => c.displayName === 'Fighter')!)!;
+    const races = readRaces2014(
+      records2014.filter((r): r is SpeciesRecord => r.kind === 'species'),
+    );
+    const human = races.find((r) => r.name === 'Human')!;
+    const acolyte = readLegacyBackground(
+      records2014.find((r): r is BackgroundRecord => r.kind === 'background')!,
+    );
+    const items = new Map(
+      records2014
+        .filter((r): r is ItemRecord => r.kind === 'item')
+        .map((r) => [r.displayName.toLowerCase(), r]),
+    );
+    const ref = (kind: 'class' | 'species' | 'background', key: string, name: string) => ({
+      kind,
+      key,
+      name,
+    });
+    const { sheet } = buildSheet2014({
+      cls: fighter,
+      classRef: ref('class', fighter.key, fighter.name),
+      race: human,
+      raceRef: ref('species', human.key, human.name),
+      chosen: [],
+      background: acolyte,
+      backgroundRef: ref('background', acolyte.key, acolyte.name),
+      abilityMethod: 'standard',
+      baseScores: { str: 15, dex: 13, con: 14, int: 8, wis: 12, cha: 10 },
+      classSkills: ['athletics', 'perception'],
+      languages: 'Common',
+      classPicks: [0, 0, 0, 0],
+      items,
+    });
+    // Human: +1 to every score. Chain mail (16) and no shield on option (a)(b)…
+    expect(sheet.abilities).toEqual({ str: 16, dex: 14, con: 15, int: 9, wis: 13, cha: 11 });
+    expect(sheet.maxHp).toBe(12);
+    expect(deriveSheet(sheet).ac.value).toBeGreaterThanOrEqual(16);
+    expect(sheet.slots).toEqual([]);
   });
 
   it('counts a wizard’s and a warlock’s spells at 1st level', () => {

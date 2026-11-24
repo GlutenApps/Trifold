@@ -259,10 +259,17 @@ export const CharacterBuild = z.object({
     wis: int.min(1).max(30),
     cha: int.min(1).max(30),
   }),
-  increase: z.union([
-    z.object({ plus2: Ability, plus1: Ability }),
-    z.object({ all: z.array(Ability).length(3) }),
-  ]),
+  /** The background's increase (2024); absent from a 2014 build, whose race raises scores. */
+  increase: z
+    .union([
+      z.object({ plus2: Ability, plus1: Ability }),
+      z.object({ all: z.array(Ability).length(3) }),
+    ])
+    .optional(),
+  /** A 2014 build's race (docs/BUILDER.md, phase 8): its subrace and the +1s the player picked. */
+  race2014: z
+    .object({ subrace: SheetRef.optional(), chosen: z.array(Ability).max(6).default([]) })
+    .optional(),
   /** The class skills picked (the background's come with it). */
   classSkills: z.array(Skill).default([]),
   /** Hit points gained at each level after the first, in order. */

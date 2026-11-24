@@ -38,8 +38,19 @@ interface CharacterState {
    * guided builder, or by Import from PDF (ADR 0073). `forJoined` links the result to the open
    * joined campaign. Null when none is.
    */
-  building: { name: string; forJoined: boolean; way: 'guided' | 'pdf' } | null;
-  startBuilding(name: string, forJoined: boolean, way?: 'guided' | 'pdf'): void;
+  building: {
+    name: string;
+    forJoined: boolean;
+    way: 'guided' | 'pdf';
+    /** The rules the guided builder follows (docs/BUILDER.md): 2024, or 2014 from SRD 5.1. */
+    edition: CharacterEdition;
+  } | null;
+  startBuilding(
+    name: string,
+    forJoined: boolean,
+    way?: 'guided' | 'pdf',
+    edition?: CharacterEdition,
+  ): void;
   cancelBuilding(): void;
   /** The builder's Finish: a Trifold character with the sheet and build record it made. */
   createBuilt(name: string, sheet: Sheet, build: CharacterBuild): Promise<Character | null>;
@@ -105,8 +116,8 @@ export const useCharacterStore = create<CharacterState>((set, get) => {
     editingSheet: false,
     building: null,
 
-    startBuilding(name, forJoined, way = 'guided') {
-      set({ building: { name, forJoined, way } });
+    startBuilding(name, forJoined, way = 'guided', edition = '2024') {
+      set({ building: { name, forJoined, way, edition } });
     },
 
     cancelBuilding() {
@@ -114,7 +125,8 @@ export const useCharacterStore = create<CharacterState>((set, get) => {
     },
 
     createBuilt(name, sheet, build) {
-      return createWith(name, { sheet, build });
+      // The character plays under the rules it was built with.
+      return createWith(name, { sheet, build, edition: build.edition });
     },
 
     createImported(name, preview, edition) {

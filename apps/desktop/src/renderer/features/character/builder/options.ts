@@ -4,8 +4,10 @@ import {
   readClass,
   readLegacyBackground,
   readLegacySpecies,
+  readRaces2014,
   readSpecies,
   readSubclass,
+  type Race2014,
   type SubclassOption,
   type BackgroundOption,
   type ClassOption,
@@ -17,6 +19,7 @@ import type {
   ItemRecord,
   RecordKind,
   SheetRef,
+  SpeciesRecord,
   SpellRecord,
 } from '@trifold/schema';
 
@@ -49,6 +52,18 @@ export interface BuilderOptions {
   items: Map<string, ItemRecord>;
   /** The SRD's spells, each with the classes whose lists hold it. */
   spells: SpellRecord[];
+  /** The 2014 builder's lists, from the bundled SRD 5.1 (docs/BUILDER.md, phase 8). */
+  srd2014: Srd2014Options;
+}
+
+export interface Srd2014Options {
+  classes: Array<Offered<ClassOption>>;
+  subclasses: Array<Offered<SubclassOption>>;
+  /** Races with their subraces; `subraceRefs` names each subrace's record by key. */
+  races: Array<Offered<Race2014> & { subraceRefs: Map<string, SheetRef> }>;
+  spells: SpellRecord[];
+  feats: FeatRecord[];
+  items: Map<string, ItemRecord>;
 }
 
 async function recordsOf(kind: RecordKind, source = SRD_2024): Promise<CompendiumRecord[]> {
@@ -69,17 +84,35 @@ const refOf = (r: CompendiumRecord): SheetRef => ({
 });
 
 export async function loadBuilderOptions(): Promise<BuilderOptions> {
-  const [classes, backgrounds, species, feats, items, spells, oldBackgrounds, oldSpecies] =
-    await Promise.all([
-      recordsOf('class'),
-      recordsOf('background'),
-      recordsOf('species'),
-      recordsOf('feat'),
-      recordsOf('item'),
-      recordsOf('spell'),
-      recordsOf('background', SRD_2014),
-      recordsOf('species', SRD_2014),
-    ]);
+  const [
+    classes,
+    backgrounds,
+    species,
+    feats,
+    items,
+    spells,
+    oldBackgrounds,
+    oldSpecies,
+    oldClasses,
+    oldSpells,
+    oldFeats,
+    oldItems,
+  ] = await Promise.all([
+    recordsOf('class'),
+    recordsOf('background'),
+    recordsOf('species'),
+    recordsOf('feat'),
+    recordsOf('item'),
+    recordsOf('spell'),
+    recordsOf('background', SRD_2014),
+    recordsOf('species', SRD_2014),
+    recordsOf('class', SRD_2014),
+    recordsOf('spell', SRD_2014),
+    recordsOf('feat', SRD_2014),
+    recordsOf('item', SRD_2014),
+  ]);
+  const oldSpeciesRecords = oldSpecies.filter((r): r is SpeciesRecord => r.kind === 'species');
+  const speciesRefs = new Map(oldSpeciesRecords.map((r) => [r.key, refOf(r)]));
   const byName = <T extends { option: { name: string } }>(a: T, b: T) =>
     a.option.name.localeCompare(b.option.name);
   return {
@@ -115,6 +148,39 @@ export async function loadBuilderOptions(): Promise<BuilderOptions> {
         return option ? [{ option, ref: refOf(r) }] : [];
       })
       .sort(byName),
+    srd2014: {
+      classes: oldClasses
+        .flatMap((r) => {
+          const option = r.kind === 'class' ? readClass(r) : null;
+          return option ? [{ option, ref: refOf(r) }] : [];
+        })
+        .sort(byName),
+      subclasses: oldClasses
+        .flatMap((r) => {
+          const option = r.kind === 'class' ? readSubclass(r) : null;
+          return option ? [{ option, ref: refOf(r) }] : [];
+        })
+        .sort(byName),
+      races: readRaces2014(oldSpeciesRecords).map((option) => ({
+        option,
+        ref: speciesRefs.get(option.key) ?? { kind: 'species', key: option.key, name: option.name },
+        subraceRefs: new Map(
+          option.subraces.flatMap((s) => {
+            const r = speciesRefs.get(s.key);
+            return r ? [[s.key, r] as const] : [];
+          }),
+        ),
+      })),
+      spells: oldSpells
+        .filter((r): r is SpellRecord => r.kind === 'spell')
+        .sort((a, b) => a.displayName.localeCompare(b.displayName)),
+      feats: oldFeats.filter((r): r is FeatRecord => r.kind === 'feat'),
+      items: new Map(
+        oldItems
+          .filter((r): r is ItemRecord => r.kind === 'item')
+          .map((r) => [r.displayName.toLowerCase(), r]),
+      ),
+    },
     feats: feats.filter((r): r is FeatRecord => r.kind === 'feat'),
     spells: spells
       .filter((r): r is SpellRecord => r.kind === 'spell')

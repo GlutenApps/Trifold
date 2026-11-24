@@ -2,12 +2,16 @@ import { useState } from 'react';
 import {
   ABILITY_NAMES,
   builtLevel,
+  castingAbility2014,
   featCategory,
   fixedHitPointsPerLevel,
   levelUpSheet,
   maxSpellLevel,
   scoreModifier,
   spellCounts,
+  spellCounts2014,
+  spellSlots,
+  spellSlots2014,
   type Improvement,
 } from '@trifold/rules';
 import type { Ability, Character, CharacterBuild, Sheet } from '@trifold/schema';
@@ -58,7 +62,17 @@ function LevelUpBody({
 }) {
   const sheet = character.sheet!;
   const build = character.build!;
-  const cls = options.classes.find((c) => c.option.key === build.class.key);
+  // A 2014 build levels from the SRD 5.1's classes, spells and feats (docs/BUILDER.md, phase 8).
+  const legacy = build.edition === '2014';
+  const lists = legacy
+    ? options.srd2014
+    : {
+        classes: options.classes,
+        subclasses: options.subclasses,
+        spells: options.spells,
+        feats: options.feats,
+      };
+  const cls = lists.classes.find((c) => c.option.key === build.class.key);
   const level = builtLevel(sheet) + 1;
   const [hpMode, setHpMode] = useState<'fixed' | 'roll'>('fixed');
   const [rolled, setRolled] = useState<number | null>(null);
@@ -73,8 +87,9 @@ function LevelUpBody({
     return (
       <div className="banner warn" role="alert">
         <span>
-          Level up needs the {build.class.name} class from the bundled 2024 SRD, which this Library
-          does not have switched on. Add the level by hand on the sheet.
+          Level up needs the {build.class.name} class from the bundled{' '}
+          {legacy ? 'SRD 5.1' : '2024 SRD'}, which this Library does not have switched on. Add the
+          level by hand on the sheet.
         </span>
         <button type="button" className="btn small" onClick={onClose}>
           Close
@@ -88,12 +103,12 @@ function LevelUpBody({
   const fixed = fixedHitPointsPerLevel(option.hitDie, con);
   const hitPoints = hpMode === 'fixed' ? fixed : rolled === null ? null : Math.max(1, rolled + con);
   const atSubclass = option.subclassLevel === level;
-  const subclasses = options.subclasses.filter((s) => s.option.of === option.name);
+  const subclasses = lists.subclasses.filter((s) => s.option.of === option.name);
   const subclass =
     subclasses.find((s) => s.option.key === subclassKey) ??
     (build.subclass ? subclasses.find((s) => s.option.key === build.subclass!.key) : undefined);
   const atAsi = option.asiLevels.includes(level);
-  const feats = options.feats.filter(
+  const feats = lists.feats.filter(
     (f) =>
       featCategory(f) !== 'epicBoon' &&
       featCategory(f) !== 'fightingStyle' &&
@@ -119,7 +134,13 @@ function LevelUpBody({
           : null;
 
   // New spells this level: the class table's counts now, less what the sheet already has.
-  const now = spellCounts(option, level);
+  const casting = legacy ? castingAbility2014(option.name) : null;
+  const legacyCounts = legacy
+    ? spellCounts2014(option, level, casting ? sheet.abilities[casting] : 10)
+    : null;
+  const now = legacyCounts
+    ? { cantrips: legacyCounts.cantrips, prepared: legacyCounts.spellbook || legacyCounts.spells }
+    : spellCounts(option, level);
   const have = {
     cantrips: sheet.spells.filter((s) => s.level === 0).length,
     prepared: sheet.spells.filter((s) => s.level > 0).length,
@@ -129,8 +150,10 @@ function LevelUpBody({
     prepared: Math.max(0, now.prepared - have.prepared),
   };
   const known = new Set(sheet.spells.map((s) => s.ref?.key ?? s.name.toLowerCase()));
-  const top = maxSpellLevel(option, level);
-  const classSpells = options.spells.filter(
+  const top = legacy
+    ? spellSlots2014(option, level, spellSlots(option, level)).length
+    : maxSpellLevel(option, level);
+  const classSpells = lists.spells.filter(
     (s) =>
       (s.data.classes ?? []).includes(option.name) &&
       !known.has(s.key) &&
@@ -291,7 +314,7 @@ function LevelUpBody({
             const on = spellKeys.includes(s.key);
             const isCantrip = s.data.level === 0;
             const picked = spellKeys.filter((k) => {
-              const r = options.spells.find((x) => x.key === k);
+              const r = lists.spells.find((x) => x.key === k);
               return r && (r.data.level === 0) === isCantrip;
             }).length;
             const cap = isCantrip ? more.cantrips : more.prepared;
@@ -330,7 +353,7 @@ function LevelUpBody({
               ...(subclass && (atSubclass || build.subclass) ? { subclass } : {}),
               ...(improvement ? { improvement } : {}),
               spells: spellKeys.flatMap((k) => {
-                const r = options.spells.find((x) => x.key === k);
+                const r = lists.spells.find((x) => x.key === k);
                 return r
                   ? [
                       {

@@ -61,7 +61,7 @@ export interface BuildChoices {
   size: 'Small' | 'Medium';
   abilityMethod: CharacterBuild['abilityMethod'];
   baseScores: Record<Ability, number>;
-  increase: CharacterBuild['increase'];
+  increase: NonNullable<CharacterBuild['increase']>;
   classSkills: Skill[];
   languages: string;
   /** The class's and the background's starting equipment options picked ("A: …"). */

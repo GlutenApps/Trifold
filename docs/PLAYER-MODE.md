@@ -520,7 +520,7 @@ What is left of Parts 1 to 3, and what a player needs beyond them, in order. Ite
 | 11 | The acceptance checks below on two computers, Windows and macOS | | Ian runs; fixes follow |
 | 12 | The `TRIFOLD_PLAYER_MODE` flag removed, and a release | S | |
 | **F** | **After release** | | |
-| 13 | Character builder, 2014 (phase 8) | L | |
+| 13 | Character builder, 2014 (phase 8) | L | Built (docs/BUILDER.md) |
 | 14 | Manual PDF field matching, if real sheets fail to import | M | |
 | 15 | Optional: private handouts or messages between the GM and one player; a player's own token art | M each | |
 

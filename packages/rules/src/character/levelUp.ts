@@ -1,5 +1,6 @@
 import type { Ability, CharacterBuild, ClassRecord, Sheet, SheetRef } from '@trifold/schema';
 import { spellSlots, type ClassOption } from './build2024';
+import { spellSlots2014 } from './build2014';
 
 /**
  * Level up for a character the guided builder made (docs/BUILDER.md): one level in its class,
@@ -118,7 +119,11 @@ export function levelUpSheet(c: LevelUpChoices): { sheet: Sheet; build: Characte
     abilities,
     maxHp: Math.min(999, c.sheet.maxHp + Math.max(1, c.hitPoints)),
     features,
-    slots: spellSlots(c.cls, level),
+    // A 2014 build follows the 2014 slots (half casters from 2nd level, the warlock's table).
+    slots:
+      c.build.edition === '2014'
+        ? spellSlots2014(c.cls, level, spellSlots(c.cls, level))
+        : spellSlots(c.cls, level),
     spells: [
       ...c.sheet.spells,
       ...(c.spells ?? []).map((s) => ({

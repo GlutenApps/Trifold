@@ -288,3 +288,20 @@ export function spellSlots2014(
 /** The level a 2014 class picks its subclass at, from the feature that grants it. */
 export const SUBCLASS_FEATURE_2014 =
   /^(primal path|bard college|divine domain|druid circle|martial archetype|monastic tradition|sacred oath|ranger archetype|roguish archetype|sorcerous origin|otherworldly patron|arcane tradition)$/i;
+
+/** The ability each SRD 5.1 class casts with (its Spellcasting feature); none for the rest. */
+const CASTING_2014: Readonly<Record<string, Ability>> = {
+  bard: 'cha',
+  cleric: 'wis',
+  druid: 'wis',
+  paladin: 'cha',
+  ranger: 'wis',
+  sorcerer: 'cha',
+  warlock: 'cha',
+  wizard: 'int',
+};
+
+/** A 2014 class's spellcasting ability by name; null for a class that does not cast. */
+export function castingAbility2014(className: string): Ability | null {
+  return CASTING_2014[className.trim().toLowerCase()] ?? null;
+}
