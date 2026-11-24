@@ -63,7 +63,14 @@ export function PlayerTableProvider({
   const { send } = conn;
   useEffect(() => {
     if (!canRollAtTable) return;
-    useTableRollStore.getState().setSend((expression) => send({ type: 'roll', expression }));
+    useTableRollStore.getState().setSend((expression, extra) =>
+      send({
+        type: 'roll',
+        expression,
+        ...(extra?.for ? { for: extra.for } : {}),
+        ...(extra?.initiative ? { initiative: extra.initiative } : {}),
+      }),
+    );
     return () => useTableRollStore.getState().setSend(null);
     // `send` is a new function each render and always sends through the same client.
     // eslint-disable-next-line react-hooks/exhaustive-deps

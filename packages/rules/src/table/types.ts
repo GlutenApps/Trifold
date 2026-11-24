@@ -412,8 +412,17 @@ export type ClientMessage =
   | ({ type: 'summon' } & SummonRequest)
   | { type: 'dismiss'; tokenId: string }
   | { type: 'keepSummon'; tokenId: string }
-  /** A Table roll (ADR 0059): the roller's syntax; the DM's Trifold makes the roll. */
-  | { type: 'roll'; expression: string }
+  /**
+   * A Table roll (ADR 0059): the roller's syntax; the DM's Trifold makes the roll. A roll from a
+   * sheet (ADR 0075) says what it is for ("Stealth check"); an initiative roll names the creature
+   * whose initiative it is, and the DM's Trifold enters the total as that creature's initiative.
+   */
+  | {
+      type: 'roll';
+      expression: string;
+      for?: string;
+      initiative?: { creatureKind: AnyCreatureKind; creatureId: string };
+    }
   /**
    * The held PC's numbers from the player's linked character, for the GM to accept (ADR 0071).
    * Without `creatureId`, a device holding nothing asks the GM to add the character as a new PC

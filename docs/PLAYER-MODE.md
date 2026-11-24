@@ -511,7 +511,7 @@ What is left of Parts 1 to 3, and what a player needs beyond them, in order. Ite
 | 5 | The components the phone page and the player console share moved to a folder both import (no behaviour change) | S | Built |
 | **C** | **Playing from the sheet** | | |
 | 6 | *Added:* tracking during play on the Trifold sheet: spell slots used, limited-use features, hit dice, death saves and Heroic Inspiration, with Short rest and Long rest for the sheet's own resources (HP stays the table's) | M–L | Built (ADR 0074); death saves stay with the table |
-| 7 | *Added:* rolling from the sheet: a save, skill, attack, spell attack or initiative, following the Table and Private switch; an initiative roll fills the initiative box | M | |
+| 7 | *Added:* rolling from the sheet: a save, skill, attack, spell attack or initiative, following the Table and Private switch; an initiative roll fills the initiative box | M | Built (ADR 0075) |
 | **D** | **Ready for players who are not the GM** | | |
 | 8 | *Added:* a version check between the GM's and the player's Trifold, with a plain message to update on a mismatch | S–M | |
 | 9 | *Added:* a first-run choice for a new Library (running games or playing); the playing path leads with Join a campaign and Characters | S–M | |

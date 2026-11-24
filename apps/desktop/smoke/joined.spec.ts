@@ -308,6 +308,12 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(sheet).toContainText('Sam’s rogue');
     await expect(sheet.getByLabel('Numbers')).toContainText('13');
     await expect(page.getByTestId('sheet-live')).toContainText('Prone');
+    // Rolling from the sheet (ADR 0075): Table is the default, so the GM's Trifold makes the
+    // roll and it comes back named for what it was. Dexterity 16 makes Stealth +3.
+    await sheet.getByRole('button', { name: 'Roll Stealth check' }).click();
+    await expect(sheet.getByTestId('sheet-last-roll')).toContainText('Stealth check: 1d20+3', {
+      timeout: 10_000,
+    });
     await expect
       .poll(
         async () =>
@@ -437,8 +443,9 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(dice.getByTestId('latest-roll')).toContainText('3d4');
     await expect(page.getByTestId('roll-mode')).toHaveText('Private');
     await gmPage.waitForTimeout(1_000);
+    // Two table rolls: the Stealth check from the sheet and the 2d6+1; not the private 3d4.
     await expect(gmDice.getByRole('list', { name: 'Roll log' }).getByRole('listitem')).toHaveCount(
-      1,
+      2,
     );
     await gmPage.keyboard.press('Escape');
     await dice.getByRole('button', { name: 'Table' }).click();
