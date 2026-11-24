@@ -428,3 +428,124 @@ describe('PDFs that are not a filled character sheet', () => {
     ]);
   });
 });
+
+describe('the official 2024 sheet', () => {
+  // Generic field names, the same in every copy (sheet2024.ts); SRD content.
+  const cleric = (): PdfField[] => [
+    text('Text1', 'Hale Ironbrow'),
+    text('Text6', 'Acolyte'),
+    text('Text7', 'Cleric'),
+    text('Text8', 'Dwarf'),
+    text('Text9', 'Life Domain'),
+    text('Text11', '3'),
+    text('Text13', '18'),
+    text('Text16', '27'),
+    text('Text19', '+2'),
+    text('Text26', '+0'),
+    text('Text27', '30 ft.'),
+    text('Text29', '13'),
+    // Scores in the small box, modifiers in the circle.
+    text('Text64', '14'),
+    text('Text21', '+2'),
+    text('Text66', '10'),
+    text('Text22', '+0'),
+    text('Text67', '14'),
+    text('Text24', '+2'),
+    text('Text63', '10'),
+    text('Text20', '+0'),
+    text('Text65', '16'),
+    text('Text23', '+3'),
+    text('Text68', '12'),
+    text('Text25', '+1'),
+    text('Text75', '+5'),
+    check('Check Box21', true, [0, 0, 0, 0]),
+    text('Text81', '+3'),
+    check('Check Box26', true, [0, 0, 0, 0]),
+    text('Text71', '+2'),
+    check('Check Box17', true, [0, 0, 0, 0]),
+    text('Text78', '+5'),
+    check('Check Box25', true, [0, 0, 0, 0]),
+    check('Check Box13', true, [0, 0, 0, 0]),
+    check('Check Box12', true, [0, 0, 0, 0]),
+    text('Text59', 'Simple weapons'),
+    text('Text98', 'Common, Dwarvish'),
+    text('Text30', 'Mace'),
+    text('Text31', '+4'),
+    text('Text32', '1d6+2 Bludgeoning'),
+    text('Text38', 'Sacred Flame'),
+    text('Text39', 'DC 13 DEX'),
+    text('Text40', '1d8 Radiant'),
+    text('Text54', 'Spellcasting (WIS)\nChannel Divinity: Divine Spark, Turn Undead'),
+    text(
+      'Text55',
+      'LIFE DOMAIN\nDisciple of Life: healing spells restore extra 2 + spell level HP',
+    ),
+    text('Text57', 'Darkvision (120 ft.)'),
+    text('Text111', 'Wisdom'),
+    text('Text94', '13'),
+    text('Text95', '+5'),
+    text('Text112', '4'),
+    text('Text113', '2'),
+    text('Text105.0', '0'),
+    text('Text106.0', 'Sacred Flame'),
+    check('Check Box252.0', false, [0, 0, 0, 0]),
+    text('Text105.1', '1'),
+    text('Text106.1', 'Bless'),
+    text('Text105.2', '2'),
+    text('Text106.2', 'Spiritual Weapon'),
+    text('Text99', 'Chain Mail, Shield, Mace'),
+    text('Text101', 'Bag of Holding'),
+    text('Text269', '15'),
+    text('Text267', '5'),
+  ];
+
+  it('reads the sheet by its generic field names', () => {
+    const { imported, warnings } = ok(cleric());
+    expect(imported.layout).toBe('sheet2024');
+    expect(imported.edition).toBe('2024');
+    expect(imported.name).toBe('Hale Ironbrow');
+    const s = imported.sheet;
+    expect(s.classes).toEqual([{ name: 'Cleric', subclass: 'Life Domain', level: 3 }]);
+    expect([s.species, s.background, s.maxHp, s.speed]).toEqual(['Dwarf', 'Acolyte', 27, 30]);
+    expect(s.abilities).toEqual({ str: 14, dex: 10, con: 14, int: 10, wis: 16, cha: 12 });
+    expect(s.saves).toEqual(['wis', 'cha']);
+    expect(s.skills).toEqual({ history: 'proficient', medicine: 'proficient' });
+    expect(s.spellcastingAbility).toBe('wis');
+    expect(s.overrides).toEqual({ ac: 18 });
+    expect(s.otherProficiencies).toBe(
+      'Armor: Light, Shields\nWeapons: Simple weapons\nLanguages: Common, Dwarvish',
+    );
+    expect(s.gp).toBe(15.5);
+    expect(warnings).toEqual([]);
+  });
+
+  it('takes spell levels from their column, as prepared, and slots from their totals', () => {
+    const s = ok(cleric()).imported.sheet;
+    expect(s.spells.map((x) => [x.name, x.level, x.prepared])).toEqual([
+      ['Sacred Flame', 0, false],
+      ['Bless', 1, true],
+      ['Spiritual Weapon', 2, true],
+    ]);
+    expect(s.slots).toEqual([4, 2]);
+  });
+
+  it('keeps a save DC with the damage, and reads features by box and heading', () => {
+    const s = ok(cleric()).imported.sheet;
+    expect(s.attacks.map((a) => [a.name, a.bonus, a.damage])).toEqual([
+      ['Mace', 4, '1d6+2 Bludgeoning'],
+      ['Sacred Flame', 0, '1d8 Radiant (DC 13 DEX)'],
+    ]);
+    expect(s.features.map((f) => [f.name, f.from, f.text])).toEqual([
+      ['Spellcasting (WIS)', 'Cleric', ''],
+      ['Channel Divinity: Divine Spark, Turn Undead', 'Cleric', ''],
+      ['Disciple of Life', 'Life Domain', 'healing spells restore extra 2 + spell level HP'],
+      ['Darkvision (120 ft.)', 'Dwarf', ''],
+    ]);
+    expect(s.equipment.map((i) => i.name)).toEqual([
+      'Chain Mail',
+      'Shield',
+      'Mace',
+      'Bag of Holding',
+    ]);
+  });
+});

@@ -1,5 +1,6 @@
 import { ulid } from 'ulid';
 import { deriveSheet, blankSheet, scoreModifier } from '@trifold/rules';
+import { fromSheet2024, isSheet2024 } from './sheet2024';
 import type {
   Ability,
   CharacterEdition,
@@ -37,7 +38,7 @@ export interface PdfField {
   rect: [number, number, number, number];
 }
 
-export type PdfSheetLayout = 'sheet2014' | 'appExport' | 'dropdowns' | 'other';
+export type PdfSheetLayout = 'sheet2024' | 'sheet2014' | 'appExport' | 'dropdowns' | 'other';
 
 export interface ImportedSheet {
   name: string;
@@ -252,9 +253,12 @@ const CORE_FIELDS = [
 /** Values blank templates ship that mean nothing was filled in. */
 const PLACEHOLDER = /^(--|—|–|-|\.|n\/a)$/i;
 
-export function readPdfSheet(fields: readonly PdfField[]): PdfSheetResult {
+export function readPdfSheet(pdfFields: readonly PdfField[]): PdfSheetResult {
   const warnings: string[] = [];
-  if (fields.length === 0) return { ok: false, problem: 'noFields', warnings };
+  if (pdfFields.length === 0) return { ok: false, problem: 'noFields', warnings };
+  // The official 2024 sheet's generic names, translated into the ones read below.
+  const is2024 = isSheet2024(new Set(pdfFields.map((f) => fieldKey(f.name))));
+  const fields = is2024 ? fromSheet2024(pdfFields) : pdfFields;
 
   // The first field with a value wins a name; the export repeats the header on every page.
   const byKey = new Map<string, PdfField>();
@@ -281,8 +285,9 @@ export function readPdfSheet(fields: readonly PdfField[]): PdfSheetResult {
     return { ok: false, problem: 'unknownLayout', warnings };
   }
 
-  const layout: PdfSheetLayout =
-    byKey.has('spellname0') || byKey.has('class level')
+  const layout: PdfSheetLayout = is2024
+    ? 'sheet2024'
+    : byKey.has('spellname0') || byKey.has('class level')
       ? 'appExport'
       : byKey.has('strdropdown')
         ? 'dropdowns'
@@ -432,8 +437,12 @@ export function readPdfSheet(fields: readonly PdfField[]): PdfSheetResult {
   for (const n of attackRows) {
     const nameText = text(n === 1 ? 'wpn name' : `wpn name ${n}`);
     if (!nameText) continue;
-    const hit = bonus(text(`wpn${n} atkbonus`, `wpn${n} atkbonus `));
-    const damage = text(`wpn${n} damage`, `wpn${n} damage `);
+    const hitText = text(`wpn${n} atkbonus`);
+    const hit = bonus(hitText);
+    // A cantrip's "DC 15 DEX" is not a bonus: it stays with the damage.
+    const damage = [text(`wpn${n} damage`), hit === null && hitText ? `(${hitText})` : '']
+      .filter(Boolean)
+      .join(' ');
     sheet.attacks.push({
       id: ulid(),
       name: nameText.slice(0, 80),
@@ -444,7 +453,11 @@ export function readPdfSheet(fields: readonly PdfField[]): PdfSheetResult {
     });
   }
 
-  sheet.features = readFeatures(byKey);
+  sheet.features = readFeatures(byKey, {
+    className: classes[0]?.name ?? '',
+    subclass: classes[0]?.subclass ?? '',
+    species: sheet.species,
+  });
   sheet.equipment = readEquipment(byKey, text('equipment'));
 
   // Coins, as gold.
@@ -505,7 +518,7 @@ export function readPdfSheet(fields: readonly PdfField[]): PdfSheetResult {
     if (!name) warnings.push('No character name on the sheet.');
 
     const allText = fields.map((f) => f.value).join('\n');
-    const edition: CharacterEdition = /\b2024\b|XPHB/.test(allText) ? '2024' : '2014';
+    const edition: CharacterEdition = is2024 || /\b2024\b|XPHB/.test(allText) ? '2024' : '2014';
 
     return {
       ok: true,
@@ -588,12 +601,20 @@ function readSpells(
   const spellFields = fields
     .map((f) => {
       const key = fieldKey(f.name);
-      const m = /^spellname(\d+)$/.exec(key) ?? /^spells (\d+)$/.exec(key);
+      const m =
+        /^spellname(\d+)$/.exec(key) ??
+        /^spells (\d+)$/.exec(key) ??
+        /^spell name (\d+)$/.exec(key);
       return m && f.value.trim()
-        ? { f, n: Number(m[1]), exportRow: key.startsWith('spellname') }
+        ? {
+            f,
+            n: Number(m[1]),
+            exportRow: key.startsWith('spellname'),
+            levelled: key.startsWith('spell name'),
+          }
         : null;
     })
-    .filter((x): x is { f: PdfField; n: number; exportRow: boolean } => !!x)
+    .filter((x): x is { f: PdfField; n: number; exportRow: boolean; levelled: boolean } => !!x)
     .sort((a, b) => a.f.page - b.f.page || a.n - b.n);
 
   const checks = fields.filter((f) => f.kind === 'check' && f.checked);
@@ -601,10 +622,13 @@ function readSpells(
   const seen = new Set<string>();
   let carried: number | null = null;
   let unsure = 0;
-  for (const { f, n, exportRow } of spellFields) {
-    let level: number | null = null;
+  for (const { f, n, exportRow, levelled } of spellFields) {
+    // The 2024 sheet writes each row's level in its own column, and lists only cantrips and
+    // prepared spells.
+    const written = levelled ? firstNumber(byKey.get(`spell level ${n}`)?.value ?? '') : null;
+    let level: number | null = written !== null && written >= 0 && written <= 9 ? written : null;
     let gap = Infinity;
-    for (const m of markers) {
+    for (const m of levelled ? [] : markers) {
       if (m.field.page !== f.page) continue;
       const overlaps = left(m.field) < right(f) && right(m.field) > left(f);
       const above = bottom(m.field) >= top(f) - 2;
@@ -622,15 +646,17 @@ function readSpells(
       level = 0;
     }
     carried = level;
-    const prepared = exportRow
-      ? /^p$/i.test(byKey.get(`spellprepared${n}`)?.value.trim() ?? '')
-      : checks.some(
-          (c) =>
-            c.page === f.page &&
-            Math.abs(centreY(c) - centreY(f)) <= 4 &&
-            left(f) - right(c) >= -2 &&
-            left(f) - right(c) <= 14,
-        );
+    const prepared = levelled
+      ? true
+      : exportRow
+        ? /^p$/i.test(byKey.get(`spellprepared${n}`)?.value.trim() ?? '')
+        : checks.some(
+            (c) =>
+              c.page === f.page &&
+              Math.abs(centreY(c) - centreY(f)) <= 4 &&
+              left(f) - right(c) >= -2 &&
+              left(f) - right(c) <= 14,
+          );
     const name = f.value
       .replace(/\s*\[R\]\s*$/i, '')
       .trim()
@@ -651,7 +677,10 @@ function readSpells(
  * "* Name • Source page" entries with their text below; a sheet that is free text becomes one
  * feature per paragraph, named by its first line.
  */
-function readFeatures(byKey: Map<string, PdfField>): SheetFeature[] {
+function readFeatures(
+  byKey: Map<string, PdfField>,
+  context: { className: string; subclass: string; species: string },
+): SheetFeature[] {
   const parts: string[] = [];
   for (let i = 1; i <= 12; i++) {
     const v = byKey.get(`featurestraits${i}`)?.value;
@@ -685,6 +714,33 @@ function readFeatures(byKey: Map<string, PdfField>): SheetFeature[] {
     for (const f of out) f.text = f.text.trim();
     return out.slice(0, 300);
   }
+  // The 2024 sheet's boxes: class features, species traits and feats, a feature per line.
+  const boxes: Array<[string, string]> = [
+    ['class features 1', context.className],
+    ['class features 2', context.className],
+    ['species traits', context.species],
+    ['feats', 'Feat'],
+  ];
+  if (boxes.some(([k]) => byKey.get(k)?.value.trim())) {
+    for (const [k, label] of boxes) {
+      let from = label;
+      for (const raw of (byKey.get(k)?.value ?? '').split(/\r?\n/)) {
+        const line = raw.trim();
+        if (!line) continue;
+        // An all-capitals line heads what follows: "LIFE DOMAIN".
+        if (/^[^a-z]*[A-Z][^a-z]*$/.test(line) && line.length <= 60) {
+          // The subclass keeps its own capitals ("LIFE DOMAIN" → "Life Domain").
+          from =
+            line.toLowerCase() === context.subclass.toLowerCase()
+              ? context.subclass
+              : line.charAt(0) + line.slice(1).toLowerCase();
+          continue;
+        }
+        out.push({ id: ulid(), ...nameAndText(line), from: from.slice(0, 80) });
+      }
+    }
+    return out.slice(0, 300);
+  }
   const free = [
     'features and traits',
     'featurestraits',
@@ -713,6 +769,18 @@ function readFeatures(byKey: Map<string, PdfField>): SheetFeature[] {
     }
   }
   return out.slice(0, 300);
+}
+
+/**
+ * A one-line feature: "Disciple of Life: healing spells restore…" is a name and its text, and so
+ * is "Magic Initiate (Cleric) – origin feat…"; a short tail ("Fighting Style: Defense") stays
+ * part of the name.
+ */
+function nameAndText(line: string): { name: string; text: string } {
+  const m = /^(.{2,60}?)(?::|\s[–—-])\s+(.+)$/.exec(line);
+  if (m && m[2]!.length > 30)
+    return { name: m[1]!.trim().slice(0, 120), text: m[2]!.slice(0, 20_000) };
+  return { name: line.slice(0, 120), text: '' };
 }
 
 /** Equipment: the export's `Eq Name0`/`Eq Qty0` rows, or a free-text list split on commas and lines. */

@@ -417,6 +417,8 @@ Read, never written (ADR 0073). Main takes every page's widget annotations with 
 | Equipment, coins | `Eq Name0`/`Eq Qty0` …, or `Equipment` free text split on commas and lines (not inside brackets, "2 daggers" is 2); `PP`, `GP`, `EP`, `SP`, `CP` summed into `gp` |
 | Other proficiencies, notes | `ProficienciesLang`; personality, ideals, bonds, flaws, backstory, allies, alignment, faith and appearance into the character's notes |
 
+**The official 2024 sheet** is told by `Text1`, `Text106.0` and `Check Box252.0` together, and its generic names are translated first (`packages/importers/src/pdfSheet/sheet2024.ts`): `Text1` name, `Text6` background, `Text7` class, `Text8` species, `Text9` subclass and `Text11` level (joined as "Cleric 5 (Life Domain)"), `Text13` AC, `Text16` max HP, `Text19` proficiency bonus, `Text26` initiative, `Text27` speed, `Text29` passive Perception; scores `Text63`–`Text68` (INT, STR, WIS, DEX, CON, CHA) and modifiers `Text20`–`Text25`; saves and skills `Text69`–`Text92` with their check boxes; six weapon rows from `Text30`; `Text54`/`Text55` class features, `Text57` species traits and `Text58` feats, a feature per line ("Name: text" when the text is long; an all-capitals line heads the lines after it); spell rows `Text105.n` (level) and `Text106.n` (name), all prepared; slot totals `Text112`–`Text120`; `Text111` spellcasting ability, `Text94` save DC, `Text95` attack; armour training boxes, `Text59` weapons, `Text60` tools and `Text98` languages into other proficiencies; `Text99` equipment with the attuned items `Text101`–`Text103`; `Text226` and `Text267`–`Text270` coins; `Text96` appearance, `Text97` backstory and `Text100` alignment into notes.
+
 Conventions:
 
 - **Score or modifier by value.** A plain number from 1 to 30 is the score and a signed one the modifier, whichever field holds it (the 2014 sheet prints its big box for the modifier and apps fill it both ways); two plain numbers are told apart by mod = ⌊(score − 10) / 2⌋. Minus signs may be `-`, `−` or `–`.
@@ -424,7 +426,8 @@ Conventions:
 - **Marks by position.** A check box or a mark letter counts for a save or skill when it is on the same line (centres within 4 pt) and ends at most 20 pt left of the value. A check box cannot say expertise: a skill whose number is the modifier plus twice the proficiency bonus is expertise. `H` (half proficiency) is not proficiency; its number is kept as an override.
 - **Spell levels by position.** A spell takes the level of the nearest header or slot box above it that overlaps its column. In the export a level runs onto the next page; on the 2014 sheet a spell with no box above it is a cantrip. A trailing `[R]` is dropped, and a spell listed twice at one level is kept once.
 - **Overrides.** Proficiency bonus, AC, initiative, passives, saves, skills, spell save DC and spell attack are kept as overrides where the page's number differs from what the sheet works out.
-- **Edition** is 2024 when any field mentions 2024; otherwise 2014. The player can change it in the preview.
+- **Attacks** with a save DC instead of a bonus ("DC 15 DEX") keep it after the damage: "2d8 Radiant (DC 15 DEX)".
+- **Edition** is 2024 on the 2024 sheet or when any field mentions 2024; otherwise 2014. The player can change it in the preview.
 - **A blank template** (no name, class or hit points, whatever its defaults) is `empty`; `--` and similar placeholders count as blank.
 
 ---

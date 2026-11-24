@@ -57,11 +57,31 @@ describe.skipIf(pdfs.length === 0)('Import from PDF, local sheets', () => {
     const expectedFile = join(ROOT, file.replace(/\.pdf$/, '.expected.json'));
     if (existsSync(expectedFile)) {
       const expected = JSON.parse(readFileSync(expectedFile, 'utf8')) as {
-        expected_values: { CharacterName?: string; scores?: Record<string, number> };
+        expected_values?: { CharacterName?: string; scores?: Record<string, number> };
+        values?: Record<string, string | boolean>;
       };
       const want = expected.expected_values;
-      if (want.CharacterName) expect(imported.name).toBe(want.CharacterName);
-      if (want.scores) expect(s.abilities).toEqual(want.scores);
+      if (want?.CharacterName) expect(imported.name).toBe(want.CharacterName);
+      if (want?.scores) expect(s.abilities).toEqual(want.scores);
+      // The 2024 sheet's expected values are keyed by meaning ("abilities.str.score").
+      const v = expected.values;
+      if (v) {
+        expect(imported.name).toBe(v['characterName']);
+        for (const a of ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const) {
+          expect(s.abilities[a]).toBe(Number(v[`abilities.${a}.score`]));
+          expect(s.saves.includes(a)).toBe(v[`abilities.${a}.saveProf`] === true);
+          expect(n.saves[a].value).toBe(Number(String(v[`abilities.${a}.save`]).replace('+', '')));
+        }
+        for (const [key, value] of Object.entries(v)) {
+          const skill = /^skills\.(\w+)\.total$/.exec(key)?.[1] as
+            keyof typeof n.skills | undefined;
+          if (!skill) continue;
+          expect(n.skills[skill].value).toBe(Number(String(value).replace('+', '')));
+          expect(!!s.skills[skill]).toBe(v[`skills.${skill}.prof`] === true);
+        }
+        expect(s.maxHp).toBe(Number(v['hpMax']));
+        expect(n.ac.value).toBe(Number(v['armorClass']));
+      }
     }
   });
 });
