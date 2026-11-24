@@ -1305,11 +1305,11 @@ export interface TrifoldApi {
      */
     create(name: string): Promise<CampaignBundle>;
     /**
-     * Makes it the open campaign, remembered in `library.json` for next launch. Accepts an id or a
-     * slug.
+     * Makes it the open campaign for this run; the next launch starts on the Library (ADR 0079).
+     * Accepts an id or a slug.
      */
     open(campaignId: string): Promise<CampaignBundle>;
-    /** The campaign opened last time, reopened on start; null when none. */
+    /** The campaign open in this run; null when none, as at every launch (ADR 0079). */
     current(): Promise<CampaignBundle | null>;
     /**
      * Every campaign's bundle, read without opening any: what the Library's search looks in.

@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
 import { tvOnPrimary } from './tv';
 import { keepLogs } from './keepLogs';
-import { chooseGameMaster } from './firstRun';
+import { chooseGameMaster, reopenCampaign } from './firstRun';
 
 /**
  * Counters (ADR 0019) inside real Electron: make two counters in the dock tool, change them,
@@ -132,10 +132,11 @@ test('counters are made, changed, held at their bounds, shown on the TV and kept
       ['Torches', 8, null, null, 5, false],
     ]);
 
-    // The restarted app reopens the campaign with the counters as they were.
+    // The restarted app starts on Library › Campaigns (ADR 0079); opening the campaign again
+    // finds the counters as they were.
     app = await launch(userData, library);
     page = await app.firstWindow();
-    await expect(page.getByRole('tab', { name: 'Campaign', exact: true })).toBeVisible();
+    await reopenCampaign(page, 'Counter Campaign');
     await openCounters(page);
     await expect(
       page.getByRole('listitem', { name: 'Ritual rounds' }).getByRole('button', {

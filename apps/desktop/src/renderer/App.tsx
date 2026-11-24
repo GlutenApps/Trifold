@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PlayerScreen } from './features/presenter/PlayerScreen';
 import { AppShell } from './features/shell/AppShell';
+import { WindowBoundary } from './features/shell/WindowBoundary';
 
 /**
  * The router, and the whole of it (ADR 0002): one renderer bundle serves two windows, and the
@@ -29,5 +30,15 @@ export function App() {
     document.title = route === 'player' ? 'Trifold player' : 'Trifold';
   }, [route]);
 
-  return route === 'player' ? <PlayerScreen /> : <AppShell />;
+  // A whole-window safety net (ADR 0079): an error in the shell itself shows a message and goes
+  // to the log instead of leaving a page that never paints.
+  return route === 'player' ? (
+    <WindowBoundary name="TV window" quiet>
+      <PlayerScreen />
+    </WindowBoundary>
+  ) : (
+    <WindowBoundary name="Console window">
+      <AppShell />
+    </WindowBoundary>
+  );
 }

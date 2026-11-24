@@ -1,6 +1,6 @@
 import { syncIndex } from './index/sync';
 import { loadShared, NOTHING_SHARED } from './table/sharedContent';
-import { app, net, screen } from 'electron';
+import { app, dialog, net, screen } from 'electron';
 import { join } from 'node:path';
 import { EVENT_CHANNELS } from '@trifold/api';
 import { TEXT_SIZE_ZOOM } from '@trifold/schema';
@@ -9,6 +9,7 @@ import { AppConfigStore } from './appConfig';
 import { configCopyTarget, copyStatus } from './backupCopy';
 import { registerIpc } from './ipc';
 import { LibrarySession } from './library/session';
+import { afterPageGone, describeTrouble, problemPage } from './consoleHealth';
 import { createLogger, errorMessage } from './log';
 import { IconResources } from './icons';
 import { runDailyBackup, runQuitBackup } from './libraryOpen';
@@ -38,26 +39,58 @@ if (userDataOverride) app.setPath('userData', userDataOverride);
 app.setAppUserModelId(app.isPackaged ? 'app.trifold.desktop' : 'app.trifold.desktop.dev');
 registerMediaScheme();
 
-// The loading splash (splash.ts): opens only if the console is not up within 250 ms.
-const splash = new Splash(() => createSplashWindow(WindowManager.iconOptions()));
+// The loading splash (splash.ts): opens only if the console is not up within 250 ms. The DM
+// closing it before startup is done means they gave up waiting: Trifold quits (ADR 0079).
+let splashClosedByUser = (): void => app.quit();
+const splash = new Splash(() =>
+  createSplashWindow(WindowManager.iconOptions(), () => splashClosedByUser()),
+);
+
+/** Where this run logs: the Library's logs/ once one is open, the app's before. */
+let session: LibrarySession | null = null;
+const appLogDir = join(app.getPath('userData'), 'logs');
+const logger = createLogger(() => session?.logDir ?? null, appLogDir);
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  // A failed startup still closes the splash, so no frameless window is left without a way out.
-  main().catch((err: unknown) => {
+  // Registered before anything can fail or wait (ADR 0079), so Trifold can always quit: the
+  // console is the app on every platform (ADR 0006), and closing the last window quits, so the
+  // player window and audio never outlive it, on macOS too.
+  app.on('window-all-closed', () => app.quit());
+  // A failed startup closes the splash, says why, and quits: no window is left without a way out
+  // and no process is left holding the single-instance lock.
+  main().catch(async (err: unknown) => {
     splash.done();
-    throw err;
+    logger.error(
+      `startup failed: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`,
+    );
+    await logger.idle();
+    dialog.showErrorBox(
+      'Trifold could not start',
+      `${errorMessage(err)}\n\nThe log is in ${session?.logDir ?? appLogDir}`,
+    );
+    app.exit(1);
   });
 }
 
 async function main(): Promise<void> {
+  // Opening Trifold again while it runs brings this one forward; set below once there is a
+  // console. Registered first so a second launch during startup is never left unanswered.
+  let wake = (): void => undefined;
+  app.on('second-instance', () => wake());
+  let quitting = false;
+  app.on('before-quit', () => {
+    quitting = true;
+  });
+
   await app.whenReady();
   if (process.env['TRIFOLD_NO_SPLASH'] !== '1') splash.start();
   installApplicationMenu();
-
-  let session: LibrarySession | null = null;
-  const logger = createLogger(() => session?.logDir ?? null, join(app.getPath('userData'), 'logs'));
+  splashClosedByUser = () => {
+    logger.warn('the loading window was closed before the console was ready; quitting');
+    app.quit();
+  };
   const config = await AppConfigStore.load(join(app.getPath('userData'), 'config.json'), logger);
   // Bundled SRD content lives in resources/ (repo root in dev, extraResources when packaged).
   const bundledDir = app.isPackaged
@@ -95,6 +128,9 @@ async function main(): Promise<void> {
     await Promise.race([config.idle(), new Promise((done) => setTimeout(done, 5_000))]);
   };
 
+  // An automatic reload of a console page that stopped (ADR 0079), so a page that stops on every
+  // load is explained instead of reloaded forever.
+  let lastConsoleReload: number | null = null;
   const windows = new WindowManager({
     onConsoleClosing: (bounds, event) => {
       if (closing === 'done') return;
@@ -111,6 +147,44 @@ async function main(): Promise<void> {
     },
     onPlayerChanged: (open) => windows.sendToConsole(EVENT_CHANNELS.playerWindowChanged, { open }),
     onPlayerReady: () => presenter.sync(),
+    // The console's page failed or is slow (ADR 0079): log it, recover where we can, and never
+    // leave the DM with a splash that does not end or an app with no window to close.
+    onConsoleTrouble: (trouble, shown) => {
+      if (closing !== 'open') return;
+      const line = describeTrouble(trouble);
+      if (trouble.kind === 'responsive') logger.info(line);
+      else if (trouble.kind === 'error') logger.warn(line);
+      else logger.error(line);
+      const explain = (what: string) => {
+        splash.done();
+        windows.explainConsole(problemPage(what, session?.logDir ?? appLogDir));
+      };
+      switch (trouble.kind) {
+        case 'gone':
+          if (afterPageGone(lastConsoleReload, Date.now()) === 'reload') {
+            lastConsoleReload = Date.now();
+            windows.reloadConsole();
+          } else {
+            explain('The console stopped twice in a row.');
+          }
+          return;
+        case 'load-failed':
+          explain('The console could not be loaded.');
+          return;
+        case 'unresponsive':
+        case 'slow':
+          // A window on screen, even one still loading or not answering, is one the DM can
+          // close; the close flow gives up waiting on the page after a few seconds.
+          if (!shown) {
+            splash.done();
+            windows.showConsole();
+          }
+          return;
+        case 'responsive':
+        case 'error':
+          return;
+      }
+    },
   });
   const presenter = new PresenterHub(windows);
   // A TV plugged in while the DM is live opens there (ADR 0046), as Go live would have done.
@@ -281,14 +355,21 @@ async function main(): Promise<void> {
     }),
     logger,
   );
+  // The splash was closed, or the app told to quit, while the Library opened: open no console.
+  if (quitting) {
+    updates.stop();
+    activeSession.close();
+    return;
+  }
   splash.setStatus('Loading the console…');
   windows.setConsoleZoom(TEXT_SIZE_ZOOM[config.get().textSize]);
   windows.openConsole(config.get().consoleWindow).once('ready-to-show', () => splash.done());
+  wake = () => {
+    if (closing !== 'open') return;
+    splash.done();
+    windows.revealConsole();
+  };
 
-  app.on('second-instance', () => windows.focusConsole());
-  // The console window is the app on every platform (ADR 0006): closing it quits, so the
-  // player window and audio never outlive it, on macOS too.
-  app.on('window-all-closed', () => app.quit());
   app.on('before-quit', (event) => {
     // Quit from the menu or Cmd+Q: run the console's close flow first (flush, on-close backup);
     // it closes the last window, which quits again with the Library still open until here.

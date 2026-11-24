@@ -66,7 +66,7 @@ describe('CampaignRepository', () => {
     ]) {
       expect(entries).toContain(folder);
     }
-    expect(store.getSettings().lastOpenCampaignSlug).toBe('the-sunken-keep');
+    expect(repo.current).toBe('the-sunken-keep');
     expect((await repo.list())[0]).toMatchObject({
       name: 'The Sunken Keep',
       pcCount: 0,
@@ -128,13 +128,14 @@ describe('CampaignRepository', () => {
     expect((await repo.list())[0]?.encounterCount).toBe(1);
   });
 
-  it('reopens the last campaign and closes it', async () => {
-    const created = await repo.create('Persist');
-    const again = new CampaignRepository(store, logger);
-    expect((await again.reopenLast())?.campaign.id).toBe(created.campaign.id);
-    await again.close();
+  it('starts each run with no campaign open, and remembers none in library.json (ADR 0079)', async () => {
+    await repo.create('Persist');
+    expect(repo.current).toBe('persist');
     expect(store.getSettings().lastOpenCampaignSlug).toBeNull();
-    expect(await again.reopenLast()).toBeNull();
+    const nextRun = new CampaignRepository(store, logger);
+    expect(nextRun.current).toBeNull();
+    await repo.close();
+    expect(repo.current).toBeNull();
   });
 
   it('deletes a campaign folder and closes it when it was open', async () => {
@@ -143,7 +144,6 @@ describe('CampaignRepository', () => {
     await repo.savePc(card('Thora'));
     await repo.remove(gone.campaign.id);
     expect(repo.current).toBeNull();
-    expect(store.getSettings().lastOpenCampaignSlug).toBeNull();
     expect(await readdir(store.resolvePath('campaigns'))).toEqual(['keep']);
     expect((await repo.list()).map((c) => c.id)).toEqual([keep.campaign.id]);
   });
@@ -153,7 +153,6 @@ describe('CampaignRepository', () => {
     const open = await repo.create('Open');
     await repo.remove(other.campaign.id);
     expect(repo.current).toBe('open');
-    expect(store.getSettings().lastOpenCampaignSlug).toBe('open');
     expect((await repo.list()).map((c) => c.id)).toEqual([open.campaign.id]);
     await expect(repo.remove(other.campaign.id)).rejects.toThrow(/not found/);
   });

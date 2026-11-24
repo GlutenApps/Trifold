@@ -246,6 +246,10 @@ export const LibrarySettings = z.object({
   schemaVersion: z.literal(LIBRARY_SCHEMA_VERSION),
   /** Bumped by the app when the derived SQLite index layout changes; a lower value forces a rebuild. */
   indexVersion: z.number().int().nonnegative().default(0),
+  /**
+   * The campaign open when Trifold last closed. No longer written or read: every launch starts on
+   * the Library (ADR 0079). Kept so files that carry it parse as before.
+   */
   lastOpenCampaignSlug: z.string().nullable().default(null),
   theme: z.enum(['dark', 'light']).default('dark'),
   /** Electron display id the player window opens on. Null = pick the first non-primary display. */

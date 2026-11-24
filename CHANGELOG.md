@@ -4,6 +4,18 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.5.0-beta.3] - 2026-11-24
+
+Trifold opens on your campaigns list every time, and no longer gets stuck on the loading screen.
+
+### Changed
+
+- **Trifold opens on Library › Campaigns** every time, rather than in the campaign open when it last closed. Opening the campaign brings its console back as you left it.
+
+### Fixed
+
+- **Trifold no longer gets stuck on the loading screen.** If the console's window cannot draw, it now shows the window anyway, or a page that says it stopped and where the log is, instead of leaving the loading screen up. Closing the loading screen quits Trifold rather than leaving it running in the background, and opening Trifold again while it runs brings its window forward. A console that stops is reloaded once, and what went wrong is written to the log.
+
 ## [0.5.0-beta.2] - 2026-11-24
 
 Fixes from the first table test of player mode, and a way to set up a character when you sit down.

@@ -72,8 +72,16 @@ export class Splash {
   }
 }
 
-/** The real window: frameless, centred, on the brand's slate, with the kit's animated page. */
-export function createSplashWindow(extra: Electron.BrowserWindowConstructorOptions): SplashWindow {
+/**
+ * The real window: frameless, centred, on the brand's slate, with the kit's animated page.
+ * `onClosedByUser` runs when the DM closes it themselves (Alt+F4, the taskbar) rather than
+ * startup closing it: they have given up waiting, so Trifold quits instead of running on with no
+ * window (ADR 0079).
+ */
+export function createSplashWindow(
+  extra: Electron.BrowserWindowConstructorOptions,
+  onClosedByUser: () => void,
+): SplashWindow {
   const win = new BrowserWindow({
     width: 480,
     height: 360,
@@ -90,6 +98,10 @@ export function createSplashWindow(extra: Electron.BrowserWindowConstructorOptio
   });
   let ready = false;
   let pending: string | null = null;
+  let closedByStartup = false;
+  win.once('closed', () => {
+    if (!closedByStartup) onClosedByUser();
+  });
   const push = (text: string) => {
     if (win.isDestroyed()) return;
     void win.webContents
@@ -112,6 +124,7 @@ export function createSplashWindow(extra: Electron.BrowserWindowConstructorOptio
       else pending = text;
     },
     close: () => {
+      closedByStartup = true;
       if (!win.isDestroyed()) win.destroy();
     },
   };
