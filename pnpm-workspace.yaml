@@ -12,3 +12,8 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   simple-git-hooks: false # hooks are installed by the root "prepare" script instead
+
+# pdf.js (Import from PDF, ADR 0073) only reads fields and text; its optional native canvas
+# package draws pages, which Trifold never does.
+ignoredOptionalDependencies:
+  - '@napi-rs/canvas'

@@ -28,7 +28,7 @@ Parsing lives in `packages/importers/src/open5e/` (build time) and the typed rea
 
 ## The flow
 
-The SRD's own five steps, on the Sheets tab or Library › Characters. **New character** keeps its two kinds; a **Trifold character** then starts one of three ways: **Guided builder** (this flow), **Blank sheet** (the sheet filled in by hand, as today) or **Import from PDF** (phase 6, hidden until built). Each step can be revisited until Finish; nothing is written before Finish, then the result is a Trifold character.
+The SRD's own five steps, on the Sheets tab or Library › Characters. **New character** keeps its two kinds; a **Trifold character** then starts one of three ways: **Guided builder** (this flow), **Blank sheet** (the sheet filled in by hand, as today) or **Import from PDF** (ADR 0073: the sheet read from a PDF, previewed, then created). Each step can be revisited until Finish; nothing is written before Finish, then the result is a Trifold character.
 
 1. **Class.** The 12 classes with hit die, primary ability and a one-line summary. Picks: skills (the class's "Choose n"), weapon mastery where the class has it, and a fighting style where it has one. A subclass is picked at the level that grants it (Level up), not here.
 2. **Origin.** Background (its feat comes with it; a choice inside the feat, such as Magic Initiate's spell list, is offered), then species and its choices, then languages (Common plus two from the SRD list).

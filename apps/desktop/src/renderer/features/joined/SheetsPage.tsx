@@ -6,6 +6,7 @@ import { ExternalForm } from '../character/ExternalForm';
 import { SheetView } from '../character/SheetView';
 import { TrifoldSheet } from '../character/TrifoldSheet';
 import { GuidedBuilder } from '../character/builder/GuidedBuilder';
+import { PdfImport } from '../character/PdfImport';
 import { useJoinedStore } from '../../stores/joinedStore';
 import { HeldConditions } from '../campaign/HeldConditions';
 import { HpChip, HpEditor } from '../campaign/HpBetweenFights';
@@ -111,6 +112,7 @@ export function SheetsPage() {
   const building = useCharacterStore((s) => s.building);
   const cancelBuilding = useCharacterStore((s) => s.cancelBuilding);
   const createBuilt = useCharacterStore((s) => s.createBuilt);
+  const createImported = useCharacterStore((s) => s.createImported);
   const linkCharacter = useJoinedStore((s) => s.linkCharacter);
   const view = conn.link === 'open' ? conn.view : null;
   const mine = useMemo(
@@ -126,6 +128,23 @@ export function SheetsPage() {
     if (!characterId) return;
     return () => void flush(characterId);
   }, [flush, characterId]);
+
+  // Import from PDF (ADR 0073), opened from My characters: Create links what it made.
+  if (building?.forJoined && building.way === 'pdf') {
+    return (
+      <div className="sheets-page" data-testid="sheets-page">
+        <PdfImport
+          name={building.name}
+          onCancel={cancelBuilding}
+          onDone={(preview, name, edition) =>
+            void createImported(name, preview, edition).then(
+              (made) => made && linkCharacter(made.id),
+            )
+          }
+        />
+      </div>
+    );
+  }
 
   // The guided builder, opened from My characters (docs/BUILDER.md): Finish links what it made.
   if (building?.forJoined) {
