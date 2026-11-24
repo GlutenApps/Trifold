@@ -19,7 +19,7 @@ So the list below does not repeat it:
 
 **The table owns some things on purpose** (PLAYER-MODE.md, Who owns what): current HP, temp HP, death saves and conditions. The sheet shows them while connected and does not keep its own copy.
 
-**Built since:** items 1 to 5, 20 and 21 (ADR 0081): equipped (with AC from equipped armour and shields), attunement, places, coins, item charges, defences, senses and other speeds.
+**Built since:** items 1 to 5, 20 and 21 (ADR 0081): equipped (with AC from equipped armour and shields), attunement, places, coins, item charges, defences, senses and other speeds. Spells and equipment are also added, changed and removed in their own tabs (ADR 0082).
 
 ## Inventory and equipment
 
@@ -82,6 +82,12 @@ So the list below does not repeat it:
 | 30 | **Print or export to PDF** | Common | None | A print layout of the sheet; Electron prints to PDF without a new dependency. | M | B |
 | 31 | **The full sheet on a phone** | Common in mobile apps | The phone page shows a summary | The same sheet at the phone page's width (it already works from 480 px). | L | C |
 | 32 | **Favourites or an "on my turn" view** | Some | The Actions tab | Pin attacks, spells and features to the top of Actions. | M | C |
+
+## The editor
+
+| # | Item | Other sheets | Trifold now | Work | Size | Priority |
+| --- | --- | --- | --- | --- | --- | --- |
+| 33 | **Rework the editor** (Edit, and Library › Characters) | Builders and sheets edit in place, section by section, with controls sized to what they hold | One long page of every section, with text boxes and number fields that do not fit what they hold (Ian, 2026-11-24: "a super long wall of text … needs to be totally reworked") | Its own short plan first: probably the sheet's own tabs in an editing state, or sections that open one at a time, with fields sized to their content and the in-tab editing of ADR 0082 as the pattern. | L | A |
 
 ## Not for Trifold
 

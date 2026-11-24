@@ -17,6 +17,7 @@ export function SheetRow({
   muted,
   after,
   actions,
+  below,
   className,
 }: {
   name: string;
@@ -29,6 +30,8 @@ export function SheetRow({
   after?: ReactNode;
   /** Quiet per-row actions (ADR 0020), always on screen, full when the row is hovered. */
   actions?: ReactNode;
+  /** Shown under the row while it is being changed in place: an item's editor. */
+  below?: ReactNode;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -59,6 +62,7 @@ export function SheetRow({
         {after}
         {actions && <span className="row-actions">{actions}</span>}
       </div>
+      {below}
       {open && (
         <div className="sh-expand">
           {text?.trim() && <p className="sh-text">{text}</p>}

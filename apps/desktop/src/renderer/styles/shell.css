@@ -3528,11 +3528,20 @@ button.sh-vital.rolls:hover .sh-v-label {
   background: var(--bg-panel);
 }
 
-/* On the Sheets tab the stuck bars reach its edges, so nothing scrolls past beside them. */
+/* On the Sheets tab the stuck bars reach its edges, so nothing scrolls past beside or above
+   them: they stick at the tab's very top, not below its 12 px padding. */
 .sheets-page .turnbar,
 .sheets-page .sh-tabs {
   margin-inline: -12px;
   padding-inline: 12px;
+}
+
+.sheets-page .turnbar {
+  top: -12px;
+}
+
+.sheets-page .sh-tabs {
+  top: calc(var(--tb-h, 0px) - 12px);
 }
 
 .sh-tabs .subtabbar {
@@ -4159,6 +4168,93 @@ button.sh-vital.rolls:hover .sh-v-label {
   margin: 0 0 4px;
   font-size: 13px;
   font-weight: 600;
+}
+
+/* Adding a spell or an item in its own tab (ADR 0082): a search, what it found, and adding
+   what was typed as written. Recessed, like the other panels a tab opens in place. */
+.sh-add {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.sh-add-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sh-add-head input {
+  flex: 1;
+  min-width: 0;
+}
+
+.sh-add-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.sh-add-pick {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.sh-add-pick:hover,
+.sh-add-pick:focus-visible {
+  background: var(--bg-hover);
+}
+
+.sh-add-pick:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.sh-add-pick .sh-name {
+  flex: 1;
+}
+
+.sh-add-own {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* An item changed in place, under its row. */
+.sh-item-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  margin: 2px 0 8px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.sh-item-edit .field {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sh-item-edit .field input[type='text'] {
+  width: 160px;
 }
 
 /* Equipped or attuned, said in words where nothing can be changed. */

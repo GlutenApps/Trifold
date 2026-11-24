@@ -303,8 +303,11 @@ describe('equipment (docs/CHARACTER-SHEET.md, items 1 to 5, 20, 21)', () => {
   it('offers attunement only for items that need it, and counts it against three', async () => {
     const user = userEvent.setup();
     render(<AtTheTable start={armed} />);
-    await screen.findByRole('button', { name: 'Attune to Ring of Protection' });
-    expect(screen.queryByRole('button', { name: 'Attune to Shield' })).toBeNull();
+    // Attune keeps its place on every row, and is only live for what needs it.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Attune to Ring of Protection' })).toBeEnabled(),
+    );
+    expect(screen.getByRole('button', { name: 'Attune to Shield' })).toBeDisabled();
     const gear = within(screen.getByRole('tabpanel', { name: 'Equipment' }));
     expect(gear.getByText('0 of 3')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Attune to Ring of Protection' }));
@@ -334,5 +337,134 @@ describe('equipment (docs/CHARACTER-SHEET.md, items 1 to 5, 20, 21)', () => {
     expect(defs).toHaveTextContent('Sensesdarkvision 120 ft');
     // Read only: equipped and attuned are words, not buttons.
     expect(screen.queryByRole('button', { name: /^Equip / })).toBeNull();
+  });
+});
+
+describe('changing spells and equipment in their tabs (ADR 0082)', () => {
+  const row = (name: string, kind: 'spell' | 'item', level: number | null = null) =>
+    ({
+      id: `r-${name}`,
+      kind,
+      key: name.toLowerCase(),
+      name,
+      displayName: name,
+      sourceId: 'srd-2024',
+      sourceName: 'SRD 5.2.1',
+      edition: '2024',
+      editions: ['2024'],
+      otherVersions: [],
+      cr: null,
+      type: null,
+      size: null,
+      environment: null,
+      isNpc: false,
+      level,
+      typeCode: null,
+      rarity: null,
+    }) as never;
+
+  beforeEach(() => {
+    clearItemFacts();
+    vi.mocked(window.trifold.compendium.findByKey).mockResolvedValue([]);
+    window.trifold.compendium.search = vi.fn(async (q: { kind: string; text?: string }) => ({
+      rows:
+        q.kind === 'spell' ? [row('Healing Word', 'spell', 1)] : [row('Potion of Healing', 'item')],
+      total: 1,
+      tookMs: 1,
+    })) as never;
+  });
+
+  it('adds a spell from the compendium at its level, linked, and undoes it', async () => {
+    const seen = vi.fn();
+    const user = userEvent.setup();
+    render(<AtTheTable seen={seen} />);
+    await user.click(screen.getByRole('button', { name: 'Add a spell' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Search spells to add' }), 'heal');
+    await user.click(await screen.findByRole('button', { name: 'Add Healing Word' }));
+    const added = seen.mock.lastCall![0].spells.at(-1);
+    expect(added).toMatchObject({
+      name: 'Healing Word',
+      level: 1,
+      prepared: true,
+      ref: { kind: 'spell', key: 'healing word' },
+    });
+    expect(
+      within(screen.getByTestId('spell-level-1')).getByText('Healing Word'),
+    ).toBeInTheDocument();
+    await user.click(
+      within(screen.getByTestId('sheet-last-roll')).getByRole('button', { name: 'Undo' }),
+    );
+    expect(screen.queryByText('Healing Word')).toBeNull();
+  });
+
+  it('adds a spell as written at a chosen level', async () => {
+    const seen = vi.fn();
+    const user = userEvent.setup();
+    render(<AtTheTable seen={seen} />);
+    await user.click(screen.getByRole('button', { name: 'Add a spell' }));
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search spells to add' }),
+      'Mote of Dust',
+    );
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Level of the spell added as written' }),
+      '2',
+    );
+    await user.click(screen.getByRole('button', { name: /Add “Mote of Dust” as written/ }));
+    expect(seen.mock.lastCall![0].spells.at(-1)).toMatchObject({ name: 'Mote of Dust', level: 2 });
+  });
+
+  it('prepares, unprepares and removes a spell from its row', async () => {
+    const seen = vi.fn();
+    const user = userEvent.setup();
+    render(<AtTheTable seen={seen} />);
+    expect(screen.getByRole('button', { name: 'Prepare Sacred Flame' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Prepare Shield of Faith' }));
+    expect(seen.mock.lastCall![0].spells.find((x: { id: string }) => x.id === 's3').prepared).toBe(
+      true,
+    );
+    await user.click(screen.getByRole('button', { name: 'Remove Aid' }));
+    expect(seen.mock.lastCall![0].spells.map((x: { name: string }) => x.name)).not.toContain('Aid');
+  });
+
+  it('adds an item, then moves it to a place and sets how many in place', async () => {
+    const seen = vi.fn();
+    const user = userEvent.setup();
+    render(<AtTheTable seen={seen} />);
+    await user.click(screen.getByRole('tab', { name: 'Equipment' }));
+    await user.click(screen.getByRole('button', { name: 'Add an item' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Search items to add' }), 'potion');
+    await user.click(await screen.findByRole('button', { name: 'Add Potion of Healing' }));
+    await user.click(screen.getByRole('button', { name: 'Change Potion of Healing' }));
+    const editor = within(screen.getByRole('group', { name: 'Change Potion of Healing' }));
+    await user.type(editor.getByRole('combobox', { name: 'Potion of Healing place' }), 'Backpack');
+    const qty = editor.getByRole('spinbutton', { name: 'Potion of Healing quantity' });
+    await user.clear(qty);
+    await user.type(qty, '3');
+    const potion = seen.mock.lastCall![0].equipment.at(-1);
+    expect(potion).toMatchObject({ name: 'Potion of Healing', place: 'Backpack', quantity: 3 });
+    const groups = () =>
+      screen
+        .getAllByTestId('item-place')
+        .map((p) => p.querySelector('h4')?.firstChild?.textContent);
+    // It stays where it was while being changed, so typing a place does not move it mid-word.
+    expect(groups()).toEqual(['On you']);
+    await user.click(editor.getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('group', { name: 'Change Potion of Healing' })).toBeNull();
+    expect(groups()).toEqual(['On you', 'Backpack']);
+  });
+
+  it('removes an item, and offers nothing to change on a read-only sheet', async () => {
+    const seen = vi.fn();
+    const user = userEvent.setup();
+    const { unmount } = render(<AtTheTable seen={seen} />);
+    await user.click(screen.getByRole('button', { name: 'Remove Bolts' }));
+    expect(seen.mock.lastCall![0].equipment.map((x: { name: string }) => x.name)).toEqual([
+      'Holy Symbol',
+    ]);
+    unmount();
+    render(<SheetView character={cleric} />);
+    expect(screen.queryByRole('button', { name: /^Add a/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Remove / })).toBeNull();
   });
 });
