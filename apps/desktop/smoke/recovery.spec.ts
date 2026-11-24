@@ -91,7 +91,8 @@ test('a hidden console comes back on a second launch, and a stopped console page
 
     // The page stops: main reloads it once and the console comes back.
     await crashConsole(app);
-    await expect.poll(() => libraryLog(library)).toContain('console page stopped (crashed');
+    // The reason is the OS's: a forced crash reads "crashed" on Windows and "killed" on macOS.
+    await expect.poll(() => libraryLog(library)).toContain('console page stopped (');
     await expect.poll(() => consoleDrawn(app), { timeout: 20_000 }).toBe(true);
 
     // It stops again within the minute: no second reload, the window says what happened.
