@@ -1293,10 +1293,13 @@ body.resizing {
   white-space: nowrap;
 }
 
-.player-move {
+/* The player console's Move banner holds Cancel and Move here, so unlike the phone page's banner
+   (web.css, which takes no taps) it takes clicks. */
+.pc-movebanner.player-move {
   display: flex;
   align-items: center;
   gap: 8px;
+  pointer-events: auto;
 }
 
 /* My characters and Initiative (docs/PLAYER-MODE.md): the player console's dock tools. */
