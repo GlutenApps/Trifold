@@ -39,7 +39,7 @@ The SRD's own five steps, on the Sheets tab or Library › Characters. **New cha
 
 ## Level up
 
-On a Trifold character made by the builder: **Level up** on the sheet (Edit mode). HP: the fixed value (half the die plus one, plus Con) or a roll. New features from the class table are added; the subclass is picked at its level; an ASI level offers +2/+1 or a feat; new cantrips, prepared spells and slots follow the table. A sheet update offer follows as for any change (ADR 0071).
+On a Trifold character made by the builder: **Level up** on the sheet (Edit mode). HP: the fixed value (half the die plus one, plus Con) or a roll. New features from the class table are added; the subclass is picked at its level; an ASI level offers +2/+1 or a feat; new cantrips, prepared spells and slots follow the table. A sheet update offer follows as for any change (ADR 0071). Built: **Level up** on the Trifold sheet of a character the builder made (it has `build`), as one panel: hit points fixed or rolled (with Con, at least 1), the new class and subclass features listed, the subclass at its level, at an ASI level +2 to one ability, +1 to two (none above 20) or a feat (origin and general feats other than Ability Score Improvement itself), and new cantrips and prepared spells up to the class table's counts; spell slots follow the class. The build record keeps the hit points, the subclass and each improvement.
 
 ## Data model
 
