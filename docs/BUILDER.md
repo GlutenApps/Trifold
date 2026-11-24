@@ -33,7 +33,7 @@ The SRD's own five steps, on the Sheets tab or Library › Characters. **New cha
 1. **Class.** The 12 classes with hit die, primary ability and a one-line summary. Picks: skills (the class's "Choose n"), weapon mastery where the class has it, and a fighting style where it has one. A subclass is picked at the level that grants it (Level up), not here.
 2. **Origin.** Background (its feat comes with it; a choice inside the feat, such as Magic Initiate's spell list, is offered), then species and its choices, then languages (Common plus two from the SRD list).
 3. **Ability scores.** Standard array, point buy (27 points, the SRD costs), or rolled (4d6 drop lowest, rolled with Trifold's dice and shown). Then the background's increase: +2 and +1, or +1 to all three, among its three abilities. Scores and modifiers update as they change.
-4. **Equipment.** The class's and the background's option A or B; B's gold is added to coins. Items are linked to their SRD records by name where one matches.
+4. **Equipment.** The class's and the background's option A or B; B's gold is added to coins. Items are linked to their SRD records by name where one matches. Built: body armour and a shield set the sheet's armour (so its AC), and each weapon becomes an attack with the ability it uses (Dexterity for ranged, the better of Strength and Dexterity for finesse) and its damage with that modifier; coins are the sheet's `gp`.
 5. **Spells** (casters only). Cantrips and prepared spells up to the class table's counts at 1st level, from the class's list, picked from the compendium with its filters. Spell slots come from the class table.
 6. **Review.** The sheet as it will be, numbers worked out: HP is the hit die's maximum plus Con at 1st level. Finish writes it.
 

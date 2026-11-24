@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   ABILITY_NAMES,
   buildSheet2024,
+  deriveSheet,
   pointBuySpent,
   POINT_BUY_BUDGET,
   POINT_BUY_COST,
@@ -26,12 +27,13 @@ import { useBuilderOptions, type BuilderOptions } from './options';
 
 const ABILITIES: Ability[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 const ALL_SKILLS = Object.keys(SKILL_NAMES) as Skill[];
-type Step = 'class' | 'origin' | 'abilities' | 'review';
+type Step = 'class' | 'origin' | 'abilities' | 'equipment' | 'review';
 const STEPS: Array<{ id: Step; label: string }> = [
   { id: 'class', label: '1 Class' },
   { id: 'origin', label: '2 Origin' },
   { id: 'abilities', label: '3 Ability scores' },
-  { id: 'review', label: '4 Review' },
+  { id: 'equipment', label: '4 Equipment' },
+  { id: 'review', label: '5 Review' },
 ];
 type Method = CharacterBuild['abilityMethod'];
 
@@ -109,6 +111,9 @@ function BuilderSteps({
   const [increaseMode, setIncreaseMode] = useState<'twoOne' | 'all'>('twoOne');
   const [plus2, setPlus2] = useState<Ability | ''>('');
   const [plus1, setPlus1] = useState<Ability | ''>('');
+  /** The starting equipment options picked ("A: …"); option A until changed. */
+  const [classKit, setClassKit] = useState('');
+  const [backgroundKit, setBackgroundKit] = useState('');
 
   const cls = options.classes.find((c) => c.option.key === classKey);
   const background = options.backgrounds.find((b) => b.option.key === backgroundKey);
@@ -144,6 +149,7 @@ function BuilderSteps({
     class: !!cls && classSkills.length === cls.option.skills.choose,
     origin: !!background && !!species,
     abilities: !!baseScores && !!increase && (method !== 'pointBuy' || spent <= POINT_BUY_BUDGET),
+    equipment: true,
     review: true,
   };
   const reachable = (s: Step) => {
@@ -171,6 +177,9 @@ function BuilderSteps({
           increase,
           classSkills,
           languages,
+          classEquipment: classKit || cls.option.equipment[0] || '',
+          backgroundEquipment: backgroundKit || background.option.equipment[0] || '',
+          items: options.items,
         })
       : null;
 
@@ -496,10 +505,59 @@ function BuilderSteps({
         </div>
       )}
 
+      {step === 'equipment' && cls && background && (
+        <div className="builder-step" data-testid="builder-equipment">
+          <p className="muted small">
+            Your class and your background each give a choice of starting equipment, or its worth in
+            gold. Armour and weapons set your AC and attacks.
+          </p>
+          {(
+            [
+              ['class', cls.option.name, cls.option.equipment, classKit, setClassKit],
+              [
+                'background',
+                background.option.name,
+                background.option.equipment,
+                backgroundKit,
+                setBackgroundKit,
+              ],
+            ] as const
+          ).map(([kind, label, kits, picked, setPicked]) => (
+            <fieldset key={kind} className="builder-kits">
+              <legend>{label}</legend>
+              {kits.length === 0 ? (
+                <p className="muted small">No starting equipment listed.</p>
+              ) : (
+                kits.map((k, i) => (
+                  <label key={k} className="field inline builder-kit">
+                    <input
+                      type="radio"
+                      name={`builder-kit-${kind}`}
+                      checked={(picked || kits[0]) === k}
+                      onChange={() => setPicked(k)}
+                    />
+                    <span>
+                      <strong>Option {String.fromCharCode(65 + i)}</strong>{' '}
+                      <span className="muted small">{k.replace(/^[A-Z]:\s*/, '')}</span>
+                    </span>
+                  </label>
+                ))
+              )}
+            </fieldset>
+          ))}
+          {built && (
+            <p className="small" data-testid="kit-summary">
+              AC {deriveSheet(built.sheet).ac.value} · {built.sheet.attacks.length}{' '}
+              {built.sheet.attacks.length === 1 ? 'attack' : 'attacks'} · {built.sheet.gp} GP
+            </p>
+          )}
+        </div>
+      )}
+
       {step === 'review' && built && (
         <div className="builder-step" data-testid="builder-review">
           <p className="muted small">
-            Your sheet as it will be. Equipment and spells are added on the sheet for now.
+            Your sheet as it will be. Spells are added on the sheet for now.
           </p>
           <SheetView
             character={{

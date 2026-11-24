@@ -275,6 +275,7 @@ export function sheetFromNumbers(numbers: TableNumbers): Sheet {
     features: [],
     spells: [],
     equipment: [],
+    gp: 0,
     overrides,
   };
 }
