@@ -8,7 +8,7 @@ What Trifold is, how it is built, and why it works the way it does. A feature th
 
 Trifold is a local desktop app for Windows and macOS for a Dungeon Master running 5e campaigns and one-shots at a physical table, with the 2024 rules as its native edition. It covers the DM's compendium, campaign notes and combat tracker, reads the files of Lion's Den's *Game Master 5th Edition* and *Fight Club 5th Edition* apps, and adds a presenter for a second screen and a music player.
 
-The app is a **DM console**. Players build characters wherever they like (another app or paper) and hand the DM a few numbers. At the table they can, if the DM allows it, open a page on their phones to run their own character (§1.1, item 7).
+The app is first a **DM console**. Players can keep their characters wherever they like (another app or paper) and hand the DM a few numbers, and at the table they can, if the DM allows it, open a page on their phones to run their own character (§1.1, item 7). With **player mode** (§1.1, item 8; behind a flag until it is released), a player can also run Trifold themselves: keep characters in their own Library, build or import them, and join the DM's table on the local network. The DM's Trifold stays the authority for everything at the table.
 
 ### 1.1 The parts
 
@@ -19,10 +19,11 @@ The app is a **DM console**. Players build characters wherever they like (anothe
 5. **Music**: a local-file player with crossfades and scene-linked playlists, or the DM's phone played through the computer.
 6. **Dice and table tools**: a roller with a log and pinned rolls, counters, timers, quick notes.
 7. **Player connector**: a page the DM's Trifold serves on the local network, where players claim a character and update its HP, conditions, initiative and position from their phones. Off until the DM starts it.
+8. **Player mode** (§6.10, [PLAYER-MODE.md](PLAYER-MODE.md)): a player's own Trifold joins the DM's table on the local network and opens a player console (the live map, their characters, initiative, quick notes, dice and the compendium). Their characters live in their Library, as a sheet kept in another app, a sheet imported from a PDF, or a Trifold sheet built with the guided builder, with resources, rests and rolls. Behind the `TRIFOLD_PLAYER_MODE` flag until it is released.
 
 ### 1.2 Non-goals
 
-- No character builder or player-facing character sheets.
+- No character management on the DM's side. Players may build, import or link their characters in their own Trifold (player mode); the DM's console takes only the numbers the table needs, when the player offers them, and stays the authority for table state.
 - No accounts, no cloud backend, no sync between users, no hosted web client. The player connector's page is served by the DM's own Trifold, on the private local network only, while the DM has it on (ADR 0043). The app never phones home. It goes to the network only when the person at the computer asks: web tabs (pages the DM typed the address of), the opt-in update check, the player connector, and, in player mode, joining another Trifold's table on the private local network (ADR 0058; behind a flag while it is built, see [PLAYER-MODE.md](PLAYER-MODE.md)).
 - No virtual tabletop features beyond §6.5: no dynamic lighting, no line-of-sight.
 - No bundled non-SRD content, ever, and no links to community repositories in the app.
@@ -42,7 +43,7 @@ Each design choice that refines or departs from this document has a short record
 
 ## 3. Users and workflows
 
-There is one user: the DM, on one Windows or macOS computer with a second display (TV or monitor) at the table. Players may join from their phones (§1.1).
+The main user is the DM, on one Windows or macOS computer with a second display (TV or monitor) at the table. Players may join from their phones (§1.1, item 7), or, with player mode, from their own Trifold, where they keep their characters (§1.1, item 8).
 
 **Prep (days before):** import content, build the campaign (notes, NPCs), enter PC cards from what players sent, build encounters from the compendium, build the scene tree (title cards, maps with grid alignment, pre-placed creatures, fog), tag music, build playlists and link them to scenes.
 
@@ -98,6 +99,9 @@ Trifold Library/
       images/                  scene images (copied in) and display-size versions
       tokens/                  one token's art, and PC and NPC portraits
       players.json             player connector devices and claims
+  characters/
+    <id>.json                  a player's characters (ADR 0068): External or Trifold, with the sheet, its
+                               resources, forms and the builder's choices; shared by every joined campaign
   joined/
     <campaignId>/              a campaign this Library plays in (ADR 0058), named by the GM's campaign id
       joined.json              its name, the player's name, addresses that worked, the claim, the linked character
@@ -373,6 +377,24 @@ An **Audio source** toggle at the top of the Music tool chooses "This computer" 
 
 ---
 
+### 6.10 Player mode
+
+A player's own Trifold, behind the `TRIFOLD_PLAYER_MODE` flag until it is released. [PLAYER-MODE.md](PLAYER-MODE.md) holds the plan and the schedule to release; the ADRs from 0058 on record what was built.
+
+- **Joining** (ADR 0058): **Join a campaign** finds tables on the local network by mDNS, or takes the address the DM shows. A joined campaign is a folder in the player's Library, under Playing on the Campaigns page. Its connection runs only while it is open, only to private addresses. Both Trifolds compare a table protocol number first and say which needs an update (ADR 0076).
+- **The player console:**
+  - The VTT tab: the live map or the TV's screen, with the player's own tokens to move.
+  - Sheets: the linked character, a companion's stat block, pinned forms.
+  - My characters: HP and conditions, and companions.
+  - Initiative, Quick notes, Dice with Table and Private rolls (ADR 0059), and the compendium, with what the DM shares (ADR 0060).
+  - It reads only the per-device view the table sends, never the DM's campaign.
+- **Characters** (ADR 0068):
+  - External (a sheet kept elsewhere, with its numbers and link) or Trifold (a full sheet with every number worked out).
+  - A Trifold character can be built with the guided builder (docs/BUILDER.md) or imported from a PDF (ADR 0073).
+  - The sheet tracks resources and rests (ADR 0074), rolls from its numbers (ADR 0075), and links its spells, items and features to the compendium.
+  - Offering the sheet's numbers updates the DM's PC card when the DM accepts (ADR 0071, ADR 0072).
+- **First run** (ADR 0077): a new Library asks Game master or Player; a player's gets no sample campaign.
+
 ## 7. Rules edition handling (2024 native)
 
 ### 7.1 Edition tagging
@@ -437,7 +459,7 @@ This section is binding for the codebase.
 
 1. **Ships in the package:** SRD 5.2.1 and SRD 5.1 content (CC BY 4.0) with their exact attribution statements; optional open third-party documents with their own attribution; game-icons SVGs (CC BY 3.0) with the author credits; the bundled sample campaign (our own adventure text, SRD creatures, and maps by 2-Minute Tabletop under CC BY-NC 4.0, used for pre-1.0 testing and to be replaced or licensed before any release that is not free). Nothing else that is game content.
 2. **Never ships, never linked:** any non-SRD text, art, maps or product names from the game's publisher as bundled data; addresses of community compendium repositories or aggregators; token packs licensed for personal use only.
-3. **The importer is neutral.** It reads whatever file the DM supplies and stores it in the DM's Library on the DM's computer. The app sends content nowhere; the player connector serves the open campaign only to browsers on the local network while the DM has it on.
+3. **The importer is neutral.** It reads whatever file the DM supplies and stores it in the DM's Library on the DM's computer. The app sends content nowhere on its own; the player connector serves the open campaign only to browsers on the local network while the DM has it on. With player mode, the DM can share chosen sources with a campaign's players (ADR 0060): their spells, items and the like, never creatures except the companions and NPCs a player holds, copied to the players' Trifolds at the table or in a player pack, shown only in that campaign, read-only, and gone after Leave campaign. The DM chooses what to share; nothing is shared until they do.
 4. **Exports** carry `nonSrd` flags derived from the record's source; the UI warns before exporting flagged records.
 5. **Trademarks.** The publisher's game names, logo, book titles and setting names are not used in the app name, UI chrome, store listings or README. The app describes itself as "5e-compatible". Book names appear only as data the DM imported (source badges) or as SRD attribution.
 6. **No copyrighted art** in the repo: no book covers, no monster illustrations, no publisher maps, in tests and screenshots included.
@@ -510,6 +532,7 @@ The beta's list, in priority order, with each item's state:
 | 12  | Creature art (§6.8, ADR 0033)                                            | Built; campaign export leaves it out         |
 | 13  | XML export of homebrew or any source (§6.2, `DATA-FORMATS.md` §2.15)    | Planned                                      |
 | 14  | Player connector (§6.5, ADR 0043, `PLAYER-CONNECTOR.md`)                 | Built                                        |
+| 15  | Player mode (§6.10, `PLAYER-MODE.md`)                                    | Built behind a flag; acceptance on two computers next |
 
 ### Later
 
