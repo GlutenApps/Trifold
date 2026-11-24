@@ -3,6 +3,7 @@ import type { Character } from '@trifold/schema';
 import { useCharacterStore } from '../../stores/characterStore';
 import { Icon } from '../shell/icons';
 import { ExternalForm } from './ExternalForm';
+import { FormsSection } from './Forms';
 import { TrifoldSheet } from './TrifoldSheet';
 
 /**
@@ -132,6 +133,7 @@ export function CharacterEditor({ character, onBack }: { character: Character; o
       ) : (
         <TrifoldSheet character={character} />
       )}
+      <FormsSection character={character} />
     </section>
   );
 }
