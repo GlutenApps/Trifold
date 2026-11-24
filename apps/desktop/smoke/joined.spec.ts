@@ -81,6 +81,14 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await sceneRow.click();
     await sceneRow.press('Enter');
     await expect(gmPage.getByTestId('live-status')).toHaveText('Live: The Wayside Lamp');
+    // Brannoc's token on the map, so the player has one to move.
+    await gmPage.getByRole('button', { name: 'Add player characters' }).click();
+    await gmPage.getByRole('button', { name: 'Place Brannoc Hale' }).click();
+    const canvas = (await gmPage.getByTestId('map-canvas').boundingBox())!;
+    await gmPage.mouse.click(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
+    await expect(
+      gmPage.getByTestId('console-token').filter({ has: gmPage.locator('[title="Brannoc Hale"]') }),
+    ).toHaveCount(1);
 
     // The player's Trifold: its own computer's worth of user data and Library.
     player = await launch(playerData, playerLibrary);
@@ -285,6 +293,28 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     expect(
       await page.evaluate(async (u) => (await fetch(u)).headers.get('content-type'), src),
     ).toBe('image/jpeg');
+
+    // Moving the player's token is a plan until Move here, which a real click must reach.
+    const myToken = table.locator('.pc-token.mine.movable').first();
+    await expect(myToken).toBeVisible({ timeout: 15_000 });
+    let box = (await myToken.boundingBox())!;
+    for (let i = 0; i < 20; i++) {
+      await page.waitForTimeout(50);
+      const next = (await myToken.boundingBox())!;
+      if (next.x === box.x && next.y === box.y) break;
+      box = next;
+    }
+    const startAt = await myToken.getAttribute('style');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width, box.y + box.height / 2, { steps: 4 });
+    await page.mouse.move(box.x + box.width * 2.5, box.y + box.height / 2, { steps: 4 });
+    await page.mouse.up();
+    const moveBanner = table.locator('.player-move');
+    await expect(moveBanner).toContainText('Moving Brannoc Hale');
+    await moveBanner.getByRole('button', { name: 'Move here' }).click();
+    await expect(moveBanner).toHaveCount(0, { timeout: 10_000 });
+    await expect.poll(() => myToken.getAttribute('style'), { timeout: 10_000 }).not.toBe(startAt);
 
     // My characters: the player's row, built like the GM's party rows. Damage and a condition go
     // to the GM's table as requests, and the row shows what the table says back.
