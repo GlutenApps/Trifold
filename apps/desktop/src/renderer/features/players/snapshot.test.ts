@@ -339,6 +339,29 @@ describe('tableSnapshotFrom: what a device holds', () => {
       ['tobin', false],
     ]);
   });
+
+  it('names an NPC’s stat block, so the player who holds it can show it', () => {
+    const snap = tableSnapshotFrom(
+      input({
+        npcs: [
+          npc('wolf', {
+            companionOf: 'tamsin',
+            recordRef: {
+              recordId: 'srd-2024:monster:wolf',
+              sourceId: 'srd-2024',
+              key: 'wolf',
+              edition: '2024',
+            },
+          }),
+          npc('tobin'),
+        ],
+      }),
+    );
+    expect(snap.creatures.map((c) => [c.id, c.statBlock ?? null])).toEqual([
+      ['wolf', { recordId: 'srd-2024:monster:wolf', key: 'wolf' }],
+      ['tobin', null],
+    ]);
+  });
 });
 
 describe('tableSnapshotFrom: summons', () => {
@@ -394,6 +417,7 @@ describe('tableSnapshotFrom: summons', () => {
         hp: { current: 1, max: 1, temp: 0 },
         ac: 11,
         companionOf: 'brannoc',
+        statBlock: { recordId: 'owl', key: 'owl' },
         summon: {
           owner: { kind: 'pc', id: 'brannoc' },
           type: 'Beast',

@@ -4,6 +4,7 @@ import { isClaimable } from './claimable';
 import { hostAllowed, isPrivateAddress, portsToTry, TABLE_PORTS, tableUrl } from './network';
 import type { Claim, TableSnapshot, TableToken } from './types';
 import { visibleTokenIds, viewFor } from './view';
+import { statBlockRecordId } from './statBlock';
 
 const stats = {
   inFight: false,
@@ -116,6 +117,16 @@ describe('viewFor', () => {
     expect(JSON.stringify(mine)).not.toContain('"now"');
     // The picker says nothing about turns either.
     expect(JSON.stringify(viewFor(snap, claims, 'd2', true))).not.toContain('"turn"');
+  });
+
+  it('passes a held creature’s stat block on to its device only', () => {
+    const snap = snapshot([brannocToken(1)]);
+    snap.creatures[0]!.statBlock = { recordId: 'hb-1', key: 'brannoc' };
+    snap.creatures[1]!.statBlock = { recordId: 'hb-2', key: 'wren' };
+    expect(viewFor(snap, claims, 'd1', true).mine.map((c) => c.statBlock)).toEqual([
+      { recordId: 'hb-1', key: 'brannoc' },
+    ]);
+    expect(JSON.stringify(viewFor(snap, claims, 'd2', true))).not.toContain('statBlock');
   });
 
   it('shows a device with no claims the picker, never the map or stats', () => {
@@ -267,5 +278,14 @@ describe('viewFor: screens', () => {
       imageUrl: expect.stringMatching(/^\/screen\/i1\/image\?v=/),
     });
     expect(JSON.stringify(view)).not.toContain('images/v.jpg');
+  });
+});
+
+describe('statBlockRecordId', () => {
+  it('finds a shared stat block under the joined campaign, and the SRD’s by its own id', () => {
+    expect(statBlockRecordId('c1', { recordId: 'hb-1', key: 'owl' })).toBe('shared:c1:hb-1');
+    expect(statBlockRecordId('c1', { recordId: 'srd-2024:monster:wolf', key: 'wolf' })).toBe(
+      'srd-2024:monster:wolf',
+    );
   });
 });

@@ -240,6 +240,7 @@ export function viewFor(
         movementLocked: movementLocked(movement, controller(c).kind, controller(c).id),
         ...(c.companionOf ? { companionOf: c.companionOf } : {}),
         ...(c.summon ? { summon: c.summon } : {}),
+        ...(c.statBlock ? { statBlock: c.statBlock } : {}),
         ...(tokenId ? { tokenId } : {}),
       };
     });

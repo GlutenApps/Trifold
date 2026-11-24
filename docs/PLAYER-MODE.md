@@ -210,6 +210,8 @@ The HP and conditions shown on a sheet are the same live controls as the row's, 
 
 Order of building: My characters with its rows, and Sheets for the PC, first; companion stat blocks when shared content lands; forms after.
 
+Built: companion stat blocks. The view names a held NPC's or summon's stat block (`statBlock`, the GM's record id and key; `PLAYER-CONNECTOR.md`, Companions), and the Sheets tab shows it under the live HP and conditions, read from the shared source (`statBlockRecordId` in `packages/rules/src/table/statBlock.ts`) or the bundled SRD, then by key. One the player's Trifold does not have yet says so.
+
 ### Your turn and you're next
 
 Built for the view and the phone page (ADR 0057, PLAYER-CONNECTOR.md, Your turn); the player console's strip and Initiative panel read the same field in phase 2.
@@ -504,7 +506,7 @@ What is left of Parts 1 to 3, and what a player needs beyond them, in order. Ite
 | 1 | Import from PDF (phase 6), without manual field matching | | Built (ADR 0073) |
 | 2 | *Added:* imported spells, items, feats, species, background and classes linked to compendium records by name; a linked row on a sheet opens to show the record's text | S | Built (ADR 0073) |
 | **B** | **Finish the player console** | | |
-| 3 | Companion and summon stat blocks on the Sheets tab, from the bundled SRD or shared content | M | |
+| 3 | Companion and summon stat blocks on the Sheets tab, from the bundled SRD or shared content | M | Built |
 | 4 | Forms: stat blocks pinned from the player's compendium, flipped to on Sheets (reference only) | M | |
 | 5 | The components the phone page and the player console share moved to a folder both import (no behaviour change) | S | |
 | **C** | **Playing from the sheet** | | |
