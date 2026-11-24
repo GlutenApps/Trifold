@@ -141,7 +141,8 @@ export interface O5eFeat extends O5eBase {
 
 export interface O5eSpecies extends O5eBase {
   is_subspecies?: boolean | null;
-  subspecies_of?: O5eNamed | null;
+  /** The parent species: an object in some documents, its key ("srd_elf") in others. */
+  subspecies_of?: O5eNamed | string | null;
   traits?: O5eTrait[] | null;
 }
 

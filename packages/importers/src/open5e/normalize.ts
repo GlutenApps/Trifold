@@ -563,7 +563,14 @@ export function normalizeSpecies(raw: O5eSpecies, ctx: Open5eContext): Compendiu
   const traits = simpleTraits(raw.traits ?? []);
   const size = traits.find((t) => t.category === 'size')?.text;
   const speed = traits.find((t) => t.category === 'speed')?.text;
-  const parent = raw.subspecies_of?.name ?? undefined;
+  const of = raw.subspecies_of;
+  const parent = typeof of === 'string' ? undefined : (of?.name ?? undefined);
+  // A subspecies names its parent by key ("srd_elf"): kept as the parent record's key, as a
+  // subclass keeps `subclassOf` (docs/BUILDER.md, the 2014 builder's subraces).
+  const parentRef = typeof of === 'string' ? of : (of?.key ?? of?.name ?? '');
+  const parentKey = parentRef
+    ? normalizeKey(parentRef.replace(/^[a-z0-9-]+_/i, '').replace(/-/g, ' '))
+    : '';
   const record = {
     ...header(raw, ctx, 'species'),
     kind: 'species' as const,
@@ -584,7 +591,7 @@ export function normalizeSpecies(raw: O5eSpecies, ctx: Open5eContext): Compendiu
             ...traits,
           ]
         : traits,
-      extra: {},
+      extra: (parentKey ? { subspeciesOf: [parentKey] } : {}) as Record<string, string[]>,
     },
   };
   if (parent) record.tags.push('subspecies');
@@ -629,18 +636,61 @@ export function skillChoice(
   text: string,
   skills: readonly string[],
 ): { choose: number; from: string[] } | null {
-  const any = /^choose any (\d+)/i.exec(text);
-  if (any) return { choose: Number(any[1]), from: [] };
-  const m = /^choose (\d+):\s*(.+)$/i.exec(text);
-  if (!m) return null;
+  // SRD 5.1 writes the number as a word ("Choose two skills from …", "Choose any three").
+  const number = (w: string) => NUMBER_WORDS[w.toLowerCase()] ?? Number(w);
+  const any = /^choose any (\w+)/i.exec(text);
+  if (any && number(any[1]!) > 0) return { choose: number(any[1]!), from: [] };
+  const m =
+    /^choose (\d+):\s*(.+)$/i.exec(text) ?? /^choose (\w+)(?: skills)? from (.+?)\.?$/i.exec(text);
+  if (!m || !(number(m[1]!) > 0)) return null;
   const squash = (s: string) => s.replace(/\s+/g, '').toLowerCase();
   const known = new Map(skills.map((s) => [squash(s), s]));
   const from = m[2]!
-    .split(/,|\bor\b/)
+    .split(/,|\bor\b|\band\b/)
     .map((s) => s.trim())
     .filter(Boolean)
     .map((s) => known.get(squash(s)) ?? s);
-  return { choose: Number(m[1]), from };
+  return { choose: number(m[1]!), from };
+}
+
+const NUMBER_WORDS: Readonly<Record<string, number>> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+};
+
+/**
+ * An SRD 5.1 class's proficiencies feature (`PROFICIENCIES`): "**Armor:** Light armor" lines, by
+ * label. The 2024 classes keep the same facts in a core traits table instead.
+ */
+export function proficiencyLines(markdown: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const line of markdown.split(/\r?\n/)) {
+    const m = /^\s*\*\*([^*]+?):?\*\*:?\s*(.*)$/.exec(line);
+    if (m) out.set(m[1]!.trim().replace(/:$/, ''), m[2]!.trim());
+  }
+  return out;
+}
+
+/**
+ * An SRD 5.1 class's starting equipment (`STARTING_EQUIPMENT`): one choice per line, as written
+ * without its markdown ("(a) chain mail or (b) leather armor, longbow, and 20 arrows", "A
+ * spellbook"). The 2024 classes offer whole options A and B instead (`equipmentOptions`).
+ */
+export function equipmentLines(markdown: string): string[] {
+  return markdown
+    .split(/\r?\n/)
+    .map((l) => /^\s*[*-]\s+(.+)$/.exec(l)?.[1] ?? '')
+    .map((l) =>
+      l
+        .replace(/\*/g, '')
+        .replace(/\uFFFD/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )
+    .filter(Boolean);
 }
 
 /** The skills a core traits table can name, as the SRD writes them. */
@@ -700,13 +750,31 @@ export function normalizeClass(raw: O5eClass, ctx: Open5eContext): CompendiumRec
     tableRows((raw.features ?? []).find((f) => f.feature_type === 'CORE_TRAITS_TABLE')?.desc ?? ''),
   );
   const saves = (raw.saving_throws ?? []).map((s) => s.name ?? '').filter(Boolean);
-  const skills = skillChoice(core.get('Skill Proficiencies') ?? '', SKILL_NAMES_2024);
+  const skills = skillChoice(core.get('Skill Proficiencies') ?? '', SKILL_NAMES_2024) ?? null;
   if (core.size && !skills) ctx.warn(`class ${raw.key}: skill proficiencies not read`);
-  const armor = core.get('Armor Training');
-  const weapons = core.get('Weapon Proficiencies');
-  const tools = core.get('Tool Proficiencies');
+  // SRD 5.1 classes keep the same facts in a proficiencies feature and an equipment list.
+  const lines = proficiencyLines(
+    (raw.features ?? []).find((f) => f.feature_type === 'PROFICIENCIES')?.desc ?? '',
+  );
+  const skills2014 = core.size ? null : skillChoice(lines.get('Skills') ?? '', SKILL_NAMES_2024);
+  if (lines.size && !skills2014) ctx.warn(`class ${raw.key}: skill proficiencies not read`);
+  const someText = (v: string | undefined) => (v && !/^none$/i.test(v) ? v : undefined);
+  const armor = core.get('Armor Training') ?? someText(lines.get('Armor'));
+  const weapons = core.get('Weapon Proficiencies') ?? someText(lines.get('Weapons'));
+  const tools = core.get('Tool Proficiencies') ?? someText(lines.get('Tools'));
   const equipment = equipmentOptions(core.get('Starting Equipment') ?? '');
+  const equipmentChoices = equipmentLines(
+    (raw.features ?? []).find((f) => f.feature_type === 'STARTING_EQUIPMENT')?.desc ?? '',
+  );
   const primary = core.get('Primary Ability');
+  // Open5e gives SRD 5.1 classes no caster type: their slot columns say it.
+  const slotLevels = (raw.features ?? []).filter((f) => f.feature_type === 'SPELL_SLOTS').length;
+  const pact = (raw.features ?? []).some(
+    (f) => f.feature_type === 'CLASS_TABLE_DATA' && /^spell slots$/i.test(f.name ?? ''),
+  );
+  const casterType =
+    raw.caster_type ||
+    (slotLevels >= 9 ? 'FULL' : slotLevels > 0 ? 'HALF' : pact ? 'PACT' : undefined);
 
   // The class table's own columns (Cantrips, Prepared Spells, Rages…), one value per level,
   // a level the source leaves out taking the value before it.
@@ -732,19 +800,20 @@ export function normalizeClass(raw: O5eClass, ctx: Open5eContext): CompendiumRec
     data: {
       ...(hd ? { hd: Number(hd) } : {}),
       // As a Lion's Den file writes it (DATA-FORMATS.md §2.12): saves, then the skill options.
-      ...(saves.length || skills?.from.length
-        ? { proficiency: [...saves, ...(skills?.from ?? [])].join(', ') }
+      ...(saves.length || (skills ?? skills2014)?.from.length
+        ? { proficiency: [...saves, ...((skills ?? skills2014)?.from ?? [])].join(', ') }
         : {}),
-      ...(skills ? { numSkills: skills.choose } : {}),
+      ...((skills ?? skills2014) ? { numSkills: (skills ?? skills2014)!.choose } : {}),
       ...(armor && !/^none$/i.test(armor) ? { armor } : {}),
       ...(weapons ? { weapons } : {}),
       ...(tools ? { tools } : {}),
       levels: [...byLevel.values()].sort((a, b) => a.level - b.level),
       extra: {
         ...(parent ? { subclassOf: [parent] } : {}),
-        ...(raw.caster_type ? { casterType: [raw.caster_type] } : {}),
-        ...(skills && skills.from.length === 0 ? { anySkills: ['true'] } : {}),
+        ...(casterType ? { casterType: [casterType] } : {}),
+        ...((skills ?? skills2014)?.from.length === 0 ? { anySkills: ['true'] } : {}),
         ...(equipment.length ? { equipment } : {}),
+        ...(equipmentChoices.length ? { equipmentChoices } : {}),
         ...(primary ? { primaryAbility: [primary] } : {}),
         ...columns,
       },

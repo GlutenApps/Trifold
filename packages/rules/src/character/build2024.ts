@@ -5,6 +5,7 @@ import type {
   FeatRecord,
   SpeciesRecord,
 } from '@trifold/schema';
+import { SUBCLASS_FEATURE_2014 } from './build2014';
 
 /**
  * The character builder's rules layer, 2024 (docs/BUILDER.md): typed readings of the bundled
@@ -63,6 +64,8 @@ export interface ClassOption {
   tools: string;
   /** Starting equipment options ("A: …"). */
   equipment: string[];
+  /** An SRD 5.1 class's equipment lines, each a choice ("(a) … or (b) …") or a fixed item. */
+  equipmentLines?: string[];
   primaryAbility: string;
   casterType: CasterType;
   /** The level the class's subclass is chosen at, read from its "<Class> Subclass" feature. */
@@ -86,8 +89,11 @@ export function readClass(record: ClassRecord): ClassOption | null {
   // Every 2024 class picks its subclass at 3rd level; a record that does not say so (the
   // snapshot's Bard has no 3rd-level features) still gets it there.
   const subclassLevel =
-    d.levels.find((l) => l.features.some((f) => /\bsubclass(es)?$/i.test(f.name)))?.level ??
-    (record.edition === '2024' ? 3 : null);
+    d.levels.find((l) =>
+      l.features.some(
+        (f) => /\bsubclass(es)?$/i.test(f.name) || SUBCLASS_FEATURE_2014.test(f.name),
+      ),
+    )?.level ?? (record.edition === '2024' ? 3 : null);
   return {
     key: record.key,
     name: record.displayName,
@@ -98,6 +104,7 @@ export function readClass(record: ClassRecord): ClassOption | null {
     weapons: d.weapons ?? '',
     tools: d.tools ?? '',
     equipment: d.extra['equipment'] ?? [],
+    equipmentLines: d.extra['equipmentChoices'] ?? [],
     primaryAbility: d.extra['primaryAbility']?.[0] ?? '',
     casterType: (['FULL', 'HALF', 'PACT'].includes(caster) ? caster : 'NONE') as CasterType,
     subclassLevel,
