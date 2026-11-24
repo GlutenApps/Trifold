@@ -20,12 +20,15 @@ export function FirstRunChoice() {
   const choose = async (role: 'gm' | 'player') => {
     setBusy(true);
     setError(null);
+    // The page and the request to open Join a campaign come first: the Campaigns page mounts
+    // the moment the role is saved, and reads the request then.
+    setPage('campaigns');
+    if (role === 'player') useJoinedStore.setState({ wantsJoin: true });
     try {
       await setRole(role);
       if (role === 'gm') await useCampaignStore.getState().load();
-      else useJoinedStore.setState({ wantsJoin: true });
-      setPage('campaigns');
     } catch (err) {
+      useJoinedStore.setState({ wantsJoin: false });
       setError(errorMessage(err));
     } finally {
       setBusy(false);

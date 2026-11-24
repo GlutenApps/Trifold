@@ -30,7 +30,8 @@ const library = (needsRole: boolean, role: 'gm' | 'player' | null = null) => ({
 
 beforeEach(() => {
   useJoinedStore.setState({ joined: [], tables: [], wantsJoin: false });
-  useShellStore.getState().setLibraryPage('characters');
+  // Start where a new Library starts, on Campaigns, as the app does.
+  useShellStore.getState().setLibraryPage('campaigns');
   window.trifold.joined.startSearch = vi.fn(async () => []);
   window.trifold.joined.stopSearch = vi.fn(async () => undefined);
 });
