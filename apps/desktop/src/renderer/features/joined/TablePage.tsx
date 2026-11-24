@@ -1,16 +1,16 @@
 import type { ClientView } from '@trifold/api';
-import type { Connection } from '../../../web/connection';
-import { MapView } from '../../../web/MapView';
-import { Picker } from '../../../web/Picker';
-import { ScreenView } from '../../../web/ScreenView';
-import { TvBottom, TvTop } from '../../../web/TvOverlays';
-import { useMovePlan } from '../../../web/useMovePlan';
+import type { Connection } from '../../../playerUi/connection';
+import { MapView } from '../../../playerUi/MapView';
+import { Picker } from '../../../playerUi/Picker';
+import { ScreenView } from '../../../playerUi/ScreenView';
+import { TvBottom, TvTop } from '../../../playerUi/TvOverlays';
+import { useMovePlan } from '../../../playerUi/useMovePlan';
 import { rulerLabel } from '../presenter/ruler';
 import { tableNumbers } from '@trifold/rules';
 import { ChangeAddress } from './ChangeAddress';
 import { useLinkedCharacter } from './CharacterLink';
 import { creatureKeyOf, lastSeenText, linkSentence, linkText, usePlayerTable } from './PlayerTable';
-import '../../../web/web.css';
+import '../../../playerUi/web.css';
 
 /**
  * The player console's VTT tab (docs/PLAYER-MODE.md, "Panels"): what the table shows this

@@ -34,7 +34,11 @@ export default tseslint.config(
   },
   {
     // The renderer never touches Electron, the file system or SQLite directly (CLAUDE.md, repo layout).
-    files: ['apps/desktop/src/renderer/**/*.{ts,tsx}', 'apps/desktop/src/web/**/*.{ts,tsx}'],
+    files: [
+      'apps/desktop/src/renderer/**/*.{ts,tsx}',
+      'apps/desktop/src/web/**/*.{ts,tsx}',
+      'apps/desktop/src/playerUi/**/*.{ts,tsx}',
+    ],
     plugins: { 'react-hooks': reactHooks },
     rules: {
       'react-hooks/rules-of-hooks': 'error',

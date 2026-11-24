@@ -164,7 +164,7 @@ Build `features/joined/PlayerConsole.tsx` as a sibling of the GM console inside 
 
 | Where | Panel | Built from |
 | --- | --- | --- |
-| Stage | **VTT**: the map, or the TV's title, image or break screen, with its overlays | `web/MapView.tsx`, `ScreenView.tsx`, `TvOverlays.tsx` |
+| Stage | **VTT**: the map, or the TV's title, image or break screen, with its overlays | `playerUi/MapView.tsx`, `ScreenView.tsx`, `TvOverlays.tsx` |
 | Stage | **Sheets**: the full page of whichever of the player's creatures is selected: the PC's sheet, a companion's or summon's stat block, a pinned form | New (below, and Part 3) |
 | Stage | **Compendium**: bundled SRD and the player's own sources and homebrew | `features/compendium`, with the campaign actions off |
 | Stage | **Web tabs**, such as a sheet kept in another tool | Existing web tabs (ADR 0011), Library-wide as today |
@@ -174,11 +174,11 @@ Build `features/joined/PlayerConsole.tsx` as a sibling of the GM console inside 
 | Pop-up | **Dice**: rolls stay local | `features/dice` |
 | Strip | Connection status, round, "Your turn" or "You're next" | New `PlayerStrip` |
 
-When the player holds no creature, the VTT tab shows the claim picker (`web/Picker.tsx`) in place of the map. Not in the player console: Campaign (party, NPCs, GM notes), Encounters, VTT controls, Scenes, Music, and editing counters or timers (their overlays still show on the VTT tab).
+When the player holds no creature, the VTT tab shows the claim picker (`playerUi/Picker.tsx`) in place of the map. Not in the player console: Campaign (party, NPCs, GM notes), Encounters, VTT controls, Scenes, Music, and editing counters or timers (their overlays still show on the VTT tab).
 
 Reuse notes, from the code:
 
-- **Shared so far.** The phone page's document-level styles are in `web/page.css`, so the console loads `web.css` for the components; moving a token is `web/useMovePlan.ts`, used by both. The files have not moved folders yet.
+- **Shared.** The phone page's document-level styles are in `web/page.css`; the components' styles are `playerUi/web.css`, which both load. Built (item 5 of the schedule): what both clients use is in `apps/desktop/src/playerUi/` (`MapView`, `ScreenView`, `TvOverlays`, `tools`, `AddCompanion`, `Picker`, `Portrait`, `InitiativeCard`, `useMovePlan`, `connection`, `clock`), and `web/` keeps the phone page's own `App`, `Playing`, `useLayout` and `page.css`.
 - **Shared components move.** Put what both clients use (`MapView`, `ScreenView`, `TvOverlays`, the four tools, `AddCompanion`, `Picker`, `Portrait`, `InitiativeCard`) in a folder both import, and leave `Playing.tsx`, `App.tsx` and `useLayout.ts` as the phone page's own. The tools need the console's control scale in a panel (30 px, `UI-GUIDELINES.md`) and keep the 44 px touch scale on phones: one set of components, two style sheets.
 - **`Picker`** reads the device label from `localStorage` (`connection.ts`); in the player console the name comes from `joined.json`.
 - **Quick notes.** `QuickNotesTool` files into the GM's notes tree through `useCampaignStore`. Give it a notes source (save, list, the Quick Notes folder) that the GM console backs with the campaign store and the player console with `joined/<id>/notes/`. Built: `features/campaign/notesSource.ts` is the seam. A player's notes are a flat list, every one a quick note, so Move to and Open in Notes are not offered there; `Ctrl+N` and `Ctrl+S` work as in the GM's console. They are files in the player's Library and are never sent to the table.
@@ -466,13 +466,13 @@ A new file kind, `character`, at version 1. Characters rank in memory in global 
 | Dice | Change (Part 2): Table and Private, table rolls in the log | `features/dice`, `packages/rules` dice |
 | mDNS responder | Change: advertise the table as a service (port, campaign id and name) | `main/table/mdns.ts` |
 | Table discovery | New | `main/joined/discovery.ts` |
-| Map, screens, overlays for players | Move to a shared folder; check panel widths | `web/MapView.tsx`, `ScreenView.tsx`, `TvOverlays.tsx` |
-| Creature tools, picker, companions, initiative box | Move to a shared folder; console-scale styles | `web/tools.tsx`, `Picker.tsx`, `AddCompanion.tsx`, `Playing.tsx` |
+| Map, screens, overlays for players | Moved to `playerUi/`; check panel widths | `playerUi/MapView.tsx`, `ScreenView.tsx`, `TvOverlays.tsx` |
+| Creature tools, picker, companions, initiative box | Moved to `playerUi/`; console-scale styles | `playerUi/tools.tsx`, `Picker.tsx`, `AddCompanion.tsx`, `InitiativeCard.tsx` |
 | Phone page | Change: your turn and you're next in the summary | `web/Playing.tsx`, `tools.tsx` |
 | Compendium, dice, quick notes | Reuse behind a campaign-free seam | `features/compendium`, `dice`, `campaign/QuickNotesTool.tsx` |
 | Web tabs | Reuse as is | `shell/WebTabPage.tsx` |
 | Schemas, migrations, `LibraryStore`, backups | Reuse | `packages/schema`, `main/library/`, `main/backups.ts` |
-| Phone connection | Change: split into `TableClient` | `web/connection.ts` |
+| Phone connection | Change: split into `TableClient` | `playerUi/connection.ts` |
 | Shell | Change: `Stage` and `Dock` take their registries; player kinds and layouts | `shell/`, `schema/library.ts` |
 | Campaign list | Change: Running and Playing | `features/library/CampaignsPage.tsx` |
 | Player devices pop-up | Change (Part 3): sheet offers, auto-accept | `features/players/PlayerDevices.tsx`, `main/table/players.ts` |
@@ -508,7 +508,7 @@ What is left of Parts 1 to 3, and what a player needs beyond them, in order. Ite
 | **B** | **Finish the player console** | | |
 | 3 | Companion and summon stat blocks on the Sheets tab, from the bundled SRD or shared content | M | Built |
 | 4 | Forms: stat blocks pinned from the player's compendium, flipped to on Sheets (reference only) | M | Built |
-| 5 | The components the phone page and the player console share moved to a folder both import (no behaviour change) | S | |
+| 5 | The components the phone page and the player console share moved to a folder both import (no behaviour change) | S | Built |
 | **C** | **Playing from the sheet** | | |
 | 6 | *Added:* tracking during play on the Trifold sheet: spell slots used, limited-use features, hit dice, death saves and Heroic Inspiration, with Short rest and Long rest for the sheet's own resources (HP stays the table's) | M–L | |
 | 7 | *Added:* rolling from the sheet: a save, skill, attack, spell attack or initiative, following the Table and Private switch; an initiative roll fills the initiative box | M | |

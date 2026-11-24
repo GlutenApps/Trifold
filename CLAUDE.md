@@ -27,7 +27,10 @@ apps/desktop/            Electron main + preload + renderer (hash routes #/conso
                          media.ts (trifold-media:// scheme), webTabs.ts, systemPages.ts, log.ts,
                          table/ (player connector server: hub, LAN listeners, mDNS, players.json, ADR 0043),
                          joined/ (player mode, ADR 0058: joined-campaign files, table discovery, the connection to a GM's table)
-  src/web/               player connector browser client (React), built to out/web by vite.web.config.ts
+  src/web/               player connector browser client (React): the phone page's own App, Playing, layout and page.css,
+                         built to out/web by vite.web.config.ts
+  src/playerUi/          what the phone page and the player console share: map, screens, overlays, tools, picker,
+                         Add a companion, the initiative box, the move plan, the connection and their styles (web.css)
   src/preload/           typed bridge → window.trifold (generated from packages/api)
   src/renderer/          React app: features/{shell,library,compendium,campaign,counters,timers,encounters,presenter,players,joined,character,music,dice,settings},
                          stores/ (Zustand), styles/ (global.css tokens, shell, compendium, map, responsive), hotkeys.ts, platform.ts,
