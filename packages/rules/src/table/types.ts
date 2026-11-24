@@ -129,6 +129,17 @@ export interface TableCreature extends CreatureStats {
   companionOf?: string;
   /** A summon's owner and state. */
   summon?: TableSummon;
+  /** The record its stat block is, for an NPC or summon that has one. */
+  statBlock?: TableStatBlock;
+}
+
+/**
+ * A creature's stat block, by the GM's record id and key. A player's Trifold has it as shared
+ * content, or in the bundled SRD (`statBlockRecordId`); the key is the fallback.
+ */
+export interface TableStatBlock {
+  recordId: string;
+  key: string;
 }
 
 export interface TableSummon {
@@ -294,6 +305,8 @@ export interface CreatureView extends CreatureStats {
   /** The PC it is a companion of, when it is one. */
   companionOf?: string;
   summon?: TableSummon;
+  /** Its stat block (an NPC's or a summon's), which the player's Trifold may show. */
+  statBlock?: TableStatBlock;
 }
 
 export interface PickerEntry {

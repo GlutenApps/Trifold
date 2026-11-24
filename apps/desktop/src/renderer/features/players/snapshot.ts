@@ -217,6 +217,10 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       ...(npc.portrait ? { portraitSrc: input.portraitUrl(npc.portrait) } : {}),
       claimable: isClaimable('npc', npcOffered(npc), rolesFor(npc.id)),
       ...(npc.companionOf ? { companionOf: npc.companionOf } : {}),
+      // Its stat block goes to the player who holds it as shared content (ADR 0060).
+      ...(npc.recordRef
+        ? { statBlock: { recordId: npc.recordRef.recordId, key: npc.recordRef.key } }
+        : {}),
       hp: f
         ? { current: f.hp.current, max: f.hp.max, temp: f.hp.temp }
         : npc.hp
@@ -251,6 +255,9 @@ export function tableSnapshotFrom(input: SnapshotInput): TableSnapshot {
       ...turnOf(f),
       editable: { hp: true, maxHp: true, ac: true, conditions: true },
       companionOf: s.ownerId,
+      ...(t.ref.kind === 'record'
+        ? { statBlock: { recordId: t.ref.ref.recordId, key: t.ref.ref.key } }
+        : {}),
       summon: {
         owner: { kind: s.ownerKind, id: s.ownerId },
         type: s.type,

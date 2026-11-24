@@ -15,7 +15,7 @@ import {
   TableAddress,
   type FileKind,
 } from '@trifold/schema';
-import { quickNoteTitle } from '@trifold/rules';
+import { quickNoteTitle, sharedSourceId, SHARED_SOURCE_PREFIX } from '@trifold/rules';
 import type { LibraryStore } from '../library/LibraryStore';
 
 /** The player's own files in a joined campaign, one JSON file each. */
@@ -364,10 +364,9 @@ export class JoinedStore {
   }
 }
 
-const SHARED_PREFIX = 'shared:';
-
-/** The id of the source a joined campaign's shared content lives in. */
-export const sharedSourceId = (campaignId: string): string => `${SHARED_PREFIX}${campaignId}`;
+// The shared source's id (ADR 0060) is in @trifold/rules, where the player console reads it too.
+export { sharedSourceId };
+const SHARED_PREFIX = SHARED_SOURCE_PREFIX;
 
 /** More records than this from one table is not shared content. */
 const SHARED_MAX_RECORDS = 50_000;

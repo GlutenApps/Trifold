@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClientView, CreatureView, JoinedSummary } from '@trifold/api';
 import { blankSheet } from '@trifold/rules';
+import { parseCompendiumXml } from '@trifold/importers';
 import type { Character } from '@trifold/schema';
+import fixture from '../../../../../../fixtures/compendium-sample.xml?raw';
 import { useCharacterStore } from '../../stores/characterStore';
 import { useJoinedStore } from '../../stores/joinedStore';
 import { useShellStore } from '../../stores/shellStore';
@@ -187,6 +189,51 @@ describe('Sheets (ADR 0069)', () => {
     expect(screen.getByTestId('companion-sheet')).toHaveTextContent('Beast · AC 13');
     await user.click(screen.getByRole('tab', { name: 'Brannoc' }));
     expect(screen.getByTestId('sheet-view')).toBeInTheDocument();
+  });
+
+  it('shows a companion’s stat block from what the GM shared, under its live numbers', async () => {
+    useJoinedStore.setState({ current: campaign('K1') });
+    // An SRD stat block, read from the compendium fixture, as the GM's shared copy.
+    const shrub = parseCompendiumXml(fixture, {
+      sourceId: 'src',
+      defaultEdition: '2014',
+    }).records.find((r) => r.name === 'Awakened Shrub')!;
+    const shared = { ...shrub, id: 'shared:c1:hb-shrub', sourceId: 'shared:c1' };
+    vi.mocked(window.trifold.compendium.get).mockImplementation(async (id) =>
+      id === 'shared:c1:hb-shrub' ? (shared as never) : null,
+    );
+    const user = userEvent.setup();
+    mount(
+      <SheetsPage />,
+      view([
+        creature(),
+        creature({
+          kind: 'npc',
+          id: 'n-shrub',
+          name: 'Bramble',
+          ac: 11,
+          companionOf: 'p1',
+          statBlock: { recordId: 'hb-shrub', key: 'awakened shrub' },
+        }),
+        creature({
+          kind: 'npc',
+          id: 'n-cat',
+          name: 'Whiskers',
+          ac: 12,
+          companionOf: 'p1',
+          statBlock: { recordId: 'hb-cat', key: 'cat' },
+        }),
+      ]),
+    );
+    await user.click(await screen.findByRole('tab', { name: 'Bramble' }));
+    expect(await screen.findByTestId('companion-statblock')).toHaveTextContent('False Appearance');
+    expect(screen.getByTestId('sheet-live')).toBeInTheDocument();
+    // One the player's Trifold does not have yet says so.
+    await user.click(screen.getByRole('tab', { name: 'Whiskers' }));
+    expect(
+      await screen.findByText(/Its stat block is not on this computer yet/),
+    ).toBeInTheDocument();
+    expect(window.trifold.compendium.findByKey).toHaveBeenCalledWith('monster', 'cat');
   });
 });
 

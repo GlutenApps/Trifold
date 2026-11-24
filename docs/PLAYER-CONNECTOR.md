@@ -123,7 +123,7 @@ source of truth.
 
 Each device receives only:
 
-- its own creatures in full (stats, conditions, what it may edit, whether movement is locked);
+- its own creatures in full (stats, conditions, what it may edit, whether movement is locked, and for an NPC or summon with a stat block, that record's id and key as `statBlock`, so a player's Trifold can show the stat block it got as shared content or has in the bundled SRD);
 - other visible tokens' position, label, role and picture, with masked names already applied;
 - nothing hidden, and nothing whose centre is under fog, except the device's own tokens: if the
   DM fogs over a player's token, its owner still sees it (and can only drag it out into a
@@ -257,6 +257,8 @@ An NPC can be a **Companion of** a PC, set on the NPC form: a ranger's beast, a 
 an NPC. Claiming the PC also claims its companions that no other device holds; releasing the PC
 (Switch character, DM release, a takeover) releases the companions the same device holds. A
 companion is on the table with its PC whether or not it is offered in the picker.
+
+A player's Trifold shows a held companion's, summon's or NPC's stat block on its Sheets tab. The view names it (`statBlock: { recordId, key }`, the GM's record), and the player's Trifold reads it from the joined campaign's shared source, where shared content (ADR 0060) put it under `shared:<campaign id>:<record id>`, or from the bundled SRD by its own id; then any version by key. Phones do not show stat blocks.
 
 ## What the phone shows
 

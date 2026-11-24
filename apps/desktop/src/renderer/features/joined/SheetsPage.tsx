@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CreatureView, TableIntent } from '@trifold/api';
-import type { ConditionInstance } from '@trifold/schema';
+import { statBlockRecordId } from '@trifold/rules';
+import type { CompendiumRecord, ConditionInstance } from '@trifold/schema';
+import { RecordBody } from '../compendium/RecordDetail';
 import { useCharacterStore } from '../../stores/characterStore';
 import { ExternalForm } from '../character/ExternalForm';
 import { SheetView } from '../character/SheetView';
@@ -19,7 +21,9 @@ import { creatureKeyOf, orderMine, usePlayerTable } from './PlayerTable';
  * stage tab for the creature picked in My characters, in full. A switcher along the top mirrors
  * the dock's rows. The player's own character shows the linked character's sheet, with the
  * table's live HP and conditions above it while connected, and Edit on the sheet itself; a
- * companion or summon shows what the table sends of it, read only.
+ * companion or summon shows its stat block, read only, with the table's live HP and conditions
+ * above it. The stat block is the GM's shared copy or the bundled SRD's; without one, what the
+ * table sends of it.
  */
 
 /** The table's HP and conditions for one creature: the same controls and requests as its row. */
@@ -81,8 +85,41 @@ function LiveStatus({ creature }: { creature: CreatureView }) {
   );
 }
 
-/** A companion or summon: what the table sends of it, read only. */
+/**
+ * A creature's stat block as this Trifold has it: the shared copy the GM sent, or the bundled
+ * SRD's, by record id; then any version by key. `'reading'` until it is known; null for none.
+ */
+function useStatBlock(creature: CreatureView): CompendiumRecord | null | 'reading' {
+  const campaignId = useJoinedStore((s) => s.current?.campaignId ?? null);
+  const [record, setRecord] = useState<CompendiumRecord | null | 'reading'>('reading');
+  const recordId = creature.statBlock?.recordId;
+  const key = creature.statBlock?.key;
+  useEffect(() => {
+    if (!recordId || !key || !campaignId) {
+      setRecord(null);
+      return;
+    }
+    setRecord('reading');
+    let live = true;
+    const id = statBlockRecordId(campaignId, { recordId, key });
+    void (async () => {
+      const exact = await window.trifold.compendium.get(id).catch(() => null);
+      const found =
+        exact ??
+        (await window.trifold.compendium.findByKey('monster', key).catch(() => []))[0] ??
+        null;
+      if (live) setRecord(found?.kind === 'monster' ? found : null);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [campaignId, recordId, key]);
+  return record;
+}
+
+/** A companion or summon: its stat block, read only, under the table's live numbers. */
 function CompanionSheet({ creature, live }: { creature: CreatureView; live: boolean }) {
+  const record = useStatBlock(creature);
   return (
     <div className="sheet-view" data-testid="companion-sheet">
       <div className="sheet-view-head">
@@ -97,6 +134,18 @@ function CompanionSheet({ creature, live }: { creature: CreatureView; live: bool
         <p className="muted small">
           {creature.hp ? `HP ${creature.hp.current}/${creature.hp.max}` : 'HP not tracked'}
         </p>
+      )}
+      {record === 'reading' ? null : record ? (
+        <div className="sheet-view-section" data-testid="companion-statblock">
+          <RecordBody record={record} onOpenSpell={() => undefined} />
+        </div>
+      ) : (
+        creature.statBlock && (
+          <p className="muted small">
+            Its stat block is not on this computer yet. It arrives with what your GM shares when you
+            are at the table.
+          </p>
+        )
       )}
     </div>
   );
