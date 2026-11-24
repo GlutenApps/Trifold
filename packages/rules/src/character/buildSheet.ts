@@ -69,6 +69,8 @@ export interface BuildChoices {
   backgroundEquipment?: string;
   /** The SRD's item records by lowercased name, to link equipment and read armour and weapons. */
   items?: ReadonlyMap<string, ItemRecord>;
+  /** A legacy background's origin feat, picked by the player. */
+  originFeat?: { ref: SheetRef; text: string };
   /** The cantrips and prepared spells picked, by record. */
   spells?: ReadonlyArray<{ ref: SheetRef; level: number }>;
 }
@@ -138,12 +140,33 @@ export function buildSheet2024(c: BuildChoices): { sheet: Sheet; build: Characte
         from: c.species.name,
         text: t.text,
       })),
-      {
+      // A legacy background's origin feat is the player's pick (docs/BUILDER.md).
+      ...(c.originFeat
+        ? [
+            {
+              id: id('feature'),
+              name: c.originFeat.ref.name,
+              from: c.background.name,
+              text: c.originFeat.text,
+              ref: c.originFeat.ref,
+            },
+          ]
+        : c.background.feat
+          ? [
+              {
+                id: id('feature'),
+                name: c.background.feat,
+                from: c.background.name,
+                text: c.featText ?? '',
+              },
+            ]
+          : []),
+      ...(c.background.features ?? []).map((f) => ({
         id: id('feature'),
-        name: c.background.feat,
+        name: f.name,
         from: c.background.name,
-        text: c.featText ?? '',
-      },
+        text: f.text,
+      })),
     ],
   };
   const build: CharacterBuild = {

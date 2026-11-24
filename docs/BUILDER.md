@@ -47,7 +47,7 @@ The sheet stays as it is. A character made by the builder also keeps `build`: th
 
 ## Legacy options
 
-With a campaign's `allowLegacy` on, the background and species steps also list SRD 5.1 (2014) ones and imported ones. They are applied the way the 2024 rules apply older options: an older background gets the 2024 increase among any three abilities and an origin feat picked from the list; an older species keeps its traits and its listed increases are dropped in favour of the background's. Where the data cannot describe an option, the step says so and leaves it to the sheet.
+With a campaign's `allowLegacy` on, the background and species steps also list SRD 5.1 (2014) ones and imported ones. They are applied the way the 2024 rules apply older options: an older background gets the 2024 increase among any three abilities and an origin feat picked from the list; an older species keeps its traits and its listed increases are dropped in favour of the background's. Where the data cannot describe an option, the step says so and leaves it to the sheet. Built: the Origin step's **Include legacy (2014) backgrounds and species** adds the bundled SRD 5.1 ones, badged legacy. A legacy background keeps its skills, equipment and feature, asks for an origin feat, and its increase goes to any abilities (+2/+1, or +1 to three picked); a legacy species keeps its traits, with size and speed read from them and its ability score increases left out. SRD 5.1 subraces (High Elf, Hill Dwarf and the like) are not offered: their records only add to a parent and do not say its speed. Imported options and the campaign's `allowLegacy` default wait for later.
 
 ## Not in the first version
 

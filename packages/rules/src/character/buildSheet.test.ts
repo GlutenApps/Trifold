@@ -104,6 +104,40 @@ describe('the guided builder writes a sheet (docs/BUILDER.md)', () => {
     });
   });
 
+  it('takes a legacy background’s picked origin feat and keeps its feature', () => {
+    const { sheet } = buildSheet2024({
+      edition: '2024',
+      cls: cleric,
+      classRef: ref('class', 'cleric', 'Cleric'),
+      background: {
+        ...sage,
+        abilities: [],
+        feat: '',
+        featName: '',
+        legacy: true,
+        features: [{ name: 'Researcher', text: 'You know where to look.' }],
+      },
+      backgroundRef: ref('background', 'sage', 'Sage'),
+      originFeat: {
+        ref: { kind: 'feat', key: 'alert', name: 'Alert' },
+        text: 'A bonus to Initiative.',
+      },
+      species: dwarf,
+      speciesRef: ref('species', 'dwarf', 'Dwarf'),
+      size: 'Medium',
+      abilityMethod: 'standard',
+      baseScores: { str: 10, dex: 12, con: 14, int: 8, wis: 15, cha: 13 },
+      increase: { all: ['str', 'dex', 'wis'] },
+      classSkills: [],
+      languages: 'Common',
+    });
+    expect(sheet.abilities).toMatchObject({ str: 11, dex: 13, wis: 16 });
+    expect(sheet.features.filter((f) => f.from === 'Sage').map((f) => f.name)).toEqual([
+      'Alert',
+      'Researcher',
+    ]);
+  });
+
   it('reads skill names and a caster’s ability', () => {
     expect(skillKey('Sleight of Hand')).toBe('sleightOfHand');
     expect(skillKey('animal handling')).toBe('animalHandling');

@@ -173,6 +173,65 @@ const records = [
       extra: {},
     },
   },
+  {
+    ...header,
+    sourceId: 'srd-2014',
+    edition: '2014',
+    id: 'lb1',
+    kind: 'background',
+    key: 'acolyte',
+    name: 'Acolyte',
+    displayName: 'Acolyte',
+    data: {
+      proficiency: 'Insight, Religion',
+      traits: [
+        {
+          name: 'Shelter of the Faithful',
+          text: 'The faithful give you shelter.',
+          category: 'feature',
+          rolls: [],
+          modifiers: [],
+        },
+        {
+          name: 'Skill Proficiencies',
+          text: 'Insight, Religion',
+          category: 'skill_proficiency',
+          rolls: [],
+          modifiers: [],
+        },
+      ],
+      modifiers: [],
+      extra: {},
+    },
+  },
+  {
+    ...header,
+    sourceId: 'srd-2014',
+    edition: '2014',
+    id: 'ls1',
+    kind: 'species',
+    key: 'halfling',
+    name: 'Halfling',
+    displayName: 'Halfling',
+    data: {
+      spells: [],
+      traits: [
+        { name: 'Speed', text: 'Your base walking speed is 25 feet.', rolls: [], modifiers: [] },
+        { name: 'Size', text: 'Your size is Small.', rolls: [], modifiers: [] },
+        { name: 'Lucky', text: 'Reroll a 1.', rolls: [], modifiers: [] },
+      ],
+      extra: {},
+    },
+  },
+  {
+    ...header,
+    id: 'f2',
+    kind: 'feat',
+    key: 'alert',
+    name: 'Alert',
+    displayName: 'Alert',
+    data: { text: 'A bonus to Initiative.', rolls: [], modifiers: [], extra: {} },
+  },
 ] as unknown as CompendiumRecord[];
 
 beforeEach(() => {
@@ -290,6 +349,56 @@ describe('GuidedBuilder (docs/BUILDER.md)', () => {
     await waitFor(() =>
       expect(screen.getByTestId('rolled-scores').textContent).toMatch(/\(\d, \d, \d, \d\)/),
     );
+  });
+
+  it('offers legacy backgrounds and species, used the 2024 way', async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    render(<GuidedBuilder name="Pip" onCancel={() => undefined} onFinish={onFinish} />);
+    await user.click(await screen.findByRole('radio', { name: /Cleric/ }));
+    await user.click(screen.getByRole('checkbox', { name: 'Insight' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Medicine' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.queryByRole('radio', { name: /Halfling/ })).toBeNull();
+    await user.click(screen.getByRole('checkbox', { name: /Include legacy/ }));
+    await user.click(screen.getByRole('radio', { name: /Acolyte legacy/ }));
+    await user.click(screen.getByRole('radio', { name: /Halfling legacy/ }));
+    // A legacy background asks for an origin feat.
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Origin feat' }), 'alert');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    const scores = within(screen.getByTestId('builder-abilities'));
+    for (const [ability, value] of [
+      ['Wisdom', '15'],
+      ['Constitution', '14'],
+      ['Dexterity', '13'],
+      ['Charisma', '12'],
+      ['Strength', '10'],
+      ['Intelligence', '8'],
+    ] as const) {
+      const select = scores.getByRole('combobox', { name: ability });
+      const option = [...select.querySelectorAll('option')].find(
+        (o) => o.textContent === value && !o.disabled,
+      )!;
+      await user.selectOptions(select, option);
+    }
+    // Any three abilities for +1 each.
+    await user.click(scores.getByRole('radio', { name: '+1 to all three' }));
+    await user.click(scores.getByRole('checkbox', { name: 'Plus 1 to Wisdom' }));
+    await user.click(scores.getByRole('checkbox', { name: 'Plus 1 to Dexterity' }));
+    await user.click(scores.getByRole('checkbox', { name: 'Plus 1 to Charisma' }));
+    expect(scores.getByRole('checkbox', { name: 'Plus 1 to Strength' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Finish' }));
+    const [sheet] = onFinish.mock.calls[0]! as [Sheet];
+    expect(sheet.abilities).toMatchObject({ wis: 16, dex: 14, cha: 13 });
+    expect(sheet.speed).toBe(25);
+    expect(sheet.features.filter((f) => f.from === 'Acolyte').map((f) => f.name)).toEqual([
+      'Alert',
+      'Shelter of the Faithful',
+    ]);
   });
 
   it('says so when the 2024 SRD is switched off', async () => {

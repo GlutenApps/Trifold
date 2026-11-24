@@ -436,7 +436,7 @@ The GM already sets the edition: every campaign has `preferredEdition` (2024 by 
 
 The rules layer is keyed by edition from the first commit so the second engine is an addition, not a rewrite. Check what SRD 5.1 holds that SRD 5.2.1 does not against the fetched snapshots before sizing the 2014 phase.
 
-The sheet schema and the derived-number functions come first; the PDF import and the builder both write sheets, so they can proceed in parallel once it lands. Give the builder its own short spec before starting it. The spec is `docs/BUILDER.md`. Built so far: the SRD class data it needs, the rules layer, and the guided flow for class, origin, ability scores, starting equipment, spells and review (New character › Trifold character › Guided builder), and Level up on a character it made.
+The sheet schema and the derived-number functions come first; the PDF import and the builder both write sheets, so they can proceed in parallel once it lands. Give the builder its own short spec before starting it. The spec is `docs/BUILDER.md`. Built so far: the SRD class data it needs, the rules layer, and the guided flow for class, origin, ability scores, starting equipment, spells and review (New character › Trifold character › Guided builder), Level up on a character it made, and legacy (SRD 5.1) backgrounds and species used the 2024 way.
 
 ## Data model for Part 3
 

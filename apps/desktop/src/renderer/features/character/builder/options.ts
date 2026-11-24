@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import {
   readBackground,
   readClass,
+  readLegacyBackground,
+  readLegacySpecies,
   readSpecies,
   readSubclass,
   type SubclassOption,
@@ -26,6 +28,7 @@ import type {
  */
 
 const SRD_2024 = 'srd-2024';
+const SRD_2014 = 'srd-2014';
 
 export interface Offered<T> {
   option: T;
@@ -38,6 +41,9 @@ export interface BuilderOptions {
   subclasses: Array<Offered<SubclassOption>>;
   backgrounds: Array<Offered<BackgroundOption>>;
   species: Array<Offered<SpeciesOption>>;
+  /** SRD 5.1 backgrounds and species, used the 2024 way (Legacy options). */
+  legacyBackgrounds: Array<Offered<BackgroundOption>>;
+  legacySpecies: Array<Offered<SpeciesOption>>;
   feats: FeatRecord[];
   /** The SRD's items by lowercased name, for starting equipment. */
   items: Map<string, ItemRecord>;
@@ -45,15 +51,15 @@ export interface BuilderOptions {
   spells: SpellRecord[];
 }
 
-async function recordsOf(kind: RecordKind): Promise<CompendiumRecord[]> {
+async function recordsOf(kind: RecordKind, source = SRD_2024): Promise<CompendiumRecord[]> {
   const found = await window.trifold.compendium.search({
     kind,
-    sourceIds: [SRD_2024],
-    edition: '2024',
+    sourceIds: [source],
+    edition: source === SRD_2024 ? '2024' : '2014',
     limit: 500,
   });
   const records = await Promise.all(found.rows.map((r) => window.trifold.compendium.get(r.id)));
-  return records.filter((r): r is CompendiumRecord => !!r && r.sourceId === SRD_2024);
+  return records.filter((r): r is CompendiumRecord => !!r && r.sourceId === source);
 }
 
 const refOf = (r: CompendiumRecord): SheetRef => ({
@@ -63,14 +69,17 @@ const refOf = (r: CompendiumRecord): SheetRef => ({
 });
 
 export async function loadBuilderOptions(): Promise<BuilderOptions> {
-  const [classes, backgrounds, species, feats, items, spells] = await Promise.all([
-    recordsOf('class'),
-    recordsOf('background'),
-    recordsOf('species'),
-    recordsOf('feat'),
-    recordsOf('item'),
-    recordsOf('spell'),
-  ]);
+  const [classes, backgrounds, species, feats, items, spells, oldBackgrounds, oldSpecies] =
+    await Promise.all([
+      recordsOf('class'),
+      recordsOf('background'),
+      recordsOf('species'),
+      recordsOf('feat'),
+      recordsOf('item'),
+      recordsOf('spell'),
+      recordsOf('background', SRD_2014),
+      recordsOf('species', SRD_2014),
+    ]);
   const byName = <T extends { option: { name: string } }>(a: T, b: T) =>
     a.option.name.localeCompare(b.option.name);
   return {
@@ -94,6 +103,17 @@ export async function loadBuilderOptions(): Promise<BuilderOptions> {
       .sort(byName),
     species: species
       .flatMap((r) => (r.kind === 'species' ? [{ option: readSpecies(r), ref: refOf(r) }] : []))
+      .sort(byName),
+    legacyBackgrounds: oldBackgrounds
+      .flatMap((r) =>
+        r.kind === 'background' ? [{ option: readLegacyBackground(r), ref: refOf(r) }] : [],
+      )
+      .sort(byName),
+    legacySpecies: oldSpecies
+      .flatMap((r) => {
+        const option = r.kind === 'species' ? readLegacySpecies(r) : null;
+        return option ? [{ option, ref: refOf(r) }] : [];
+      })
       .sort(byName),
     feats: feats.filter((r): r is FeatRecord => r.kind === 'feat'),
     spells: spells
