@@ -54,7 +54,7 @@ With a campaign's `allowLegacy` on, the background and species steps also list S
 - Multiclassing (Level up adds levels in the one class).
 - Imported classes and subclasses (manual entry, as today).
 - Encumbrance, attunement, coin purses.
-- The 2014 builder (phase 8).
+- The 2014 builder (phase 8). Built so far: its data and rules. SRD 5.1 classes read their proficiencies, skill choice, equipment lines and caster type from the snapshot (`DATA-FORMATS.md` §4), subraces keep their parent, and `packages/rules/src/character/build2014.ts` reads races with their subraces and ability increases, equipment lines and their items, spells known and prepared (with the bard's, sorcerer's and ranger's spells-known tables, which the snapshot lacks), and the slots that differ from 2024 (half casters from 2nd level, the warlock's slot level). The flow and Level up follow.
 
 ## Order of work (one PR each)
 

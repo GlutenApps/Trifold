@@ -11,6 +11,7 @@ import {
   rulesetDocument,
   type Open5eContext,
   skillChoice,
+  proficiencyLines,
   tableRows,
 } from './normalize';
 import type { O5eBase, O5eCondition, O5eKind, O5eRuleset } from './types';
@@ -229,6 +230,57 @@ describe('normalizeOpen5e', () => {
     expect(wizard.data.levels.map((l) => l.level)).toEqual([1, 4, 5, 8, 12, 16]);
     expect(wizard.data.levels.find((l) => l.level === 4)?.scoreImprovement).toBe(true);
     expect(wizard.data.levels[0]?.features[0]?.name).toBe('Arcane Recovery');
+  });
+});
+
+describe('SRD 5.1 classes (docs/BUILDER.md, the 2014 builder)', () => {
+  it('reads the proficiencies feature, the equipment lines and the caster type from the slots', () => {
+    const wizard = get('classes', 'srd_wizard', ctx2014);
+    if (wizard.kind !== 'class') throw new Error('kind');
+    expect(wizard.data.hd).toBe(6);
+    expect(wizard.data.proficiency).toBe(
+      'Intelligence, Wisdom, Arcana, History, Insight, Investigation, Medicine, Religion',
+    );
+    expect(wizard.data.numSkills).toBe(2);
+    expect(wizard.data.weapons).toBe('Daggers, darts, slings, quarterstaffs, light crossbows');
+    expect(wizard.data.armor).toBeUndefined();
+    expect(wizard.data.extra['equipmentChoices']).toEqual([
+      '(a) a quarterstaff or (b) a dagger',
+      '(a) a component pouch or (b) an arcane focus',
+      '(a) a scholar’s pack or (b) an explorer’s pack',
+      'A spellbook',
+    ]);
+    expect(wizard.data.extra['casterType']).toEqual(['FULL']);
+    expect(wizard.data.extra['table:Cantrips Known']?.[0]).toBe('3');
+
+    const warlock = get('classes', 'srd_warlock', ctx2014);
+    if (warlock.kind !== 'class') throw new Error('kind');
+    expect(warlock.data.extra['casterType']).toEqual(['PACT']);
+    expect(warlock.data.extra['table:Spells Known']?.[0]).toBe('2');
+  });
+
+  it('keeps a subrace’s parent by key', () => {
+    const highElf = get('species', 'srd_high-elf', ctx2014);
+    if (highElf.kind !== 'species') throw new Error('kind');
+    expect(highElf.data.extra['subspeciesOf']).toEqual(['elf']);
+    expect(get('species', 'srd-2024_dragonborn').data.extra).toEqual({});
+  });
+
+  it('reads an SRD 5.1 skill choice, in words', () => {
+    const skills = ['Acrobatics', 'Animal Handling', 'Athletics', 'History', 'Insight'];
+    expect(
+      skillChoice('Choose two skills from Acrobatics, Animal Handling, and Athletics', skills),
+    ).toEqual({ choose: 2, from: ['Acrobatics', 'Animal Handling', 'Athletics'] });
+    expect(skillChoice('Choose any three', skills)).toEqual({ choose: 3, from: [] });
+  });
+
+  it('splits the proficiencies feature into its lines', () => {
+    expect([
+      ...proficiencyLines('**Armor:** None\r\n**Tools:** Three musical instruments').entries(),
+    ]).toEqual([
+      ['Armor', 'None'],
+      ['Tools', 'Three musical instruments'],
+    ]);
   });
 });
 

@@ -1032,6 +1032,66 @@
       "crossreferences": {
         "to": []
       }
+    },
+    {
+      "key": "srd_high-elf",
+      "name": "High Elf",
+      "desc": "As a high elf, you have a keen mind and a mastery of at least the basics of magic. In many fantasy gaming worlds, there are two kinds of high elves. One type is haughty and reclusive, believing themselves to be superior to non-elves and even other elves. The other type is more common and more friendly, and often encountered among humans and other races.",
+      "document": {
+        "name": "System Reference Document 5.1",
+        "key": "srd-2014",
+        "type": "SOURCE",
+        "display_name": "5e 2014 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2014",
+          "key": "5e-2014"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "is_subspecies": true,
+      "subspecies_of": "srd_elf",
+      "traits": [
+        {
+          "name": "Ability Score Increase",
+          "desc": "Your Intelligence score increases by 1.",
+          "type": null,
+          "order": null,
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Elf Weapon Training",
+          "desc": "You have proficiency with the longsword, shortsword, shortbow, and longbow.",
+          "type": null,
+          "order": null,
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Cantrip",
+          "desc": "You know one cantrip of your choice from the wizard spell list. Intelligence is your spellcasting ability for it.",
+          "type": null,
+          "order": null,
+          "crossreferences": {
+            "to": []
+          }
+        },
+        {
+          "name": "Extra Language",
+          "desc": "You can speak, read, and write one extra language of your choice.",
+          "type": null,
+          "order": null,
+          "crossreferences": {
+            "to": []
+          }
+        }
+      ]
     }
   ],
   "backgrounds": [
@@ -1312,6 +1372,634 @@
       "crossreferences": {
         "to": []
       }
+    },
+    {
+      "key": "srd_wizard",
+      "name": "Wizard",
+      "desc": "",
+      "document": {
+        "name": "System Reference Document 5.1",
+        "key": "srd-2014",
+        "type": "SOURCE",
+        "display_name": "5e 2014 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2014",
+          "key": "5e-2014"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "hit_dice": "D6",
+      "hit_points": {
+        "hit_dice": "D6",
+        "hit_dice_name": "1D6 per Wizard level",
+        "hit_points_at_1st_level": "6 + your Constitution modifier",
+        "hit_points_at_higher_levels": "1D6 (or 4) + your Constitution modifier per wizard level after 1st"
+      },
+      "saving_throws": [
+        {
+          "name": "Intelligence"
+        },
+        {
+          "name": "Wisdom"
+        }
+      ],
+      "subclass_of": null,
+      "caster_type": null,
+      "primary_abilities": [],
+      "features": [
+        {
+          "name": "Arcane Recovery",
+          "desc": "You have learned to regain some of your magical energy by studying your spellbook. Once per day when you finish a short rest, you can choose expended spell slots to recover. The spell slots can have a combined level that is equal to or less than half your wizard level (rounded up), and none of the slots can be 6th level or higher.\r\n\r\nFor example, if you're a 4th-level wizard, you can recover up to two levels worth of spell slots. You can recover either a 2nd-level spell slot or two 1st-level spell slots.",
+          "feature_type": "CLASS_LEVEL_FEATURE",
+          "gained_at": [
+            {
+              "level": 1,
+              "detail": null
+            }
+          ],
+          "data_for_class_table": []
+        },
+        {
+          "name": "Cantrips Known",
+          "desc": "[Column data]",
+          "feature_type": "CLASS_TABLE_DATA",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 1,
+              "column_value": "3"
+            },
+            {
+              "level": 10,
+              "column_value": "5"
+            },
+            {
+              "level": 11,
+              "column_value": "5"
+            },
+            {
+              "level": 12,
+              "column_value": "5"
+            },
+            {
+              "level": 13,
+              "column_value": "5"
+            },
+            {
+              "level": 14,
+              "column_value": "5"
+            },
+            {
+              "level": 15,
+              "column_value": "5"
+            },
+            {
+              "level": 16,
+              "column_value": "5"
+            },
+            {
+              "level": 17,
+              "column_value": "5"
+            },
+            {
+              "level": 18,
+              "column_value": "5"
+            },
+            {
+              "level": 19,
+              "column_value": "5"
+            },
+            {
+              "level": 2,
+              "column_value": "3"
+            },
+            {
+              "level": 20,
+              "column_value": "5"
+            },
+            {
+              "level": 3,
+              "column_value": "3"
+            },
+            {
+              "level": 4,
+              "column_value": "4"
+            },
+            {
+              "level": 5,
+              "column_value": "4"
+            },
+            {
+              "level": 6,
+              "column_value": "4"
+            },
+            {
+              "level": 7,
+              "column_value": "4"
+            },
+            {
+              "level": 8,
+              "column_value": "4"
+            },
+            {
+              "level": 9,
+              "column_value": "4"
+            }
+          ]
+        },
+        {
+          "name": "Equipment",
+          "desc": "You start with the following equipment, in addition to the equipment granted by your background:\r\n* (*a*) a quarterstaff or (*b*) a dagger\r\n* (*a*) a component pouch or (*b*) an arcane focus\r\n* (*a*) a scholar’s pack or (*b*) an explorer’s pack\r\n* A spellbook",
+          "feature_type": "STARTING_EQUIPMENT",
+          "gained_at": [],
+          "data_for_class_table": []
+        },
+        {
+          "name": "Proficiencies",
+          "desc": "**Armor:** None\r\n**Weapons:** Daggers, darts, slings, quarterstaffs, light crossbows\r\n**Tools:** None\r\n**Saving Throws:** Intelligence, Wisdom\r\n**Skills:** Choose two from Arcana, History, Insight, Investigation, Medicine, and Religion",
+          "feature_type": "PROFICIENCIES",
+          "gained_at": [],
+          "data_for_class_table": []
+        },
+        {
+          "name": "1st",
+          "desc": "[Column data]",
+          "feature_type": "SPELL_SLOTS",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 1,
+              "column_value": "2"
+            },
+            {
+              "level": 10,
+              "column_value": "4"
+            }
+          ]
+        },
+        {
+          "name": "2nd",
+          "desc": "[Column data]",
+          "feature_type": "SPELL_SLOTS",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 10,
+              "column_value": "3"
+            },
+            {
+              "level": 11,
+              "column_value": "3"
+            }
+          ]
+        },
+        {
+          "name": "3rd",
+          "desc": "[Column data]",
+          "feature_type": "SPELL_SLOTS",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 10,
+              "column_value": "3"
+            },
+            {
+              "level": 11,
+              "column_value": "3"
+            }
+          ]
+        },
+        {
+          "name": "4th",
+          "desc": "[Column data]",
+          "feature_type": "SPELL_SLOTS",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 10,
+              "column_value": "3"
+            },
+            {
+              "level": 11,
+              "column_value": "3"
+            }
+          ]
+        },
+        {
+          "name": "5th",
+          "desc": "[Column data]",
+          "feature_type": "SPELL_SLOTS",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 10,
+              "column_value": "2"
+            },
+            {
+              "level": 11,
+              "column_value": "2"
+            }
+          ]
+        },
+        {
+          "name": "6th",
+          "desc": "[Column data]",
+          "feature_type": "SPELL_SLOTS",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 11,
+              "column_value": "1"
+            },
+            {
+              "level": 12,
+              "column_value": "1"
+            }
+          ]
+        },
+        {
+          "name": "7th",
+          "desc": "[Column data]",
+          "feature_type": "SPELL_SLOTS",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 13,
+              "column_value": "1"
+            },
+            {
+              "level": 14,
+              "column_value": "1"
+            }
+          ]
+        },
+        {
+          "name": "8th",
+          "desc": "[Column data]",
+          "feature_type": "SPELL_SLOTS",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 15,
+              "column_value": "1"
+            },
+            {
+              "level": 16,
+              "column_value": "1"
+            }
+          ]
+        },
+        {
+          "name": "9th",
+          "desc": "[Column data]",
+          "feature_type": "SPELL_SLOTS",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 17,
+              "column_value": "1"
+            },
+            {
+              "level": 18,
+              "column_value": "1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "srd_warlock",
+      "name": "Warlock",
+      "desc": "",
+      "document": {
+        "name": "System Reference Document 5.1",
+        "key": "srd-2014",
+        "type": "SOURCE",
+        "display_name": "5e 2014 Rules",
+        "publisher": {
+          "name": "Wizards of the Coast",
+          "key": "wizards-of-the-coast"
+        },
+        "gamesystem": {
+          "name": "5th Edition 2014",
+          "key": "5e-2014"
+        },
+        "permalink": "https://dnd.wizards.com/resources/systems-reference-document"
+      },
+      "hit_dice": "D8",
+      "hit_points": {
+        "hit_dice": "D8",
+        "hit_dice_name": "1D8 per Warlock level",
+        "hit_points_at_1st_level": "8 + your Constitution modifier",
+        "hit_points_at_higher_levels": "1D8 (or 5) + your Constitution modifier per warlock level after 1st"
+      },
+      "saving_throws": [
+        {
+          "name": "Charisma"
+        },
+        {
+          "name": "Wisdom"
+        }
+      ],
+      "subclass_of": null,
+      "caster_type": null,
+      "primary_abilities": [],
+      "features": [
+        {
+          "name": "Cantrips Known",
+          "desc": "[Column data]",
+          "feature_type": "CLASS_TABLE_DATA",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 1,
+              "column_value": "2"
+            },
+            {
+              "level": 10,
+              "column_value": "4"
+            },
+            {
+              "level": 11,
+              "column_value": "4"
+            },
+            {
+              "level": 12,
+              "column_value": "4"
+            },
+            {
+              "level": 13,
+              "column_value": "4"
+            },
+            {
+              "level": 14,
+              "column_value": "4"
+            },
+            {
+              "level": 15,
+              "column_value": "4"
+            },
+            {
+              "level": 16,
+              "column_value": "4"
+            },
+            {
+              "level": 17,
+              "column_value": "4"
+            },
+            {
+              "level": 18,
+              "column_value": "4"
+            },
+            {
+              "level": 19,
+              "column_value": "4"
+            },
+            {
+              "level": 2,
+              "column_value": "2"
+            },
+            {
+              "level": 20,
+              "column_value": "4"
+            },
+            {
+              "level": 3,
+              "column_value": "2"
+            },
+            {
+              "level": 4,
+              "column_value": "3"
+            },
+            {
+              "level": 5,
+              "column_value": "3"
+            },
+            {
+              "level": 6,
+              "column_value": "3"
+            },
+            {
+              "level": 7,
+              "column_value": "3"
+            },
+            {
+              "level": 8,
+              "column_value": "3"
+            },
+            {
+              "level": 9,
+              "column_value": "3"
+            }
+          ]
+        },
+        {
+          "name": "Equipment",
+          "desc": "You start with the following equipment, in addition to the equipment granted by your background:\r\n* (*a*) a light crossbow and 20 bolts or (*b*) any simple weapon\r\n* (*a*) a component pouch or (*b*) an arcane focus\r\n* (*a*) a scholar’s pack or (*b*) a dungeoneer’s pack\r\n* Leather armor, any simple weapon, and two daggers",
+          "feature_type": "STARTING_EQUIPMENT",
+          "gained_at": [],
+          "data_for_class_table": []
+        },
+        {
+          "name": "Pact Magic",
+          "desc": "Your arcane research and the magic bestowed on you by your patron have given you facility with spells.\r\n\r\n### Cantrips\r\n\r\nYou know two cantrips of your choice from the warlock spell list. You learn additional warlock cantrips of your choice at higher levels, as shown in the Cantrips Known column of the Warlock table.\r\nSpell Slots\r\n\r\nThe Warlock table shows how many spell slots you have. The table also shows what the level of those slots is; all of your spell slots are the same level. To cast one of your warlock spells of 1st level or higher, you must expend a spell slot. You regain all expended spell slots when you finish a short or long rest.\r\n\r\nFor example, when you are 5th level, you have two 3rd-level spell slots. To cast the 1st-level spell thunderwave, you must spend one of those slots, and you cast it as a 3rd-level spell.\r\n\r\n### Spells Known of 1st Level and Higher\r\n\r\nAt 1st level, you know two 1st-level spells of your choice from the warlock spell list.\r\n\r\nThe Spells Known column of the Warlock table shows when you learn more warlock spells of your choice of 1st level and higher. A spell you choose must be of a level no higher than what's shown in the table's Slot Level column for your level. When you reach 6th level, for example, you learn a new warlock spell, which can be 1st, 2nd, or 3rd level.\r\n\r\nAdditionally, when you gain a level in this class, you can choose one of the warlock spells you know and replace it with another spell from the warlock spell list, which also must be of a level for which you have spell slots.\r\n\r\n### Spellcasting Ability\r\n\r\nCharisma is your spellcasting ability for your warlock spells, so you use your Charisma whenever a spell refers to your spellcasting ability. In addition, you use your Charisma modifier when setting the saving throw DC for a warlock spell you cast and when making an attack roll with one.\r\n\r\n**Spell save DC** = 8 + your proficiency bonus + your Charisma modifier\r\n\r\n**Spell attack modifier** = your proficiency bonus + your Charisma modifier\r\n\r\n### Spellcasting Focus\r\n\r\nYou can use an arcane focus as a spellcasting focus for your warlock spells.",
+          "feature_type": "CLASS_LEVEL_FEATURE",
+          "gained_at": [
+            {
+              "level": 1,
+              "detail": null
+            }
+          ],
+          "data_for_class_table": []
+        },
+        {
+          "name": "Proficiencies",
+          "desc": "**Armor:** Light armor\r\n**Weapons:** Simple weapons\r\n**Tools:** None\r\n**Saving Throws:** Wisdom, Charisma\r\n**Skills:** Choose two skills from Arcana, Deception, History, Intimidation, Investigation, Nature, and Religion",
+          "feature_type": "PROFICIENCIES",
+          "gained_at": [],
+          "data_for_class_table": []
+        },
+        {
+          "name": "Spell Slots",
+          "desc": "[Column data]",
+          "feature_type": "CLASS_TABLE_DATA",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 1,
+              "column_value": "1"
+            },
+            {
+              "level": 10,
+              "column_value": "2"
+            },
+            {
+              "level": 11,
+              "column_value": "3"
+            },
+            {
+              "level": 12,
+              "column_value": "3"
+            },
+            {
+              "level": 13,
+              "column_value": "3"
+            },
+            {
+              "level": 14,
+              "column_value": "3"
+            },
+            {
+              "level": 15,
+              "column_value": "3"
+            },
+            {
+              "level": 16,
+              "column_value": "3"
+            },
+            {
+              "level": 17,
+              "column_value": "4"
+            },
+            {
+              "level": 18,
+              "column_value": "4"
+            },
+            {
+              "level": 19,
+              "column_value": "4"
+            },
+            {
+              "level": 2,
+              "column_value": "2"
+            },
+            {
+              "level": 20,
+              "column_value": "4"
+            },
+            {
+              "level": 3,
+              "column_value": "2"
+            },
+            {
+              "level": 4,
+              "column_value": "2"
+            },
+            {
+              "level": 5,
+              "column_value": "2"
+            },
+            {
+              "level": 6,
+              "column_value": "2"
+            },
+            {
+              "level": 7,
+              "column_value": "2"
+            },
+            {
+              "level": 8,
+              "column_value": "2"
+            },
+            {
+              "level": 9,
+              "column_value": "2"
+            }
+          ]
+        },
+        {
+          "name": "Spells Known",
+          "desc": "[Column data]",
+          "feature_type": "CLASS_TABLE_DATA",
+          "gained_at": [],
+          "data_for_class_table": [
+            {
+              "level": 1,
+              "column_value": "2"
+            },
+            {
+              "level": 10,
+              "column_value": "10"
+            },
+            {
+              "level": 11,
+              "column_value": "11"
+            },
+            {
+              "level": 12,
+              "column_value": "11"
+            },
+            {
+              "level": 13,
+              "column_value": "12"
+            },
+            {
+              "level": 14,
+              "column_value": "12"
+            },
+            {
+              "level": 15,
+              "column_value": "13"
+            },
+            {
+              "level": 16,
+              "column_value": "13"
+            },
+            {
+              "level": 17,
+              "column_value": "14"
+            },
+            {
+              "level": 18,
+              "column_value": "14"
+            },
+            {
+              "level": 19,
+              "column_value": "15"
+            },
+            {
+              "level": 2,
+              "column_value": "3"
+            },
+            {
+              "level": 20,
+              "column_value": "15"
+            },
+            {
+              "level": 3,
+              "column_value": "4"
+            },
+            {
+              "level": 4,
+              "column_value": "5"
+            },
+            {
+              "level": 5,
+              "column_value": "6"
+            },
+            {
+              "level": 6,
+              "column_value": "7"
+            },
+            {
+              "level": 7,
+              "column_value": "8"
+            },
+            {
+              "level": 8,
+              "column_value": "9"
+            },
+            {
+              "level": 9,
+              "column_value": "10"
+            }
+          ]
+        }
+      ]
     }
   ],
   "conditions": [

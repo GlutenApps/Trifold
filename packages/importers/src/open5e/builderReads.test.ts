@@ -12,7 +12,10 @@ import {
   readClass,
   readLegacyBackground,
   readLegacySpecies,
+  readRaces2014,
   readSpecies,
+  spellCounts2014,
+  spellSlots2014,
 } from '@trifold/rules';
 
 /**
@@ -89,3 +92,78 @@ describe.skipIf(legacy.length === 0)(
     });
   },
 );
+
+/** The 2014 builder's readers against the bundled SRD 5.1 snapshot (docs/BUILDER.md, phase 8). */
+const SNAPSHOT_2014 = join(__dirname, '..', '..', '..', '..', 'resources', 'srd-2014.jsonl');
+const records2014: CompendiumRecord[] = existsSync(SNAPSHOT_2014)
+  ? readFileSync(SNAPSHOT_2014, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l) as CompendiumRecord)
+  : [];
+
+describe.skipIf(records2014.length === 0)('the 2014 builder reads the bundled SRD 5.1', () => {
+  const classes = () =>
+    records2014.filter((r): r is ClassRecord => r.kind === 'class' && !r.data.extra['subclassOf']);
+
+  it('reads all 12 classes, with skills, equipment lines and their subclass levels', () => {
+    expect(classes()).toHaveLength(12);
+    const levels: Record<string, number | null> = {};
+    for (const c of classes()) {
+      const option = readClass(c);
+      expect(option, c.displayName).not.toBeNull();
+      expect(option!.saves, c.displayName).toHaveLength(2);
+      expect(option!.skills.choose, c.displayName).toBeGreaterThan(0);
+      expect(option!.equipmentLines?.length, c.displayName).toBeGreaterThan(0);
+      levels[c.displayName] = option!.subclassLevel;
+    }
+    expect(levels).toMatchObject({
+      Cleric: 1,
+      Sorcerer: 1,
+      Warlock: 1,
+      Wizard: 2,
+      Druid: 2,
+      Fighter: 3,
+    });
+  });
+
+  it('reads the races with their subraces and increases', () => {
+    const races = readRaces2014(
+      records2014.filter((r): r is SpeciesRecord => r.kind === 'species'),
+    );
+    expect(races.map((r) => r.name)).toEqual([
+      'Dragonborn',
+      'Dwarf',
+      'Elf',
+      'Gnome',
+      'Half-Elf',
+      'Half-Orc',
+      'Halfling',
+      'Human',
+      'Tiefling',
+    ]);
+    const dwarf = races.find((r) => r.name === 'Dwarf')!;
+    expect(dwarf).toMatchObject({ speed: 25, size: 'Medium', increase: { fixed: { con: 2 } } });
+    expect(dwarf.subraces.map((s) => [s.name, s.increase.fixed])).toEqual([
+      ['Hill Dwarf', { wis: 1 }],
+    ]);
+    expect(races.find((r) => r.name === 'Half-Elf')!.increase).toEqual({
+      fixed: { cha: 2 },
+      choose: 2,
+    });
+    expect(races.find((r) => r.name === 'Halfling')!.subraces[0]!.name).toBe('Lightfoot');
+  });
+
+  it('counts a wizard’s and a warlock’s spells at 1st level', () => {
+    const option = (name: string) => readClass(classes().find((c) => c.displayName === name)!)!;
+    expect(spellCounts2014(option('Wizard'), 1, 16)).toEqual({
+      cantrips: 3,
+      spells: 4,
+      prepares: true,
+      spellbook: 6,
+    });
+    expect(spellCounts2014(option('Warlock'), 1, 16)).toMatchObject({ cantrips: 2, spells: 2 });
+    expect(spellSlots2014(option('Warlock'), 1, [])).toEqual([1]);
+    expect(spellCounts2014(option('Bard'), 1, 14)).toMatchObject({ cantrips: 2, spells: 4 });
+  });
+});
