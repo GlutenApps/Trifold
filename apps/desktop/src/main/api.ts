@@ -275,6 +275,9 @@ export function createApi(ctx: ApiContext): TrifoldApi {
         });
         return recentLibraries(ctx);
       },
+      async setRole(role) {
+        return ctx.session.setRole(role);
+      },
       async updateSettings(patch) {
         const settings = await requireStore().updateSettings(patch);
         if (patch.theme) ctx.windows.setTheme(settings.theme);

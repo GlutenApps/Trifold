@@ -514,7 +514,7 @@ What is left of Parts 1 to 3, and what a player needs beyond them, in order. Ite
 | 7 | *Added:* rolling from the sheet: a save, skill, attack, spell attack or initiative, following the Table and Private switch; an initiative roll fills the initiative box | M | Built (ADR 0075) |
 | **D** | **Ready for players who are not the GM** | | |
 | 8 | *Added:* a version check between the GM's and the player's Trifold, with a plain message to update on a mismatch | S–M | Built (ADR 0076) |
-| 9 | *Added:* a first-run choice for a new Library (running games or playing); the playing path leads with Join a campaign and Characters | S–M | |
+| 9 | *Added:* a first-run choice for a new Library (running games or playing); the playing path leads with Join a campaign and Characters | S–M | Built (ADR 0077) |
 | 10 | The user guide's player section and the docs pass in phase 9 | M | |
 | **E** | **Acceptance and release** | | |
 | 11 | The acceptance checks below on two computers, Windows and macOS | | Ian runs; fixes follow |

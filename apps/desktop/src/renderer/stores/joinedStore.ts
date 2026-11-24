@@ -20,6 +20,8 @@ import { useShellStore } from './shellStore';
  * `stopSearch`, which the Join a campaign panel calls as it opens and closes.
  */
 interface JoinedState {
+  /** Join a campaign opens by itself the next time the Campaigns page shows (ADR 0077). */
+  wantsJoin: boolean;
   /** The open campaign's table's app version, as it last said (ADR 0076). */
   tableVersion: string | null;
   joined: JoinedSummary[];
@@ -81,6 +83,7 @@ const newestFirst = (notes: Note[]) =>
 export const useJoinedStore = create<JoinedState>((set, get) => ({
   joined: [],
   current: null,
+  wantsJoin: false,
   tableVersion: null,
   notes: [],
   pins: [],

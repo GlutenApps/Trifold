@@ -44,6 +44,7 @@ describe('LibrarySettings', () => {
       },
       workspace: { presets: [], seeded: false, consoles: {}, webTabs: [], playerConsoles: {} },
       sampleCampaign: { added: false },
+      role: null,
     });
   });
 

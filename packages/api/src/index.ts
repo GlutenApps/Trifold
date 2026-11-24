@@ -161,6 +161,11 @@ export interface LibraryInfo {
   error: string | null;
   settings: LibrarySettings | null;
   index: IndexInfo;
+  /**
+   * A new Library waiting for its first-run choice (ADR 0077), Game master or Player, before
+   * anything is added to it. Only while player mode is on.
+   */
+  needsRole?: boolean;
 }
 
 export interface PresenterOverlays {
@@ -1077,6 +1082,11 @@ export interface TrifoldApi {
      * object.
      */
     updateSettings(patch: Partial<LibrarySettings>): Promise<LibrarySettings>;
+    /**
+     * The first-run choice (ADR 0077): a game master's new Library gets the sample campaign now;
+     * a player's does not. Also how Settings changes it later, when nothing is added.
+     */
+    setRole(role: 'gm' | 'player'): Promise<LibraryInfo>;
   };
   displays: {
     list(): Promise<DisplayInfo[]>;
@@ -1649,6 +1659,7 @@ export const API_METHODS = {
     'recent',
     'forgetRecent',
     'updateSettings',
+    'setRole',
   ],
   displays: ['list', 'identify'],
   player: ['open', 'openForLive', 'close', 'isOpen'],

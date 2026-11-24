@@ -318,6 +318,13 @@ export const LibrarySettings = z.object({
    * was, so deleting it is final. Settings › Sample campaign adds it again on request.
    */
   sampleCampaign: z.object({ added: z.boolean().default(false) }).prefault({}),
+  /**
+   * How this Library is used (ADR 0077), asked once of a new Library while player mode is on:
+   * a game master gets the sample campaign, a player gets Join a campaign first. Null for a
+   * Library made before the question or never asked, which works as a game master's. Additive
+   * with a default; no schema bump.
+   */
+  role: z.enum(['gm', 'player']).nullable().default(null),
 });
 export type LibrarySettings = z.infer<typeof LibrarySettings>;
 

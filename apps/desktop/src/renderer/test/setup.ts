@@ -112,6 +112,13 @@ export function installBridgeMock(): TrifoldBridge {
       recent: vi.fn(async () => []),
       forgetRecent: vi.fn(async () => []),
       updateSettings: vi.fn(async (patch) => ({ ...settings, ...patch })),
+      setRole: vi.fn(async (role: 'gm' | 'player') => ({
+        path: 'C:/test/Library',
+        ok: true,
+        error: null,
+        settings: { ...settings, role },
+        index: { ok: true, version: 1, error: null },
+      })),
     },
     displays: {
       list: vi.fn(async () => []),

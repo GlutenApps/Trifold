@@ -70,6 +70,7 @@ async function main(): Promise<void> {
     ),
   });
   const activeSession = session;
+  activeSession.askRole = featureFlags(process.env).playerMode;
   const icons = new IconResources(join(bundledDir, 'icons'), logger, () => session?.logDir ?? null);
   const tablePictures: TablePictures = { from: null };
   installMediaHandler(activeSession, icons, tablePictures);
