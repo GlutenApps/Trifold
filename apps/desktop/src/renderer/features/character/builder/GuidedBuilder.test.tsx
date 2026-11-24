@@ -41,6 +41,8 @@ const records = [
         casterType: ['FULL'],
         primaryAbility: ['Wisdom'],
         equipment: ['A: Mace, 7 GP', 'B: 110 GP'],
+        'table:Cantrips': Array(20).fill('1'),
+        'table:Prepared Spells': Array(20).fill('1'),
       },
     },
   },
@@ -102,6 +104,74 @@ const records = [
     name: 'Magic Initiate',
     displayName: 'Magic Initiate',
     data: { text: 'You learn two cantrips.', rolls: [], modifiers: [], extra: {} },
+  },
+  {
+    ...header,
+    id: 'sp1',
+    kind: 'spell',
+    key: 'light',
+    name: 'Light',
+    displayName: 'Light',
+    data: {
+      level: 0,
+      school: 'Evocation',
+      classes: ['Cleric'],
+      text: '',
+      rolls: [],
+      modifiers: [],
+      extra: {},
+    },
+  },
+  {
+    ...header,
+    id: 'sp2',
+    kind: 'spell',
+    key: 'sacred flame',
+    name: 'Sacred Flame',
+    displayName: 'Sacred Flame',
+    data: {
+      level: 0,
+      school: 'Evocation',
+      classes: ['Cleric'],
+      text: '',
+      rolls: [],
+      modifiers: [],
+      extra: {},
+    },
+  },
+  {
+    ...header,
+    id: 'sp3',
+    kind: 'spell',
+    key: 'bless',
+    name: 'Bless',
+    displayName: 'Bless',
+    data: {
+      level: 1,
+      school: 'Evocation',
+      classes: ['Cleric'],
+      text: '',
+      rolls: [],
+      modifiers: [],
+      extra: {},
+    },
+  },
+  {
+    ...header,
+    id: 'sp4',
+    kind: 'spell',
+    key: 'fireball',
+    name: 'Fireball',
+    displayName: 'Fireball',
+    data: {
+      level: 3,
+      school: 'Evocation',
+      classes: ['Cleric'],
+      text: '',
+      rolls: [],
+      modifiers: [],
+      extra: {},
+    },
   },
 ] as unknown as CompendiumRecord[];
 
@@ -165,6 +235,14 @@ describe('GuidedBuilder (docs/BUILDER.md)', () => {
     expect(within(kits).getByTestId('kit-summary')).toHaveTextContent('110 GP');
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
+    // Spells: one cantrip and one prepared spell, from the class's list at its slot levels.
+    const spells = within(screen.getByTestId('builder-spells'));
+    expect(spells.queryByRole('checkbox', { name: 'Fireball' })).toBeNull();
+    await user.click(spells.getByRole('checkbox', { name: 'Light' }));
+    expect(spells.getByRole('checkbox', { name: 'Sacred Flame' })).toBeDisabled();
+    await user.click(spells.getByRole('checkbox', { name: 'Bless' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
     // Review: the sheet as it will be.
     const review = screen.getByTestId('builder-review');
     expect(review).toHaveTextContent('Wren');
@@ -182,6 +260,11 @@ describe('GuidedBuilder (docs/BUILDER.md)', () => {
     });
     expect(sheet.features.find((f) => f.from === 'Sage')?.text).toBe('You learn two cantrips.');
     expect(sheet.gp).toBe(110);
+    expect(sheet.slots).toEqual([2]);
+    expect(sheet.spells.map((sp) => [sp.name, sp.level, sp.prepared])).toEqual([
+      ['Light', 0, false],
+      ['Bless', 1, true],
+    ]);
     expect(build).toMatchObject({
       abilityMethod: 'standard',
       classSkills: ['insight', 'medicine'],

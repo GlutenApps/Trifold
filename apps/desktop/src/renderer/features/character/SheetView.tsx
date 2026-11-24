@@ -169,9 +169,18 @@ export function SheetView({
             </section>
           )}
 
-          {sheet.spells.length > 0 && (
+          {(sheet.spells.length > 0 || sheet.slots.length > 0) && (
             <section className="sheet-view-section" aria-label="Spells">
               <h3>Spells</h3>
+              {sheet.slots.length > 0 && (
+                <p className="small" data-testid="sheet-slots">
+                  Slots:{' '}
+                  {sheet.slots
+                    .map((n, i) => (n ? `level ${i + 1} × ${n}` : ''))
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              )}
               <ul className="sheet-view-list">
                 {[...sheet.spells]
                   .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))

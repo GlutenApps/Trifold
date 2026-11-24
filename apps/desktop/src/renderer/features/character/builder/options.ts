@@ -13,6 +13,7 @@ import type {
   ItemRecord,
   RecordKind,
   SheetRef,
+  SpellRecord,
 } from '@trifold/schema';
 
 /**
@@ -36,6 +37,8 @@ export interface BuilderOptions {
   feats: FeatRecord[];
   /** The SRD's items by lowercased name, for starting equipment. */
   items: Map<string, ItemRecord>;
+  /** The SRD's spells, each with the classes whose lists hold it. */
+  spells: SpellRecord[];
 }
 
 async function recordsOf(kind: RecordKind): Promise<CompendiumRecord[]> {
@@ -56,12 +59,13 @@ const refOf = (r: CompendiumRecord): SheetRef => ({
 });
 
 export async function loadBuilderOptions(): Promise<BuilderOptions> {
-  const [classes, backgrounds, species, feats, items] = await Promise.all([
+  const [classes, backgrounds, species, feats, items, spells] = await Promise.all([
     recordsOf('class'),
     recordsOf('background'),
     recordsOf('species'),
     recordsOf('feat'),
     recordsOf('item'),
+    recordsOf('spell'),
   ]);
   const byName = <T extends { option: { name: string } }>(a: T, b: T) =>
     a.option.name.localeCompare(b.option.name);
@@ -82,6 +86,9 @@ export async function loadBuilderOptions(): Promise<BuilderOptions> {
       .flatMap((r) => (r.kind === 'species' ? [{ option: readSpecies(r), ref: refOf(r) }] : []))
       .sort(byName),
     feats: feats.filter((r): r is FeatRecord => r.kind === 'feat'),
+    spells: spells
+      .filter((r): r is SpellRecord => r.kind === 'spell')
+      .sort((a, b) => a.displayName.localeCompare(b.displayName)),
     items: new Map(
       items
         .filter((r): r is ItemRecord => r.kind === 'item')

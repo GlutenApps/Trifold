@@ -315,3 +315,22 @@ export function spellSlots(
   }
   return [];
 }
+
+/** How many cantrips and prepared spells a class has at a level, from its table; 0 for none. */
+export function spellCounts(
+  option: Pick<ClassOption, 'column'>,
+  level: number,
+): { cantrips: number; prepared: number } {
+  return {
+    cantrips: Number(option.column('Cantrips', level)) || 0,
+    prepared: Number(option.column('Prepared Spells', level)) || 0,
+  };
+}
+
+/** The highest spell level a class can prepare at a level: its highest slot, or 0. */
+export function maxSpellLevel(
+  option: Pick<ClassOption, 'casterType' | 'column'>,
+  level: number,
+): number {
+  return spellSlots(option, level).length;
+}

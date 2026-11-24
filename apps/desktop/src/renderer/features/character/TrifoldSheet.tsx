@@ -489,6 +489,28 @@ export function TrifoldSheet({ character }: { character: Character }) {
             </span>
           )}
         </div>
+        <div className="row wraps sheet-slots" aria-label="Spell slots">
+          <span className="muted small">Slots</span>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((l) => (
+            <label key={l} className="field inline">
+              {l}
+              <NumField
+                label={`Level ${l} slots`}
+                value={sheet.slots[l - 1] ?? 0}
+                min={0}
+                max={9}
+                onChange={(v) => {
+                  if (v === undefined) return;
+                  const slots = [...sheet.slots];
+                  while (slots.length < l) slots.push(0);
+                  slots[l - 1] = v;
+                  while (slots.length && slots[slots.length - 1] === 0) slots.pop();
+                  set({ slots });
+                }}
+              />
+            </label>
+          ))}
+        </div>
         <ul className="sheet-rows" aria-label="Spells">
           {spells.rows.map((s, i) => (
             <li key={s.id} className="sheet-row">
