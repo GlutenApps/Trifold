@@ -146,10 +146,16 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(page.getByRole('textbox', { name: 'Class 1', exact: true })).toHaveValue(
       'Fighter',
     );
+    // Level up: Fighter 2, fixed hit points (d10: 6, plus Con +2).
+    await page.getByRole('button', { name: 'Level up' }).click();
+    await expect(page.getByTestId('level-up')).toContainText('Level up to Fighter 2');
+    await expect(page.getByTestId('levelup-hp')).toContainText('+8 HP, 20 in all');
+    await page.getByTestId('level-up').getByRole('button', { name: 'Level up' }).click();
+    await expect(page.getByTestId('level-up')).toHaveCount(0);
     await page.getByRole('button', { name: 'Back to characters' }).click();
     await expect(page.getByTestId('character-row')).toHaveCount(2);
     await expect(page.getByTestId('character-row').filter({ hasText: 'Tamsin' })).toContainText(
-      'Fighter 1 · AC 16 · 12 HP',
+      'Fighter 2 · AC 16 · 20 HP',
     );
 
     await campaignsPage(page);

@@ -3,6 +3,8 @@ import {
   readBackground,
   readClass,
   readSpecies,
+  readSubclass,
+  type SubclassOption,
   type BackgroundOption,
   type ClassOption,
   type SpeciesOption,
@@ -32,6 +34,8 @@ export interface Offered<T> {
 
 export interface BuilderOptions {
   classes: Array<Offered<ClassOption>>;
+  /** Subclasses, each naming its class (Level up). */
+  subclasses: Array<Offered<SubclassOption>>;
   backgrounds: Array<Offered<BackgroundOption>>;
   species: Array<Offered<SpeciesOption>>;
   feats: FeatRecord[];
@@ -73,6 +77,12 @@ export async function loadBuilderOptions(): Promise<BuilderOptions> {
     classes: classes
       .flatMap((r) => {
         const option = r.kind === 'class' ? readClass(r) : null;
+        return option ? [{ option, ref: refOf(r) }] : [];
+      })
+      .sort(byName),
+    subclasses: classes
+      .flatMap((r) => {
+        const option = r.kind === 'class' ? readSubclass(r) : null;
         return option ? [{ option, ref: refOf(r) }] : [];
       })
       .sort(byName),

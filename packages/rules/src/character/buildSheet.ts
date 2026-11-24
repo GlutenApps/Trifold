@@ -157,6 +157,7 @@ export function buildSheet2024(c: BuildChoices): { sheet: Sheet; build: Characte
     increase: c.increase,
     classSkills: [...c.classSkills],
     hitPoints: [],
+    improvements: [],
   };
   return { sheet, build };
 }

@@ -29,3 +29,4 @@ export * from './character/derive';
 export * from './character/build2024';
 export * from './character/buildSheet';
 export * from './character/equipment';
+export * from './character/levelUp';

@@ -251,6 +251,12 @@ export const CharacterBuild = z.object({
   classSkills: z.array(Skill).default([]),
   /** Hit points gained at each level after the first, in order. */
   hitPoints: z.array(int.min(1).max(30)).default([]),
+  /** The subclass, once picked at its level. */
+  subclass: SheetRef.optional(),
+  /** Each ability score improvement or feat taken, by level ("+2 str", a feat's name). */
+  improvements: z
+    .array(z.object({ level: int.min(1).max(20), detail: z.string().max(120) }))
+    .default([]),
 });
 export type CharacterBuild = z.infer<typeof CharacterBuild>;
 
