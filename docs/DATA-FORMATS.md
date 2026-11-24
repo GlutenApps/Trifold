@@ -429,6 +429,7 @@ Conventions:
 - **Attacks** with a save DC instead of a bonus ("DC 15 DEX") keep it after the damage: "2d8 Radiant (DC 15 DEX)".
 - **Edition** is 2024 on the 2024 sheet or when any field mentions 2024; otherwise 2014. The player can change it in the preview.
 - **A blank template** (no name, class or hit points, whatever its defaults) is `empty`; `--` and similar placeholders count as blank.
+- **Links.** Main then sets `ref` on what the compendium has, by `normalizeKey` of the name: spells, feats (any feature), species, background and classes, where a bracket is a note ("Mage Hand (Tome)"). An item keeps its bracketed words in the key ("Potion of Healing (Greater)" is not the plain potion) unless they only count or measure ("Rations (1 day)"). The highest-priority version wins; a name with no match stays unlinked.
 
 ---
 

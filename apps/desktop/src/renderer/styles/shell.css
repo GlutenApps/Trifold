@@ -3175,6 +3175,27 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   cursor: pointer;
 }
 
+/* A row linked to a compendium record opens to show its text (ADR 0073). */
+.sheet-view-list li.sheet-view-linked-row {
+  display: block;
+}
+
+.sheet-view-linked summary > * + * {
+  margin-left: 8px;
+}
+
+.sheet-row-record {
+  flex-basis: 100%;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+
+.sheet-view-record {
+  margin: 4px 0 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+
 .sheets-editing {
   display: grid;
   gap: 12px;

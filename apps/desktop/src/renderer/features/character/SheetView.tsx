@@ -10,6 +10,7 @@ import {
 import type { Ability, Character, Skill } from '@trifold/schema';
 import { useShellStore } from '../../stores/shellStore';
 import { Icon } from '../shell/icons';
+import { LinkedRow } from './LinkedRow';
 import { signed } from './fields';
 
 /**
@@ -187,15 +188,24 @@ export function SheetView({
               <ul className="sheet-view-list">
                 {[...sheet.spells]
                   .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
-                  .map((s) => (
-                    <li key={s.id}>
-                      <strong>{s.name || 'Spell'}</strong>
-                      <span className="muted">
-                        {s.level === 0 ? 'Cantrip' : `Level ${s.level}`}
-                      </span>
-                      {s.prepared && <span className="badge">prepared</span>}
-                    </li>
-                  ))}
+                  .map((s) => {
+                    const row = (
+                      <>
+                        <strong>{s.name || 'Spell'}</strong>
+                        <span className="muted">
+                          {s.level === 0 ? 'Cantrip' : `Level ${s.level}`}
+                        </span>
+                        {s.prepared && <span className="badge">prepared</span>}
+                      </>
+                    );
+                    return s.ref ? (
+                      <li key={s.id} className="sheet-view-linked-row">
+                        <LinkedRow sheetRef={s.ref} summary={row} />
+                      </li>
+                    ) : (
+                      <li key={s.id}>{row}</li>
+                    );
+                  })}
               </ul>
             </section>
           )}
@@ -203,15 +213,25 @@ export function SheetView({
           {sheet.features.length > 0 && (
             <section className="sheet-view-section" aria-label="Features and traits">
               <h3>Features and traits</h3>
-              {sheet.features.map((f) => (
-                <details key={f.id} className="sheet-view-feature">
-                  <summary>
+              {sheet.features.map((f) => {
+                const summary = (
+                  <>
                     <strong>{f.name || 'Feature'}</strong>
                     {f.from && <span className="muted small"> · {f.from}</span>}
-                  </summary>
-                  {f.text && <p className="small sheet-view-text">{f.text}</p>}
-                </details>
-              ))}
+                  </>
+                );
+                const text = f.text && <p className="small sheet-view-text">{f.text}</p>;
+                return f.ref ? (
+                  <LinkedRow key={f.id} sheetRef={f.ref} summary={summary}>
+                    {text}
+                  </LinkedRow>
+                ) : (
+                  <details key={f.id} className="sheet-view-feature">
+                    <summary>{summary}</summary>
+                    {text}
+                  </details>
+                );
+              })}
             </section>
           )}
 
@@ -219,12 +239,21 @@ export function SheetView({
             <section className="sheet-view-section" aria-label="Equipment">
               <h3>Equipment</h3>
               <ul className="sheet-view-list">
-                {sheet.equipment.map((item) => (
-                  <li key={item.id}>
-                    <span>{item.name || 'Item'}</span>
-                    {item.quantity !== 1 && <span className="muted">× {item.quantity}</span>}
-                  </li>
-                ))}
+                {sheet.equipment.map((item) => {
+                  const row = (
+                    <>
+                      <span>{item.name || 'Item'}</span>
+                      {item.quantity !== 1 && <span className="muted">× {item.quantity}</span>}
+                    </>
+                  );
+                  return item.ref ? (
+                    <li key={item.id} className="sheet-view-linked-row">
+                      <LinkedRow sheetRef={item.ref} summary={row} />
+                    </li>
+                  ) : (
+                    <li key={item.id}>{row}</li>
+                  );
+                })}
               </ul>
               {sheet.gp > 0 && <p className="small">{sheet.gp.toLocaleString()} GP</p>}
             </section>

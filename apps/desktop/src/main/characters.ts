@@ -3,7 +3,7 @@ import { basename } from 'node:path';
 import { dialog } from 'electron';
 import { ulid } from 'ulid';
 import type { TrifoldApi } from '@trifold/api';
-import { readPdfSheet, type PdfSheetProblem } from '@trifold/importers';
+import { linkSheetRecords, readPdfSheet, type PdfSheetProblem } from '@trifold/importers';
 import { CHARACTER_SCHEMA_VERSION, Character, migrate, nowIso } from '@trifold/schema';
 import type { LibraryStore } from './library/LibraryStore';
 import type { LibrarySession } from './library/session';
@@ -171,7 +171,16 @@ export function createCharactersApi(
         logger.info(
           `PDF sheet ${basename(path)} read: ${read.imported.layout}, ${fields.length} fields, ${read.warnings.length} warnings`,
         );
-        const { name, edition, sheet, notes } = read.imported;
+        const { name, edition, notes } = read.imported;
+        // Names the compendium has become links, so the sheet can show their text.
+        const index = session.index;
+        const { sheet, linked } = index
+          ? linkSheetRecords(read.imported.sheet, (kind, key) => {
+              const hit = index.findByKey(kind, key)[0];
+              return hit ? { key: hit.key, name: hit.displayName } : null;
+            })
+          : { sheet: read.imported.sheet, linked: 0 };
+        logger.info(`PDF sheet ${basename(path)}: ${linked} names linked to the compendium`);
         return { fileName: basename(path), name, edition, sheet, notes, warnings: read.warnings };
       },
     },

@@ -494,6 +494,36 @@ One feature per PR (`CLAUDE.md`), and each phase updates its own docs and ADR as
 8. **Character builder, 2014.** The SRD 5.1 rules data and the 2014 branches of both flows.
 9. **Docs and tests throughout.** The ADRs with their index and decision log rows (the Players and User content rows change); `DESIGN.md` §1 (it opens by calling the app a DM console), §1.1, §1.2, §4.1, §4.2, §4.4, §5.2, §6.5, §8 and §10 (the PDF import leaves Later); `PLAYER-CONNECTOR.md`; `CLAUDE.md` ground rule 1 and the repo layout; `docs/README.md`; and the user guide (joining from the app, the player console, characters). A smoke spec runs a second app instance with its own user-data folder and Library against the first one's table server.
 
+## Schedule to release (Ian, 2026-11-23)
+
+What is left of Parts 1 to 3, and what a player needs beyond them, in order. Items marked *added* were not in the phases above; Ian agreed them on 2026-11-23. Sizes: S about one PR, M one or two, L three or more.
+
+| # | Work | Size | State |
+| --- | --- | --- | --- |
+| **A** | **Close out** | | |
+| 1 | Import from PDF (phase 6), without manual field matching | | Built (ADR 0073) |
+| 2 | *Added:* imported spells, items, feats, species, background and classes linked to compendium records by name; a linked row on a sheet opens to show the record's text | S | Built (ADR 0073) |
+| **B** | **Finish the player console** | | |
+| 3 | Companion and summon stat blocks on the Sheets tab, from the bundled SRD or shared content | M | |
+| 4 | Forms: stat blocks pinned from the player's compendium, flipped to on Sheets (reference only) | M | |
+| 5 | The components the phone page and the player console share moved to a folder both import (no behaviour change) | S | |
+| **C** | **Playing from the sheet** | | |
+| 6 | *Added:* tracking during play on the Trifold sheet: spell slots used, limited-use features, hit dice, death saves and Heroic Inspiration, with Short rest and Long rest for the sheet's own resources (HP stays the table's) | M–L | |
+| 7 | *Added:* rolling from the sheet: a save, skill, attack, spell attack or initiative, following the Table and Private switch; an initiative roll fills the initiative box | M | |
+| **D** | **Ready for players who are not the GM** | | |
+| 8 | *Added:* a version check between the GM's and the player's Trifold, with a plain message to update on a mismatch | S–M | |
+| 9 | *Added:* a first-run choice for a new Library (running games or playing); the playing path leads with Join a campaign and Characters | S–M | |
+| 10 | The user guide's player section and the docs pass in phase 9 | M | |
+| **E** | **Acceptance and release** | | |
+| 11 | The acceptance checks below on two computers, Windows and macOS | | Ian runs; fixes follow |
+| 12 | The `TRIFOLD_PLAYER_MODE` flag removed, and a release | S | |
+| **F** | **After release** | | |
+| 13 | Character builder, 2014 (phase 8) | L | |
+| 14 | Manual PDF field matching, if real sheets fail to import | M | |
+| 15 | Optional: private handouts or messages between the GM and one player; a player's own token art | M each | |
+
+Part 4 (remote play) stays paused until after release.
+
 # Acceptance (Parts 1 to 3)
 
 Done when these pass on Windows 11 and macOS, along with `pnpm test`, `typecheck`, `lint` and `smoke`.
