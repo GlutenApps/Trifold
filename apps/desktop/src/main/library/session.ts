@@ -37,12 +37,11 @@ export interface OpenSession {
  * a new one (never asked, no sample added, no campaigns), so existing Libraries work as before.
  */
 export function waitsForRole(l: {
-  askRole: boolean;
   role: 'gm' | 'player' | null;
   sampleAdded: boolean;
   campaigns: number;
 }): boolean {
-  return l.askRole && l.role === null && !l.sampleAdded && l.campaigns === 0;
+  return l.role === null && !l.sampleAdded && l.campaigns === 0;
 }
 
 export class LibrarySession {
@@ -59,8 +58,6 @@ export class LibrarySession {
   readonly sample: SampleCampaign;
   private path = '';
   private error: string | null = null;
-  /** New Libraries wait for the first-run choice (ADR 0077); set from player mode's flag. */
-  askRole = false;
   /** The open Library is new and waiting for that choice. */
   private needsRole = false;
   private indexError: string | null = null;
@@ -127,11 +124,10 @@ export class LibrarySession {
             await this.campaigns.list(),
           );
         }
-        // A new Library with player mode on waits for Game master or Player (ADR 0077): only a
+        // A new Library waits for Game master or Player (ADR 0077): only a
         // game master's gets the sample campaign.
         const settings = this.store.getSettings();
         this.needsRole = waitsForRole({
-          askRole: this.askRole,
           role: settings.role,
           sampleAdded: settings.sampleCampaign.added,
           campaigns: (await this.campaigns?.list())?.length ?? 0,

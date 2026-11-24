@@ -192,8 +192,6 @@ export function CampaignsPage() {
   const error = useCampaignStore((s) => s.error);
   const clearError = useCampaignStore((s) => s.clearError);
   const [creating, setCreating] = useState(false);
-  // Player mode is behind a flag until it is finished (docs/PLAYER-MODE.md, release safety).
-  const playerMode = useAppStore((s) => s.info?.flags.playerMode ?? false);
   const playing = useJoinedStore((s) => s.joined.length > 0);
   const joinError = useJoinedStore((s) => s.error);
   const clearJoinError = useJoinedStore((s) => s.clearError);
@@ -206,9 +204,9 @@ export function CampaignsPage() {
   });
   const player = useAppStore((s) => s.library?.settings?.role === 'player');
   useEffect(() => {
-    if (playerMode) void loadJoined();
-  }, [playerMode, loadJoined]);
-  const split = playerMode && playing;
+    void loadJoined();
+  }, [loadJoined]);
+  const split = playing;
   const [deleting, setDeleting] = useState<string | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
   const packageImport = useCampaignPackageImport();
@@ -218,22 +216,20 @@ export function CampaignsPage() {
       <div className="row">
         <h1>Campaigns</h1>
         <span className="spacer" />
-        {playerMode && (
-          <button
-            type="button"
-            className={`btn${player ? ' primary' : ''}${joining ? ' on' : ''}`}
-            aria-expanded={joining}
-            onClick={() => {
-              setCreating(false);
-              setJoining((v) => !v);
-            }}
-          >
-            Join a campaign
-          </button>
-        )}
         <button
           type="button"
-          className={`btn${player && playerMode ? '' : ' primary'}${creating ? ' on' : ''}`}
+          className={`btn${player ? ' primary' : ''}${joining ? ' on' : ''}`}
+          aria-expanded={joining}
+          onClick={() => {
+            setCreating(false);
+            setJoining((v) => !v);
+          }}
+        >
+          Join a campaign
+        </button>
+        <button
+          type="button"
+          className={`btn${player ? '' : ' primary'}${creating ? ' on' : ''}`}
           aria-expanded={creating}
           onClick={() => {
             setJoining(false);
@@ -252,8 +248,8 @@ export function CampaignsPage() {
           packageBusy={packageImport.busy}
         />
       )}
-      {playerMode && joining && <JoinCampaignPanel onClose={() => setJoining(false)} />}
-      {playerMode && joinError && (
+      {joining && <JoinCampaignPanel onClose={() => setJoining(false)} />}
+      {joinError && (
         <div className="banner error" role="alert">
           <span>{joinError}</span>
           <button type="button" className="btn small" onClick={clearJoinError}>
@@ -353,7 +349,7 @@ export function CampaignsPage() {
           })}
         </div>
       )}
-      {playerMode && <PlayingSection />}
+      <PlayingSection />
       <p className="muted small">
         A campaign holds its party, NPCs, notes, encounters, scenes and playlists. Opening one
         enters the console with its tabs, dock and layouts as you left them; the Library stays a

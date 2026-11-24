@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
 import { tvOnPrimary } from './tv';
 import { keepLogs } from './keepLogs';
+import { chooseGameMaster } from './firstRun';
 
 /**
  * Timers (ADR 0021) inside real Electron: two timers run at once, one is on the TV and the
@@ -51,6 +52,7 @@ test('timers run side by side, count down on the TV, and come back idle after a 
 
   try {
     let page = await app.firstWindow();
+    await chooseGameMaster(page);
     const rendererErrors: string[] = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error') rendererErrors.push(msg.text());

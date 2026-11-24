@@ -216,8 +216,6 @@ If nobody can connect, the firewall may be blocking Trifold, or the Wi-Fi may ke
 
 ## Playing from your own Trifold
 
-*Player mode is being finished. Until a release switches it on, the pages below are hidden; testers turn them on with the `TRIFOLD_PLAYER_MODE` environment variable.*
-
 A player can run Trifold too. Your characters live in your own Library, and at the table your Trifold joins your GM's on the same network: you see the live map, keep your sheet beside it, move your token, track your HP and conditions, and roll. Your GM's Trifold stays in charge of the table; yours only ever gets what your GM would show on a phone.
 
 **First launch.** A new Library asks **How will you use Trifold?** Choose **Player**: you get no sample campaign, and Trifold opens on **Join a campaign**. A GM chooses **Game master**. **Settings › Appearance › How you use Trifold** changes it later.

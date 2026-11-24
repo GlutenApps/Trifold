@@ -16,7 +16,6 @@ const info = (extra: object = {}) => ({
   node: '',
   platform: 'win32',
   userDataPath: '',
-  flags: { playerMode: true },
   ...extra,
 });
 const library = (needsRole: boolean, role: 'gm' | 'player' | null = null) => ({

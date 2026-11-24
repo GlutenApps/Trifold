@@ -55,7 +55,6 @@ delete env.ELECTRON_RUN_AS_NODE;
 Object.assign(env, {
   TRIFOLD_USER_DATA: join(home, 'userdata'),
   TRIFOLD_LIBRARY: join(home, 'library'),
-  TRIFOLD_PLAYER_MODE: '1',
   TRIFOLD_NO_SPLASH: '1',
 });
 if (url) env.ELECTRON_RENDERER_URL = url;

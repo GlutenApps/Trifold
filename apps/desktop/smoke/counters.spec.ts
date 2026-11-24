@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
 import { tvOnPrimary } from './tv';
 import { keepLogs } from './keepLogs';
+import { chooseGameMaster } from './firstRun';
 
 /**
  * Counters (ADR 0019) inside real Electron: make two counters in the dock tool, change them,
@@ -55,6 +56,7 @@ test('counters are made, changed, held at their bounds, shown on the TV and kept
 
   try {
     let page = await app.firstWindow();
+    await chooseGameMaster(page);
     const rendererErrors: string[] = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error') rendererErrors.push(msg.text());

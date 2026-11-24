@@ -7,14 +7,13 @@ import { useCampaignStore } from '../../stores/campaignStore';
 import { useJoinedStore } from '../../stores/joinedStore';
 import { CampaignsPage } from '../library/CampaignsPage';
 
-const info = (playerMode: boolean): AppInfo => ({
+const info = (): AppInfo => ({
   version: '0.0.0-test',
   electron: '0',
   chrome: '0',
   node: '0',
   platform: 'win32',
   userDataPath: 'C:\\test',
-  flags: { playerMode },
 });
 
 const greyford: FoundTableSummary = {
@@ -38,7 +37,7 @@ const joinedGreyford: JoinedSummary = {
 let tablesFound: (tables: FoundTableSummary[]) => void = () => undefined;
 
 beforeEach(() => {
-  useAppStore.setState({ info: info(true) });
+  useAppStore.setState({ info: info() });
   useCampaignStore.setState({ campaigns: [], current: null, error: null });
   useJoinedStore.setState({ joined: [], tables: [], searching: false, error: null });
   window.trifold.joined.list = vi.fn(async () => []);
@@ -51,14 +50,6 @@ beforeEach(() => {
 });
 
 describe('Join a campaign', () => {
-  it('is not on the page while player mode is off, and nothing searches', () => {
-    useAppStore.setState({ info: info(false) });
-    render(<CampaignsPage />);
-    expect(screen.queryByRole('button', { name: 'Join a campaign' })).toBeNull();
-    expect(window.trifold.joined.list).not.toHaveBeenCalled();
-    expect(window.trifold.joined.startSearch).not.toHaveBeenCalled();
-  });
-
   it('searches only while the panel is open', async () => {
     const user = userEvent.setup();
     render(<CampaignsPage />);

@@ -58,7 +58,6 @@ export function installBridgeMock(): TrifoldBridge {
         node: '0',
         platform: 'win32',
         userDataPath: 'C:\\test',
-        flags: { playerMode: false },
       })),
       openSystemPage: vi.fn(async () => true),
       openExternal: vi.fn(async () => true),

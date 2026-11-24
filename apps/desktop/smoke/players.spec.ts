@@ -2,6 +2,7 @@ import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
+import { chooseGameMaster } from './firstRun';
 
 /**
  * The player connector (ADR 0043, docs/PLAYER-CONNECTOR.md) inside real Electron: the
@@ -81,7 +82,7 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
 
   // First run: the Library gets the sample campaign (ADR 0016). Then set the table up on disk.
   let app = await launch(userData, library);
-  await app.firstWindow();
+  await chooseGameMaster(await app.firstWindow());
   const dir = await sampleDir(library);
   await app.close();
 

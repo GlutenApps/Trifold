@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { _electron as electron, expect, test } from '@playwright/test';
 import { keepLogs } from './keepLogs';
+import { chooseGameMaster } from './firstRun';
 
 /**
  * Web tabs (ADR 0011) inside real Electron: the webview attaches, loads a page from a local
@@ -41,6 +42,7 @@ test('a web tab hosts a page, follows its title and survives in the Library', as
 
   try {
     const console_ = await app.firstWindow();
+    await chooseGameMaster(console_);
     const rendererErrors: string[] = [];
     console_.on('console', (msg) => {
       if (msg.type() === 'error') rendererErrors.push(msg.text());

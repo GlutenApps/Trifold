@@ -6,6 +6,7 @@ import { basename, join, resolve } from 'node:path';
 import { _electron as electron, expect, test } from '@playwright/test';
 import type { TrifoldBridge } from '@trifold/api';
 import { keepLogs } from './keepLogs';
+import { chooseGameMaster } from './firstRun';
 import { tvOnPrimary } from './tv';
 
 // Page-side callbacks in `evaluate` run in the renderer, where the preload exposes window.trifold.
@@ -67,14 +68,19 @@ test('console, Library, import, search, stat block and player window all work en
 
     // Nothing is open, so the window starts in the Library.
     await expect(console_.getByTestId('library')).toBeVisible();
+    // A new Library asks Game master or Player first (ADR 0077); the game master's gets the sample.
+    await chooseGameMaster(console_);
     await expect(console_).toHaveTitle('Trifold');
 
     // Library folder layout and settings file were created atomically on first run.
     const settings = JSON.parse(await readFile(join(library, 'library.json'), 'utf8'));
     expect(settings.schemaVersion).toBe(5);
     await expect(stat(join(library, 'sources'))).resolves.toBeTruthy();
-    // Every new Library is given the bundled sample campaign once (ADR 0016).
-    expect(settings.sampleCampaign).toEqual({ added: true });
+    // A game master's new Library is given the bundled sample campaign once (ADR 0016, ADR 0077),
+    // right after the first-run choice.
+    await expect
+      .poll(async () => JSON.parse(await readFile(join(library, 'library.json'), 'utf8')))
+      .toMatchObject({ role: 'gm', sampleCampaign: { added: true } });
 
     // The native SQLite index opened inside Electron.
     await libNav('Settings').click();

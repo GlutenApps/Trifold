@@ -32,9 +32,6 @@ export function LibraryView() {
   const setPage = useShellStore((s) => s.setLibraryPage);
   const campaigns = useCampaignStore((s) => s.campaigns.length);
   const tracks = useMusicStore((s) => s.library?.tracks.length ?? 0);
-  // Characters are player mode's (docs/PLAYER-MODE.md, Part 3), behind its flag until finished.
-  const playerMode = useAppStore((s) => s.info?.flags.playerMode ?? false);
-  const pages = PAGES.filter((p) => p.id !== 'characters' || playerMode);
   // A new Library asks Game master or Player first (ADR 0077).
   const needsRole = useAppStore((s) => !!s.library?.needsRole);
 
@@ -47,7 +44,7 @@ export function LibraryView() {
   return (
     <div className="library" data-testid="library">
       <nav className="lib-nav" aria-label="Library">
-        {pages.map((p) => (
+        {PAGES.map((p) => (
           <button
             key={p.id}
             type="button"
@@ -70,21 +67,17 @@ export function LibraryView() {
         </p>
       </nav>
       <div className="lib-content">
-        {needsRole ? (
-          <FirstRunChoice />
-        ) : (
-          <LibraryPageContent page={page} playerMode={playerMode} />
-        )}
+        {needsRole ? <FirstRunChoice /> : <LibraryPageContent page={page} />}
       </div>
     </div>
   );
 }
 
-function LibraryPageContent({ page, playerMode }: { page: LibraryPage; playerMode: boolean }) {
+function LibraryPageContent({ page }: { page: LibraryPage }) {
   return (
     <>
       {page === 'campaigns' && <CampaignsPage />}
-      {page === 'characters' && playerMode && <CharactersPage />}
+      {page === 'characters' && <CharactersPage />}
       {page === 'compendium' && <CompendiumLibraryPage />}
       {page === 'images' && <ImagesPage />}
       {page === 'music' && (
