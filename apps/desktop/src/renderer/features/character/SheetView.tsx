@@ -830,9 +830,10 @@ export function SheetView({
                       {list.map((s) => {
                         const name = s.name || 'Spell';
                         const unready = level > 0 && !s.prepared;
+                        // A cantrip casts too; it just spends nothing.
                         const why =
                           level === 0
-                            ? 'Cantrips use no slot'
+                            ? ''
                             : unready
                               ? 'Not prepared'
                               : left <= 0
@@ -869,9 +870,25 @@ export function SheetView({
                                     type="button"
                                     className="chrome-btn xs"
                                     disabled={!!why}
-                                    aria-label={`Cast ${name} with a level ${level} slot`}
-                                    title={why || `Cast: uses a level ${level} slot`}
+                                    aria-label={
+                                      level === 0
+                                        ? `Cast ${name}`
+                                        : `Cast ${name} with a level ${level} slot`
+                                    }
+                                    title={
+                                      why ||
+                                      (level === 0
+                                        ? 'Cast: a cantrip uses no slot'
+                                        : `Cast: uses a level ${level} slot`)
+                                    }
                                     onClick={() => {
+                                      if (level === 0) {
+                                        say({
+                                          label: name,
+                                          detail: 'cast, a cantrip uses no slot',
+                                        });
+                                        return;
+                                      }
                                       const next = spendSlot(sheet, level);
                                       if (!next) return;
                                       save(next);

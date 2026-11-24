@@ -11,7 +11,7 @@ Adding, changing or removing a spell or an item meant pressing Edit, then scroll
 - **Add.** Spells and Equipment each have an Add button in the tab's header ("Add a spell", "Add an item"; UI guidelines §9). It opens a search at the top of the tab: compendium records of that kind as you type, each added with a click and linked to its record (a spell takes its level from it), and what was typed added as written (a spell at a level picked beside it). Escape or Close puts it away.
 - **Spell rows** have three quiet actions (ADR 0020), each in its place on every row:
   - **Prepare,** a toggle. On cantrips it is pressed and disabled, because cantrips are always ready.
-  - **Cast.** On cantrips it is disabled, because they use no slot.
+  - **Cast.** On a cantrip it casts without spending anything, and the readout says so.
   - **Remove.**
 - **Item rows** have Equip, Attune (disabled where the item does not need attunement), Change (the pencil) and Remove. Change opens a small editor under the row: name, how many, where it is kept, and charges with when they come back. Each change saves as it is made. While it is open the item stays in the group it was in, so typing a new place does not move it away mid-word; it moves on Done.
 - **Remove** is a removal from a list (`close`, no confirm). The turn bar's readout says what was removed or added, with Undo.

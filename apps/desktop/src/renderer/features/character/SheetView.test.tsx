@@ -200,6 +200,19 @@ describe('spells', () => {
     ).toBeInTheDocument();
   });
 
+  it('casts a cantrip without spending anything, and says so', async () => {
+    const seen = vi.fn();
+    const user = userEvent.setup();
+    render(<AtTheTable seen={seen} />);
+    await user.click(screen.getByRole('button', { name: 'Cast Sacred Flame' }));
+    const readout = screen.getByTestId('sheet-last-roll');
+    expect(readout).toHaveTextContent('Sacred Flame');
+    expect(readout).toHaveTextContent('cast, a cantrip uses no slot');
+    // Nothing changed, so nothing was saved and there is nothing to undo.
+    expect(seen).not.toHaveBeenCalled();
+    expect(within(readout).queryByRole('button', { name: 'Undo' })).toBeNull();
+  });
+
   it('hides unprepared spells on request and says how many', async () => {
     const user = userEvent.setup();
     render(<AtTheTable />);
