@@ -379,7 +379,7 @@ An **Audio source** toggle at the top of the Music tool chooses "This computer" 
 
 ### 6.10 Player mode
 
-A player's own Trifold, behind the `TRIFOLD_PLAYER_MODE` flag until it is released. [PLAYER-MODE.md](PLAYER-MODE.md) holds the plan and the schedule to release; the ADRs from 0058 on record what was built.
+A player's own Trifold, on in every install since 0.5.0 (a new Library asks Game master or Player first, ADR 0077). [PLAYER-MODE.md](PLAYER-MODE.md) holds the plan and the schedule to release; the ADRs from 0058 on record what was built.
 
 - **Joining** (ADR 0058): **Join a campaign** finds tables on the local network by mDNS, or takes the address the DM shows. A joined campaign is a folder in the player's Library, under Playing on the Campaigns page. Its connection runs only while it is open, only to private addresses. Both Trifolds compare a table protocol number first and say which needs an update (ADR 0076).
 - **The player console:**

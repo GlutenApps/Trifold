@@ -97,20 +97,6 @@ export interface PdfSheetPreview {
   warnings: string[];
 }
 
-export interface FeatureFlags {
-  /** Player mode (docs/PLAYER-MODE.md): Join a campaign, the Playing list, the player console. */
-  playerMode: boolean;
-}
-
-/** The environment variable that turns each flag on when it is `1`. */
-export const FEATURE_FLAG_ENV: Record<keyof FeatureFlags, string> = {
-  playerMode: 'TRIFOLD_PLAYER_MODE',
-};
-
-export function featureFlags(env: Record<string, string | undefined>): FeatureFlags {
-  return { playerMode: env[FEATURE_FLAG_ENV.playerMode] === '1' };
-}
-
 export interface AppInfo {
   version: string;
   electron: string;
@@ -118,7 +104,6 @@ export interface AppInfo {
   node: string;
   platform: string;
   userDataPath: string;
-  flags: FeatureFlags;
 }
 
 /** OS settings pages the "Phone audio" guide opens (ADR 0007); see main/systemPages.ts. */

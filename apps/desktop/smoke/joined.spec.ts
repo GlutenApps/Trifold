@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Page } from '@playwright/test';
 import { fieldPdf } from './fieldPdf';
+import { chooseGameMaster } from './firstRun';
 
 /**
  * Join a campaign (docs/PLAYER-MODE.md) with two real copies of the app on one machine: a GM's
@@ -17,7 +18,7 @@ const { ELECTRON_RUN_AS_NODE: _dropped, ...env } = process.env;
 const exe = process.env['TRIFOLD_SMOKE_EXE'];
 const PORT = 18140;
 
-function launch(userData: string, library: string, extra: Record<string, string>) {
+function launch(userData: string, library: string, extra: Record<string, string> = {}) {
   return electron.launch({
     ...(exe ? { executablePath: exe, args: [] } : { args: [resolve(__dirname, '..')] }),
     env: {
@@ -48,10 +49,9 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
   try {
     // The GM opens the sample campaign and lets players join.
     const gmPage = await gm.firstWindow();
+    await chooseGameMaster(gmPage);
     await campaignsPage(gmPage);
-    // Without the flag, a GM's Trifold shows nothing of player mode.
     await expect(gmPage.getByRole('button', { name: 'Create campaign' })).toBeVisible();
-    await expect(gmPage.getByRole('button', { name: 'Join a campaign' })).toHaveCount(0);
     await gmPage
       .locator('.campaign-card')
       .filter({ hasText: 'The Lantern at Greyford' })
@@ -83,10 +83,10 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(gmPage.getByTestId('live-status')).toHaveText('Live: The Wayside Lamp');
 
     // The player's Trifold: its own computer's worth of user data and Library.
-    player = await launch(playerData, playerLibrary, { TRIFOLD_PLAYER_MODE: '1' });
+    player = await launch(playerData, playerLibrary);
     const page = await player.firstWindow();
 
-    // The first-run choice (ADR 0077): a new Library with player mode on asks first. A player's
+    // The first-run choice (ADR 0077): a new Library asks first. A player's
     // gets no sample campaign, and opens on Join a campaign.
     await page
       .getByTestId('first-run')

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
 import { keepLogs } from './keepLogs';
+import { chooseGameMaster } from './firstRun';
 
 /**
  * The tray (ADR 0023) inside real Electron: choose a timer and a counter for it in place of
@@ -48,6 +49,7 @@ test('the tray takes a timer and a counter, fits a narrow window and comes back 
 
   try {
     let page = await app.firstWindow();
+    await chooseGameMaster(page);
     const rendererErrors: string[] = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error') rendererErrors.push(msg.text());

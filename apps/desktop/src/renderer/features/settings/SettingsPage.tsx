@@ -96,7 +96,6 @@ function AppearanceSection({ hasLibrary }: { hasLibrary: boolean }) {
   const library = useAppStore((s) => s.library);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const setRole = useAppStore((s) => s.setRole);
-  const playerMode = useAppStore((s) => s.info?.flags.playerMode ?? false);
   const [textSize, setTextSize] = useState<TextSize | null>(null);
 
   useEffect(() => {
@@ -117,23 +116,21 @@ function AppearanceSection({ hasLibrary }: { hasLibrary: boolean }) {
 
   return (
     <SettingsSection id="appearance" icon="eye" title="Appearance">
-      {playerMode && (
-        <SettingRow
-          label="How you use Trifold"
-          htmlFor="settings-role"
-          hint="A player's Library leads with Join a campaign. Saved with this Library."
+      <SettingRow
+        label="How you use Trifold"
+        htmlFor="settings-role"
+        hint="A player's Library leads with Join a campaign. Saved with this Library."
+      >
+        <select
+          id="settings-role"
+          disabled={!hasLibrary}
+          value={library?.settings?.role ?? 'gm'}
+          onChange={(e) => void setRole(e.target.value === 'player' ? 'player' : 'gm')}
         >
-          <select
-            id="settings-role"
-            disabled={!hasLibrary}
-            value={library?.settings?.role ?? 'gm'}
-            onChange={(e) => void setRole(e.target.value === 'player' ? 'player' : 'gm')}
-          >
-            <option value="gm">Game master</option>
-            <option value="player">Player</option>
-          </select>
-        </SettingRow>
-      )}
+          <option value="gm">Game master</option>
+          <option value="player">Player</option>
+        </select>
+      </SettingRow>
       <SettingRow label="Theme" htmlFor="settings-theme" hint="Saved with this Library.">
         <select
           id="settings-theme"

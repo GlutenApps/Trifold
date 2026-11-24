@@ -2,7 +2,7 @@ import { syncIndex } from './index/sync';
 import { loadShared, NOTHING_SHARED } from './table/sharedContent';
 import { app, net, screen } from 'electron';
 import { join } from 'node:path';
-import { EVENT_CHANNELS, featureFlags } from '@trifold/api';
+import { EVENT_CHANNELS } from '@trifold/api';
 import { TEXT_SIZE_ZOOM } from '@trifold/schema';
 import { createApi } from './api';
 import { AppConfigStore } from './appConfig';
@@ -70,7 +70,6 @@ async function main(): Promise<void> {
     ),
   });
   const activeSession = session;
-  activeSession.askRole = featureFlags(process.env).playerMode;
   const icons = new IconResources(join(bundledDir, 'icons'), logger, () => session?.logDir ?? null);
   const tablePictures: TablePictures = { from: null };
   installMediaHandler(activeSession, icons, tablePictures);
@@ -221,12 +220,11 @@ async function main(): Promise<void> {
     ...(smokePort ? { ports: [smokePort] } : {}),
   });
 
-  // Joined campaigns (docs/PLAYER-MODE.md): nothing searches or connects until the player asks,
-  // and not at all while player mode is switched off.
+  // Joined campaigns (docs/PLAYER-MODE.md): nothing searches or connects until the player asks.
   const joined = new JoinedService({
     session: activeSession,
     logger,
-    enabled: featureFlags(process.env).playerMode,
+    enabled: true,
     onTables: (tables) => windows.sendToConsole(EVENT_CHANNELS.joinedTables, tables),
     onLink: (event) => windows.sendToConsole(EVENT_CHANNELS.joinedLink, event),
     onMessage: (event) => windows.sendToConsole(EVENT_CHANNELS.joinedMessage, event),
