@@ -186,7 +186,8 @@ textarea {
     .roll-entry,
     .combatant-row,
     .sb-feature-head,
-    .d20-roll
+    .d20-roll,
+    .sh-row
   ):is(:hover, :focus-within, .selected)
   :is(.row-actions, .scene-actions, .reorder, .roll-modes)
   > :not(:disabled),

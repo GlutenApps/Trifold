@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { Sheet } from '@trifold/schema';
 import { blankSheet } from './derive';
-import { hitDice, hitDieOf, longRest, shortRest, spendHitDie } from './resources';
+import {
+  hitDice,
+  hitDieOf,
+  longRest,
+  setSlotsUsed,
+  shortRest,
+  slotsAt,
+  spendHitDie,
+  spendSlot,
+} from './resources';
 
 /** Resources and rests (ADR 0074). */
 
@@ -79,5 +88,28 @@ describe('rests', () => {
     // Six levels: three dice come back, the two d10s first, then one d8.
     const after = longRest(sheet({ hitDiceUsed: { '8': 4, '10': 2 } }), '2014').sheet;
     expect(after.hitDiceUsed).toEqual({ '10': 0, '8': 3 });
+  });
+});
+
+describe('spell slots', () => {
+  const caster = (): Sheet => ({ ...blankSheet(), slots: [4, 3, 2], slotsUsed: [1] });
+
+  it('says how many of a level there are and how many are left', () => {
+    expect(slotsAt(caster(), 1)).toEqual({ max: 4, left: 3 });
+    expect(slotsAt(caster(), 2)).toEqual({ max: 3, left: 3 });
+    expect(slotsAt(caster(), 4)).toEqual({ max: 0, left: 0 });
+  });
+
+  it('casting spends one of that level, and nothing when none is left', () => {
+    const once = spendSlot(caster(), 3)!;
+    expect(once.slotsUsed).toEqual([1, 0, 1]);
+    const twice = spendSlot(once, 3)!;
+    expect(spendSlot(twice, 3)).toBeNull();
+    expect(spendSlot(caster(), 5)).toBeNull();
+  });
+
+  it('marks slots used within what the level has', () => {
+    expect(setSlotsUsed(caster(), 2, 5).slotsUsed).toEqual([1, 3]);
+    expect(setSlotsUsed(caster(), 1, -1).slotsUsed).toEqual([0]);
   });
 });

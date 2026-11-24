@@ -1623,7 +1623,8 @@ button.chrome-btn:disabled:not(.primary, .tally) {
 .dh,
 .fly-head,
 .strip,
-.web-bar {
+.web-bar,
+.turnbar {
   --control-h: var(--control-h-compact);
 }
 
@@ -3105,29 +3106,6 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   color: var(--text);
 }
 
-.sheet-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 6px;
-}
-
-.sheet-stat {
-  display: grid;
-  gap: 2px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--bg-panel);
-}
-
-.sheet-stat strong {
-  font-size: 18px;
-}
-
-.sheet-stat.overridden {
-  border-color: var(--warn);
-}
-
 .sheet-view-section {
   display: grid;
   gap: 6px;
@@ -3137,64 +3115,6 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   margin: 0;
   font-size: 13px;
   color: var(--text);
-}
-
-.sheet-view-abilities {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 6px;
-}
-
-.sheet-view-abilities li {
-  display: grid;
-  gap: 2px;
-}
-
-.sheet-view-skills {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 2px 16px;
-}
-
-.sheet-view-skills li {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.sheet-trained {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.sheet-view-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.sheet-view-list li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.sheet-view-text {
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-.sheet-view-feature summary {
-  cursor: pointer;
 }
 
 /* The first-run choice (ADR 0077): two large choices side by side, stacked when narrow. */
@@ -3229,58 +3149,6 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   border-color: var(--accent);
 }
 
-/* Rolling from the sheet (ADR 0075): a number that rolls looks like the number, underlined. */
-.roll-value {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
-}
-
-.roll-value:hover,
-.roll-value:focus-visible {
-  color: var(--accent);
-}
-
-.sheet-rolls {
-  display: grid;
-  gap: 4px;
-}
-
-/* Resources on a Trifold sheet (ADR 0074): a name, then its boxes or button. */
-.resource-rows {
-  display: grid;
-  gap: 4px;
-}
-
-.resource-row {
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.resource-name {
-  min-width: min(180px, 100%);
-}
-
-.resource-pips {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-/* A row linked to a compendium record opens to show its text (ADR 0073). */
-.sheet-view-list li.sheet-view-linked-row {
-  display: block;
-}
-
-.sheet-view-linked summary > * + * {
-  margin-left: 8px;
-}
-
 .sheet-row-record {
   flex-basis: 100%;
   padding-left: 12px;
@@ -3291,6 +3159,970 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   margin: 4px 0 8px;
   padding-left: 12px;
   border-left: 2px solid var(--border);
+}
+
+/* The character sheet (ADR 0080). Abilities and skills are pinned on the left from 640 px of the
+   sheet's own width, beside sub-tabs; below that they are one of the tabs. The turn bar and the
+   tabs stick to the top of the panel's scroll.
+
+   What can be pressed looks pressable, and nothing else does:
+   - pressable: a box with a control's border and radius, raised a pixel (a rollable number, the
+     Initiative tile, the app's buttons), or a dot in a round target that lights on hover (a pip);
+     a row lights on hover only when it opens or has an action, and an openable name underlines;
+   - readable: flat text, or a recessed well with no border (the other tiles, ability cards, the
+     last-roll readout); proficiency is a diamond, never a round dot that could pass for a pip. */
+.sh {
+  container: sheet / inline-size;
+  min-width: 0;
+}
+
+.sh-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sh-id {
+  flex: 1;
+  min-width: 0;
+}
+
+.sh-sub {
+  margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.sh-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* The turn bar: the table's HP and conditions with the roll mode beside them, the HP editor
+   when open, then the last roll. */
+.turnbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: 12px 0 0;
+  padding: 8px 0;
+  background: var(--bg-panel);
+  border-block: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.turnbar > .sheet-live {
+  display: contents;
+}
+
+.turnbar .status-line {
+  grid-column: 1;
+  margin: 0;
+}
+
+.turnbar .hp-editor {
+  grid-column: 1 / -1;
+  order: 1;
+  margin: 0;
+}
+
+.tb-mode {
+  grid-column: 2;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.turnbar.no-live .tb-mode {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.tb-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.tb-roll,
+.tb-problem {
+  grid-column: 1 / -1;
+  order: 3;
+}
+
+.tb-problem {
+  margin: 0;
+}
+
+@container sheet (width < 640px) {
+  .turnbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tb-mode,
+  .turnbar.no-live .tb-mode {
+    grid-column: 1;
+    justify-self: stretch;
+    order: 2;
+  }
+
+  .tb-label {
+    display: none;
+  }
+
+  .tb-mode .seg {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* The last roll, or the last rest or cast: one line that never changes shape, recessed because
+   it only reads. The total keeps its cell at the left; the dice trail off rather than wrap. */
+.tb-roll {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  min-width: 0;
+  padding-right: 4px;
+  background: var(--bg);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.lr-total {
+  flex: none;
+  align-self: stretch;
+  min-width: 48px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid var(--border);
+  font: 600 16px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.lr-total .icon {
+  color: var(--text-muted);
+}
+
+.lr-label {
+  flex: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.lr-detail {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tb-roll.empty .lr-label {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.tb-roll.crit .lr-total {
+  color: var(--ok);
+}
+
+.tb-roll.fumble .lr-total {
+  color: var(--danger);
+}
+
+.tb-roll.fresh .lr-total {
+  animation: lr-in 700ms ease-out;
+}
+
+.lr-undo {
+  flex: none;
+  margin-left: auto;
+}
+
+@keyframes lr-in {
+  from {
+    background: var(--bg-active);
+  }
+
+  to {
+    background: transparent;
+  }
+}
+
+/* The four numbers every turn needs. Each tile is centred and they share two rows (subgrid), so
+   the values line up even when a label wraps or carries a mark. */
+.sh-vitals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: auto auto;
+  gap: 0 8px;
+  margin-top: 16px;
+}
+
+.sh-vital {
+  grid-row: span 2;
+  display: grid;
+  grid-template-rows: subgrid;
+  row-gap: 4px;
+  justify-items: center;
+  min-width: 0;
+  padding: 10px 8px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+}
+
+/* The one tile that rolls: a control's border, raised, a die by its label. */
+button.sh-vital.rolls {
+  cursor: pointer;
+  border-color: var(--border);
+  background: var(--bg-panel);
+  box-shadow: 0 1px 0 var(--bg-rail);
+}
+
+button.sh-vital.rolls:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+button.sh-vital.rolls:active {
+  background: var(--bg-active);
+  box-shadow: none;
+}
+
+button.sh-vital.rolls:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sh-v-label {
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+button.sh-vital.rolls:hover .sh-v-label {
+  color: var(--text);
+}
+
+.sh-v-val {
+  font: 600 22px/1.15 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.sh-v-unit {
+  margin-left: 3px;
+  font: 500 12px var(--font-ui);
+  color: var(--text-muted);
+}
+
+.sh-hand {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+/* A number that rolls: a boxed control at the row tier, raised a pixel. */
+.sh-roll {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-h-row);
+  min-width: 36px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg-panel);
+  box-shadow: 0 1px 0 var(--bg-rail);
+  color: var(--text);
+  font: 600 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sh-roll:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.sh-roll:active {
+  background: var(--bg-active);
+  box-shadow: none;
+}
+
+.sh-roll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* The same number where nothing rolls: plain, unboxed. */
+.sh-ro {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 36px;
+  font: 600 13px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sh-roll.dice,
+.sh-ro.dice {
+  font-weight: 500;
+}
+
+/* Abilities and skills on the left, the tabs and their content on the right. */
+.sh-cols {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+}
+
+.sh-ref,
+.sh-main {
+  display: contents;
+}
+
+.sh-anchor {
+  order: 0;
+  display: block;
+  height: 0;
+}
+
+.sh-tabs {
+  order: 1;
+  position: sticky;
+  top: var(--tb-h, 0px);
+  z-index: 4;
+  margin: 0 0 16px;
+  background: var(--bg-panel);
+}
+
+/* On the Sheets tab the stuck bars reach its edges, so nothing scrolls past beside them. */
+.sheets-page .turnbar,
+.sheets-page .sh-tabs {
+  margin-inline: -12px;
+  padding-inline: 12px;
+}
+
+.sh-tabs .subtabbar {
+  margin: 0;
+  padding-top: 4px;
+}
+
+.sh-grp {
+  order: 2;
+  display: none;
+  min-width: 0;
+  container: grp / inline-size;
+}
+
+.sh-grp.on {
+  display: block;
+}
+
+.sh-grp-in {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+@container sheet (min-width: 640px) {
+  .sh-cols {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    align-items: start;
+    column-gap: 24px;
+  }
+
+  .sh-ref {
+    display: block;
+    min-width: 0;
+  }
+
+  .sh-main {
+    display: block;
+    min-width: 0;
+    align-self: stretch;
+    padding-left: 24px;
+    border-left: 1px solid var(--border);
+  }
+
+  .sh-grp-abilities {
+    display: block;
+  }
+
+  .sheets-page .sh-tabs {
+    margin-left: 0;
+    padding-left: 0;
+  }
+}
+
+@container sheet (min-width: 960px) {
+  .sh-cols {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+}
+
+@container grp (min-width: 620px) {
+  .sh-grp-actions .sh-grp-in {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 28px 32px;
+  }
+
+  .sh-grp-actions .sh-empty {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Sections: a quiet heading on a rule; the resources section, shared with the editor, too. */
+.sh-sec {
+  min-width: 0;
+}
+
+.sh-sec-head,
+.sh .resources > h2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  min-height: 22px;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sh-sec-head h3,
+.sh .resources > h2 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.sh-sec-head h3 {
+  margin: 0 auto 0 0;
+}
+
+.sh-sec-head.solo {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.sh .resources {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+
+.sh-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.sh-kv {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sh-kv .k {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sh .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* Proficiency: a diamond for proficient, ringed for expertise, a blank for neither. */
+.sh-prof {
+  flex: none;
+  width: 7px;
+  height: 7px;
+}
+
+.sh-prof.proficient,
+.sh-prof.expertise {
+  background: var(--accent);
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+
+.sh-prof.expertise {
+  box-shadow:
+    0 0 0 1.5px var(--bg-panel),
+    0 0 0 3px var(--accent);
+}
+
+/* Abilities: recessed cards, read only; the save in each is the button. */
+.sh-abils {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 8px;
+}
+
+.sh-abil {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.sh-abil-name {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sh-abil-mod {
+  font: 600 18px/1.25 var(--font-mono);
+}
+
+.sh-abil-score {
+  font: 12px var(--font-mono);
+  color: var(--text-muted);
+}
+
+.sh-abil-save {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sh-abil-save.trained {
+  color: var(--text);
+}
+
+.sh-abil-save > :last-child {
+  margin-left: auto;
+}
+
+.sh-skills {
+  columns: 2 190px;
+  column-gap: 24px;
+}
+
+.sh-skill {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  break-inside: avoid;
+}
+
+.sh-skill-name {
+  color: var(--text-muted);
+}
+
+.sh-skill.trained .sh-skill-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.sh-skill-ab {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sh-mini {
+  margin: 14px 0 0;
+  display: grid;
+  gap: 2px;
+}
+
+.sh-mini > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  max-width: 260px;
+  min-height: 22px;
+}
+
+.sh-mini dt,
+.sh-profs dt {
+  color: var(--text-muted);
+}
+
+.sh-mini dd {
+  margin: 0;
+  font: 600 13px var(--font-mono);
+}
+
+.sh-profs {
+  margin: 14px 0 0;
+  display: grid;
+  gap: 6px;
+}
+
+.sh-profs dt {
+  font-size: 12px;
+}
+
+.sh-profs dd {
+  margin: 0;
+}
+
+/* Attacks: the name, then to-hit and damage in columns. */
+.sh-atk,
+.sh-atk-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 52px 84px;
+  align-items: center;
+  gap: 8px;
+}
+
+.sh-atk {
+  min-height: 32px;
+}
+
+.sh-atk-cols {
+  margin-bottom: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sh-atk-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sh-atk-name .sh-name {
+  font-weight: 600;
+}
+
+.sh-atk > .sh-roll,
+.sh-atk > .sh-ro {
+  justify-self: start;
+}
+
+/* Resources (the sheet and the editor): a name and its count, then its pips. */
+.res-rows {
+  display: grid;
+  gap: 2px;
+}
+
+.res-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+
+.res-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.res-name {
+  font-weight: 500;
+}
+
+.res-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.res-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.res-question {
+  flex: 1 1 100%;
+}
+
+/* Pips: a filled dot is one left. Pressable ones sit in a round target that lights on hover;
+   inert ones (a read-only sheet) are smaller and have none. */
+.sh-pips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sh-pips > .sh-pip {
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-h-row);
+  height: var(--control-h-row);
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+}
+
+.sh-pips > .sh-pip::before {
+  content: '';
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 999px;
+}
+
+.sh-pips > .sh-pip.on::before {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.sh-pips > button.sh-pip {
+  cursor: pointer;
+}
+
+.sh-pips > button.sh-pip:hover {
+  background: var(--bg-hover);
+}
+
+.sh-pips > button.sh-pip:hover::before {
+  border-color: var(--text);
+}
+
+.sh-pips > button.sh-pip.on:hover::before {
+  background: var(--text);
+  border-color: var(--text);
+}
+
+.sh-pips > button.sh-pip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.sh-pips.static > .sh-pip {
+  width: 12px;
+  height: 12px;
+}
+
+.sh-pips.static > .sh-pip::before {
+  width: 8px;
+  height: 8px;
+  border-width: 1px;
+}
+
+/* Spells, by level, each level with its own slots. */
+.sh-lvls {
+  display: grid;
+  gap: 16px 28px;
+}
+
+@container grp (min-width: 560px) {
+  .sh-lvls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.sh-lvl-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-height: 26px;
+}
+
+.sh-lvl-head h4 {
+  margin: 0 auto 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sh-lvl-count,
+.sh-lvl-hidden {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sh-lvl-hidden {
+  margin: 2px 0 0;
+}
+
+/* Rows of spells, features and gear. Only a row that opens or acts lights on hover. */
+.sh-item {
+  break-inside: avoid;
+}
+
+.sh-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  margin: 0 -6px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.sh-row.acts:hover,
+.sh-row.acts:focus-within {
+  background: var(--bg-hover);
+}
+
+.sh-disc,
+.sh-plain {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--control-h-row);
+}
+
+.sh-disc {
+  all: unset;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--control-h-row);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.sh-disc:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.sh-chev {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  color: var(--text-muted);
+  transition: transform 120ms ease-out;
+}
+
+.sh-disc[aria-expanded='true'] .sh-chev {
+  transform: rotate(90deg);
+}
+
+.sh-disc:hover .sh-chev {
+  color: var(--text);
+}
+
+.sh-disc:hover .sh-name {
+  text-decoration: underline;
+  text-decoration-color: var(--text-muted);
+  text-underline-offset: 3px;
+}
+
+.sh-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.sh-row.muted-row .sh-name {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.sh-expand {
+  margin: 0 0 6px;
+  padding: 0 6px 4px 22px;
+  color: var(--text-muted);
+}
+
+.sh-text {
+  margin: 0 0 6px;
+  max-width: 62ch;
+  white-space: pre-wrap;
+}
+
+.sh-src,
+.sh-subtext {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sh-src {
+  white-space: nowrap;
+}
+
+.sh-qty {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+@container grp (min-width: 600px) {
+  .sh-flow {
+    columns: 2;
+    column-gap: 28px;
+  }
+}
+
+.sh-notes {
+  margin: 0;
+  max-width: 65ch;
+  white-space: pre-wrap;
+}
+
+.sh-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+}
+
+.sh-empty p {
+  margin: 0;
+  flex: 1 1 220px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-roll.fresh .lr-total {
+    animation: none;
+  }
+
+  .sh-chev {
+    transition: none;
+  }
 }
 
 .sheets-editing {
