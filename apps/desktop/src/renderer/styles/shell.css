@@ -241,7 +241,7 @@
   flex-direction: column;
   /* What sticky headers inside paint behind them, so they read as part of the panel. */
   --surface: var(--bg-panel);
-  background: var(--surface);
+  background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -3173,6 +3173,38 @@ button.chrome-btn:disabled:not(.primary, .tally) {
 
 .sheet-view-feature summary {
   cursor: pointer;
+}
+
+/* The first-run choice (ADR 0077): two large choices side by side, stacked when narrow. */
+.first-run {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.first-run-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.first-run-choice {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  text-align: left;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.first-run-choice:hover,
+.first-run-choice:focus-visible {
+  border-color: var(--accent);
 }
 
 /* Rolling from the sheet (ADR 0075): a number that rolls looks like the number, underlined. */

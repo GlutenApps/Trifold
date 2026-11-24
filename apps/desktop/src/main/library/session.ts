@@ -32,6 +32,19 @@ export interface OpenSession {
 }
 
 /** The one open Library (DESIGN.md §4.2: several Libraries are supported, one open at a time). */
+/**
+ * Whether a Library waits for the first-run choice (ADR 0077): only while player mode is on, only
+ * a new one (never asked, no sample added, no campaigns), so existing Libraries work as before.
+ */
+export function waitsForRole(l: {
+  askRole: boolean;
+  role: 'gm' | 'player' | null;
+  sampleAdded: boolean;
+  campaigns: number;
+}): boolean {
+  return l.askRole && l.role === null && !l.sampleAdded && l.campaigns === 0;
+}
+
 export class LibrarySession {
   store: LibraryStore | null = null;
   sources: SourceRepository | null = null;
@@ -46,6 +59,10 @@ export class LibrarySession {
   readonly sample: SampleCampaign;
   private path = '';
   private error: string | null = null;
+  /** New Libraries wait for the first-run choice (ADR 0077); set from player mode's flag. */
+  askRole = false;
+  /** The open Library is new and waiting for that choice. */
+  private needsRole = false;
   private indexError: string | null = null;
 
   constructor(
@@ -110,7 +127,16 @@ export class LibrarySession {
             await this.campaigns.list(),
           );
         }
-        await this.sample.seedOnce(this.store, this.packager());
+        // A new Library with player mode on waits for Game master or Player (ADR 0077): only a
+        // game master's gets the sample campaign.
+        const settings = this.store.getSettings();
+        this.needsRole = waitsForRole({
+          askRole: this.askRole,
+          role: settings.role,
+          sampleAdded: settings.sampleCampaign.added,
+          campaigns: (await this.campaigns?.list())?.length ?? 0,
+        });
+        if (!this.needsRole) await this.sample.seedOnce(this.store, this.packager());
       } catch (err) {
         this.index = null;
         this.indexError = errorMessage(err);
@@ -189,7 +215,19 @@ export class LibrarySession {
       error: this.error,
       settings: this.store?.getSettings() ?? null,
       index: { ok: this.index !== null, version: INDEX_VERSION, error: this.indexError },
+      ...(this.needsRole ? { needsRole: true } : {}),
     };
+  }
+
+  /** The first-run choice, or a later change in Settings (ADR 0077). */
+  async setRole(role: 'gm' | 'player'): Promise<LibraryInfo> {
+    const store = this.require().store;
+    const first = this.needsRole;
+    await store.updateSettings({ role });
+    this.needsRole = false;
+    if (first && role === 'gm') await this.sample.seedOnce(store, this.packager());
+    this.logger.info(`library role: ${role}${first ? ' (first run)' : ''}`);
+    return this.info();
   }
 
   close(): void {

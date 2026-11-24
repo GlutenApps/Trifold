@@ -23,6 +23,8 @@ interface AppState {
   openLibrary(path: string): Promise<void>;
   openLibraryFolder(): Promise<void>;
   updateSettings(patch: Partial<LibrarySettings>): Promise<void>;
+  /** The first-run choice, or a later change in Settings (ADR 0077). */
+  setRole(role: 'gm' | 'player'): Promise<void>;
   refreshDisplays(): Promise<void>;
   openPlayer(displayId?: number | null): Promise<void>;
   closePlayer(): Promise<void>;
@@ -81,6 +83,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (err) {
       set({ error: errorMessage(err) });
     }
+  },
+
+  async setRole(role) {
+    const library = await window.trifold.library.setRole(role);
+    set({ library });
   },
 
   async updateSettings(patch) {

@@ -86,6 +86,14 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     player = await launch(playerData, playerLibrary, { TRIFOLD_PLAYER_MODE: '1' });
     const page = await player.firstWindow();
 
+    // The first-run choice (ADR 0077): a new Library with player mode on asks first. A player's
+    // gets no sample campaign, and opens on Join a campaign.
+    await page
+      .getByTestId('first-run')
+      .getByRole('button', { name: /^Player/ })
+      .click();
+    await expect(page.getByTestId('join-campaign')).toBeVisible();
+
     // Characters (ADR 0068): the player makes a Trifold character in their Library; its sheet
     // works its numbers out, and the file lands in characters/.
     await page
@@ -223,7 +231,7 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await panel.getByRole('textbox', { name: 'Your name at the table' }).fill('Sam');
     await panel.getByRole('button', { name: 'Join', exact: true }).click();
 
-    // The campaign is under Playing, beside the Library's own sample campaign under Running.
+    // The campaign is under Playing; Running, this Library's own, is empty for a player.
     await expect(panel).toBeHidden();
     await expect(page.getByRole('heading', { name: 'Playing' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Running' })).toBeVisible();

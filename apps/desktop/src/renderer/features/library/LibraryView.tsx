@@ -1,3 +1,4 @@
+import { FirstRunChoice } from './FirstRunChoice';
 import { useMusicStore } from '../../stores/musicStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useShellStore, type LibraryPage } from '../../stores/shellStore';
@@ -34,6 +35,8 @@ export function LibraryView() {
   // Characters are player mode's (docs/PLAYER-MODE.md, Part 3), behind its flag until finished.
   const playerMode = useAppStore((s) => s.info?.flags.playerMode ?? false);
   const pages = PAGES.filter((p) => p.id !== 'characters' || playerMode);
+  // A new Library asks Game master or Player first (ADR 0077).
+  const needsRole = useAppStore((s) => !!s.library?.needsRole);
 
   const counts: Partial<Record<LibraryPage, string>> = {
     campaigns: String(campaigns),
@@ -67,23 +70,35 @@ export function LibraryView() {
         </p>
       </nav>
       <div className="lib-content">
-        {page === 'campaigns' && <CampaignsPage />}
-        {page === 'characters' && playerMode && <CharactersPage />}
-        {page === 'compendium' && <CompendiumLibraryPage />}
-        {page === 'images' && <ImagesPage />}
-        {page === 'music' && (
-          <>
-            <h1>Music folders</h1>
-            <MusicFolders />
-          </>
-        )}
-        {page === 'settings' && (
-          <>
-            <h1>Settings</h1>
-            <SettingsPage />
-          </>
+        {needsRole ? (
+          <FirstRunChoice />
+        ) : (
+          <LibraryPageContent page={page} playerMode={playerMode} />
         )}
       </div>
     </div>
+  );
+}
+
+function LibraryPageContent({ page, playerMode }: { page: LibraryPage; playerMode: boolean }) {
+  return (
+    <>
+      {page === 'campaigns' && <CampaignsPage />}
+      {page === 'characters' && playerMode && <CharactersPage />}
+      {page === 'compendium' && <CompendiumLibraryPage />}
+      {page === 'images' && <ImagesPage />}
+      {page === 'music' && (
+        <>
+          <h1>Music folders</h1>
+          <MusicFolders />
+        </>
+      )}
+      {page === 'settings' && (
+        <>
+          <h1>Settings</h1>
+          <SettingsPage />
+        </>
+      )}
+    </>
   );
 }

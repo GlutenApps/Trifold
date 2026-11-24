@@ -82,6 +82,7 @@ An architecture decision record (ADR) is a short file about one choice that refi
 | [0074](0074-sheet-resources.md) | Resources on the Trifold sheet: slots spent, limited-use features, hit dice and Heroic Inspiration, with Short rest and Long rest (all hit dice back under 2024 rules, half under 2014); a spent hit die's healing goes to the table as an HP change; death saves stay with the table. |
 | [0075](0075-sheet-rolls.md) | Rolling from the sheet: the Sheets tab's saves, skills, initiative, attacks, damage and spell attack roll with Roll with (one roll's advantage or disadvantage), following the Table and Private switch; `roll` gains `for` (named in every log) and `initiative` (the table enters the total). |
 | [0076](0076-table-version-check.md) | A table protocol number, sent in the `campaign` message and the advertisement with the app version: a player's Trifold on another protocol does not join and says which side must update (also in Join a campaign); the same protocol on another app version plays with a note. |
+| [0077](0077-first-run-choice.md) | A new Library asks Game master or Player (while player mode is on): a game master's gets the sample campaign, a player's none and opens on Join a campaign; `role` in `library.json`, changed in Settings. |
 
 ## Decision log
 
@@ -138,4 +139,5 @@ Product-level decisions by area, as they were settled. Rationale is in the ADRs 
 | Resources | A Trifold sheet's Resources section tracks spell slots spent, limited-use features, hit dice and Heroic Inspiration, with Short rest and Long rest; spending a hit die at the table sends its healing there. See ADR 0074. |
 | Rolling from the sheet | On the Sheets tab, a save, skill, initiative, attack, damage or spell attack rolls when clicked, at the table or privately; an initiative roll is entered while the fight waits for it. See ADR 0075. |
 | Version check | A player's Trifold that cannot play with the GM's says which one needs an update, in Join a campaign and on the strip; a different version that can play shows a note. See ADR 0076. |
+| First-run choice | A new Library asks how it will be used: Game master gets the sample campaign; Player opens on Join a campaign. Settings › Appearance changes it. See ADR 0077. |
 | Web tabs | The stage `+` menu adds a web tab: an address the DM typed, hosted in a sandboxed Electron webview in one persistent session, so a hosted document or sheet sits beside the console as a tab and reopens where it was left at the next launch. Library-wide list stored with the layouts; close parks, remove forgets; modifier hotkeys reach through the page; every tab has Open in system browser. See ADR 0011. |

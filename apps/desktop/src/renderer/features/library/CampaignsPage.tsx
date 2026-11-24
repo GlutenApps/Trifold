@@ -198,7 +198,13 @@ export function CampaignsPage() {
   const joinError = useJoinedStore((s) => s.error);
   const clearJoinError = useJoinedStore((s) => s.clearError);
   const loadJoined = useJoinedStore((s) => s.load);
-  const [joining, setJoining] = useState(false);
+  // A player's first run opens Join a campaign straight away (ADR 0077).
+  const [joining, setJoining] = useState(() => {
+    const wanted = useJoinedStore.getState().wantsJoin;
+    if (wanted) useJoinedStore.setState({ wantsJoin: false });
+    return wanted;
+  });
+  const player = useAppStore((s) => s.library?.settings?.role === 'player');
   useEffect(() => {
     if (playerMode) void loadJoined();
   }, [playerMode, loadJoined]);
@@ -215,7 +221,7 @@ export function CampaignsPage() {
         {playerMode && (
           <button
             type="button"
-            className={`btn${joining ? ' on' : ''}`}
+            className={`btn${player ? ' primary' : ''}${joining ? ' on' : ''}`}
             aria-expanded={joining}
             onClick={() => {
               setCreating(false);
@@ -227,7 +233,7 @@ export function CampaignsPage() {
         )}
         <button
           type="button"
-          className={`btn primary${creating ? ' on' : ''}`}
+          className={`btn${player && playerMode ? '' : ' primary'}${creating ? ' on' : ''}`}
           aria-expanded={creating}
           onClick={() => {
             setJoining(false);
