@@ -306,6 +306,22 @@ export function SheetsPage() {
             character={character}
             onEdit={() => setEditing(true)}
             live={view && me ? <LiveStatus creature={me} /> : undefined}
+            // Rolling (ADR 0075): an initiative roll while the fight waits for it is entered there.
+            rolls={{
+              actor: me?.name ?? character.name,
+              ...(view && me?.needsInitiative
+                ? {
+                    initiative: { creatureKind: me.kind, creatureId: me.id },
+                    onInitiative: (value: number) =>
+                      conn.send({
+                        type: 'intent',
+                        creatureKind: me.kind,
+                        creatureId: me.id,
+                        intent: { kind: 'initiative', value },
+                      }),
+                  }
+                : {}),
+            }}
             // Resources (ADR 0074): a hit die's healing goes to the table as an HP change.
             resources={{
               onChange: (next) => change(character.id, { sheet: next }),

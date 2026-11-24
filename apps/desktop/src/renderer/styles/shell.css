@@ -3175,6 +3175,28 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   cursor: pointer;
 }
 
+/* Rolling from the sheet (ADR 0075): a number that rolls looks like the number, underlined. */
+.roll-value {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.roll-value:hover,
+.roll-value:focus-visible {
+  color: var(--accent);
+}
+
+.sheet-rolls {
+  display: grid;
+  gap: 4px;
+}
+
 /* Resources on a Trifold sheet (ADR 0074): a name, then its boxes or button. */
 .resource-rows {
   display: grid;

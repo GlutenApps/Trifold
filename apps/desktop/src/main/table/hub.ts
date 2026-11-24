@@ -135,6 +135,13 @@ const ClientMessageSchema: z.ZodType<ClientMessage> = z.discriminatedUnion('type
   z.object({
     type: z.literal('roll'),
     expression: z.string().min(1).max(TABLE_ROLL_MAX_LENGTH),
+    for: z.string().trim().min(1).max(40).optional(),
+    initiative: z
+      .object({
+        creatureKind: z.enum(['pc', 'npc', 'summon']),
+        creatureId: z.string().min(1).max(64),
+      })
+      .optional(),
   }),
   // Checked like an intent (ADR 0071): every number in the range the PC card takes.
   z.object({
@@ -847,7 +854,7 @@ export class TableHub {
       case 'keepSummon':
         return this.summonAction(client, msg.type === 'dismiss' ? 'dismiss' : 'keep', msg.tokenId);
       case 'roll':
-        return this.roll(client, msg.expression);
+        return this.roll(client, msg.expression, msg.for, msg.initiative);
       case 'sheetOffer':
         return msg.creatureId
           ? this.sheetOffer(client, msg.creatureId, msg.offer)
@@ -1157,7 +1164,12 @@ export class TableHub {
    * that holds a creature. It is named for the player's character. Nothing is kept: a device
    * that connects later sees rolls from then on.
    */
-  private roll(client: Client, expression: string): void {
+  private roll(
+    client: Client,
+    expression: string,
+    what?: string,
+    initiative?: { creatureKind: AnyCreatureKind; creatureId: string },
+  ): void {
     const claims = (this.players?.claims ?? []).filter((c) => c.deviceId === client.deviceId);
     if (!client.deviceId || claims.length === 0) {
       return this.reject(client, 'Pick a character before rolling at the table.');
@@ -1172,12 +1184,26 @@ export class TableHub {
       this.device(client)?.label ??
       'A player';
     const at = Date.now();
-    const roll: TableRoll = { id: `table-${at}-${++this.rollSeq}`, at, by, ...made.roll };
+    const roll: TableRoll = {
+      id: `table-${at}-${++this.rollSeq}`,
+      at,
+      by,
+      ...made.roll,
+      // A roll from a sheet says what it was (ADR 0075): "Stealth check: 1d20+7".
+      ...(what ? { label: `${what}: ${made.roll.label}` } : {}),
+    };
     const holding = new Set((this.players?.claims ?? []).map((c) => c.deviceId));
     for (const c of this.clients) {
       if (c.deviceId && holding.has(c.deviceId)) this.send(c, { type: 'rolled', roll });
     }
     this.opts.onRoll?.(roll);
+    // An initiative roll enters its total, with the same checks as the initiative box.
+    if (initiative) {
+      this.intent(client, initiative.creatureKind, initiative.creatureId, {
+        kind: 'initiative',
+        value: made.roll.total,
+      });
+    }
   }
 
   // ---------- movement ----------

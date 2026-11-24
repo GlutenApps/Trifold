@@ -144,8 +144,44 @@ describe('Sheets (ADR 0069)', () => {
     // Dex 16, no armour: AC 13; stealth with expertise at 3rd level: +7.
     expect(within(screen.getByLabelText('Numbers')).getByText('13')).toBeInTheDocument();
     expect(within(screen.getByLabelText('Skills')).getByText('+7')).toBeInTheDocument();
-    expect(within(screen.getByLabelText('Attacks')).getByText('+5 to hit')).toBeInTheDocument();
+    expect(screen.getByLabelText('Attacks')).toHaveTextContent('+5 to hit');
     expect(screen.getByTestId('sheet-live')).toHaveTextContent('20');
+  });
+
+  it('rolls from the sheet at the table, saying what the roll is for (ADR 0075)', async () => {
+    useJoinedStore.setState({ current: campaign('K1') });
+    const user = userEvent.setup();
+    mount(<SheetsPage />, view([creature()]));
+    await screen.findByTestId('sheet-view');
+    await user.click(screen.getByRole('radio', { name: 'Advantage' }));
+    await user.click(screen.getByRole('button', { name: 'Roll Stealth check' }));
+    expect(window.trifold.joined.send).toHaveBeenLastCalledWith('c1', {
+      type: 'roll',
+      expression: '1d20+7 adv',
+      for: 'Stealth check',
+    });
+    // Advantage was for that roll only.
+    expect(screen.getByRole('radio', { name: 'Normal' })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Roll Rapier damage' }));
+    expect(window.trifold.joined.send).toHaveBeenLastCalledWith('c1', {
+      type: 'roll',
+      expression: '1d8+3',
+      for: 'Rapier damage',
+    });
+  });
+
+  it('enters an initiative roll at the table while the fight waits for it', async () => {
+    useJoinedStore.setState({ current: campaign('K1') });
+    const user = userEvent.setup();
+    mount(<SheetsPage />, view([creature({ inFight: true, needsInitiative: true })]));
+    await screen.findByTestId('sheet-view');
+    await user.click(screen.getByRole('button', { name: 'Roll Initiative' }));
+    expect(window.trifold.joined.send).toHaveBeenLastCalledWith('c1', {
+      type: 'roll',
+      expression: '1d20+3',
+      for: 'Initiative',
+      initiative: { creatureKind: 'pc', creatureId: 'p1' },
+    });
   });
 
   it('opens the sheet link in a web tab, and edits on the sheet itself', async () => {

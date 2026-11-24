@@ -12,12 +12,20 @@ import { useRollLogStore } from './rollLogStore';
  */
 export type TableRollMode = 'table' | 'private';
 
+/** What a roll from a sheet adds (ADR 0075): what it is for, and whose initiative it is. */
+export interface TableRollExtra {
+  for?: string;
+  initiative?: { creatureKind: 'pc' | 'npc' | 'summon'; creatureId: string };
+}
+
+type TableRollSend = (expression: string, extra?: TableRollExtra) => void;
+
 interface TableRollState {
   /** The player's choice; Table until they say otherwise. Session only. */
   mode: TableRollMode;
-  send: ((expression: string) => void) | null;
+  send: TableRollSend | null;
   setMode(mode: TableRollMode): void;
-  setSend(send: ((expression: string) => void) | null): void;
+  setSend(send: TableRollSend | null): void;
 }
 
 export const useTableRollStore = create<TableRollState>((set) => ({
@@ -28,7 +36,7 @@ export const useTableRollStore = create<TableRollState>((set) => ({
 }));
 
 /** Where the next roll goes: to the table when the player chose that and can, else nowhere. */
-export function tableRollSender(): ((expression: string) => void) | null {
+export function tableRollSender(): TableRollSend | null {
   const { mode, send } = useTableRollStore.getState();
   return mode === 'table' ? send : null;
 }

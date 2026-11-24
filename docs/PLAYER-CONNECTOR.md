@@ -164,7 +164,7 @@ a connection dot.
 | `grab`, `preview`, `hold`, `drop`, `letGo` | Moving a token |
 | `releaseOne {creatureKind, creatureId}` | Release one companion |
 | `summon {…}`, `dismiss {tokenId}`, `keepSummon {tokenId}` | Summoning |
-| `roll {expression}` | A Table roll from a player's Trifold: the DM's Trifold makes it (ADR 0059) |
+| `roll {expression, for?, initiative?}` | A Table roll from a player's Trifold: the DM's Trifold makes it (ADR 0059). From a sheet (ADR 0075), `for` names it ("Stealth check"), and `initiative: {creatureKind, creatureId}` enters its total as that creature's initiative, checked like an `initiative` intent |
 | `sheetOffer {creatureId?, offer, label?}` | A player's Trifold offers its linked character's table numbers for the PC it holds (ADR 0071): checked like an intent, then held for the DM or accepted automatically. Without `creatureId`, a device holding nothing asks for a new PC from the sheet, which always waits for the DM (ADR 0072) |
 
 | Server sends | Meaning |
