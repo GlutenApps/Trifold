@@ -116,6 +116,24 @@
   text-overflow: ellipsis;
 }
 
+/* Running and Playing, when the Library has campaigns of both kinds. */
+.switcher-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.switcher-group + .switcher-group {
+  margin-top: 6px;
+}
+
+.switcher-heading {
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
 .window-controls-space {
   width: 140px;
   flex-shrink: 0;

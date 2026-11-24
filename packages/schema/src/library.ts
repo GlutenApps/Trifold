@@ -223,6 +223,13 @@ export const WorkspacePreset = z.object({
 });
 export type WorkspacePreset = z.infer<typeof WorkspacePreset>;
 
+/** A player's named layout: player tabs and tools only, so it never names a GM panel. */
+export const PlayerWorkspacePreset = z.object({
+  name: z.string().min(1),
+  layout: PlayerShellLayout,
+});
+export type PlayerWorkspacePreset = z.infer<typeof PlayerWorkspacePreset>;
+
 export const WorkspaceSettings = z.object({
   /** The DM's named layouts, fully editable and app-wide. The starter set is copied in once. */
   presets: z.array(WorkspacePreset).default([]),
@@ -236,6 +243,11 @@ export const WorkspaceSettings = z.object({
    * (docs/PLAYER-MODE.md). Additive with a default; no schema bump.
    */
   playerConsoles: z.record(z.string(), PlayerShellLayout).default({}),
+  /**
+   * The player's named layouts: one list for every joined campaign, kept apart from the GM's
+   * `presets`. Additive with a default; no schema bump.
+   */
+  playerPresets: z.array(PlayerWorkspacePreset).default([]),
 });
 export type WorkspaceSettings = z.infer<typeof WorkspaceSettings>;
 

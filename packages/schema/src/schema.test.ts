@@ -42,7 +42,14 @@ describe('LibrarySettings', () => {
         sfxVolume: 0.8,
         crossfadeSec: 4,
       },
-      workspace: { presets: [], seeded: false, consoles: {}, webTabs: [], playerConsoles: {} },
+      workspace: {
+        presets: [],
+        seeded: false,
+        consoles: {},
+        webTabs: [],
+        playerConsoles: {},
+        playerPresets: [],
+      },
       sampleCampaign: { added: false },
       role: null,
     });

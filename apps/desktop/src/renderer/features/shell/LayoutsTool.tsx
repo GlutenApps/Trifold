@@ -1,18 +1,25 @@
 import { InlineConfirm } from './InlineConfirm';
-import { useState } from 'react';
-import { describeLayout, matchesPreset } from '../../stores/shellLayout';
-import { useShellStore } from '../../stores/shellStore';
+import { useMemo, useState } from 'react';
+import { describeLayout, matchesPreset, ROLE_TOOLS } from '../../stores/shellLayout';
+import { presetsFor, useShellStore } from '../../stores/shellStore';
 import { Icon } from './icons';
 import { hk } from '../../platform';
 
 /**
- * The DM's layouts (ADR 0004, layouts are app-wide; a pop-up since ADR 0009): apply, overwrite
+ * Named layouts (ADR 0004, layouts are app-wide; a pop-up since ADR 0009): apply, overwrite
  * with the screen as it is now, rename, reorder, delete, save the current arrangement as a new
- * one. Nothing is locked.
+ * one. Nothing is locked. The list is the loaded console's role's: the GM's layouts in a GM
+ * console, the player's in a joined campaign, each shared by every campaign of that role.
  */
 export function LayoutsTool() {
   const layout = useShellStore((s) => s.layout);
-  const presets = useShellStore((s) => s.presets);
+  const role = useShellStore((s) => s.role);
+  const gmPresets = useShellStore((s) => s.presets);
+  const playerPresets = useShellStore((s) => s.playerPresets);
+  const presets = useMemo(
+    () => presetsFor(role, gmPresets, playerPresets),
+    [role, gmPresets, playerPresets],
+  );
   const webTabs = useShellStore((s) => s.webTabs);
   const applyLayout = useShellStore((s) => s.applyLayout);
   const savePreset = useShellStore((s) => s.savePreset);
@@ -55,7 +62,7 @@ export function LayoutsTool() {
       {presets.length === 0 && <p className="muted">No layouts yet. Save the screen above.</p>}
       <ol className="layout-list" aria-label="Layouts">
         {presets.map((preset, index) => {
-          const current = matchesPreset(layout, preset.layout);
+          const current = matchesPreset(layout, preset.layout, ROLE_TOOLS[role]);
           return (
             <li key={index} className={`layout-row${current ? ' current' : ''}`}>
               <span className="layout-hotkey kbd">{index < 9 ? hk(`Ctrl+${index + 1}`) : ''}</span>
@@ -165,12 +172,16 @@ export function LayoutsTool() {
           );
         })}
       </ol>
-      <div className="row">
-        <button type="button" className="btn" onClick={restore}>
-          Bring back the starter layouts
-        </button>
-        <span className="muted small">Adds Prep, Table and Combat again if you deleted them.</span>
-      </div>
+      {role === 'gm' && (
+        <div className="row">
+          <button type="button" className="btn" onClick={restore}>
+            Bring back the starter layouts
+          </button>
+          <span className="muted small">
+            Adds Prep, Table and Combat again if you deleted them.
+          </span>
+        </div>
+      )}
     </div>
   );
 }

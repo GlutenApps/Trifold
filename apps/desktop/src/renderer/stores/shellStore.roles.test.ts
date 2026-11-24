@@ -25,6 +25,7 @@ beforeEach(() => {
     joinedId: null,
     layout: defaultLayout(),
     presets: STARTER_PRESETS.map((p) => ({ name: p.name, layout: p.layout })),
+    playerPresets: [],
     consoles: {},
     playerConsoles: {},
     webTabs: [],
@@ -109,16 +110,75 @@ describe('the player console in the shell', () => {
     expect(ShellLayout.safeParse(shell().consoles['greyford']).success).toBe(true);
   });
 
-  it('keeps named layouts for the GM: a player console cannot apply, save or match one', () => {
+  it('keeps the GM’s named layouts out of a player console: it cannot apply, change or match one', () => {
     shell().enterPlayerConsole('01CAMPAIGN');
     const before = shell().layout;
     shell().applyLayout(0);
     expect(shell().layout).toBe(before);
     shell().savePreset('Mine');
     shell().updatePreset(0);
+    shell().renamePreset(0, 'Renamed');
+    shell().restoreStarterLayouts();
     expect(shell().presets.map((p) => p.name)).toEqual(STARTER_PRESETS.map((p) => p.name));
     expect(shell().presets[0]?.layout).toEqual(STARTER_PRESETS[0]?.layout);
+    // What it saved went to the player's own list.
+    expect(shell().playerPresets.map((p) => p.name)).toEqual(['Renamed']);
+  });
+
+  it('gives the player their own named layouts, shared by every joined campaign', () => {
+    shell().enterPlayerConsole('01CAMPAIGN');
+    shell().closeTab('compendium');
+    shell().toggleSection('quickNotes');
+    shell().savePreset('Sheet first');
+    expect(shell().currentPresetIndex()).toBe(0);
+    const saved = shell().playerPresets[0]!;
+    expect(saved.layout).not.toHaveProperty('tray');
+    expect(PlayerShellLayout.safeParse(saved.layout).success).toBe(true);
+
+    // Another joined campaign starts on the default and offers the same layout.
+    shell().enterPlayerConsole('01OTHER');
     expect(shell().currentPresetIndex()).toBe(-1);
+    shell().applyLayout(0);
+    expect(shell().layout.stage.groups[0]?.tabs).toEqual(['table', 'sheets']);
+    expect(shell().layout.dock.sections.map((s) => s.tool)).toEqual([...PLAYER_MINOR_KINDS]);
+    expect(shell().currentPresetIndex()).toBe(0);
+
+    // A GM console offers the GM's list, never the player's.
+    shell().enterConsole('greyford');
+    shell().applyLayout(0);
+    expect(shell().layout.stage.groups[0]?.tabs).toEqual(
+      STARTER_PRESETS[0]?.layout.stage.groups[0]?.tabs,
+    );
+    shell().savePreset('Sheet first');
+    expect(shell().presets.at(-1)?.name).toBe('Sheet first');
+    expect(shell().playerPresets).toHaveLength(1);
+  });
+
+  it('renames, reorders, overwrites and deletes the player’s layouts in their own list', () => {
+    shell().enterPlayerConsole('01CAMPAIGN');
+    shell().savePreset('One');
+    shell().closeTab('sheets');
+    shell().savePreset('One');
+    expect(shell().playerPresets.map((p) => p.name)).toEqual(['One', 'One 2']);
+    shell().movePreset(1, -1);
+    expect(shell().playerPresets.map((p) => p.name)).toEqual(['One 2', 'One']);
+    shell().renamePreset(0, 'Map only');
+    shell().openMajor('sheets');
+    shell().updatePreset(0);
+    expect(shell().playerPresets[0]?.layout.stage.groups[0]?.tabs).toContain('sheets');
+    shell().deletePreset(1);
+    expect(shell().playerPresets.map((p) => p.name)).toEqual(['Map only']);
+    expect(shell().presets.map((p) => p.name)).toEqual(STARTER_PRESETS.map((p) => p.name));
+  });
+
+  it('drops a removed web tab from the player’s layouts too', () => {
+    const key = shell().addWebTab({ url: 'https://example.com/sheet', title: 'Sheet' });
+    const id = shell().webTabs[0]!.id;
+    shell().enterPlayerConsole('01CAMPAIGN');
+    shell().openMajor(key);
+    shell().savePreset('With sheet');
+    shell().removeWebTab(id);
+    expect(shell().playerPresets[0]?.layout.stage.groups[0]?.tabs).not.toContain(key);
   });
 
   it('drops a removed web tab from saved player consoles too', () => {
@@ -148,6 +208,7 @@ describe('the player console in the shell', () => {
     shell().enterLibrary();
     shell().enterPlayerConsole('01CAMPAIGN');
     shell().toggleSection('quickNotes');
+    shell().savePreset('Mine');
     await flushPendingSaves();
     const workspace = (updateSettings.mock.calls.at(-1) as unknown[] | undefined)?.[0] as {
       workspace: unknown;
@@ -158,5 +219,6 @@ describe('the player console in the shell', () => {
     expect(parsed.workspace.playerConsoles['01CAMPAIGN']?.dock.sections.every((s) => s.open)).toBe(
       true,
     );
+    expect(parsed.workspace.playerPresets.map((p) => p.name)).toEqual(['Mine']);
   });
 });

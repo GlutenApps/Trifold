@@ -1,5 +1,6 @@
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCombatStore } from '../../stores/combatStore';
+import { useJoinedStore } from '../../stores/joinedStore';
 import { usePresenterStore } from '../../stores/presenterStore';
 import { useShellStore } from '../../stores/shellStore';
 
@@ -76,4 +77,14 @@ export function switchCampaign(campaignId: string, then?: () => void): void {
     await useCampaignStore.getState().open(campaignId);
     if (useCampaignStore.getState().current?.campaign.id === campaignId) then?.();
   });
+}
+
+/**
+ * Opens a joined campaign's player console (or goes back to it), from the top bar's switcher.
+ * Leaving a GM campaign with something live asks first, as switching between GM campaigns does.
+ */
+export function openJoined(campaignId: string): void {
+  const open = () => useJoinedStore.getState().openCampaign(campaignId);
+  if (useJoinedStore.getState().current?.campaignId === campaignId) void open();
+  else guarded(open);
 }
