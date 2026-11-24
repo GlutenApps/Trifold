@@ -62,7 +62,8 @@ function slugify(name: string): string {
 }
 
 /**
- * One campaign is open at a time (`current`, remembered in `library.json`); any campaign can be
+ * One campaign is open at a time (`current`, for this run only: every launch starts on the
+ * Library, ADR 0079); any campaign can be
  * read with `bundleOf`, which is what export uses. Entity lists come back sorted (PCs and NPCs
  * by name, encounters newest first, adventures and scenes by `order`, notes in tree order).
  */
@@ -209,37 +210,20 @@ export class CampaignRepository {
   async open(campaignId: string): Promise<CampaignBundle> {
     const slug = await this.slugFor(campaignId);
     this.currentSlug = slug;
-    await this.store.updateSettings({ lastOpenCampaignSlug: slug });
     const bundle = await this.bundle();
     this.currentCampaignId = bundle.campaign.id;
     return bundle;
   }
 
-  async reopenLast(): Promise<CampaignBundle | null> {
-    const slug = this.store.getSettings().lastOpenCampaignSlug;
-    if (!slug) return null;
-    try {
-      return await this.open(slug);
-    } catch (err) {
-      this.logger.warn(
-        `last campaign ${slug} could not be reopened: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      return null;
-    }
-  }
-
   async close(): Promise<void> {
     this.currentSlug = null;
     this.currentCampaignId = null;
-    await this.store.updateSettings({ lastOpenCampaignSlug: null });
   }
 
   /** Deletes the campaign folder and everything in it; closes it first when it is open. */
   async remove(campaignId: string): Promise<void> {
     const slug = await this.slugFor(campaignId);
-    if (this.currentSlug === slug || this.store.getSettings().lastOpenCampaignSlug === slug) {
-      await this.close();
-    }
+    if (this.currentSlug === slug) await this.close();
     await rm(this.store.resolvePath(this.dir(slug)), { recursive: true, force: true });
     this.logger.info(`campaign folder campaigns/${slug} deleted`);
   }

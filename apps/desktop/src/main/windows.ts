@@ -2,6 +2,7 @@ import { app, BrowserWindow, screen, session, shell, type Display } from 'electr
 import { join } from 'node:path';
 import { EVENT_CHANNELS, type DisplayInfo } from '@trifold/api';
 import type { WindowBounds } from '@trifold/schema';
+import { CONSOLE_READY_LIMIT_MS, STARTUP_ERROR_LINES, type ConsoleTrouble } from './consoleHealth';
 import { describeDisplays, IDENTIFY_MS, identifyPage } from './displays';
 import {
   forwardableInput,
@@ -39,6 +40,11 @@ export interface WindowHooks {
   onConsoleClosing(bounds: WindowBounds, event: { preventDefault(): void }): void;
   onPlayerChanged(open: boolean): void;
   onPlayerReady(): void;
+  /**
+   * The console's page failed or is slow (ADR 0079). `shown` says whether the window has been
+   * on screen yet: before that, the DM is still looking at the splash.
+   */
+  onConsoleTrouble(trouble: ConsoleTrouble, shown: boolean): void;
 }
 
 function boundsOf(win: BrowserWindow): WindowBounds {
@@ -61,6 +67,10 @@ function isOnScreen(b: WindowBounds): boolean {
  */
 export class WindowManager {
   private consoleWin: BrowserWindow | null = null;
+  /** The console has been on screen (its first paint, or shown early after trouble). */
+  private consoleShown = false;
+  /** The console shows the problem page; its own page's further reports are ignored. */
+  private consoleExplained = false;
   private playerWin: BrowserWindow | null = null;
   private theme: Theme = 'dark';
   private consoleZoom = 1;
@@ -206,10 +216,14 @@ export class WindowManager {
     WindowManager.hostWebTabs(win);
     // Every load (a reload, a dev rebuild) starts at 100 %: apply the text size again.
     win.webContents.on('did-finish-load', () => win.webContents.setZoomFactor(this.consoleZoom));
+    this.consoleShown = false;
+    this.consoleExplained = false;
     win.once('ready-to-show', () => {
       if (bounds?.maximized) win.maximize();
+      this.consoleShown = true;
       win.show();
     });
+    this.watchConsole(win);
     win.on('close', (event) => this.hooks.onConsoleClosing(boundsOf(win), event));
     win.on('closed', () => {
       this.consoleWin = null;
@@ -296,7 +310,59 @@ export class WindowManager {
   /** Shows a hidden console again (Restart to update, when the installer did not start). */
   showConsole(): void {
     const win = this.consoleWin;
-    if (win && !win.isDestroyed()) win.show();
+    if (!win || win.isDestroyed()) return;
+    this.consoleShown = true;
+    win.show();
+  }
+
+  /**
+   * Reports trouble with the console's page to `onConsoleTrouble` (ADR 0079): its process
+   * stopping, a failed load, a hang, no first paint in time, and the errors it logs before it
+   * first shows. Without this a console that never paints leaves the splash up and the app
+   * running with no window to close.
+   */
+  private watchConsole(win: BrowserWindow): void {
+    const wc = win.webContents;
+    const report = (trouble: ConsoleTrouble) => {
+      if (win.isDestroyed() || this.consoleWin !== win || this.consoleExplained) return;
+      this.hooks.onConsoleTrouble(trouble, this.consoleShown);
+    };
+    wc.on('render-process-gone', (_e, details) => {
+      if (details.reason !== 'clean-exit') {
+        report({ kind: 'gone', reason: details.reason, exitCode: details.exitCode });
+      }
+    });
+    wc.on('did-fail-load', (_e, code, description, _url, isMainFrame) => {
+      // -3 is a load that was replaced by another (a reload, a navigation), not a failure.
+      if (isMainFrame && code !== -3) report({ kind: 'load-failed', code, description });
+    });
+    win.on('unresponsive', () => report({ kind: 'unresponsive' }));
+    win.on('responsive', () => report({ kind: 'responsive' }));
+    let errorLines = 0;
+    wc.on('console-message', (event) => {
+      if (event.level !== 'error' || this.consoleShown || errorLines >= STARTUP_ERROR_LINES) return;
+      errorLines += 1;
+      report({ kind: 'error', message: event.message });
+    });
+    const timer = setTimeout(() => {
+      if (!this.consoleShown) report({ kind: 'slow' });
+    }, CONSOLE_READY_LIMIT_MS);
+    win.on('closed', () => clearTimeout(timer));
+  }
+
+  /** Loads the console's page again, after its process stopped. */
+  reloadConsole(): void {
+    const win = this.consoleWin;
+    if (win && !win.isDestroyed()) win.webContents.reload();
+  }
+
+  /** Replaces the console's page with one that says it stopped working, and shows the window. */
+  explainConsole(html: string): void {
+    const win = this.consoleWin;
+    if (!win || win.isDestroyed()) return;
+    this.consoleExplained = true;
+    void win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    this.showConsole();
   }
 
   isConsoleOpen(): boolean {
@@ -308,10 +374,16 @@ export class WindowManager {
     if (win && !win.isDestroyed()) win.close();
   }
 
-  focusConsole(): void {
+  /**
+   * Brings the console forward when Trifold is opened again while it runs: restored if it is
+   * minimised, and shown if it never showed (a console that has not painted is still a window the
+   * DM can close).
+   */
+  revealConsole(): void {
     const win = this.consoleWin;
     if (!win || win.isDestroyed()) return;
     if (win.isMinimized()) win.restore();
+    if (!win.isVisible()) this.showConsole();
     win.focus();
   }
 

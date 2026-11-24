@@ -18,7 +18,13 @@ export { errorMessage } from '@trifold/schema';
  * Until then lines go to `fallbackDir` (the app's userData/logs), so a failure to open the
  * Library at all still leaves a trace a packaged app can show the DM.
  */
-export function createLogger(getLogDir: () => string | null, fallbackDir?: string): Logger {
+export function createLogger(
+  getLogDir: () => string | null,
+  fallbackDir?: string,
+): Logger & {
+  /** Resolves once every line logged so far is on disk (for a failed startup, before exit). */
+  idle(): Promise<void>;
+} {
   let queue: Promise<void> = Promise.resolve();
 
   const log = (level: LogLevel, message: string): void => {
@@ -41,5 +47,6 @@ export function createLogger(getLogDir: () => string | null, fallbackDir?: strin
     info: (message) => log('info', message),
     warn: (message) => log('warn', message),
     error: (message) => log('error', message),
+    idle: () => queue,
   };
 }

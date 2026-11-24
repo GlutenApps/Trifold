@@ -88,7 +88,7 @@ The session log keeps itself. The first fight that ends, scene you send to the T
 
 ### Switching and closing
 
-Pick another campaign from the top bar menu and the current one closes. If a scene is on the TV or a fight is running, Trifold asks first ("Something is on the TV"): **Keep running**, or **Stop sharing and close**, which blacks out the TV and leaves the fight saved with its encounter for later.
+Trifold always opens on **Library › Campaigns**; open a campaign there and its console is as you left it. Pick another campaign from the top bar menu and the current one closes. If a scene is on the TV or a fight is running, Trifold asks first ("Something is on the TV"): **Keep running**, or **Stop sharing and close**, which blacks out the TV and leaves the fight saved with its encounter for later.
 
 ## Encounters and combat
 

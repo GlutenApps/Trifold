@@ -54,10 +54,10 @@ export function createCampaignApi(
       async open(campaignId) {
         return repo().open(campaignId);
       },
+      // Only the campaign opened in this run: every launch starts on the Library (ADR 0079).
       async current() {
         const campaigns = session.campaigns;
-        if (!campaigns) return null;
-        return campaigns.current ? campaigns.bundle() : campaigns.reopenLast();
+        return campaigns?.current ? campaigns.bundle() : null;
       },
       async bundles() {
         const out = [];

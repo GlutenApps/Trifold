@@ -1395,6 +1395,25 @@ body.resizing {
   overflow-wrap: anywhere;
 }
 
+/* WindowBoundary (ADR 0079): the whole window stopped drawing. The top strip stays clear of the
+   window controls the OS draws over the title bar, and drags the window like the top bar. */
+.window-crash {
+  box-sizing: border-box;
+  height: 100vh;
+  padding: 64px 24px 24px;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  -webkit-app-region: drag;
+}
+
+.window-crash > .banner {
+  max-width: 640px;
+  -webkit-app-region: no-drag;
+}
+
 .panel-pending {
   margin: 0;
   padding: 16px;

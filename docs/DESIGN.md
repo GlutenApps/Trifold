@@ -71,7 +71,7 @@ All user data lives in one folder the DM picks on first run (default `Documents/
 
 ```
 Trifold Library/
-  library.json                 settings, layouts, web tabs, schemaVersion, last-open campaign
+  library.json                 settings, layouts, web tabs, schemaVersion
   index.sqlite                 derived; safe to delete
   sources/                     imported compendium sources (one folder each)
     <sourceId>/

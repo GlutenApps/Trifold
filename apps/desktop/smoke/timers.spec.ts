@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
 import { tvOnPrimary } from './tv';
 import { keepLogs } from './keepLogs';
-import { chooseGameMaster } from './firstRun';
+import { chooseGameMaster, reopenCampaign } from './firstRun';
 
 /**
  * Timers (ADR 0021) inside real Electron: two timers run at once, one is on the TV and the
@@ -121,10 +121,10 @@ test('timers run side by side, count down on the TV, and come back idle after a 
     ]);
     expect(JSON.stringify(onDisk)).not.toMatch(/endsAt|status|leftMs/);
 
-    // After a restart every timer is idle at its full time.
+    // After a restart (on Library › Campaigns, ADR 0079) every timer is idle at its full time.
     app = await launch(userData, library);
     page = await app.firstWindow();
-    await expect(page.getByRole('tab', { name: 'Campaign', exact: true })).toBeVisible();
+    await reopenCampaign(page, 'Timer Campaign');
     await openTimers(page);
     const back = page.getByRole('listitem', { name: 'Guards return' });
     await expect(back).toHaveClass(/status-idle/);

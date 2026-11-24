@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
 import { keepLogs } from './keepLogs';
-import { chooseGameMaster } from './firstRun';
+import { chooseGameMaster, reopenCampaign } from './firstRun';
 
 /**
  * The tray (ADR 0023) inside real Electron: choose a timer and a counter for it in place of
@@ -154,10 +154,11 @@ test('the tray takes a timer and a counter, fits a narrow window and comes back 
     expect(rendererErrors).toEqual([]);
     await app.close();
 
-    // The tray is part of the campaign's console and comes back as it was.
+    // The tray is part of the campaign's console and comes back as it was when the campaign is
+    // opened again (a restart starts on Library › Campaigns, ADR 0079).
     app = await launch(userData, library);
     page = await app.firstWindow();
-    await expect(page.getByRole('tab', { name: 'Campaign', exact: true })).toBeVisible();
+    await reopenCampaign(page, 'Tray Campaign');
     await expect
       .poll(() => sections(page))
       .toEqual(['tv', 'combat', 'counter', 'timer', 'choose', 'dice']);
