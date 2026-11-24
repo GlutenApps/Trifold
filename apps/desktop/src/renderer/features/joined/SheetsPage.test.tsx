@@ -217,6 +217,7 @@ describe('My characters and Sheets (ADR 0069)', () => {
     mount(<MyCharactersTool />, view([creature()]));
     await user.click(await screen.findByRole('button', { name: 'New character' }));
     await user.type(screen.getByRole('textbox', { name: 'Character name' }), 'Wren');
+    await user.click(screen.getByRole('radio', { name: /Blank sheet/ }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(window.trifold.joined.linkCharacter).toHaveBeenCalled());
     const [, linked] = vi.mocked(window.trifold.joined.linkCharacter).mock.calls[0]!;

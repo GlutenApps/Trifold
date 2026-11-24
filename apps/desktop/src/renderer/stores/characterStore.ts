@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import { ulid } from 'ulid';
 import { blankSheet, sheetFromNumbers } from '@trifold/rules';
-import { errorMessage, nowIso, type Character } from '@trifold/schema';
+import {
+  errorMessage,
+  nowIso,
+  type Character,
+  type CharacterBuild,
+  type Sheet,
+} from '@trifold/schema';
 
 /**
  * The player's characters (ADR 0068) as the renderer holds them: the list from main, the one
@@ -25,6 +31,15 @@ interface CharacterState {
   open(id: string | null): void;
   /** Makes a character and opens it. */
   create(kind: Character['kind'], name: string): Promise<Character | null>;
+  /**
+   * The guided builder open for a new character (docs/BUILDER.md), by the name it was given;
+   * `forJoined` links the result to the open joined campaign. Null when none is.
+   */
+  building: { name: string; forJoined: boolean } | null;
+  startBuilding(name: string, forJoined: boolean): void;
+  cancelBuilding(): void;
+  /** The builder's Finish: a Trifold character with the sheet and build record it made. */
+  createBuilt(name: string, sheet: Sheet, build: CharacterBuild): Promise<Character | null>;
   /** Changes a character at once and writes it a moment later. */
   change(id: string, patch: Partial<Character>): void;
   /** Writes a character's pending change now. */
@@ -60,6 +75,33 @@ export const useCharacterStore = create<CharacterState>((set, get) => {
     loaded: false,
     openId: null,
     editingSheet: false,
+    building: null,
+
+    startBuilding(name, forJoined) {
+      set({ building: { name, forJoined } });
+    },
+
+    cancelBuilding() {
+      set({ building: null });
+    },
+
+    async createBuilt(name, sheet, build) {
+      const made = await get().create('trifold', name);
+      if (!made) return null;
+      const next: Character = { ...made, sheet, build };
+      set((s) => ({
+        characters: s.characters.map((c) => (c.id === made.id ? next : c)),
+        building: null,
+      }));
+      try {
+        const saved = await window.trifold.characters.save(next);
+        set((s) => ({ characters: s.characters.map((c) => (c.id === saved.id ? saved : c)) }));
+        return saved;
+      } catch (err) {
+        set({ error: errorMessage(err) });
+        return next;
+      }
+    },
     error: null,
 
     setEditingSheet(on) {

@@ -3191,6 +3191,79 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   display: block;
 }
 
+/* The guided builder (docs/BUILDER.md). */
+.guided-builder,
+.builder-step {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.builder-step h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.builder-choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 6px;
+}
+
+.builder-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg-panel);
+  cursor: pointer;
+}
+
+.builder-choice.on {
+  border-color: var(--accent);
+}
+
+.builder-choice > span {
+  display: grid;
+  gap: 2px;
+}
+
+.builder-skills,
+.builder-increase {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.builder-scores {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px 16px;
+}
+
+.character-starts {
+  padding-left: 24px;
+}
+
+.guided-builder h2 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text);
+}
+
 /* New PC from player sheet (ADR 0072), under the player console's picker. */
 .ask-new-pc {
   justify-content: center;
