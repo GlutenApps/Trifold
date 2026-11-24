@@ -384,3 +384,21 @@ describe('Forms', () => {
     expect(screen.queryByRole('button', { name: 'Pin as a form' })).toBeNull();
   });
 });
+
+describe('Resources at the table (ADR 0074)', () => {
+  it('sends a spent hit die’s healing to the table as an HP change', async () => {
+    useJoinedStore.setState({ current: campaign('K1') });
+    const user = userEvent.setup();
+    mount(<SheetsPage />, view([creature()]));
+    await user.click(await screen.findByRole('button', { name: 'Spend a d8' }));
+    expect(window.trifold.joined.send).toHaveBeenCalledWith(
+      'c1',
+      expect.objectContaining({
+        type: 'intent',
+        creatureKind: 'pc',
+        creatureId: 'p1',
+        intent: { kind: 'hp', delta: expect.any(Number) },
+      }),
+    );
+  });
+});

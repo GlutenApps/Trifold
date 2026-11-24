@@ -117,6 +117,8 @@ export function buildSheet2024(c: BuildChoices): { sheet: Sheet; build: Characte
     spellcastingAbility: spellcastingAbilityOf(c.cls),
     equipment: gear.equipment,
     slots: spellSlots(c.cls, 1),
+    // Pact Magic slots come back on a short rest (ADR 0074).
+    ...(c.cls.casterType === 'PACT' ? { slotsOnShortRest: true } : {}),
     spells: (c.spells ?? []).map((s) => ({
       id: id('spell'),
       name: s.ref.name,

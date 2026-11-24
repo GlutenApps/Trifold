@@ -475,7 +475,10 @@ describe('the official 2024 sheet', () => {
     text('Text38', 'Sacred Flame'),
     text('Text39', 'DC 13 DEX'),
     text('Text40', '1d8 Radiant'),
-    text('Text54', 'Spellcasting (WIS)\nChannel Divinity: Divine Spark, Turn Undead'),
+    text(
+      'Text54',
+      'Spellcasting (WIS)\nChannel Divinity (2 / short rest): Divine Spark, Turn Undead',
+    ),
     text(
       'Text55',
       'LIFE DOMAIN\nDisciple of Life: healing spells restore extra 2 + spell level HP',
@@ -547,5 +550,7 @@ describe('the official 2024 sheet', () => {
       'Mace',
       'Bag of Holding',
     ]);
+    // "(2 / short rest)" becomes the feature's limited uses (ADR 0074), out of its name.
+    expect(s.features[1]!.uses).toEqual({ max: 2, used: 0, reset: 'short' });
   });
 });
