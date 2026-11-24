@@ -134,6 +134,11 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await builder.getByRole('combobox', { name: 'Plus 2' }).selectOption('str');
     await builder.getByRole('combobox', { name: 'Plus 1' }).selectOption('con');
     await builder.getByRole('button', { name: 'Next' }).click();
+    // Equipment, option A for both: the Fighter's chain mail makes AC 16, its weapons and the
+    // Soldier's are attacks, and both options' gold adds up.
+    await expect(builder.getByTestId('kit-summary')).toContainText('AC 16');
+    await expect(builder.getByTestId('kit-summary')).toContainText('18 GP');
+    await builder.getByRole('button', { name: 'Next' }).click();
     // Hit die maximum (d10) plus Con (15: +2) at 1st level.
     await expect(builder.getByTestId('builder-review').getByLabel('Numbers')).toContainText('12');
     await builder.getByRole('button', { name: 'Finish' }).click();
@@ -144,7 +149,7 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await page.getByRole('button', { name: 'Back to characters' }).click();
     await expect(page.getByTestId('character-row')).toHaveCount(2);
     await expect(page.getByTestId('character-row').filter({ hasText: 'Tamsin' })).toContainText(
-      'Fighter 1 · AC 11 · 12 HP',
+      'Fighter 1 · AC 16 · 12 HP',
     );
 
     await campaignsPage(page);

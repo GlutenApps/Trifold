@@ -208,6 +208,8 @@ export const Sheet = z.object({
   features: z.array(SheetFeature).max(300).default([]),
   spells: z.array(SheetSpell).max(500).default([]),
   equipment: z.array(SheetItem).max(500).default([]),
+  /** Coins, as gold pieces (docs/BUILDER.md: an equipment option's gold goes here). */
+  gp: z.number().min(0).max(10_000_000).default(0),
   /** Numbers the player set by hand over what the sheet works out. */
   overrides: z.partialRecord(DerivedKey, int.min(-20).max(99)).default({}),
 });

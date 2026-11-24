@@ -603,6 +603,16 @@ export function TrifoldSheet({ character }: { character: Character }) {
             </li>
           ))}
         </ul>
+        <label className="field inline">
+          Gold
+          <NumField
+            label="Gold"
+            value={sheet.gp}
+            min={0}
+            max={10_000_000}
+            onChange={(v) => v !== undefined && set({ gp: v })}
+          />
+        </label>
         <AddButton
           label="Add an item"
           onAdd={() => equipment.add({ id: ulid(), name: '', quantity: 1 })}

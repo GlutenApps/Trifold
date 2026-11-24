@@ -3269,3 +3269,16 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   justify-content: center;
   padding: 8px 12px;
 }
+
+.builder-kits {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.builder-kit {
+  align-items: flex-start;
+}

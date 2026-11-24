@@ -158,6 +158,13 @@ describe('GuidedBuilder (docs/BUILDER.md)', () => {
     expect(screen.getByTestId('final-scores')).toHaveTextContent('WIS 17 (+3)');
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
+    // Equipment: option A until another is picked; B is its worth in gold.
+    const kits = screen.getByTestId('builder-equipment');
+    expect(within(kits).getByTestId('kit-summary')).toHaveTextContent('7 GP');
+    await user.click(within(kits).getAllByRole('radio', { name: /Option B/ })[0]!);
+    expect(within(kits).getByTestId('kit-summary')).toHaveTextContent('110 GP');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
     // Review: the sheet as it will be.
     const review = screen.getByTestId('builder-review');
     expect(review).toHaveTextContent('Wren');
@@ -174,6 +181,7 @@ describe('GuidedBuilder (docs/BUILDER.md)', () => {
       medicine: 'proficient',
     });
     expect(sheet.features.find((f) => f.from === 'Sage')?.text).toBe('You learn two cantrips.');
+    expect(sheet.gp).toBe(110);
     expect(build).toMatchObject({
       abilityMethod: 'standard',
       classSkills: ['insight', 'medicine'],

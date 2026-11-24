@@ -203,7 +203,7 @@ export function SheetView({
             </section>
           )}
 
-          {sheet.equipment.length > 0 && (
+          {(sheet.equipment.length > 0 || sheet.gp > 0) && (
             <section className="sheet-view-section" aria-label="Equipment">
               <h3>Equipment</h3>
               <ul className="sheet-view-list">
@@ -214,6 +214,7 @@ export function SheetView({
                   </li>
                 ))}
               </ul>
+              {sheet.gp > 0 && <p className="small">{sheet.gp.toLocaleString()} GP</p>}
             </section>
           )}
         </>

@@ -387,7 +387,7 @@ A player's character (docs/PLAYER-MODE.md, Part 3; ADR 0068), schema `Character`
     "abilities": { "str": 10, "dex": 16, "con": 12, "int": 13, "wis": 10, "cha": 14 },
     "saves": ["dex", "int"], "skills": { "stealth": "expertise" }, "otherProficiencies": "",
     "maxHp": 21, "armor": { "kind": "light", "base": 11, "shield": false, "bonus": 0 }, "speed": 30,
-    "spellcastingAbility": null, "attacks": [], "features": [], "spells": [], "equipment": [],
+    "spellcastingAbility": null, "attacks": [], "features": [], "spells": [], "equipment": [], "gp": 0,
     "overrides": { "ac": 15 }
   },
   "notes": "",
@@ -396,7 +396,7 @@ A player's character (docs/PLAYER-MODE.md, Part 3; ADR 0068), schema `Character`
 }
 ```
 
-`kind` is `external` (the sheet is kept elsewhere: `numbers` holds the table numbers as entered, and `sheet` is absent) or `trifold` (`sheet` holds the sheet, and the table numbers are worked out from it by `tableNumbers` in `packages/rules/src/character/`; `numbers` is left as it was). `overrides` holds numbers set by hand over what the sheet works out, by key (`ac`, `initiative`, `save.dex`, `skill.stealth`, …). A sheet's attacks, features, spells and items may carry `ref: { kind, key, name }`, a compendium record by kind and key with its name kept for when the record is gone. `sheetUrl` is an `http` or `https` address only. A character made by the guided builder (docs/BUILDER.md) also has `build`: the edition, the class, background and species by `ref`, the size, the ability method, the scores before the background's increase, the increase (`{plus2, plus1}` or `{all}`), the class skills picked, and the hit points gained at each later level; Level up follows it. A character exported from the Library is this same JSON; importing one whose id is taken gives it a new id.
+`kind` is `external` (the sheet is kept elsewhere: `numbers` holds the table numbers as entered, and `sheet` is absent) or `trifold` (`sheet` holds the sheet, and the table numbers are worked out from it by `tableNumbers` in `packages/rules/src/character/`; `numbers` is left as it was). `overrides` holds numbers set by hand over what the sheet works out, by key (`ac`, `initiative`, `save.dex`, `skill.stealth`, …). A sheet's attacks, features, spells and items may carry `ref: { kind, key, name }`, a compendium record by kind and key with its name kept for when the record is gone. `gp` is the character's coins in gold pieces. `sheetUrl` is an `http` or `https` address only. A character made by the guided builder (docs/BUILDER.md) also has `build`: the edition, the class, background and species by `ref`, the size, the ability method, the scores before the background's increase, the increase (`{plus2, plus1}` or `{all}`), the class skills picked, and the hit points gained at each later level; Level up follows it. A character exported from the Library is this same JSON; importing one whose id is taken gives it a new id.
 
 ---
 

@@ -1,4 +1,4 @@
-import type { Ability, CharacterBuild, Sheet, SheetRef, Skill } from '@trifold/schema';
+import type { Ability, CharacterBuild, ItemRecord, Sheet, SheetRef, Skill } from '@trifold/schema';
 import {
   hitPointsAtFirstLevel,
   withBackgroundIncrease,
@@ -7,6 +7,7 @@ import {
   type SpeciesOption,
 } from './build2024';
 import { blankSheet, scoreModifier, SKILL_NAMES } from './derive';
+import { equipmentToSheet, optionItems } from './equipment';
 
 /**
  * The guided builder's last step (docs/BUILDER.md): its choices made into a 1st-level sheet and
@@ -62,6 +63,11 @@ export interface BuildChoices {
   increase: CharacterBuild['increase'];
   classSkills: Skill[];
   languages: string;
+  /** The class's and the background's starting equipment options picked ("A: …"). */
+  classEquipment?: string;
+  backgroundEquipment?: string;
+  /** The SRD's item records by lowercased name, to link equipment and read armour and weapons. */
+  items?: ReadonlyMap<string, ItemRecord>;
 }
 
 let nextId = 0;
@@ -75,6 +81,14 @@ export function buildSheet2024(c: BuildChoices): { sheet: Sheet; build: Characte
     if (key) skills[key] = 'proficient';
   }
   for (const key of c.classSkills) skills[key] = 'proficient';
+  const kit = [c.classEquipment, c.backgroundEquipment]
+    .filter((o): o is string => !!o)
+    .map(optionItems);
+  const gear = equipmentToSheet(
+    kit.flatMap((k) => k.items),
+    c.items ?? new Map(),
+    abilities,
+  );
   const proficiencies = [
     c.cls.armor && `Armor: ${c.cls.armor}`,
     c.cls.weapons && `Weapons: ${c.cls.weapons}`,
@@ -96,6 +110,10 @@ export function buildSheet2024(c: BuildChoices): { sheet: Sheet; build: Characte
     maxHp: hitPointsAtFirstLevel(c.cls.hitDie, scoreModifier(abilities.con)),
     speed: c.species.speed,
     spellcastingAbility: spellcastingAbilityOf(c.cls),
+    equipment: gear.equipment,
+    gp: kit.reduce((n, k) => n + k.gp, 0),
+    attacks: gear.attacks,
+    ...(gear.armor ? { armor: gear.armor } : {}),
     features: [
       ...c.cls.features(1).map((f) => ({
         id: id('feature'),
