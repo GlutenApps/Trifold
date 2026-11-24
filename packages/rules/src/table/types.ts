@@ -1,7 +1,7 @@
 import type { AreaOutline } from '../areaShapes';
 import type { TableRoll } from './rolls';
 import type { FogShapeLike } from '../fog';
-import type { TableNumbers } from '@trifold/schema';
+import type { PlayerSheet, TableNumbers } from '@trifold/schema';
 
 /**
  * A player's character's table numbers offered to the GM's PC card (docs/PLAYER-MODE.md, Sheet
@@ -436,7 +436,12 @@ export type ClientMessage =
    * Without `creatureId`, a device holding nothing asks the GM to add the character as a new PC
    * (ADR 0072); `label` is the name the GM's device list shows.
    */
-  | { type: 'sheetOffer'; creatureId?: string; offer: SheetOffer; label?: string };
+  | { type: 'sheetOffer'; creatureId?: string; offer: SheetOffer; label?: string }
+  /**
+   * The held PC's sheet from the player's linked character, for the GM to read on the PC card
+   * (ADR 0078); null when the player unlinks it. It changes nothing on the card.
+   */
+  | { type: 'sheetShare'; creatureId: string; character: PlayerSheet | null };
 
 /** What main hands the console to do about summons. */
 export type TableSummonEvent =

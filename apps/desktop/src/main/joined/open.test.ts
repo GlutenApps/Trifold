@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlayerLink, ServerMessage, SheetOffer } from '@trifold/api';
-import { TableNumbers } from '@trifold/schema';
+import { TableNumbers, type PlayerSheet } from '@trifold/schema';
 import { LibraryStore } from '../library/LibraryStore';
 import type { LibrarySession } from '../library/session';
 import type { FoundTable } from '../table/mdns';
@@ -74,6 +74,7 @@ describe('JoinedService: an open campaign', () => {
       enabled?: boolean;
       fetched?: Uint8Array | null;
       characterOffer?: (id: string) => Promise<SheetOffer | null>;
+      characterSheet?: (id: string) => Promise<PlayerSheet | null>;
     } = {},
   ) {
     const store = await LibraryStore.open(root);
@@ -106,6 +107,9 @@ describe('JoinedService: an open campaign', () => {
       fetchShared,
       onShared: (campaignId, records) => void shared.push(`${campaignId}:${records}`),
       ...(options.characterOffer ? { characterOffer: options.characterOffer } : {}),
+      ...(options.characterSheet
+        ? { characterSheet: options.characterSheet, shareDelayMs: 5 }
+        : {}),
     });
     made.push(service);
     const file = async () =>
@@ -233,6 +237,62 @@ describe('JoinedService: an open campaign', () => {
     service.characterChanged('K2');
     await new Promise((r) => setTimeout(r, 20));
     expect(offers()).toHaveLength(2);
+  });
+
+  it('shares the linked sheet for the PC held, again only when it changes, and takes it back on Unlink (ADR 0078)', async () => {
+    let sheet: PlayerSheet = {
+      schemaVersion: 1,
+      id: 'K1',
+      name: 'Bren',
+      kind: 'external',
+      edition: '2024',
+      numbers: TableNumbers.parse({ classText: 'Rogue 3', level: 3 }),
+      createdAt: '2026-11-24T00:00:00.000Z',
+      updatedAt: '2026-11-24T00:00:00.000Z',
+    };
+    const { service, net } = await setup({ characterSheet: async () => sheet });
+    await service.open('c1');
+    const ws = net.all[0]!;
+    const shares = () => ws.sent.filter((m) => m.type === 'sheetShare');
+    const state = (mine: string[]): ServerMessage => ({
+      type: 'state',
+      campaignName: 'Greyford',
+      live: true,
+      mine: mine.map((id) => ({
+        kind: 'pc' as const,
+        id,
+        name: 'Brannoc',
+        hp: { current: 20, max: 24, temp: 0 },
+        ac: 16,
+        conditions: [],
+        inFight: false,
+        needsInitiative: false,
+        editable: { hp: true, maxHp: true, ac: true, conditions: true },
+        movementLocked: false,
+      })),
+      picker: [],
+      map: null,
+      reclaimMode: 'open',
+    });
+    ws.receive(campaign);
+    // Holding a PC with nothing linked: nothing to share, and nothing to take back.
+    ws.receive(state(['p1']));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(shares()).toEqual([]);
+    await service.linkCharacter('c1', 'K1');
+    await vi.waitFor(() => expect(shares()).toHaveLength(1));
+    expect(shares()[0]).toEqual({ type: 'sheetShare', creatureId: 'p1', character: sheet });
+    // Saved again unchanged: nothing more. Changed: shared again.
+    service.characterChanged('K1');
+    await new Promise((r) => setTimeout(r, 30));
+    expect(shares()).toHaveLength(1);
+    sheet = { ...sheet, name: 'Bren the Bold' };
+    service.characterChanged('K1');
+    await vi.waitFor(() => expect(shares()).toHaveLength(2));
+    // Unlinked: the GM's copy is taken back.
+    await service.linkCharacter('c1', null);
+    await vi.waitFor(() => expect(shares()).toHaveLength(3));
+    expect(shares()[2]).toEqual({ type: 'sheetShare', creatureId: 'p1', character: null });
   });
 
   it('goes where the search finds the table when the old address stops answering', async () => {

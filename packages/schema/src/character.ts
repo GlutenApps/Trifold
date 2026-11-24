@@ -308,3 +308,11 @@ export const Character = z.object({
   updatedAt: IsoDateTime,
 });
 export type Character = z.infer<typeof Character>;
+
+/**
+ * A player's character as their Trifold shares it with the GM's (ADR 0078), to read on the PC
+ * card: everything the sheet shows. The private notes and the builder's choices stay with the
+ * player.
+ */
+export const PlayerSheet = Character.omit({ notes: true, build: true });
+export type PlayerSheet = z.infer<typeof PlayerSheet>;

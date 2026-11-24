@@ -11,6 +11,7 @@ import { TrifoldSheet } from '../character/TrifoldSheet';
 import { GuidedBuilder } from '../character/builder/GuidedBuilder';
 import { GuidedBuilder2014 } from '../character/builder/GuidedBuilder2014';
 import { PdfImport } from '../character/PdfImport';
+import { SheetSetup } from './SheetSetup';
 import { FormSheet, FormsSection } from '../character/Forms';
 import { useJoinedStore } from '../../stores/joinedStore';
 import { HeldConditions } from '../campaign/HeldConditions';
@@ -343,11 +344,14 @@ export function SheetsPage() {
         )
       ) : (
         <div className="sheets-empty">
-          <p className="muted" role="status">
-            {!loaded
-              ? 'Reading your characters…'
-              : 'No character is linked to this campaign yet. Link one from your Library, or make a new one, under My characters.'}
-          </p>
+          {!loaded ? (
+            <p className="muted" role="status">
+              Reading your characters…
+            </p>
+          ) : (
+            // The same choices as above the map (ADR 0078), for the PC held if there is one.
+            <SheetSetup pcName={mine.find((c) => c.kind === 'pc')?.name} />
+          )}
         </div>
       )}
     </div>

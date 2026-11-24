@@ -284,6 +284,10 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
 
     // Picking a character puts the player on the map the TV shows, with its picture from main.
     await table.getByRole('button', { name: /Brannoc Hale/ }).click();
+    // No sheet is linked yet, so the player is asked for one above the map (ADR 0078).
+    await expect(table.getByRole('region', { name: 'Your sheet for Brannoc Hale' })).toBeVisible({
+      timeout: 15_000,
+    });
     const mapImage = table.locator('.pc-map image, .pc-map img').first();
     await expect(table.locator('.pc-map')).toBeVisible({ timeout: 15_000 });
     await expect(mapImage).toBeAttached({ timeout: 15_000 });
@@ -386,6 +390,20 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(offerRow).toHaveCount(0);
     await expect(page.getByTestId('sheet-answer')).toContainText('took its numbers');
     await expect(row).toContainText('AC 13', { timeout: 10_000 });
+    // Linked, the setup card is gone, and the GM reads the sheet on the PC card (ADR 0078).
+    await expect(table.getByTestId('sheet-setup')).toHaveCount(0);
+    await gmPage.keyboard.press('Escape');
+    await gmPage.getByRole('tab', { name: 'Campaign', exact: true }).click();
+    await gmPage.getByRole('tab', { name: /^Party/ }).click();
+    await gmPage.getByRole('button', { name: 'Read Brannoc Hale’s sheet' }).click({
+      timeout: 15_000,
+    });
+    const shared = gmPage.getByTestId('player-sheet');
+    await expect(shared).toContainText('Shared from Sam’s Trifold');
+    await expect(shared.getByTestId('sheet-view').getByLabel('Numbers')).toContainText('13');
+    await gmPage.getByRole('button', { name: 'Back to the party' }).click();
+    await gmPage.keyboard.press(`${gmMod}+t`);
+    await gmPage.getByRole('button', { name: 'Player devices', exact: true }).click();
 
     // New PC from player sheet (ADR 0072): holding nothing, the player asks the GM to add their
     // character; the GM adds it, and the new card is the player's at once.

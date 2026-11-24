@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { MonsterRecord, NPC, PCCard } from '@trifold/schema';
+import type { Character, MonsterRecord, NPC, PCCard } from '@trifold/schema';
 import { landOn, navKey, useNavTarget } from '../../navigate';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useCompendiumStore } from '../../stores/compendiumStore';
 import { useShellStore } from '../../stores/shellStore';
 import { StatBlock } from '../compendium/StatBlock';
+import { SheetView } from '../character/SheetView';
 import { mediaUrl } from '@trifold/api';
 import { ArtThumb } from '../shell/ArtThumb';
 import { tokenArtUrl } from '../presenter/tokenArt';
@@ -81,7 +82,49 @@ type TabView<T> =
        */
       added?: { creatureId: string | null; query: string };
     }
-  | { kind: 'copy'; mode?: AddNpcMode; query?: string };
+  | { kind: 'copy'; mode?: AddNpcMode; query?: string }
+  /** A player's sheet, shared from their Trifold (ADR 0078), to read. */
+  | { kind: 'sheet'; id: string };
+
+/**
+ * A player's sheet as their Trifold shared it (ADR 0078), read-only: the player owns it, and
+ * only its table numbers reach the card, through Accept (ADR 0071).
+ */
+function PlayerSheetView({ pc, onBack }: { pc: PCCard; onBack(): void }) {
+  const shared = pc.playerSheet!;
+  const character: Character = { ...shared.character, notes: '' };
+  return (
+    <div className="card player-sheet-view" data-testid="player-sheet">
+      <div className="row">
+        <button
+          type="button"
+          className="chrome-btn"
+          aria-label="Back to the party"
+          title="Back to the party"
+          onClick={onBack}
+        >
+          <Icon name="left" />
+        </button>
+        <h2 className="grow">{pc.name}</h2>
+      </div>
+      <p className="muted small" role="status">
+        Shared from {shared.from ? `${shared.from}’s` : 'the player’s'} Trifold,{' '}
+        {sharedWhen(shared.sharedAt)}. The player keeps it up to date; you can read it here.
+      </p>
+      <SheetView character={character} />
+    </div>
+  );
+}
+
+/** "today at 7:40 PM" or the date, for when a sheet was shared. */
+function sharedWhen(iso: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return 'some time ago';
+  const time = at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return at.toDateString() === new Date().toDateString()
+    ? `today at ${time}`
+    : `${at.toLocaleDateString()} at ${time}`;
+}
 
 function PartyTab() {
   const current = useCampaignStore((s) => s.current);
@@ -103,7 +146,12 @@ function PartyTab() {
         key={view.key}
         pc={view.item}
         onCancel={() => toList()}
-        onSave={(pc, another) => {
+        onSave={(edited, another) => {
+          // The player's sheet is theirs (ADR 0078): the card keeps the one shared last, even if
+          // a new one arrived while the form was open.
+          const latest = useCampaignStore.getState().current?.pcs.find((p) => p.id === edited.id);
+          const { playerSheet: _shown, ...rest } = edited;
+          const pc = latest?.playerSheet ? { ...rest, playerSheet: latest.playerSheet } : rest;
           void savePc(pc).then((saved) => {
             if (!saved) return;
             if (another) setView({ kind: 'edit', item: blankPc(), key: view.key + 1 });
@@ -111,6 +159,19 @@ function PartyTab() {
           });
         }}
       />
+    );
+  }
+  if (view.kind === 'sheet') {
+    const pc = current.pcs.find((p) => p.id === view.id);
+    return pc?.playerSheet ? (
+      <PlayerSheetView pc={pc} onBack={() => toList(pc.id)} />
+    ) : (
+      <div className="card">
+        <p className="muted">This player’s sheet is no longer shared.</p>
+        <button type="button" className="btn" onClick={() => toList()}>
+          Back to the party
+        </button>
+      </div>
     );
   }
   if (view.kind === 'copy') {
@@ -209,6 +270,17 @@ function PartyTab() {
                 />
               ) : (
                 <span className="row-actions">
+                  {pc.playerSheet && (
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-label={`Read ${pc.name}’s sheet`}
+                      title={`Read the sheet ${pc.playerSheet.from || 'the player'} shared`}
+                      onClick={() => setView({ kind: 'sheet', id: pc.id })}
+                    >
+                      <Icon name="card" />
+                    </button>
+                  )}
                   {pc.sheetUrl && (
                     <button
                       type="button"

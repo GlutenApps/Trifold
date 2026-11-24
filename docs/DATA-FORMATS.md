@@ -328,7 +328,7 @@ Both folders are virtual sources: the index treats each as one source whose hash
 | Path                                  | Contents                                                                                       |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `campaign.json`                       | The campaign: name, slug, preferred edition, active adventure, and `settings` (player-window overlays, token style, HP display, initiative mode, the summon list) |
-| `pcs/<id>.json`                       | PC cards; `currentHp` and `tempHp` carry over between fights, absent means full                |
+| `pcs/<id>.json`                       | PC cards; `currentHp` and `tempHp` carry over between fights, absent means full; `playerSheet` (`{ character, from, sharedAt }`) is the sheet a player's Trifold last shared, read-only (ADR 0078) |
 | `npcs/<id>.json`                      | NPCs: optional stat block (`recordRef`), portrait, role, location, notes, alive or dead, HP from their last fight, and `companionOf` (the PC id an NPC companion belongs to) |
 | `encounters/<id>.json`                | Encounters: combatant templates, the live fight in `state` (autosaved, null between fights) and `results` with each finished fight's log |
 | `adventures/<id>.json`                | Adventures                                                                                     |

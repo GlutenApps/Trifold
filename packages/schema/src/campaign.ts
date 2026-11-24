@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Ability, Edition, IsoDateTime } from './common';
+import { PlayerSheet } from './character';
 import { RecordRef } from './record';
 
 /** Campaign folder objects (DESIGN.md §5.2, DATA-FORMATS.md §5.4). One JSON file per object. */
@@ -139,6 +140,19 @@ export const PCCard = z.object({
     .string()
     .max(2000)
     .regex(/^https?:\/\/\S+$/i)
+    .optional(),
+  /**
+   * The player's character sheet as their Trifold last shared it (ADR 0078), to read here. The
+   * player owns it and it changes nothing on the card: its table numbers still reach the card
+   * only through Accept (ADR 0071).
+   */
+  playerSheet: z
+    .object({
+      character: PlayerSheet,
+      /** The device's name in Player devices when it was shared. */
+      from: z.string().max(80).default(''),
+      sharedAt: IsoDateTime,
+    })
     .optional(),
   notes: z.string().default(''),
   tokenStyleOverride: z.enum(['engraved', 'flat', 'twoTone', 'plain']).optional(),

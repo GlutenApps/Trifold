@@ -4,6 +4,19 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.5.0-beta.2] - 2026-11-24
+
+Fixes from the first table test of player mode, and a way to set up a character when you sit down.
+
+### Added
+
+- **Your sheet for …** (ADR 0078): pick a PC with no sheet and the VTT tab asks for one above the map: use a character from your Library (one named like the PC first), **Build one**, **Import from PDF**, or **Not now**. Holding nothing, **Bringing a new character?** under the list does the same before you ask your GM to add it, and the Sheets tab offers the same choices.
+- **Read a player's sheet** (ADR 0078): a linked player's sheet is shared with the GM's Trifold and kept on their PC card. **Read <name>'s sheet** on the Party tab opens it read-only, kept up to date as the player changes it. Private notes stay with the player.
+
+### Fixed
+
+- **Cancel and Move here** in the player console's Move banner can be clicked; they could not.
+
 ## [0.5.0-beta.1] - 2026-11-24
 
 Player mode: players run Trifold on their own computer and join the GM's table on the local network, with their own characters. A pre-release for table testing.

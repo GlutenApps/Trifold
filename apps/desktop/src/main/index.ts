@@ -22,7 +22,7 @@ import { createSplashWindow, Splash } from './splash';
 import { TableHub } from './table/hub';
 import { JoinedService } from './joined/service';
 import { CharactersRepository } from './characters';
-import { tableNumbers } from '@trifold/rules';
+import { playerSheetOf, tableNumbers } from '@trifold/rules';
 import { NsisSelfInstaller, selfUpdateBlocker } from './updateInstaller';
 import { UpdateService, releaseFolder } from './updates';
 import { UPDATE_PUBLIC_KEYS } from './updateSignature';
@@ -197,6 +197,7 @@ async function main(): Promise<void> {
     onStatus: (status) => windows.sendToConsole(EVENT_CHANNELS.tableStatus, status),
     onIntent: (intent) => windows.sendToConsole(EVENT_CHANNELS.tableIntent, intent),
     onSheet: (event) => windows.sendToConsole(EVENT_CHANNELS.tableSheet, event),
+    onSheetShare: (event) => windows.sendToConsole(EVENT_CHANNELS.tableSheetShare, event),
     onToken: (event) => windows.sendToConsole(EVENT_CHANNELS.tableToken, event),
     onSummon: (event) => windows.sendToConsole(EVENT_CHANNELS.tableSummon, event),
     onRoll: (roll) => windows.sendToConsole(EVENT_CHANNELS.tableRoll, roll),
@@ -250,6 +251,13 @@ async function main(): Promise<void> {
         numbers: tableNumbers(character),
         ...(character.sheetUrl ? { sheetUrl: character.sheetUrl } : {}),
       };
+    },
+    // A linked character's sheet, shared for the GM to read on the PC card (ADR 0078).
+    characterSheet: async (characterId) => {
+      const store = activeSession.store;
+      if (!store) return null;
+      const character = await new CharactersRepository(store, logger).get(characterId);
+      return character ? playerSheetOf(character) : null;
     },
     // Pictures from a GM's table are derived data: beside the app's settings, not in the Library.
     cacheDir: join(app.getPath('userData'), 'table-cache'),

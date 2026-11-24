@@ -1,6 +1,6 @@
 {
   "name": "@trifold/desktop",
-  "version": "0.5.0-beta.1",
+  "version": "0.5.0-beta.2",
   "private": true,
   "license": "GPL-3.0-or-later",
   "description": "Trifold desktop app: a local DM console for 5e-compatible games.",
