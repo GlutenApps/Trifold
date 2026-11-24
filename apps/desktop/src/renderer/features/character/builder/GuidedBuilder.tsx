@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   ABILITY_NAMES,
   buildSheet2024,
+  featCategory,
   maxSpellLevel,
   spellCounts,
   deriveSheet,
@@ -98,6 +99,11 @@ function BuilderSteps({
   const [classSkills, setClassSkills] = useState<Skill[]>([]);
   const [backgroundKey, setBackgroundKey] = useState('');
   const [speciesKey, setSpeciesKey] = useState('');
+  /** Legacy options (docs/BUILDER.md): SRD 5.1 backgrounds and species, used the 2024 way. */
+  const [legacy, setLegacy] = useState(false);
+  const [originFeatKey, setOriginFeatKey] = useState('');
+  /** A legacy background's +1 to three abilities, picked from all six. */
+  const [threeAbilities, setThreeAbilities] = useState<Ability[]>([]);
   const [size, setSize] = useState<'Small' | 'Medium'>('Medium');
   const [languages, setLanguages] = useState('Common');
   const [method, setMethod] = useState<Method>('standard');
@@ -123,7 +129,18 @@ function BuilderSteps({
   const [spellFilter, setSpellFilter] = useState('');
 
   const cls = options.classes.find((c) => c.option.key === classKey);
-  const background = options.backgrounds.find((b) => b.option.key === backgroundKey);
+  // A key names its edition, since a 2014 and a 2024 background can share one.
+  const pickKey = (o: { key: string; legacy?: boolean }) =>
+    `${o.legacy ? '2014' : '2024'}:${o.key}`;
+  const backgroundList = [...options.backgrounds, ...(legacy ? options.legacyBackgrounds : [])];
+  const speciesList = [...options.species, ...(legacy ? options.legacySpecies : [])];
+  const background = backgroundList.find((b) => pickKey(b.option) === backgroundKey);
+  const originFeats = options.feats.filter((f) => featCategory(f) === 'origin');
+  const originFeat = originFeats.find((f) => f.key === originFeatKey);
+  /** The abilities the increase may go to: the background's three, or any for a legacy one. */
+  const increaseAbilities = background?.option.legacy
+    ? ABILITIES
+    : (background?.option.abilities ?? []);
   // Casters pick cantrips and prepared spells at 1st level, from their class's list.
   const counts = cls ? spellCounts(cls.option, 1) : { cantrips: 0, prepared: 0 };
   const topLevel = cls ? maxSpellLevel(cls.option, 1) : 0;
@@ -137,7 +154,7 @@ function BuilderSteps({
   const casts = counts.cantrips + counts.prepared > 0 && classSpells.length > 0;
   const steps = STEPS.filter((x) => x.id !== 'spells' || casts);
   const order = steps.map((x) => x.id);
-  const species = options.species.find((s) => s.option.key === speciesKey);
+  const species = speciesList.find((s) => pickKey(s.option) === speciesKey);
   const pool = useMemo(
     () => (method === 'standard' ? [...STANDARD_ARRAY] : (rolled?.map((r) => r.score) ?? [])),
     [method, rolled],
@@ -160,14 +177,18 @@ function BuilderSteps({
   const increase: CharacterBuild['increase'] | null = !background
     ? null
     : increaseMode === 'all'
-      ? { all: [...background.option.abilities] }
+      ? background.option.legacy
+        ? threeAbilities.length === 3
+          ? { all: [...threeAbilities] }
+          : null
+        : { all: [...background.option.abilities] }
       : plus2 && plus1 && plus2 !== plus1
         ? { plus2, plus1 }
         : null;
 
   const ready: Record<Step, boolean> = {
     class: !!cls && classSkills.length === cls.option.skills.choose,
-    origin: !!background && !!species,
+    origin: !!background && !!species && (!background.option.legacy || !!originFeat),
     abilities: !!baseScores && !!increase && (method !== 'pointBuy' || spent <= POINT_BUY_BUDGET),
     equipment: true,
     spells: true,
@@ -189,6 +210,14 @@ function BuilderSteps({
             )?.data.text ?? '',
           species: species.option,
           speciesRef: species.ref,
+          ...(background.option.legacy && originFeat
+            ? {
+                originFeat: {
+                  ref: { kind: 'feat' as const, key: originFeat.key, name: originFeat.displayName },
+                  text: originFeat.data.text,
+                },
+              }
+            : {}),
           size,
           abilityMethod: method,
           baseScores,
@@ -297,47 +326,99 @@ function BuilderSteps({
 
       {step === 'origin' && (
         <div className="builder-step" data-testid="builder-origin">
+          {(options.legacyBackgrounds.length > 0 || options.legacySpecies.length > 0) && (
+            <label className="field inline">
+              <input
+                type="checkbox"
+                checked={legacy}
+                onChange={(e) => {
+                  setLegacy(e.target.checked);
+                  if (!e.target.checked) {
+                    if (backgroundKey.startsWith('2014:')) setBackgroundKey('');
+                    if (speciesKey.startsWith('2014:')) setSpeciesKey('');
+                  }
+                }}
+              />
+              Include legacy (2014) backgrounds and species, used the 2024 way
+            </label>
+          )}
           <h3>Background</h3>
           <ul className="builder-choices" aria-label="Backgrounds">
-            {options.backgrounds.map(({ option: b }) => (
-              <li key={b.key}>
-                <label className={`builder-choice${backgroundKey === b.key ? ' on' : ''}`}>
+            {backgroundList.map(({ option: b }) => (
+              <li key={pickKey(b)}>
+                <label className={`builder-choice${backgroundKey === pickKey(b) ? ' on' : ''}`}>
                   <input
                     type="radio"
                     name="builder-background"
-                    checked={backgroundKey === b.key}
+                    checked={backgroundKey === pickKey(b)}
                     onChange={() => {
-                      setBackgroundKey(b.key);
+                      setBackgroundKey(pickKey(b));
                       setPlus2('');
                       setPlus1('');
+                      setThreeAbilities([]);
                     }}
                   />
                   <span>
-                    <strong>{b.name}</strong>
+                    <strong>
+                      {b.name}
+                      {b.legacy && (
+                        <>
+                          {' '}
+                          <span className="badge">legacy</span>
+                        </>
+                      )}
+                    </strong>
                     <span className="muted small">
-                      {b.abilities.map(abbr).join(', ')} · {b.feat} · {b.skills.join(', ')}
+                      {b.legacy
+                        ? `Any three abilities · an origin feat · ${b.skills.join(', ')}`
+                        : `${b.abilities.map(abbr).join(', ')} · ${b.feat} · ${b.skills.join(', ')}`}
                     </span>
                   </span>
                 </label>
               </li>
             ))}
           </ul>
+          {background?.option.legacy && (
+            <label className="field">
+              Origin feat
+              <select
+                aria-label="Origin feat"
+                value={originFeatKey}
+                onChange={(e) => setOriginFeatKey(e.target.value)}
+              >
+                <option value="">Choose an origin feat…</option>
+                {originFeats.map((f) => (
+                  <option key={f.key} value={f.key}>
+                    {f.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <h3>Species</h3>
           <ul className="builder-choices" aria-label="Species">
-            {options.species.map(({ option: s }) => (
-              <li key={s.key}>
-                <label className={`builder-choice${speciesKey === s.key ? ' on' : ''}`}>
+            {speciesList.map(({ option: s }) => (
+              <li key={pickKey(s)}>
+                <label className={`builder-choice${speciesKey === pickKey(s) ? ' on' : ''}`}>
                   <input
                     type="radio"
                     name="builder-species"
-                    checked={speciesKey === s.key}
+                    checked={speciesKey === pickKey(s)}
                     onChange={() => {
-                      setSpeciesKey(s.key);
+                      setSpeciesKey(pickKey(s));
                       setSize(s.sizes.includes('Medium') ? 'Medium' : s.sizes[0]!);
                     }}
                   />
                   <span>
-                    <strong>{s.name}</strong>
+                    <strong>
+                      {s.name}
+                      {s.legacy && (
+                        <>
+                          {' '}
+                          <span className="badge">legacy</span>
+                        </>
+                      )}
+                    </strong>
                     <span className="muted small">
                       {s.sizes.join(' or ')} · speed {s.speed} ·{' '}
                       {s.traits.map((t) => t.name).join(', ')}
@@ -471,7 +552,9 @@ function BuilderSteps({
           {background && (
             <fieldset className="builder-increase">
               <legend>
-                {background.option.name} raises {background.option.abilities.map(abbr).join(', ')}
+                {background.option.legacy
+                  ? `${background.option.name} raises any abilities`
+                  : `${background.option.name} raises ${background.option.abilities.map(abbr).join(', ')}`}
               </legend>
               <label className="field inline">
                 <input
@@ -491,6 +574,29 @@ function BuilderSteps({
                 />
                 +1 to all three
               </label>
+              {increaseMode === 'all' && background.option.legacy && (
+                <div className="row">
+                  {ABILITIES.map((a) => {
+                    const on = threeAbilities.includes(a);
+                    return (
+                      <label key={a} className="field inline">
+                        <input
+                          type="checkbox"
+                          aria-label={`Plus 1 to ${ABILITY_NAMES[a]}`}
+                          checked={on}
+                          disabled={!on && threeAbilities.length >= 3}
+                          onChange={(e) =>
+                            setThreeAbilities((list) =>
+                              e.target.checked ? [...list, a] : list.filter((x) => x !== a),
+                            )
+                          }
+                        />
+                        {abbr(a)}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
               {increaseMode === 'twoOne' && (
                 <div className="row">
                   <select
@@ -499,7 +605,7 @@ function BuilderSteps({
                     onChange={(e) => setPlus2(e.target.value as Ability)}
                   >
                     <option value="">+2 to…</option>
-                    {background.option.abilities.map((a) => (
+                    {increaseAbilities.map((a) => (
                       <option key={a} value={a}>
                         {ABILITY_NAMES[a]}
                       </option>
@@ -511,7 +617,7 @@ function BuilderSteps({
                     onChange={(e) => setPlus1(e.target.value as Ability)}
                   >
                     <option value="">+1 to…</option>
-                    {background.option.abilities
+                    {increaseAbilities
                       .filter((a) => a !== plus2)
                       .map((a) => (
                         <option key={a} value={a}>

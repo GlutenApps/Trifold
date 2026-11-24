@@ -7,7 +7,13 @@ import type {
   CompendiumRecord,
   SpeciesRecord,
 } from '@trifold/schema';
-import { readBackground, readClass, readSpecies } from '@trifold/rules';
+import {
+  readBackground,
+  readClass,
+  readLegacyBackground,
+  readLegacySpecies,
+  readSpecies,
+} from '@trifold/rules';
 
 /**
  * The builder's readers against the bundled SRD 5.2.1 snapshot itself (docs/BUILDER.md), when it
@@ -46,3 +52,40 @@ describe.skipIf(records.length === 0)('the builder reads the bundled SRD 5.2.1',
     for (const s of species) expect(readSpecies(s).speed, s.displayName).toBeGreaterThanOrEqual(25);
   });
 });
+
+const LEGACY = join(__dirname, '..', '..', '..', '..', 'resources', 'srd-2014.jsonl');
+const legacy: CompendiumRecord[] = existsSync(LEGACY)
+  ? readFileSync(LEGACY, 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l) as CompendiumRecord)
+  : [];
+
+describe.skipIf(legacy.length === 0)(
+  'the builder reads the bundled SRD 5.1 as legacy options',
+  () => {
+    it('reads every background, the base species with their speed, and leaves subraces out', () => {
+      for (const b of legacy.filter((r): r is BackgroundRecord => r.kind === 'background')) {
+        expect(readLegacyBackground(b).skills.length, b.displayName).toBeGreaterThan(0);
+      }
+      const species = legacy.filter((r): r is SpeciesRecord => r.kind === 'species');
+      const read = species.flatMap((s) => {
+        const option = readLegacySpecies(s);
+        return option ? [option] : [];
+      });
+      expect(read.map((s) => s.name).sort()).toEqual([
+        'Dragonborn',
+        'Dwarf',
+        'Elf',
+        'Gnome',
+        'Half-Elf',
+        'Half-Orc',
+        'Halfling',
+        'Human',
+        'Tiefling',
+      ]);
+      expect(read.find((s) => s.name === 'Dwarf')?.speed).toBe(25);
+      expect(read.find((s) => s.name === 'Halfling')?.sizes).toEqual(['Small']);
+    });
+  },
+);

@@ -122,6 +122,13 @@ export interface BackgroundOption {
   skills: string[];
   tool: string;
   equipment: string[];
+  /**
+   * An older (2014) background, used the 2024 way (docs/BUILDER.md, Legacy options): its
+   * increase goes to any three abilities and an origin feat is picked; `abilities` and `feat`
+   * are empty. Its own features are kept.
+   */
+  legacy?: boolean;
+  features?: Array<{ name: string; text: string }>;
 }
 
 /** A background record as the builder reads it; null without its ability scores and feat. */
@@ -153,6 +160,8 @@ export interface SpeciesOption {
   speed: number;
   /** Its traits other than size and speed, as written. */
   traits: Array<{ name: string; text: string }>;
+  /** An older (2014) species: its ability score increases are left out, the 2024 way. */
+  legacy?: boolean;
 }
 
 export function readSpecies(record: SpeciesRecord): SpeciesOption {
@@ -166,6 +175,58 @@ export function readSpecies(record: SpeciesRecord): SpeciesOption {
     traits: record.data.traits
       .filter((t) => t.category !== 'size' && t.category !== 'speed')
       .map((t) => ({ name: t.name, text: t.text })),
+  };
+}
+
+/**
+ * An SRD 5.1 (2014) background used under the 2024 rules: its skills, equipment and features;
+ * the increase and the origin feat are the player's to pick.
+ */
+export function readLegacyBackground(record: BackgroundRecord): BackgroundOption {
+  const trait = (category: string) =>
+    record.data.traits.find((t) => t.category === category)?.text.trim() ?? '';
+  return {
+    key: record.key,
+    name: record.displayName,
+    abilities: [],
+    feat: '',
+    featName: '',
+    skills: splitList(trait('skill_proficiency') || record.data.proficiency || ''),
+    tool: trait('tool_proficiency'),
+    equipment: trait('equipment') ? [trait('equipment')] : [],
+    legacy: true,
+    features: record.data.traits
+      .filter((t) => t.category === 'feature')
+      .map((t) => ({ name: t.name, text: t.text })),
+  };
+}
+
+/** Traits of an SRD 5.1 species that the 2024 way leaves out or handles elsewhere. */
+const LEGACY_SPECIES_SKIP =
+  /^(description|ability score increase|age|alignment|size|speed|languages)$/i;
+
+/**
+ * An SRD 5.1 (2014) species used under the 2024 rules: size and speed read from their traits,
+ * its other traits kept, its ability score increases left out. Null for a record with no Speed
+ * trait (a subrace, which only adds to its parent).
+ */
+export function readLegacySpecies(record: SpeciesRecord): SpeciesOption | null {
+  const text = (name: string) =>
+    record.data.traits.find((t) => t.name.toLowerCase() === name)?.text ?? '';
+  const speedText = text('speed');
+  const speed = Number(/(\d+)\s*feet/i.exec(speedText)?.[1] ?? 0);
+  if (!speed) return null;
+  const sizeText = text('size');
+  const size = /\bsmall\b/i.test(sizeText) ? 'Small' : 'Medium';
+  return {
+    key: record.key,
+    name: record.displayName,
+    sizes: [size],
+    speed,
+    traits: record.data.traits
+      .filter((t) => !LEGACY_SPECIES_SKIP.test(t.name) && t.category !== 'description')
+      .map((t) => ({ name: t.name, text: t.text })),
+    legacy: true,
   };
 }
 

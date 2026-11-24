@@ -9,6 +9,8 @@ import {
   pointBuySpent,
   readBackground,
   readClass,
+  readLegacyBackground,
+  readLegacySpecies,
   readSpecies,
   rollAbilityScore,
   maxSpellLevel,
@@ -336,5 +338,89 @@ describe('the builder’s rules arithmetic', () => {
     const pact = readClass(warlock)!;
     expect(spellSlots(pact, 1)).toEqual([1]);
     expect(spellSlots(pact, 5)).toEqual([0, 0, 2]);
+  });
+});
+
+describe('legacy (SRD 5.1) options, used the 2024 way (docs/BUILDER.md)', () => {
+  const old = { schemaVersion: 1, id: 'y', sourceId: 'srd-2014', edition: '2014', tags: [] };
+  const trait = (name: string, text: string, category?: string) => ({
+    name,
+    text,
+    ...(category ? { category } : {}),
+    rolls: [],
+    modifiers: [],
+  });
+
+  it('reads an older background: skills, equipment and its feature, no abilities or feat', () => {
+    const acolyte = {
+      ...old,
+      kind: 'background',
+      key: 'acolyte',
+      name: 'Acolyte',
+      displayName: 'Acolyte',
+      data: {
+        proficiency: 'Insight, Religion',
+        traits: [
+          trait('Equipment', 'A holy symbol, a prayer book and 15 gp', 'equipment'),
+          trait('Shelter of the Faithful', 'You command the respect of the faithful.', 'feature'),
+          trait('Skill Proficiencies', 'Insight, Religion', 'skill_proficiency'),
+        ],
+        modifiers: [],
+        extra: {},
+      },
+    } as unknown as BackgroundRecord;
+    expect(readLegacyBackground(acolyte)).toEqual({
+      key: 'acolyte',
+      name: 'Acolyte',
+      abilities: [],
+      feat: '',
+      featName: '',
+      skills: ['Insight', 'Religion'],
+      tool: '',
+      equipment: ['A holy symbol, a prayer book and 15 gp'],
+      legacy: true,
+      features: [
+        { name: 'Shelter of the Faithful', text: 'You command the respect of the faithful.' },
+      ],
+    });
+  });
+
+  it('reads an older species from its traits, without its ability score increase; a subrace is left out', () => {
+    const species = (key: string, traits: unknown[]) =>
+      ({
+        ...old,
+        kind: 'species',
+        key,
+        name: key,
+        displayName: key,
+        data: { spells: [], traits, extra: {} },
+      }) as unknown as SpeciesRecord;
+    const dwarf = species('Dwarf', [
+      trait('Description', 'Bold and hardy.', 'description'),
+      trait('Ability Score Increase', 'Your Constitution score increases by 2.'),
+      trait('Speed', 'Your base walking speed is 25 feet.'),
+      trait('Size', 'Your size is Medium.'),
+      trait('Darkvision', 'You can see in dim light within 60 feet.'),
+    ]);
+    expect(readLegacySpecies(dwarf)).toEqual({
+      key: 'Dwarf',
+      name: 'Dwarf',
+      sizes: ['Medium'],
+      speed: 25,
+      traits: [{ name: 'Darkvision', text: 'You can see in dim light within 60 feet.' }],
+      legacy: true,
+    });
+    const halfling = species('Halfling', [
+      trait('Speed', 'Your base walking speed is 25 feet.'),
+      trait('Size', 'Your size is Small.'),
+    ]);
+    expect(readLegacySpecies(halfling)?.sizes).toEqual(['Small']);
+    expect(
+      readLegacySpecies(
+        species('Hill Dwarf', [
+          trait('Dwarven Toughness', 'Your hit point maximum increases by 1.'),
+        ]),
+      ),
+    ).toBeNull();
   });
 });
