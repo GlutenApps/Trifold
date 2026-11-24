@@ -4,6 +4,10 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.5.0-beta.3] - 2026-11-24
+
+Trifold opens on your campaigns list every time, and no longer gets stuck on the loading screen.
+
 ### Changed
 
 - **Trifold opens on Library › Campaigns** every time, rather than in the campaign open when it last closed. Opening the campaign brings its console back as you left it.
