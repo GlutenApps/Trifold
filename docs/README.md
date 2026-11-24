@@ -17,6 +17,7 @@ Welcome. Start with the user guide if you're running or playing games with Trifo
 | [Player connector](PLAYER-CONNECTOR.md)      | How players join from their phones over the local network, and what each screen does.          |
 | [Player mode](PLAYER-MODE.md)                | Playing in a campaign from Trifold itself: the plan, what is built, and the schedule to release. |
 | [Character builder](BUILDER.md)             | The character builder: where its rules come from, the flow, Level up and legacy options.       |
+| [Character sheet dev list](CHARACTER-SHEET.md) | What the character sheet could do next, from an audit of other 5e sheets, sized and prioritised. |
 | [Deep links](DEEP-LINKS.md)                  | How one part of the app opens an item in another, as global search does.                       |
 | [UI guidelines](UI-GUIDELINES.md)            | Control sizes, the shared patterns for common actions, and how panels behave at narrow widths.  |
 | [Design tokens](TOKENS.md)                   | The colours, type and sizes behind the app's styles.                                             |
