@@ -80,7 +80,7 @@ A joined campaign is a local shell that points at the GM's machine, never a copy
 
 ### The campaign list
 
-`features/library/CampaignsPage.tsx` splits into **Running** and **Playing**. Running is today's list, unchanged. Playing lists joined campaigns with the last time each was live. A Library with no joined campaigns shows no Playing section; **Join a campaign** sits beside Create campaign.
+`features/library/CampaignsPage.tsx` splits into **Running** and **Playing**. Both list the most recently opened first (`compareRecent` in `packages/rules/src/recentCampaigns.ts`): a running campaign's last opening is kept in `library.json` (`campaignOpenedAt`), a joined one's in its `joined.json` (`openedAt`), and one never opened goes by when it last changed, or for a joined one when it was last live or joined. Each card says when it was opened; a Playing card also says when it was last live. Past eight campaigns in all, a filter by name sits above the list. The top bar's switcher lists the five most recent of each kind, always with the open one, and **More campaigns…** when there are more. A Library with no joined campaigns shows no Playing section; **Join a campaign** sits beside Create campaign.
 
 The list does not connect to anything. Whether a GM's table is up is only found out when the player opens a joined campaign.
 

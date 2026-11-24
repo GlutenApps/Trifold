@@ -99,3 +99,47 @@ describe('CampaignsPage create', () => {
     expect(screen.queryByTestId('campaign-create')).toBeNull();
   });
 });
+
+describe('CampaignsPage order and filter', () => {
+  const many = (n: number): CampaignSummary[] =>
+    Array.from({ length: n }, (_, i) => ({
+      ...summary,
+      id: `c${i + 1}`,
+      slug: `c${i + 1}`,
+      name: i === 0 ? 'The Lantern at Greyford' : `Campaign ${i + 1}`,
+    }));
+
+  it('says when each campaign was opened, or when it changed if it has not been', () => {
+    const opened = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+    useCampaignStore.setState({
+      campaigns: [
+        { ...summary, openedAt: opened },
+        { ...summary, id: 'c2', name: 'Old Keep' },
+      ],
+    });
+    render(<CampaignsPage />);
+    expect(screen.getByText('opened 3 days ago')).toBeInTheDocument();
+    expect(
+      screen.getByText(`updated ${new Date(summary.updatedAt).toLocaleDateString()}`),
+    ).toBeInTheDocument();
+  });
+
+  it('offers no filter for a short list', () => {
+    useCampaignStore.setState({ campaigns: many(8) });
+    render(<CampaignsPage />);
+    expect(screen.queryByRole('searchbox', { name: 'Filter campaigns' })).toBeNull();
+  });
+
+  it('filters a long list by name, and says when nothing matches', async () => {
+    const user = userEvent.setup();
+    useCampaignStore.setState({ campaigns: many(9) });
+    render(<CampaignsPage />);
+    const field = screen.getByRole('searchbox', { name: 'Filter campaigns' });
+    await user.type(field, 'grey lantern');
+    expect(screen.getByText('The Lantern at Greyford')).toBeInTheDocument();
+    expect(screen.queryByText('Campaign 2')).toBeNull();
+    await user.clear(field);
+    await user.type(field, 'nothing like it');
+    expect(screen.getByText(/No running campaigns match/)).toBeInTheDocument();
+  });
+});

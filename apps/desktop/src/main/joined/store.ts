@@ -15,7 +15,12 @@ import {
   TableAddress,
   type FileKind,
 } from '@trifold/schema';
-import { quickNoteTitle, sharedSourceId, SHARED_SOURCE_PREFIX } from '@trifold/rules';
+import {
+  compareRecent,
+  quickNoteTitle,
+  sharedSourceId,
+  SHARED_SOURCE_PREFIX,
+} from '@trifold/rules';
 import type { LibraryStore } from '../library/LibraryStore';
 
 /** The player's own files in a joined campaign, one JSON file each. */
@@ -37,7 +42,10 @@ export class JoinedStore {
     return `joined/${JoinedCampaignId.parse(campaignId)}/joined.json`;
   }
 
-  /** Every joined campaign, most recently live first, then by name. Unreadable ones are skipped. */
+  /**
+   * Every joined campaign, most recently opened first (`compareRecent`; one never opened by when
+   * it was last live, else joined), then by name. Unreadable ones are skipped.
+   */
   async list(): Promise<JoinedCampaign[]> {
     let names: string[];
     try {
@@ -51,11 +59,12 @@ export class JoinedStore {
       // A folder renamed by hand is not the campaign its file says it is.
       if (joined && joined.campaignId === name) out.push(joined);
     }
-    return out.sort(
-      (a, b) =>
-        (b.lastLiveAt ?? '').localeCompare(a.lastLiveAt ?? '') ||
-        a.campaignName.localeCompare(b.campaignName),
-    );
+    const recent = (j: JoinedCampaign) => ({
+      name: j.campaignName,
+      openedAt: j.openedAt,
+      fallbackAt: j.lastLiveAt ?? j.joinedAt,
+    });
+    return out.sort((a, b) => compareRecent(recent(a), recent(b)));
   }
 
   async get(campaignId: string): Promise<JoinedCampaign | null> {
@@ -105,6 +114,15 @@ export class JoinedStore {
     const existing = await this.get(campaignId);
     if (!existing) return null;
     const next = JoinedCampaign.parse({ ...existing, ...patch });
+    await this.store.writeJson(this.file(campaignId), next);
+    return next;
+  }
+
+  /** Records that the player opened the campaign now. Null when not joined. */
+  async opened(campaignId: string, now: Date = new Date()): Promise<JoinedCampaign | null> {
+    const existing = await this.get(campaignId);
+    if (!existing) return null;
+    const next = JoinedCampaign.parse({ ...existing, openedAt: now.toISOString() });
     await this.store.writeJson(this.file(campaignId), next);
     return next;
   }

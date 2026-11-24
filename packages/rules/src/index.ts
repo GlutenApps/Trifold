@@ -33,3 +33,4 @@ export * from './character/levelUp';
 export * from './character/resources';
 export * from './character/build2014';
 export * from './character/buildSheet2014';
+export * from './recentCampaigns';

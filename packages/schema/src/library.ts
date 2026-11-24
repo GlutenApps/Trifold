@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { IsoDateTime } from './common';
 import { MusicSettings } from './music';
 
 /**
@@ -263,6 +264,13 @@ export const LibrarySettings = z.object({
    * the Library (ADR 0079). Kept so files that carry it parse as before.
    */
   lastOpenCampaignSlug: z.string().nullable().default(null),
+  /**
+   * When each campaign this Library runs was last opened, by campaign id: the Campaigns page and
+   * the top bar's switcher list the most recent first. Kept here, not in `campaign.json`, so
+   * opening a campaign never changes its files or what an export carries. A joined campaign
+   * keeps its own in `joined.json`. Additive with a default; no schema bump.
+   */
+  campaignOpenedAt: z.record(z.string(), IsoDateTime).default({}),
   theme: z.enum(['dark', 'light']).default('dark'),
   /** Electron display id the player window opens on. Null = pick the first non-primary display. */
   playerDisplayId: z.number().int().nullable().default(null),

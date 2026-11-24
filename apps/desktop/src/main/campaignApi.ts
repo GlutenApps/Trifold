@@ -4,7 +4,8 @@ import { CampaignEntities } from './campaign/entities';
 import { importSceneImage } from './campaign/images';
 import { importCampaignXml } from './campaign/importCampaign';
 import { syncIndex } from './index/sync';
-import { CAMPAIGN_SCHEMA_VERSION } from '@trifold/schema';
+import { CAMPAIGN_SCHEMA_VERSION, nowIso } from '@trifold/schema';
+import { compareRecent } from '@trifold/rules';
 import { bringStatBlock, ownStatBlock, shareUsedSources } from './sources/campaignScope';
 import type { LibrarySession } from './library/session';
 import { errorMessage, type Logger } from './log';
@@ -43,16 +44,42 @@ export function createCampaignApi(
     const { store, catalog, index } = session.require();
     await syncIndex(index, catalog, store, logger);
   };
+  /** When each campaign was last opened (library.json), so the lists can put recent ones first. */
+  const openedAt = () => session.require().store.getSettings().campaignOpenedAt;
+  /** Records an open, or forgets a deleted campaign. Never fails the action it follows. */
+  const setOpenedAt = async (campaignId: string, at: string | null) => {
+    try {
+      await session.require().store.updateSettings((s) => {
+        const next = { ...s.campaignOpenedAt };
+        if (at) next[campaignId] = at;
+        else delete next[campaignId];
+        return { campaignOpenedAt: next };
+      });
+    } catch (err) {
+      logger.warn(`Could not record when campaign ${campaignId} was opened: ${errorMessage(err)}`);
+    }
+  };
   return {
     campaigns: {
+      // Most recently opened first (`compareRecent`); a campaign never opened by when it changed.
       async list() {
-        return repo().list();
+        const opened = openedAt();
+        return (await repo().list())
+          .map((c) => ({ ...c, openedAt: opened[c.id] ?? null }))
+          .sort((a, b) =>
+            compareRecent(
+              { name: a.name, openedAt: a.openedAt, fallbackAt: a.updatedAt },
+              { name: b.name, openedAt: b.openedAt, fallbackAt: b.updatedAt },
+            ),
+          );
       },
       async create(name) {
         return repo().create(name);
       },
       async open(campaignId) {
-        return repo().open(campaignId);
+        const bundle = await repo().open(campaignId);
+        await setOpenedAt(campaignId, nowIso());
+        return bundle;
       },
       // Only the campaign opened in this run: every launch starts on the Library (ADR 0079).
       async current() {
@@ -78,6 +105,7 @@ export function createCampaignApi(
       },
       async remove(campaignId) {
         await repo().remove(campaignId);
+        await setOpenedAt(campaignId, null);
         // Its creatures (ADR 0035) leave the index with it.
         await resync();
       },

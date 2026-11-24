@@ -192,6 +192,7 @@ describe('JoinedService', () => {
       characterId: null,
       joinedAt: expect.any(String),
       lastLiveAt: null,
+      openedAt: null,
       claimed: false,
     });
     expect(seen.at(-1)).toEqual([expect.objectContaining({ campaignId: 'c1', joined: true })]);

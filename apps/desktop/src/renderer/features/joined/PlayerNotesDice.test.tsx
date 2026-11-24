@@ -26,6 +26,7 @@ const campaign: JoinedSummary = {
   characterId: null,
   joinedAt: '2026-11-23T18:00:00.000Z',
   lastLiveAt: null,
+  openedAt: null,
   claimed: true,
 };
 

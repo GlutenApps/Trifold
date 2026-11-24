@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { recentSlice } from '@trifold/rules';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useJoinedStore } from '../../stores/joinedStore';
 import { presetsFor, useShellStore } from '../../stores/shellStore';
@@ -21,7 +22,8 @@ const MARK = 22;
  *
  * A joined campaign's player console (docs/PLAYER-MODE.md) has the same bar: the switcher, its
  * own layouts and Settings, without Hotkeys. The switcher lists both kinds of campaign, Running
- * and Playing, so moving between running a game and playing in one is one pick.
+ * and Playing, so moving between running a game and playing in one is one pick. Each lists its
+ * most recently opened few (`recentSlice`); the rest are a click away on the Campaigns page.
  */
 export function TopBar() {
   const space = useShellStore((s) => s.space);
@@ -70,6 +72,12 @@ export function TopBar() {
   const campaignName = joined ? joinedName : (current?.campaign.name ?? '');
   // Headings only when the Library has both kinds; otherwise the list speaks for itself.
   const grouped = campaigns.length > 0 && joinedList.length > 0;
+  // Both lists come from main most recently opened first; the open campaign always stays in.
+  const running = recentSlice(campaigns, (c) => !playing && c.id === current?.campaign.id);
+  const playingList = recentSlice(
+    joinedList,
+    (j) => playing && j.campaignId === joined?.campaignId,
+  );
 
   /** Runs a menu choice and closes the menu. */
   const pick = (action: () => void) => () => {
@@ -125,7 +133,7 @@ export function TopBar() {
                         Running
                       </div>
                     )}
-                    {campaigns.map((c) => {
+                    {running.shown.map((c) => {
                       const isCurrent = !playing && c.id === current?.campaign.id;
                       return (
                         <button
@@ -152,7 +160,7 @@ export function TopBar() {
                         Playing
                       </div>
                     )}
-                    {joinedList.map((j) => {
+                    {playingList.shown.map((j) => {
                       const isCurrent = playing && j.campaignId === joined?.campaignId;
                       const name = j.campaignName || 'Unnamed campaign';
                       return (
@@ -172,6 +180,16 @@ export function TopBar() {
                       );
                     })}
                   </div>
+                )}
+                {(running.more || playingList.more) && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="switcher-more"
+                    onClick={pick(() => enterLibrary('campaigns'))}
+                  >
+                    More campaigns…
+                  </button>
                 )}
                 <div className="menu-sep" />
                 {playing ? (

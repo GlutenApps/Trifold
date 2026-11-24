@@ -30,6 +30,7 @@ const joinedGreyford: JoinedSummary = {
   characterId: null,
   joinedAt: '2026-11-23T18:00:00.000Z',
   lastLiveAt: null,
+  openedAt: null,
   claimed: false,
 };
 
@@ -86,7 +87,7 @@ describe('Join a campaign', () => {
     expect(window.trifold.joined.stopSearch).toHaveBeenCalled();
     expect(screen.getByRole('heading', { name: 'Playing' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Running' })).toBeInTheDocument();
-    expect(screen.getByText('Playing as Sam')).toBeInTheDocument();
+    expect(screen.getByText('Playing as Sam · not at the table yet')).toBeInTheDocument();
   });
 
   it('says which side must update instead of offering Join, for a table on another protocol', async () => {

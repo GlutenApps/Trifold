@@ -835,6 +835,8 @@ export interface CampaignSummary {
   name: string;
   slug: string;
   updatedAt: string;
+  /** When this Library last opened it (`campaigns.list` fills it in); null when never. */
+  openedAt?: string | null;
   pcCount: number;
   encounterCount: number;
 }
@@ -1818,6 +1820,8 @@ export interface JoinedSummary {
   joinedAt: string;
   /** When this Library was last connected to the campaign's table. */
   lastLiveAt: string | null;
+  /** When the player last opened its console, connected or not; null when never. */
+  openedAt: string | null;
   /** This Library holds a claim at the table: it picked a character there before. */
   claimed: boolean;
 }

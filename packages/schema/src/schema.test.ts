@@ -24,6 +24,7 @@ describe('LibrarySettings', () => {
       schemaVersion: 5,
       indexVersion: 0,
       lastOpenCampaignSlug: null,
+      campaignOpenedAt: {},
       theme: 'dark',
       playerDisplayId: null,
       checkForUpdates: false,

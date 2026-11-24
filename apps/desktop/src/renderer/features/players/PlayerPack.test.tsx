@@ -83,6 +83,7 @@ describe('Join a campaign from a file', () => {
         characterId: null,
         joinedAt: '2026-11-23T00:00:00.000Z',
         lastLiveAt: null,
+        openedAt: null,
         claimed: false,
       },
     });
