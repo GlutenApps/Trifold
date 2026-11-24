@@ -4,6 +4,24 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.5.0-beta.1] - 2026-11-24
+
+Player mode: players run Trifold on their own computer and join the GM's table on the local network, with their own characters. A pre-release for table testing.
+
+### Added
+
+- **First-run choice**: a new Library asks **Game master** or **Player**. A game master's gets the sample campaign; a player's opens on **Join a campaign**. Settings › Appearance › **How you use Trifold** changes it later. Libraries already in use are not asked.
+- **Join a campaign** (Library › Campaigns): tables on this network are listed by campaign name, or type the address the GM's Trifold shows. Joined campaigns sit under **Playing**, beside your own under **Running**.
+- **The player console**: the live map with your token, your characters and the initiative order, **Your turn** and **You're next**, quick notes, dice (table rolls go to the GM's roll log; private ones go nowhere) and the compendium. Opening a joined campaign while the table is down shows the last map until it comes back.
+- **Characters** (Library › Characters): a sheet kept in another app, a sheet imported from a PDF (**Import from PDF**), or a Trifold sheet made with the guided builder, under the 2024 rules or the legacy 2014 rules. Trifold sheets work out their numbers, roll from the page, track resources with short and long rests, level up, and keep stat blocks for wild shapes and companions.
+- **Sharing with players**: a campaign shares books and collections with its players, who get the spells and items but never the creatures. **Player packs** carry a campaign to players before the first session. A player's level-up reaches the GM as a sheet offer to accept or dismiss.
+- **Version check**: a player's Trifold that can't talk to the GM's says which one needs an update.
+
+### Changed
+
+- **Sources** are organised by book: filter, star, delete and share books, and settle duplicate records one at a time.
+- A panel that fails to draw shows an error in that panel instead of blanking the window.
+
 ## [0.4.6] - 2026-11-21
 
 Table-testing fixes for 0.4.5, HP and conditions between fights, and a new licence: Trifold is now free software under the GNU GPL.
