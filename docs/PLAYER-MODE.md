@@ -210,7 +210,7 @@ The HP and conditions shown on a sheet are the same live controls as the row's, 
 
 Order of building: My characters with its rows, and Sheets for the PC, first; companion stat blocks when shared content lands; forms after.
 
-Built: companion stat blocks. The view names a held NPC's or summon's stat block (`statBlock`, the GM's record id and key; `PLAYER-CONNECTOR.md`, Companions), and the Sheets tab shows it under the live HP and conditions, read from the shared source (`statBlockRecordId` in `packages/rules/src/table/statBlock.ts`) or the bundled SRD, then by key. One the player's Trifold does not have yet says so.
+Built: companion stat blocks. The view names a held NPC's or summon's stat block (`statBlock`, the GM's record id and key; `PLAYER-CONNECTOR.md`, Companions), and the Sheets tab shows it under the live HP and conditions, read from the shared source (`statBlockRecordId` in `packages/rules/src/table/statBlock.ts`) or the bundled SRD, then by key. One the player's Trifold does not have yet says so. Built too: forms. A character keeps them (`forms`, by kind, key and name); the character's editor has a Forms section with a creature search, and a creature's compendium page in the player console has **Pin as a form** for the linked character. Each form is a tab on the Sheets switcher after the creatures, showing its stat block under the character's own live HP and conditions, with a note that HP, conditions and the token stay the character's.
 
 ### Your turn and you're next
 
@@ -507,7 +507,7 @@ What is left of Parts 1 to 3, and what a player needs beyond them, in order. Ite
 | 2 | *Added:* imported spells, items, feats, species, background and classes linked to compendium records by name; a linked row on a sheet opens to show the record's text | S | Built (ADR 0073) |
 | **B** | **Finish the player console** | | |
 | 3 | Companion and summon stat blocks on the Sheets tab, from the bundled SRD or shared content | M | Built |
-| 4 | Forms: stat blocks pinned from the player's compendium, flipped to on Sheets (reference only) | M | |
+| 4 | Forms: stat blocks pinned from the player's compendium, flipped to on Sheets (reference only) | M | Built |
 | 5 | The components the phone page and the player console share moved to a folder both import (no behaviour change) | S | |
 | **C** | **Playing from the sheet** | | |
 | 6 | *Added:* tracking during play on the Trifold sheet: spell slots used, limited-use features, hit dice, death saves and Heroic Inspiration, with Short rest and Long rest for the sheet's own resources (HP stays the table's) | M–L | |

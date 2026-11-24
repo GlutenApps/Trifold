@@ -1,3 +1,4 @@
+import { FormToggle } from '../character/Forms';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { CompendiumRecord, Roll } from '@trifold/schema';
 import { useRollLogStore } from '../../stores/rollLogStore';
@@ -495,6 +496,7 @@ export function RecordDetail({
         <span className="spacer" />
         <UseThisCopy record={record} copies={editions} />
         <SummonableToggle record={record} />
+        <FormToggle record={record} />
         <ShareToggle record={record} />
         {/* SRD rules are read, not copied: house rules belong in notes (ADR 0041). */}
         {homebrew && !isOwnRecord(record) && !isSharedRecord(record) && record.kind !== 'rule' && (

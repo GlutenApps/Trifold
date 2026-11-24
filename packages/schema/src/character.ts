@@ -275,6 +275,12 @@ export const Character = z.object({
   notes: z.string().max(50_000).default(''),
   /** What the guided builder chose (docs/BUILDER.md); absent on a character made by hand. */
   build: CharacterBuild.optional(),
+  /**
+   * Forms (docs/PLAYER-MODE.md, "My characters and Sheets"): creature stat blocks the player
+   * pinned for a wild shape or another transformation, by kind, key and name. Reference only:
+   * the character's HP and token are untouched.
+   */
+  forms: z.array(SheetRef).max(100).optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });

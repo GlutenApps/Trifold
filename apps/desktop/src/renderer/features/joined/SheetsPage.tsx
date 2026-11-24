@@ -4,11 +4,13 @@ import { statBlockRecordId } from '@trifold/rules';
 import type { CompendiumRecord, ConditionInstance } from '@trifold/schema';
 import { RecordBody } from '../compendium/RecordDetail';
 import { useCharacterStore } from '../../stores/characterStore';
+import { Icon } from '../shell/icons';
 import { ExternalForm } from '../character/ExternalForm';
 import { SheetView } from '../character/SheetView';
 import { TrifoldSheet } from '../character/TrifoldSheet';
 import { GuidedBuilder } from '../character/builder/GuidedBuilder';
 import { PdfImport } from '../character/PdfImport';
+import { FormSheet, FormsSection } from '../character/Forms';
 import { useJoinedStore } from '../../stores/joinedStore';
 import { HeldConditions } from '../campaign/HeldConditions';
 import { HpChip, HpEditor } from '../campaign/HpBetweenFights';
@@ -170,6 +172,10 @@ export function SheetsPage() {
   );
   const me = mine[0];
   const shown = mine.find((c) => creatureKeyOf(c) === selected) ?? me;
+  /** A form picked on the switcher (by key); a creature's tab puts it away. */
+  const [formKey, setFormKey] = useState<string | null>(null);
+  const forms = character?.forms ?? [];
+  const form = forms.find((f) => f.key === formKey) ?? null;
   const ownShown = !shown || shown === me;
 
   // Leaving the tab, or another character, writes what is pending.
@@ -214,11 +220,11 @@ export function SheetsPage() {
 
   return (
     <div className="sheets-page" data-testid="sheets-page">
-      {mine.length > 1 && (
+      {(mine.length > 1 || forms.length > 0) && (
         <div className="subtablist" role="tablist" aria-label="Whose sheet">
           {mine.map((c) => {
             const key = creatureKeyOf(c);
-            const on = c === shown;
+            const on = !form && c === shown;
             return (
               <button
                 key={key}
@@ -226,16 +232,51 @@ export function SheetsPage() {
                 role="tab"
                 className={`subtab${on ? ' active' : ''}`}
                 aria-selected={on}
-                onClick={() => select(key)}
+                onClick={() => {
+                  setFormKey(null);
+                  select(key);
+                }}
               >
                 {c.name}
               </button>
             );
           })}
+          {mine.length === 0 && character && (
+            <button
+              type="button"
+              role="tab"
+              className={`subtab${form ? '' : ' active'}`}
+              aria-selected={!form}
+              onClick={() => setFormKey(null)}
+            >
+              {character.name}
+            </button>
+          )}
+          {/* Forms (reference only) follow the creatures. */}
+          {forms.map((f) => (
+            <button
+              key={`form:${f.key}`}
+              type="button"
+              role="tab"
+              className={`subtab${form === f ? ' active' : ''}`}
+              aria-selected={form === f}
+              title={`${f.name}: a form of ${character?.name ?? 'your character'}`}
+              onClick={() => setFormKey(f.key)}
+            >
+              <Icon name="paw" size={13} />
+              {f.name}
+            </button>
+          ))}
         </div>
       )}
 
-      {!ownShown && shown ? (
+      {form && character ? (
+        <FormSheet
+          form={form}
+          character={character}
+          live={view && me ? <LiveStatus creature={me} /> : undefined}
+        />
+      ) : !ownShown && shown ? (
         <CompanionSheet creature={shown} live={!!view} />
       ) : character ? (
         editing ? (
@@ -258,6 +299,7 @@ export function SheetsPage() {
             ) : (
               <TrifoldSheet character={character} />
             )}
+            <FormsSection character={character} />
           </div>
         ) : (
           <SheetView

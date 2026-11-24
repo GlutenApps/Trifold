@@ -12,6 +12,7 @@ import { useShellStore } from '../../stores/shellStore';
 import { MyCharactersTool } from './MyCharactersTool';
 import { PlayerTableProvider } from './PlayerTable';
 import { SheetsPage } from './SheetsPage';
+import { FormToggle } from '../character/Forms';
 import { TablePage } from './TablePage';
 
 const now = '2026-11-23T00:00:00.000Z';
@@ -299,5 +300,87 @@ describe('New PC from player sheet, the player’s side (ADR 0072)', () => {
     });
     await screen.findByRole('heading', { name: /Pick your character/ });
     expect(screen.queryByTestId('ask-new-pc')).toBeNull();
+  });
+});
+
+describe('Forms', () => {
+  const shrub = () =>
+    parseCompendiumXml(fixture, { sourceId: 'srd-2024', defaultEdition: '2014' }).records.find(
+      (r) => r.name === 'Awakened Shrub',
+    )!;
+
+  it('shows a pinned form as a tab, its stat block under the character’s own live numbers', async () => {
+    vi.mocked(window.trifold.characters.list).mockResolvedValue([
+      { ...bren, forms: [{ kind: 'monster', key: 'awakened shrub', name: 'Awakened Shrub' }] },
+    ]);
+    vi.mocked(window.trifold.compendium.findByKey).mockImplementation(async (kind, key) =>
+      kind === 'monster' && key === 'awakened shrub' ? [shrub()] : [],
+    );
+    useJoinedStore.setState({ current: campaign('K1') });
+    const user = userEvent.setup();
+    mount(<SheetsPage />, view([creature()]));
+    await user.click(await screen.findByRole('tab', { name: 'Awakened Shrub' }));
+    const sheet = screen.getByTestId('form-sheet');
+    expect(sheet).toHaveTextContent(
+      'A form of Bren. Hit points, conditions and the token stay Bren’s.',
+    );
+    expect(await screen.findByTestId('linked-record')).toHaveTextContent('False Appearance');
+    // The character's own HP, not a second pool.
+    expect(screen.getByTestId('sheet-live')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Brannoc' }));
+    expect(screen.getByTestId('sheet-view')).toBeInTheDocument();
+  });
+
+  it('adds a form from a search while editing, and removes it', async () => {
+    vi.mocked(window.trifold.compendium.search).mockResolvedValue({
+      rows: [
+        {
+          id: 'm1',
+          kind: 'monster',
+          key: 'awakened shrub',
+          name: 'Awakened Shrub',
+          displayName: 'Awakened Shrub',
+          sourceId: 'srd-2024',
+          sourceName: 'SRD 5.2',
+          edition: '2024',
+          editions: ['2024'],
+          otherVersions: [],
+          cr: '0',
+        } as never,
+      ],
+      total: 1,
+      tookMs: 0,
+    });
+    useJoinedStore.setState({ current: campaign('K1') });
+    useCharacterStore.setState({ editingSheet: true });
+    const user = userEvent.setup();
+    mount(<SheetsPage />, view([creature()]));
+    const forms = within(await screen.findByTestId('forms-section'));
+    await user.type(forms.getByRole('searchbox', { name: 'Add a form' }), 'shrub');
+    await user.click(await forms.findByRole('button', { name: 'Awakened Shrub' }));
+    const saved = () => useCharacterStore.getState().characters.find((c) => c.id === 'K1')!;
+    expect(saved().forms).toEqual([
+      { kind: 'monster', key: 'awakened shrub', name: 'Awakened Shrub' },
+    ]);
+    await user.click(forms.getByRole('button', { name: 'Remove Awakened Shrub' }));
+    expect(saved().forms).toEqual([]);
+  });
+
+  it('pins a creature as a form from its compendium page, for the linked character only', async () => {
+    useJoinedStore.setState({ current: campaign('K1') });
+    useCharacterStore.setState({ characters: [bren], loaded: true });
+    const user = userEvent.setup();
+    const { unmount } = render(<FormToggle record={shrub()} />);
+    const pin = screen.getByRole('button', { name: 'Pin as a form' });
+    expect(pin).toHaveAttribute('aria-pressed', 'false');
+    await user.click(pin);
+    expect(useCharacterStore.getState().characters[0]!.forms).toEqual([
+      { kind: 'monster', key: 'awakened shrub', name: 'Awakened Shrub' },
+    ]);
+    unmount();
+    // No joined campaign, no character to pin to.
+    useJoinedStore.setState({ current: null });
+    render(<FormToggle record={shrub()} />);
+    expect(screen.queryByRole('button', { name: 'Pin as a form' })).toBeNull();
   });
 });
