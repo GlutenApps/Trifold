@@ -117,7 +117,16 @@ export interface RestResult {
 
 const spentSlots = (sheet: Sheet) => (sheet.slotsUsed ?? []).some((n) => n > 0);
 
-/** A short rest: features that recharge on one, and Pact Magic slots. */
+/** Items with spent charges that come back on this rest: a short rest, or any rest that is long. */
+function refillItems(sheet: Sheet, long: boolean, restored: string[]): Sheet['equipment'] {
+  return sheet.equipment.map((item) => {
+    if (!item.uses || item.uses.used === 0 || (!long && item.uses.reset !== 'short')) return item;
+    restored.push(item.name || 'Item');
+    return { ...item, uses: { ...item.uses, used: 0 } };
+  });
+}
+
+/** A short rest: features and item charges that recharge on one, and Pact Magic slots. */
 export function shortRest(sheet: Sheet): RestResult {
   const restored: string[] = [];
   const features = sheet.features.map((f) => {
@@ -125,16 +134,18 @@ export function shortRest(sheet: Sheet): RestResult {
     restored.push(f.name || 'Feature');
     return { ...f, uses: { ...f.uses, used: 0 } };
   });
+  const equipment = refillItems(sheet, false, restored);
   const slots = sheet.slotsOnShortRest && spentSlots(sheet);
   if (slots) restored.push('spell slots');
   return {
-    sheet: { ...sheet, features, ...(slots ? { slotsUsed: [] } : {}) },
+    sheet: { ...sheet, features, equipment, ...(slots ? { slotsUsed: [] } : {}) },
     restored,
   };
 }
 
 /**
- * A long rest: every feature's uses and every slot. Hit dice: all of them under the 2024 rules,
+ * A long rest: every feature's uses, every item's charges (a dawn passes during one) and every
+ * slot. Hit dice: all of them under the 2024 rules,
  * up to half the character's total (at least one) under the 2014 rules, largest dice first.
  */
 export function longRest(sheet: Sheet, edition: CharacterEdition): RestResult {
@@ -144,6 +155,7 @@ export function longRest(sheet: Sheet, edition: CharacterEdition): RestResult {
     restored.push(f.name || 'Feature');
     return { ...f, uses: { ...f.uses, used: 0 } };
   });
+  const equipment = refillItems(sheet, true, restored);
   if (spentSlots(sheet)) restored.push('spell slots');
 
   const pools = hitDice(sheet);
@@ -162,7 +174,7 @@ export function longRest(sheet: Sheet, edition: CharacterEdition): RestResult {
   }
   if (spent > 0) restored.push('hit dice');
   return {
-    sheet: { ...sheet, features, slotsUsed: [], hitDiceUsed },
+    sheet: { ...sheet, features, equipment, slotsUsed: [], hitDiceUsed },
     restored,
   };
 }

@@ -168,11 +168,42 @@ export const SheetSpell = z.object({
 });
 export type SheetSpell = z.infer<typeof SheetSpell>;
 
+/**
+ * What an item adds to AC when worn (docs/CHARACTER-SHEET.md, items 1 and 2): body armour by its
+ * kind and base AC, or a shield and what it adds. Copied from the compendium record when the
+ * item is first equipped or unequipped, so the sheet works AC out without reading the record.
+ */
+export const ItemArmor = z.object({
+  kind: z.enum(['light', 'medium', 'heavy', 'shield']),
+  base: int.min(0).max(30),
+});
+export type ItemArmor = z.infer<typeof ItemArmor>;
+
+/** An item's charges: how many, how many are spent, and when they come back. */
+export const ItemUses = z.object({
+  max: int.min(1).max(99),
+  used: int.min(0).max(99).default(0),
+  /** A magic item's charges usually come back at dawn; a long rest brings them back too. */
+  reset: z.enum(['short', 'long', 'dawn']).default('dawn'),
+});
+export type ItemUses = z.infer<typeof ItemUses>;
+
 export const SheetItem = z.object({
   id: Id,
   name: z.string().max(120).default(''),
   quantity: int.min(0).max(9999).default(1),
   ref: SheetRef.optional(),
+  /** Worn or held. Equipped armour and shields set AC once the sheet knows them (`armor`). */
+  equipped: z.boolean().optional(),
+  /** Attuned to the character; a character attunes to at most three items. */
+  attuned: z.boolean().optional(),
+  /** The item needs attunement, as its compendium record says. */
+  attunement: z.boolean().optional(),
+  /** Where it is kept: a name the player gives (Backpack, Mount, Home). Absent: on the character. */
+  place: z.string().max(60).optional(),
+  /** Charges, for a wand or a staff; pips on the sheet, refilled by rests. */
+  uses: ItemUses.optional(),
+  armor: ItemArmor.optional(),
 });
 export type SheetItem = z.infer<typeof SheetItem>;
 
@@ -226,8 +257,47 @@ export const Sheet = z.object({
   features: z.array(SheetFeature).max(300).default([]),
   spells: z.array(SheetSpell).max(500).default([]),
   equipment: z.array(SheetItem).max(500).default([]),
-  /** Coins, as gold pieces (docs/BUILDER.md: an equipment option's gold goes here). */
+  /**
+   * Gold pieces (docs/BUILDER.md: an equipment option's gold goes here). A sheet made before
+   * `coins` kept every coin here, as gold.
+   */
   gp: z.number().min(0).max(10_000_000).default(0),
+  /** The other coins, each a count. */
+  coins: z
+    .object({
+      cp: z.number().min(0).max(10_000_000).default(0),
+      sp: z.number().min(0).max(10_000_000).default(0),
+      ep: z.number().min(0).max(10_000_000).default(0),
+      pp: z.number().min(0).max(10_000_000).default(0),
+    })
+    .optional(),
+  /** Damage types (and conditions) the character resists, ignores or takes extra from. */
+  defenses: z
+    .object({
+      resist: z.array(z.string().max(40)).max(30).default([]),
+      immune: z.array(z.string().max(40)).max(30).default([]),
+      vulnerable: z.array(z.string().max(40)).max(30).default([]),
+      conditionImmune: z.array(z.string().max(40)).max(30).default([]),
+    })
+    .optional(),
+  /** Special senses, in feet. */
+  senses: z
+    .object({
+      darkvision: int.min(0).max(1000).optional(),
+      blindsight: int.min(0).max(1000).optional(),
+      tremorsense: int.min(0).max(1000).optional(),
+      truesight: int.min(0).max(1000).optional(),
+    })
+    .optional(),
+  /** Speeds other than walking (`speed`), in feet. */
+  speeds: z
+    .object({
+      fly: int.min(0).max(1000).optional(),
+      swim: int.min(0).max(1000).optional(),
+      climb: int.min(0).max(1000).optional(),
+      burrow: int.min(0).max(1000).optional(),
+    })
+    .optional(),
   /** Numbers the player set by hand over what the sheet works out. */
   overrides: z.partialRecord(DerivedKey, int.min(-20).max(99)).default({}),
 });

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Character, Sheet, TableNumbers } from '@trifold/schema';
 import {
+  armourWorn,
   attackBonus,
+  attunedCount,
   blankSheet,
   characterLevel,
   classLine,
@@ -147,5 +149,55 @@ describe('table numbers', () => {
   it('start a blank sheet at 1st level with nothing overridden', () => {
     expect(blankSheet().overrides).toEqual({});
     expect(Sheet.parse(blankSheet())).toEqual(blankSheet());
+  });
+});
+
+describe('AC from what is worn (docs/CHARACTER-SHEET.md, item 1)', () => {
+  // Dex 14 (+2), and the fighter's armour setting: medium base 14 with a shield, AC 18.
+  const withGear = (equipment: unknown[]) => Sheet.parse({ ...fighter, equipment });
+  const chain = { id: 'i1', name: 'Chain Mail', armor: { kind: 'heavy', base: 16 } };
+  const shield = { id: 'i2', name: 'Shield', armor: { kind: 'shield', base: 2 } };
+
+  it('keeps the armour setting until the sheet knows the armour items', () => {
+    expect(deriveSheet(withGear([{ id: 'i0', name: 'Rope' }])).ac.value).toBe(18);
+    expect(armourWorn(withGear([])).body?.item).toBeNull();
+  });
+
+  it('counts equipped body armour and shield, and nothing worn when they come off', () => {
+    expect(
+      deriveSheet(
+        withGear([
+          { ...chain, equipped: true },
+          { ...shield, equipped: true },
+        ]),
+      ).ac.value,
+    ).toBe(18);
+    // Chain mail off: unarmoured (10 + Dex 2) plus the shield.
+    expect(deriveSheet(withGear([chain, { ...shield, equipped: true }])).ac.value).toBe(14);
+    expect(armourWorn(withGear([{ ...chain, equipped: true }, shield]))).toEqual({
+      body: { armor: { kind: 'heavy', base: 16 }, item: 'Chain Mail' },
+      shield: null,
+    });
+  });
+
+  it('works each piece out on its own: a known shield beside the armour setting', () => {
+    // Only the shield is known; the body is still the setting's medium 14 + Dex 2 = 16.
+    expect(deriveSheet(withGear([{ ...shield, equipped: false }])).ac.value).toBe(16);
+  });
+
+  it('adds the other AC bonus, and an override still wins', () => {
+    const bonus = Sheet.parse({
+      ...fighter,
+      armor: { ...fighter.armor, bonus: 1 },
+      equipment: [{ ...chain, equipped: true }],
+    });
+    expect(deriveSheet(bonus).ac.value).toBe(19);
+    expect(deriveSheet({ ...bonus, overrides: { ac: 12 } }).ac.value).toBe(12);
+  });
+
+  it('counts attuned items', () => {
+    expect(
+      attunedCount(withGear([{ id: 'a', attuned: true }, { id: 'b' }, { id: 'c', attuned: true }])),
+    ).toBe(2);
   });
 });

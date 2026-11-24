@@ -1,4 +1,11 @@
-import type { Ability, ItemRecord, Sheet, SheetAttack, SheetItem } from '@trifold/schema';
+import type {
+  Ability,
+  ItemArmor,
+  ItemRecord,
+  Sheet,
+  SheetAttack,
+  SheetItem,
+} from '@trifold/schema';
 import { scoreModifier } from './derive';
 
 /**
@@ -79,9 +86,28 @@ let nextId = 0;
 const id = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(nextId += 1)}`;
 
 /**
+ * What an item adds to AC when worn, from its compendium record (docs/CHARACTER-SHEET.md, item
+ * 1): body armour by its type (light, medium, heavy) and base AC, or a shield and what it adds
+ * (2 unless the record says otherwise). Undefined for anything else.
+ */
+export function itemArmor(
+  name: string,
+  data: Pick<ItemRecord['data'], 'typeCode' | 'ac'>,
+): ItemArmor | undefined {
+  if (data.typeCode === 'S' || /\bshield\b/i.test(name)) {
+    return { kind: 'shield', base: data.ac ?? 2 };
+  }
+  if (data.ac === undefined) return undefined;
+  if (data.typeCode === 'LA') return { kind: 'light', base: data.ac };
+  if (data.typeCode === 'MA') return { kind: 'medium', base: data.ac };
+  if (data.typeCode === 'HA') return { kind: 'heavy', base: data.ac };
+  return undefined;
+}
+
+/**
  * Equipment lines on a sheet: each linked to its SRD item where one matches, the first body
- * armour and a shield setting the sheet's armour, and each weapon an attack with the ability it
- * uses (Dexterity for ranged, the better of the two for finesse) and its damage.
+ * armour and a shield setting the sheet's armour and equipped, and each weapon an attack with
+ * the ability it uses (Dexterity for ranged, the better of the two for finesse) and its damage.
  */
 export function equipmentToSheet(
   lines: readonly EquipmentLine[],
@@ -96,21 +122,21 @@ export function equipmentToSheet(
   const dex = scoreModifier(abilities.dex);
   for (const line of lines) {
     const item = findItem(line.name, byName);
+    const worn = item ? itemArmor(item.displayName, item.data) : undefined;
+    // The first body armour and the first shield are worn; any others are carried.
+    const wear = !!worn && (worn.kind === 'shield' ? !shield : !body);
+    if (wear && worn.kind === 'shield') shield = true;
+    else if (wear && worn.kind !== 'shield') body = { kind: worn.kind, base: worn.base };
     equipment.push({
       id: id('item'),
       name: item?.displayName ?? line.name,
       quantity: line.quantity,
       ...(item ? { ref: { kind: 'item' as const, key: item.key, name: item.displayName } } : {}),
+      ...(worn ? { armor: worn, equipped: wear } : {}),
+      ...(item?.data.requiresAttunement ? { attunement: true } : {}),
     });
     if (!item) continue;
     const d = item.data;
-    if (/shield/i.test(item.displayName)) shield = true;
-    else if (!body && d.ac !== undefined && ['LA', 'MA', 'HA'].includes(d.typeCode ?? '')) {
-      body = {
-        kind: d.typeCode === 'LA' ? 'light' : d.typeCode === 'MA' ? 'medium' : 'heavy',
-        base: d.ac,
-      };
-    }
     if (d.dmg1 && (d.typeCode === 'M' || d.typeCode === 'R')) {
       const props = d.properties ?? [];
       const ability: Ability =

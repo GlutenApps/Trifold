@@ -19,6 +19,8 @@ So the list below does not repeat it:
 
 **The table owns some things on purpose** (PLAYER-MODE.md, Who owns what): current HP, temp HP, death saves and conditions. The sheet shows them while connected and does not keep its own copy.
 
+**Built since:** items 1 to 5, 20 and 21 (ADR 0081): equipped (with AC from equipped armour and shields), attunement, places, coins, item charges, defences, senses and other speeds.
+
 ## Inventory and equipment
 
 | # | Item | Other sheets | Trifold now | Work | Size | Priority |

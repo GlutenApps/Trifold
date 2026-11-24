@@ -8,7 +8,9 @@ import {
 } from 'react';
 import {
   ABILITY_NAMES,
+  armourWorn,
   attackBonus,
+  attunedCount,
   classLine,
   deriveSheet,
   setSlotsUsed,
@@ -19,7 +21,7 @@ import {
   tableNumbers,
   type RollMode,
 } from '@trifold/rules';
-import type { Ability, Character, Sheet, Skill } from '@trifold/schema';
+import type { Ability, Character, Sheet, SheetItem, Skill } from '@trifold/schema';
 import { useRollLogStore } from '../../stores/rollLogStore';
 import { useShellStore } from '../../stores/shellStore';
 import { Icon } from '../shell/icons';
@@ -28,6 +30,7 @@ import { SheetRow } from './LinkedRow';
 import { Pips, ResourcesSection, type SheetEvent } from './Resources';
 import { signed } from './fields';
 import { d20, damageDice, rollFromSheet, type SheetRollOptions } from './sheetRolls';
+import { toggleItem, useAttunementNeeded } from './itemFacts';
 
 /**
  * A character's sheet to read and use at the table (docs/PLAYER-MODE.md, "My characters and
@@ -186,15 +189,57 @@ function SheetLink({ character }: { character: Character }) {
   );
 }
 
-/** The armour behind AC, as the AC tile's tooltip. */
+/** The armour behind AC, as the AC tile's tooltip: what is worn, from items or the setting. */
 function armourText(sheet: Sheet | undefined): string | undefined {
   if (!sheet) return undefined;
-  const a = sheet.armor;
-  const kind =
-    a.kind === 'none'
-      ? 'No armour'
-      : `${a.kind[0]!.toUpperCase()}${a.kind.slice(1)} armour, base ${a.base}`;
-  return `${kind}${a.shield ? ', shield' : ''}${a.bonus ? `, ${signed(a.bonus)}` : ''}`;
+  const { body, shield } = armourWorn(sheet);
+  const kind = body ? `${body.armor.kind[0]!.toUpperCase()}${body.armor.kind.slice(1)}` : '';
+  const bodyText = body
+    ? body.item
+      ? `${body.item} (${body.armor.kind}, base ${body.armor.base})`
+      : `${kind} armour, base ${body.armor.base}`
+    : 'No armour';
+  const shieldText = shield ? `, ${shield.item ?? 'shield'} (+${shield.armor.base})` : '';
+  const bonus = sheet.armor.bonus ? `, ${signed(sheet.armor.bonus)}` : '';
+  return `${bodyText}${shieldText}${bonus}`;
+}
+
+/** Coins as the Equipment tab shows them, largest first: "5 PP · 47 GP · 12 SP". */
+function coinsText(sheet: Sheet): string {
+  const c = sheet.coins;
+  return (
+    [
+      ['PP', c?.pp ?? 0],
+      ['GP', sheet.gp],
+      ['EP', c?.ep ?? 0],
+      ['SP', c?.sp ?? 0],
+      ['CP', c?.cp ?? 0],
+    ] as const
+  )
+    .filter(([, n]) => n > 0)
+    .map(([k, n]) => `${n.toLocaleString()} ${k}`)
+    .join(' · ');
+}
+
+/** "fly 30 ft, swim 30 ft": a list of named distances, the ones set. */
+function feet(list: Partial<Record<string, number>> | undefined): string {
+  return Object.entries(list ?? {})
+    .filter((e): e is [string, number] => typeof e[1] === 'number' && e[1] > 0)
+    .map(([k, n]) => `${k} ${n} ft`)
+    .join(', ');
+}
+
+/** Defences, senses and other speeds the sheet has (docs/CHARACTER-SHEET.md, items 20 and 21). */
+function defenceLines(sheet: Sheet): { label: string; value: string }[] {
+  const d = sheet.defenses;
+  return [
+    { label: 'Resistant', value: d?.resist.join(', ') ?? '' },
+    { label: 'Immune', value: d?.immune.join(', ') ?? '' },
+    { label: 'Vulnerable', value: d?.vulnerable.join(', ') ?? '' },
+    { label: 'Condition immunities', value: d?.conditionImmune.join(', ') ?? '' },
+    { label: 'Senses', value: feet(sheet.senses) },
+    { label: 'Other speeds', value: feet(sheet.speeds) },
+  ].filter((l) => l.value);
 }
 
 /** "Armor: light, heavy. Languages: Common." as label and value pairs, one per sentence. */
@@ -359,6 +404,12 @@ export function SheetView({
     : null;
   const save = sheet && resources ? resources.onChange : null;
   const say = (e: SheetEvent) => setEvent({ ...e, at: Date.now() });
+  // An equip or attune reads the item's record first (toggleItem), then saves the latest sheet.
+  const latest = useRef(sheet);
+  latest.current = sheet;
+  const needAttune = useAttunementNeeded(sheet?.equipment ?? []);
+  const toggle = (id: string, field: 'equipped' | 'attuned') =>
+    save && void toggleItem(() => latest.current, save, id, field);
 
   const pinned = width >= PIN_FROM;
   const groups: SubTab<Group>[] = [{ id: 'actions', label: 'Actions' }];
@@ -367,7 +418,7 @@ export function SheetView({
   }
   if (!pinned) groups.push({ id: 'abilities', label: 'Abilities' });
   if (sheet && sheet.features.length > 0) groups.push({ id: 'features', label: 'Features' });
-  if (sheet && (sheet.equipment.length > 0 || sheet.gp > 0)) {
+  if (sheet && (sheet.equipment.length > 0 || coinsText(sheet))) {
     groups.push({ id: 'equipment', label: 'Equipment' });
   }
   if (character.notes.trim()) groups.push({ id: 'notes', label: 'Notes' });
@@ -756,32 +807,124 @@ export function SheetView({
     </Section>
   );
 
-  const equipment = sheet && (sheet.equipment.length > 0 || sheet.gp > 0) && (
-    <Section
-      title="Equipment"
-      solo
-      className="sh-gear"
-      meta={
-        sheet.gp > 0 && (
-          <span className="sh-kv">
-            <span className="k">Gold</span>
-            <span className="num">{sheet.gp.toLocaleString()} GP</span>
-          </span>
-        )
-      }
-    >
-      <div className="sh-flow">
-        {sheet.equipment.map((item) => (
+  const equipment =
+    sheet &&
+    (sheet.equipment.length > 0 || coinsText(sheet)) &&
+    (() => {
+      // Grouped by where each item is kept: on the character first, then each place by name.
+      const places = [...new Set(sheet.equipment.map((i) => i.place?.trim() ?? ''))].sort((a, b) =>
+        a === '' ? -1 : b === '' ? 1 : a.localeCompare(b),
+      );
+      const attuned = attunedCount(sheet);
+      const attunable = sheet.equipment.some(
+        (i) => i.attunement || i.attuned || needAttune.has(i.id),
+      );
+      const row = (item: SheetItem) => {
+        const name = item.name || 'Item';
+        const canAttune = item.attunement || item.attuned || needAttune.has(item.id);
+        return (
           <SheetRow
             key={item.id}
-            name={item.name || 'Item'}
+            name={name}
             sheetRef={item.ref}
-            after={item.quantity !== 1 && <span className="sh-qty">×{item.quantity}</span>}
+            after={
+              <>
+                {item.quantity !== 1 && <span className="sh-qty">×{item.quantity}</span>}
+                {item.uses && (
+                  <Pips
+                    label={`${name} charge`}
+                    max={item.uses.max}
+                    used={item.uses.used}
+                    onChange={
+                      save &&
+                      ((used) =>
+                        save({
+                          ...sheet,
+                          equipment: sheet.equipment.map((x) =>
+                            x.id === item.id && x.uses ? { ...x, uses: { ...x.uses, used } } : x,
+                          ),
+                        }))
+                    }
+                  />
+                )}
+                {/* Where nothing can be changed, say it in words. */}
+                {!save && item.equipped && <span className="sh-tag">equipped</span>}
+                {!save && item.attuned && <span className="sh-tag">attuned</span>}
+              </>
+            }
+            actions={
+              save && (
+                <>
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-pressed={!!item.equipped}
+                    aria-label={`Equip ${name}`}
+                    title={item.equipped ? 'Equipped: press to take it off' : 'Equip'}
+                    onClick={() => toggle(item.id, 'equipped')}
+                  >
+                    <Icon name="hand" />
+                  </button>
+                  {canAttune && (
+                    <button
+                      type="button"
+                      className="chrome-btn xs"
+                      aria-pressed={!!item.attuned}
+                      aria-label={`Attune to ${name}`}
+                      title={item.attuned ? 'Attuned: press to end it' : 'Attune'}
+                      onClick={() => toggle(item.id, 'attuned')}
+                    >
+                      <Icon name="gem" />
+                    </button>
+                  )}
+                </>
+              )
+            }
           />
-        ))}
-      </div>
-    </Section>
-  );
+        );
+      };
+      return (
+        <Section
+          title="Equipment"
+          solo
+          className="sh-gear"
+          meta={
+            <>
+              {coinsText(sheet) && (
+                <span className="sh-kv">
+                  <span className="k">Coins</span>
+                  <span className="num">{coinsText(sheet)}</span>
+                </span>
+              )}
+              {attunable && (
+                <span
+                  className={`sh-kv${attuned > 3 ? ' over' : ''}`}
+                  title={attuned > 3 ? 'A character attunes to at most three items' : undefined}
+                >
+                  <span className="k">Attuned</span>
+                  <span className="num">{attuned} of 3</span>
+                </span>
+              )}
+            </>
+          }
+        >
+          {places.map((place) => {
+            const items = sheet.equipment.filter((i) => (i.place?.trim() ?? '') === place);
+            return (
+              <div key={place || 'on-you'} className="sh-place" data-testid="item-place">
+                {places.length > 1 && (
+                  <h4 className="sh-place-head">
+                    {place || 'On you'}
+                    <span className="sh-lvl-count">{items.length}</span>
+                  </h4>
+                )}
+                <div className="sh-flow">{items.map(row)}</div>
+              </div>
+            );
+          })}
+        </Section>
+      );
+    })();
 
   const notes = character.notes.trim() && (
     <Section title="Notes" solo className="sh-notes-sec">
@@ -932,8 +1075,22 @@ export function SheetView({
             </>
           }
           extra={n?.speed.overridden && <HandMark />}
+          {...(feet(sheet?.speeds)
+            ? { title: `Walking ${t.speed} ft; ${feet(sheet?.speeds)}` }
+            : {})}
         />
       </div>
+
+      {sheet && defenceLines(sheet).length > 0 && (
+        <dl className="sh-defs" aria-label="Defences and senses">
+          {defenceLines(sheet).map((d) => (
+            <div key={d.label}>
+              <dt>{d.label}</dt>
+              <dd>{d.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
 
       <div className="sh-cols">
         <div className="sh-ref">

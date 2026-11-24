@@ -3079,6 +3079,16 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   min-width: min(160px, 100%);
 }
 
+/* An item's second line in the editor: where it is kept, equipped, attuned, charges. */
+.sheet-row-more {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding-left: 12px;
+}
+
 /* The player console's Sheets tab (ADR 0069): a sheet to read at the table. */
 .sheets-page {
   display: grid;
@@ -4113,6 +4123,52 @@ button.sh-vital.rolls:hover .sh-v-label {
 .sh-empty p {
   margin: 0;
   flex: 1 1 220px;
+}
+
+/* Defences, senses and other speeds: a line of labelled facts under the tiles, read only. */
+.sh-defs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 12px 0 0;
+}
+
+.sh-defs > div {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sh-defs dt {
+  color: var(--text-muted);
+}
+
+.sh-defs dd {
+  margin: 0;
+}
+
+/* Equipment by where it is kept. */
+.sh-place + .sh-place {
+  margin-top: 16px;
+}
+
+.sh-place-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Equipped or attuned, said in words where nothing can be changed. */
+.sh-tag {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sh-kv.over .num {
+  color: var(--warn);
 }
 
 @media (prefers-reduced-motion: reduce) {

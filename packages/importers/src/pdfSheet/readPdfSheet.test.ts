@@ -175,7 +175,9 @@ describe('the official 2014 field set', () => {
       [2, 'handaxes'],
       [1, "explorer's pack (with rope, rations)"],
     ]);
-    expect(s.gp).toBe(15.9);
+    // Each coin as itself (docs/CHARACTER-SHEET.md, item 4), no longer folded into gold.
+    expect(s.gp).toBe(15);
+    expect(s.coins).toEqual({ pp: 0, ep: 0, sp: 7, cp: 20 });
     expect(s.otherProficiencies).toContain('Common, Dwarvish');
     expect(s.features.map((f) => f.name)).toEqual([
       'Fighting Style: Defense',
@@ -350,6 +352,7 @@ describe('the export a character app makes', () => {
       [10, 'Rations (1 day)'],
     ]);
     expect(s.gp).toBe(40);
+    expect(s.coins).toBeUndefined();
     expect(imported.notes).toBe(
       'Backstory:\nRaised in a mountain library.\nLeft to find a lost book.',
     );
@@ -518,7 +521,8 @@ describe('the official 2024 sheet', () => {
     expect(s.otherProficiencies).toBe(
       'Armor: Light, Shields\nWeapons: Simple weapons\nLanguages: Common, Dwarvish',
     );
-    expect(s.gp).toBe(15.5);
+    expect(s.gp).toBe(15);
+    expect(s.coins).toEqual({ pp: 0, ep: 0, sp: 5, cp: 0 });
     expect(warnings).toEqual([]);
   });
 

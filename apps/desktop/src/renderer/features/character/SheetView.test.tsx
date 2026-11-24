@@ -1,10 +1,11 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { blankSheet } from '@trifold/rules';
-import type { Character, Sheet } from '@trifold/schema';
+import type { Character, CompendiumRecord, Sheet } from '@trifold/schema';
 import { useRollLogStore } from '../../stores/rollLogStore';
+import { clearItemFacts } from './itemFacts';
 import { SheetView } from './SheetView';
 
 /** The character sheet's layout (ADR 0080): tabs, pips, slots by spell level, the readout. */
@@ -76,8 +77,8 @@ const cleric: Character = {
 };
 
 /** The sheet with rolling and resources on, its sheet kept in state as the store keeps it. */
-function AtTheTable({ seen }: { seen?(s: Sheet): void }) {
-  const [character, setCharacter] = useState(cleric);
+function AtTheTable({ seen, start = cleric }: { seen?(s: Sheet): void; start?: Character }) {
+  const [character, setCharacter] = useState(start);
   return (
     <SheetView
       character={character}
@@ -156,7 +157,7 @@ describe('what can be pressed (ADR 0080)', () => {
   });
 
   it('only lets a row light up when it opens or acts', () => {
-    render(<AtTheTable />);
+    render(<SheetView character={cleric} />);
     const bolts = screen.getByText('Bolts').closest('.sh-row')!;
     expect(bolts).not.toHaveClass('acts');
     const channel = screen.getByRole('button', { name: 'Channel Divinity' }).closest('.sh-row')!;
@@ -220,5 +221,118 @@ describe('the turn bar', () => {
     expect(readout).toHaveTextContent('Medicine check');
     expect(readout).toHaveTextContent('1d20+7');
     expect(screen.getByRole('button', { name: 'Normal' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+describe('equipment (docs/CHARACTER-SHEET.md, items 1 to 5, 20, 21)', () => {
+  const record = (name: string, data: Record<string, unknown>) =>
+    ({
+      kind: 'item',
+      key: name.toLowerCase(),
+      name,
+      displayName: name,
+      data: {
+        typeCode: 'G',
+        magic: false,
+        stealthDisadvantage: false,
+        properties: [],
+        text: '',
+        ...data,
+      },
+    }) as unknown as CompendiumRecord;
+  const records: Record<string, CompendiumRecord> = {
+    'chain mail': record('Chain Mail', { typeCode: 'HA', ac: 16 }),
+    shield: record('Shield', { typeCode: 'S', ac: 2 }),
+    'ring of protection': record('Ring of Protection', {
+      typeCode: 'RG',
+      requiresAttunement: true,
+    }),
+  };
+  const ref = (name: string) => ({ kind: 'item' as const, key: name.toLowerCase(), name });
+  const armed: Character = {
+    ...cleric,
+    sheet: {
+      ...cleric.sheet!,
+      equipment: [
+        { id: 'e1', name: 'Chain Mail', quantity: 1, ref: ref('Chain Mail') },
+        { id: 'e2', name: 'Shield', quantity: 1, ref: ref('Shield') },
+        { id: 'e3', name: 'Ring of Protection', quantity: 1, ref: ref('Ring of Protection') },
+        { id: 'e4', name: 'Rope', quantity: 1, place: 'Backpack' },
+        { id: 'e5', name: 'Wand', quantity: 1, uses: { max: 7, used: 2, reset: 'dawn' } },
+      ],
+      gp: 47,
+      coins: { pp: 5, ep: 0, sp: 12, cp: 0 },
+      defenses: { resist: ['poison'], immune: [], vulnerable: [], conditionImmune: [] },
+      senses: { darkvision: 120 },
+    },
+  };
+
+  beforeEach(() => {
+    clearItemFacts();
+    vi.mocked(window.trifold.compendium.findByKey).mockImplementation(async (_kind, key) => {
+      const r = records[key];
+      return r ? [r] : [];
+    });
+  });
+
+  /** The AC tile's value. */
+  const ac = () =>
+    within(screen.getByLabelText('Numbers'))
+      .getByText('AC')
+      .closest('.sh-vital')!
+      .querySelector('.sh-v-val')!;
+
+  it('sets AC from the armour and shield equipped, read from their records', async () => {
+    const user = userEvent.setup();
+    render(<AtTheTable start={armed} />);
+    // No armour setting and nothing equipped: 10 + Dex 0.
+    expect(ac()).toHaveTextContent('10');
+    await user.click(screen.getByRole('button', { name: 'Equip Chain Mail' }));
+    await waitFor(() => expect(ac()).toHaveTextContent('16'));
+    await user.click(screen.getByRole('button', { name: 'Equip Shield' }));
+    await waitFor(() => expect(ac()).toHaveTextContent('18'));
+    expect(screen.getByRole('button', { name: 'Equip Shield' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    // Taken off again: the chain mail is known now, so nothing worn means unarmoured.
+    await user.click(screen.getByRole('button', { name: 'Equip Chain Mail' }));
+    await waitFor(() => expect(ac()).toHaveTextContent('12'));
+  });
+
+  it('offers attunement only for items that need it, and counts it against three', async () => {
+    const user = userEvent.setup();
+    render(<AtTheTable start={armed} />);
+    await screen.findByRole('button', { name: 'Attune to Ring of Protection' });
+    expect(screen.queryByRole('button', { name: 'Attune to Shield' })).toBeNull();
+    const gear = within(screen.getByRole('tabpanel', { name: 'Equipment' }));
+    expect(gear.getByText('0 of 3')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Attune to Ring of Protection' }));
+    await waitFor(() => expect(gear.getByText('1 of 3')).toBeInTheDocument());
+  });
+
+  it('groups items by where they are kept, with coins and charges', () => {
+    render(<AtTheTable start={armed} />);
+    const places = screen.getAllByTestId('item-place');
+    expect(places.map((p) => p.querySelector('h4')?.firstChild?.textContent)).toEqual([
+      'On you',
+      'Backpack',
+    ]);
+    expect(within(places[1]!).getByText('Rope')).toBeInTheDocument();
+    expect(screen.getByText('5 PP · 47 GP · 12 SP')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('tabpanel', { name: 'Equipment' })).getByRole('group', {
+        name: 'Wand charge: 5 of 7 left',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows defences and senses under the tiles', () => {
+    render(<SheetView character={armed} />);
+    const defs = screen.getByLabelText('Defences and senses');
+    expect(defs).toHaveTextContent('Resistantpoison');
+    expect(defs).toHaveTextContent('Sensesdarkvision 120 ft');
+    // Read only: equipped and attuned are words, not buttons.
+    expect(screen.queryByRole('button', { name: /^Equip / })).toBeNull();
   });
 });

@@ -460,10 +460,12 @@ export function readPdfSheet(pdfFields: readonly PdfField[]): PdfSheetResult {
   }).map(withUses);
   sheet.equipment = readEquipment(byKey, text('equipment'));
 
-  // Coins, as gold.
-  const coin = (k: string) => firstNumber(text(k)) ?? 0;
-  const gp = coin('pp') * 10 + coin('gp') + coin('ep') / 2 + coin('sp') / 10 + coin('cp') / 100;
-  sheet.gp = Math.round(clamp(gp, 0, 10_000_000) * 100) / 100;
+  // Coins, each as itself (docs/CHARACTER-SHEET.md, item 4).
+  const coin = (k: string) => clamp(Math.floor(firstNumber(text(k)) ?? 0), 0, 10_000_000);
+  sheet.gp = coin('gp');
+  if (coin('pp') || coin('ep') || coin('sp') || coin('cp')) {
+    sheet.coins = { pp: coin('pp'), ep: coin('ep'), sp: coin('sp'), cp: coin('cp') };
+  }
 
   // Overrides: what the page says, where the sheet would work out something else.
   const derived = deriveSheet(sheet);
