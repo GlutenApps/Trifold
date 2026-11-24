@@ -42,15 +42,27 @@ interface Page<T> {
 const ATTEMPTS = 6;
 
 /**
- * GETs JSON, retrying server errors, rate limits, and a 200 whose body is not JSON (the API's
- * front end sometimes answers with an HTML page while it is busy), with a growing pause.
+ * GETs JSON, retrying server errors, rate limits, a 200 whose body is not JSON (the API's front
+ * end sometimes answers with an HTML page while it is busy) and a connection that drops or
+ * resets before the body is in, with a growing pause.
  */
 async function getJson<T>(url: string): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
-    const res = await fetch(url, { headers: { accept: 'application/json' } });
-    let problem: string;
-    if (res.ok) {
-      const body = await res.text();
+    let problem = '';
+    let res: Response | null = null;
+    let body = '';
+    try {
+      res = await fetch(url, { headers: { accept: 'application/json' } });
+      if (res.ok) body = await res.text();
+    } catch (err) {
+      // Dropped or reset before the body was in (ECONNRESET, "terminated").
+      res = null;
+      const cause = (err as { cause?: { code?: string } }).cause?.code;
+      problem = `the connection failed (${cause ?? (err as Error).message})`;
+    }
+    if (!res) {
+      problem ||= 'the connection failed';
+    } else if (res.ok) {
       try {
         return JSON.parse(body) as T;
       } catch {
