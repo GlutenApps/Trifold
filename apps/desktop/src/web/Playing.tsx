@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ClientView, CreatureView, TableIntent } from '@trifold/api';
-import type { Connection } from './connection';
-import { AddCompanion } from './AddCompanion';
-import { MapView, type MeasureLine } from './MapView';
-import { ScreenView } from './ScreenView';
-import { TvBottom, TvTop } from './TvOverlays';
+import type { Connection } from '../playerUi/connection';
+import { AddCompanion } from '../playerUi/AddCompanion';
+import { MapView, type MeasureLine } from '../playerUi/MapView';
+import { ScreenView } from '../playerUi/ScreenView';
+import { TvBottom, TvTop } from '../playerUi/TvOverlays';
 import { rulerLabel, squaresBetween } from '../renderer/features/presenter/ruler';
 import {
   CompanionsTool,
@@ -18,9 +18,10 @@ import {
   ToolTabs,
   TOOLS,
   type Tool,
-} from './tools';
+} from '../playerUi/tools';
 import { persistentTools, type Layout } from './useLayout';
-import { useMovePlan } from './useMovePlan';
+import { useMovePlan } from '../playerUi/useMovePlan';
+import { InitiativeCard } from '../playerUi/InitiativeCard';
 
 /**
  * The page while a player holds characters (player UI handoff, 2026-11-15): the map as large as
@@ -390,43 +391,5 @@ export function Playing({
         </aside>
       )}
     </main>
-  );
-}
-
-/**
- * The initiative box (PLAYER-CONNECTOR.md, "Initiative"): one number, then it goes. Floats over
- * the top of the map here; the player console puts it in its Initiative tool (PLAYER-MODE.md).
- */
-export function InitiativeCard({
-  creature,
-  onSubmit,
-}: {
-  creature: CreatureView;
-  onSubmit(value: number): void;
-}) {
-  const [value, setValue] = useState('');
-  const ok = /^-?\d{1,2}$/.test(value);
-  return (
-    <form
-      className="pc-initiative"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (ok) onSubmit(Number(value));
-      }}
-    >
-      <label className="pc-field">
-        <span>Roll initiative for {creature.name} and enter what you got</span>
-        <input
-          inputMode="numeric"
-          maxLength={3}
-          aria-label="Initiative"
-          value={value}
-          onChange={(e) => setValue(e.target.value.replace(/[^\d-]/g, '').slice(0, 3))}
-        />
-      </label>
-      <button type="submit" className="pc-btn primary" disabled={!ok}>
-        Submit
-      </button>
-    </form>
   );
 }

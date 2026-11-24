@@ -27,6 +27,7 @@ export default defineConfig({
           include: [
             'apps/desktop/src/renderer/**/*.test.{ts,tsx}',
             'apps/desktop/src/web/**/*.test.{ts,tsx}',
+            'apps/desktop/src/playerUi/**/*.test.{ts,tsx}',
           ],
           setupFiles: ['apps/desktop/src/renderer/test/setup.ts'],
         },

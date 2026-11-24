@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CreatureView, TableIntent } from '@trifold/api';
 import type { ConditionInstance } from '@trifold/schema';
-import { AddCompanion } from '../../../web/AddCompanion';
+import { AddCompanion } from '../../../playerUi/AddCompanion';
 import { HeldConditions } from '../campaign/HeldConditions';
 import { HpChip, HpEditor, type HpChange } from '../campaign/HpBetweenFights';
 import { Icon } from '../shell/icons';
@@ -14,7 +14,7 @@ import {
   orderMine,
   usePlayerTable,
 } from './PlayerTable';
-import '../../../web/web.css';
+import '../../../playerUi/web.css';
 
 /**
  * My characters (docs/PLAYER-MODE.md, "My characters and Sheets"): the player console's quick

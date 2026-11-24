@@ -5,7 +5,7 @@ import { useJoinedStore } from '../../stores/joinedStore';
 import { useShellStore } from '../../stores/shellStore';
 import { useSourcesStore } from '../../stores/sourcesStore';
 import { logTableRoll, useTableRollStore } from '../../stores/tableRollStore';
-import { useConnection, type Connection } from '../../../web/connection';
+import { useConnection, type Connection } from '../../../playerUi/connection';
 import { createBridgeClient, withTableUrls } from './bridgeClient';
 
 /**

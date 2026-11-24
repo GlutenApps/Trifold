@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { createWebSocketClient, useConnection, type Connection } from './connection';
-import { Picker } from './Picker';
+import { createWebSocketClient, useConnection, type Connection } from '../playerUi/connection';
+import { Picker } from '../playerUi/Picker';
 import { Playing } from './Playing';
 import { useLayout } from './useLayout';
 

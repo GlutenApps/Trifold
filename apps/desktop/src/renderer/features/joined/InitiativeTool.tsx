@@ -1,6 +1,6 @@
-import { InitiativeCard } from '../../../web/Playing';
+import { InitiativeCard } from '../../../playerUi/InitiativeCard';
 import { linkSentence, usePlayerTable } from './PlayerTable';
-import '../../../web/web.css';
+import '../../../playerUi/web.css';
 
 /**
  * Initiative (docs/PLAYER-MODE.md, "Panels"): the player console's view of the fight's order.

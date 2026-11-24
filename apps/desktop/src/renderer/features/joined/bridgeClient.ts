@@ -1,5 +1,5 @@
 import { MEDIA_SCHEME, type ClientView, type ServerMessage } from '@trifold/api';
-import type { TableClient } from '../../../web/connection';
+import type { TableClient } from '../../../playerUi/connection';
 
 /**
  * The player console's transport (docs/PLAYER-MODE.md, "Connection"): the same `TableClient` the
