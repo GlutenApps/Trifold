@@ -9,6 +9,7 @@ import { ExternalForm } from '../character/ExternalForm';
 import { SheetView } from '../character/SheetView';
 import { TrifoldSheet } from '../character/TrifoldSheet';
 import { GuidedBuilder } from '../character/builder/GuidedBuilder';
+import { GuidedBuilder2014 } from '../character/builder/GuidedBuilder2014';
 import { PdfImport } from '../character/PdfImport';
 import { FormSheet, FormsSection } from '../character/Forms';
 import { useJoinedStore } from '../../stores/joinedStore';
@@ -203,9 +204,10 @@ export function SheetsPage() {
 
   // The guided builder, opened from My characters (docs/BUILDER.md): Finish links what it made.
   if (building?.forJoined) {
+    const Builder = building.edition === '2014' ? GuidedBuilder2014 : GuidedBuilder;
     return (
       <div className="sheets-page" data-testid="sheets-page">
-        <GuidedBuilder
+        <Builder
           name={building.name}
           onCancel={cancelBuilding}
           onFinish={(sheet, build) =>

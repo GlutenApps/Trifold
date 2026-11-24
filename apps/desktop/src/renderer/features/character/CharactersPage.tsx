@@ -5,6 +5,7 @@ import { useCharacterStore } from '../../stores/characterStore';
 import { Icon } from '../shell/icons';
 import { CharacterEditor } from './CharacterEditor';
 import { GuidedBuilder } from './builder/GuidedBuilder';
+import { GuidedBuilder2014 } from './builder/GuidedBuilder2014';
 import { PdfImport } from './PdfImport';
 
 /**
@@ -40,6 +41,8 @@ export function NewCharacterPanel({
   const [kind, setKind] = useState<Character['kind']>('trifold');
   /** How a Trifold character starts (docs/BUILDER.md): guided builder, blank sheet or a PDF. */
   const [start, setStart] = useState<'guided' | 'blank' | 'pdf'>('guided');
+  /** The guided builder's rules (docs/BUILDER.md): 2024, or 2014 from the SRD 5.1. */
+  const [rules, setRules] = useState<Character['edition']>('2024');
   const [busy, setBusy] = useState(false);
   return (
     <form
@@ -58,7 +61,7 @@ export function NewCharacterPanel({
           return;
         }
         if (kind === 'trifold' && start === 'guided') {
-          startBuilding(name.trim() || 'Unnamed character', forJoined);
+          startBuilding(name.trim() || 'Unnamed character', forJoined, 'guided', rules);
           onGuided?.();
           onClose();
           return;
@@ -136,6 +139,19 @@ export function NewCharacterPanel({
                 </span>
               </span>
             </label>
+            {start === 'guided' && (
+              <label className="field inline character-rules">
+                Rules
+                <select
+                  aria-label="Builder rules"
+                  value={rules}
+                  onChange={(e) => setRules(e.target.value === '2014' ? '2014' : '2024')}
+                >
+                  <option value="2024">2024 rules</option>
+                  <option value="2014">Legacy rules (2014)</option>
+                </select>
+              </label>
+            )}
             <label className="character-kind">
               <input
                 type="radio"
@@ -209,8 +225,9 @@ export function CharactersPage() {
     );
   }
   if (building && !building.forJoined) {
+    const Builder = building.edition === '2014' ? GuidedBuilder2014 : GuidedBuilder;
     return (
-      <GuidedBuilder
+      <Builder
         name={building.name}
         onCancel={cancelBuilding}
         onFinish={(sheet, build) =>

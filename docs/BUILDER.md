@@ -54,7 +54,16 @@ With a campaign's `allowLegacy` on, the background and species steps also list S
 - Multiclassing (Level up adds levels in the one class).
 - Imported classes and subclasses (manual entry, as today).
 - Encumbrance, attunement, coin purses.
-- The 2014 builder (phase 8). Built so far: its data and rules. SRD 5.1 classes read their proficiencies, skill choice, equipment lines and caster type from the snapshot (`DATA-FORMATS.md` §4), subraces keep their parent, and `packages/rules/src/character/build2014.ts` reads races with their subraces and ability increases, equipment lines and their items, spells known and prepared (with the bard's, sorcerer's and ranger's spells-known tables, which the snapshot lacks), and the slots that differ from 2024 (half casters from 2nd level, the warlock's slot level). The flow and Level up follow.
+- The 2014 builder (phase 8). Built so far: its data and rules. SRD 5.1 classes read their proficiencies, skill choice, equipment lines and caster type from the snapshot (`DATA-FORMATS.md` §4), subraces keep their parent, and `packages/rules/src/character/build2014.ts` reads races with their subraces and ability increases, equipment lines and their items, spells known and prepared (with the bard's, sorcerer's and ranger's spells-known tables, which the snapshot lacks), and the slots that differ from 2024 (half casters from 2nd level, the warlock's slot level). Built too: the flow and Level up. **Guided builder** under New character has **Rules**, 2024 or Legacy (2014); the 2014 builder takes the SRD 5.1's steps:
+  - **Class:** with its subclass at 1st level for the cleric, sorcerer and warlock.
+  - **Race:** its subrace, the +1s a race lets the player place, and languages.
+  - **Background:** the SRD 5.1's, or a 2024 one used the 2014 way, with its skills, tool and kit but no increase or feat.
+  - **Ability scores:** standard array, point buy or rolled, then the race's increases.
+  - **Equipment:** line by line, (a) or (b).
+  - **Spells:** cantrips, and spells known or prepared, or a wizard's spellbook with the first picks prepared.
+  - **Review.**
+
+  The sheet's spellcasting ability is the class's SRD 5.1 one, and the character plays under the 2014 rules. Level up on a 2014 character reads the SRD 5.1's classes, subclasses, spells and feats, and follows the 2014 counts and slots.
 
 ## Order of work (one PR each)
 
