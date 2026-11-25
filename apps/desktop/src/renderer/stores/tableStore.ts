@@ -100,13 +100,16 @@ export const tableOn = (status: TableStatus | null, campaignId: string | undefin
  * switching the campaign stops the server. Returns the unsubscribe.
  */
 export function installTableSync(): () => void {
-  let frame: number | null = null;
+  /** A push is asked for and has not run yet. */
+  let pending = false;
+  let fallback: number | null = null;
+  /** Failed map image draws in a row, for the retry's back-off. */
+  let imageFailures = 0;
   let lastSnapshot = '';
   let lastImageKey = '';
   let wasOn = false;
 
   const push = () => {
-    frame = null;
     const { status } = useTableStore.getState();
     const current = useCampaignStore.getState().current;
     if (!current || !tableOn(status, current.campaign.id)) return;
@@ -150,25 +153,50 @@ export function installTableSync(): () => void {
           scene.fog?.shapes ?? null,
         )
           .then((jpeg) => {
+            imageFailures = 0;
             if (lastImageKey === key) {
               void window.trifold.table.setMapImage(scene.id, scene.imageKey, jpeg);
             }
           })
-          .catch(() => {
-            // Leave the key unset so the next change tries again; phones keep the backdrop.
+          .catch((err: unknown) => {
+            // Phones keep the backdrop meanwhile. The key is left unset so the next push draws
+            // it again, and a push is asked for after a pause, so a draw that failed once (a
+            // picture slow to load) does not wait for some other change to come along.
             if (lastImageKey === key) lastImageKey = '';
+            imageFailures += 1;
+            const attempt = imageFailures;
+            if (attempt <= 3) window.setTimeout(schedule, 1000 * attempt);
+            // The log is told after the retry is set, and its failure never stops one.
+            void Promise.resolve()
+              .then(() =>
+                window.trifold.app.reportError(
+                  'table map image',
+                  `${errorMessage(err)} (attempt ${attempt})`,
+                ),
+              )
+              .catch(() => undefined);
           });
       }
     }
   };
 
+  /**
+   * Pushes at most once a frame. A console that is covered or minimized does not paint, so its
+   * frames stop; a timer runs the push then, so phones still get the table while the GM looks
+   * at another window.
+   */
   const schedule = () => {
-    if (frame !== null) return;
-    const raf =
-      typeof requestAnimationFrame === 'function'
-        ? requestAnimationFrame
-        : (cb: () => void) => window.setTimeout(cb, 16);
-    frame = raf(push);
+    if (pending) return;
+    pending = true;
+    const run = () => {
+      if (!pending) return;
+      pending = false;
+      if (fallback !== null) window.clearTimeout(fallback);
+      fallback = null;
+      push();
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+    fallback = window.setTimeout(run, 100);
   };
 
   const syncJoinCode = () => {

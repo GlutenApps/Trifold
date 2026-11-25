@@ -671,6 +671,10 @@ export class TableHub {
 
   setMapImage(sceneId: string, imageKey: string, jpeg: Uint8Array): void {
     if (this.state !== 'on') return;
+    // Once per scene picture or fog change: what phones are sent, for a log that says why not.
+    this.opts.logger.info(
+      `table server: map image for scene ${sceneId}, ${Math.round(jpeg.byteLength / 1024)} KB`,
+    );
     this.mapImage = { sceneId, imageKey, jpeg: Buffer.from(jpeg) };
     this.scheduleBroadcast();
   }

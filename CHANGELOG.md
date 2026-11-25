@@ -10,6 +10,10 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 - **Concentration** (ADR 0083): casting a concentration spell shows what you're concentrating on in the sheet's top bar, with the Constitution save to roll and End. Casting another ends the first; a long rest ends it.
 - **Spell details on the row**: casting time, range, and C or R for concentration and ritual, for spells from the compendium.
 
+### Fixed
+
+- **Phones get the map while the console is covered or minimized.** The console kept phones up to date only while it was being drawn on screen; it now keeps sending when another window is in front. A map image that fails to draw is tried again instead of waiting for the next change, and the failure goes to the log.
+
 ## [0.5.0-beta.4] - 2026-11-24
 
 A redesigned character sheet with equipment you can wear, attune and stash, spells and gear you can change without leaving the sheet, and the player console's top bar brought in line with the GM's.
