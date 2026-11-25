@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ulid } from 'ulid';
 import {
   ABILITY_NAMES,
+  armourWorn,
   attackBonus,
   builtLevel,
   deriveSheet,
@@ -18,6 +19,7 @@ import { LevelUpPanel } from './builder/LevelUpPanel';
 import { LinkedText } from './LinkedRow';
 import { PdfImport } from './PdfImport';
 import { ResourcesSection } from './Resources';
+import { toggleItem } from './itemFacts';
 
 /**
  * A Trifold character's sheet (PLAYER-MODE.md, Way 3; ADR 0068): who they are, abilities, saves
@@ -75,6 +77,47 @@ function renamed<T extends { ref?: SheetRef }>(row: T, name: string): Partial<T>
     : ({ name } as unknown as Partial<T>);
 }
 
+/** Places offered for an item, beside those the sheet already uses. */
+const PLACES = ['Backpack', 'Mount', 'Home'];
+
+/**
+ * A comma-separated list ("fire, poison"), kept as typed while it is edited so a trailing comma
+ * or space is not swallowed; the list it means is saved on every change.
+ */
+function ListField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: readonly string[];
+  onChange(next: string[]): void;
+}) {
+  const parse = (t: string) =>
+    t
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .slice(0, 30)
+      .map((x) => x.slice(0, 40));
+  const [text, setText] = useState(value.join(', '));
+  useEffect(() => {
+    setText((t) => (parse(t).join('|') === value.join('|') ? t : value.join(', ')));
+  }, [value]);
+  return (
+    <input
+      type="text"
+      aria-label={label}
+      value={text}
+      placeholder="None"
+      onChange={(e) => {
+        setText(e.target.value);
+        onChange(parse(e.target.value));
+      }}
+    />
+  );
+}
+
 function AddButton({ label, onAdd }: { label: string; onAdd(): void }) {
   return (
     <button type="button" className="btn" onClick={onAdd}>
@@ -123,6 +166,24 @@ export function TrifoldSheet({ character }: { character: Character }) {
   const features = list('features');
   const spells = list('spells');
   const equipment = list('equipment');
+  // Equip and attune read the item's record first; they then save onto the latest sheet.
+  const latestSheet = () =>
+    useCharacterStore.getState().characters.find((c) => c.id === id)?.sheet ?? sheet;
+  const saveSheet = (next: Sheet) => change(id, { sheet: next });
+  const worn = armourWorn(sheet);
+  const wornItems = [worn.body?.item, worn.shield?.item].filter((x): x is string => !!x);
+  const places = [
+    ...new Set([...sheet.equipment.map((i) => i.place?.trim() ?? '').filter(Boolean), ...PLACES]),
+  ];
+  const defenses = sheet.defenses ?? {
+    resist: [],
+    immune: [],
+    vulnerable: [],
+    conditionImmune: [],
+  };
+  const setDefense = (key: keyof typeof defenses, next: string[]) =>
+    set({ defenses: { ...defenses, [key]: next } });
+  const coins = sheet.coins ?? { cp: 0, sp: 0, ep: 0, pp: 0 };
 
   return (
     <div className="character-body trifold-sheet" data-testid="trifold-sheet">
@@ -412,6 +473,12 @@ export function TrifoldSheet({ character }: { character: Character }) {
           </span>
         </div>
         <h3>Armour</h3>
+        {wornItems.length > 0 && (
+          <p className="muted small" data-testid="armour-from-items">
+            AC comes from what is equipped in Equipment: {wornItems.join(' and ')}. The settings
+            here count for armour Equipment does not know.
+          </p>
+        )}
         <div className="sheet-grid">
           <label className="field">
             Armour
@@ -459,6 +526,67 @@ export function TrifoldSheet({ character }: { character: Character }) {
             />
             Shield (+2)
           </label>
+        </div>
+        <h3>Defences and senses</h3>
+        <div className="sheet-grid">
+          <label className="field">
+            Resistant to
+            <ListField
+              label="Resistant to"
+              value={defenses.resist}
+              onChange={(v) => setDefense('resist', v)}
+            />
+          </label>
+          <label className="field">
+            Immune to
+            <ListField
+              label="Immune to"
+              value={defenses.immune}
+              onChange={(v) => setDefense('immune', v)}
+            />
+          </label>
+          <label className="field">
+            Vulnerable to
+            <ListField
+              label="Vulnerable to"
+              value={defenses.vulnerable}
+              onChange={(v) => setDefense('vulnerable', v)}
+            />
+          </label>
+          <label className="field">
+            Condition immunities
+            <ListField
+              label="Condition immunities"
+              value={defenses.conditionImmune}
+              onChange={(v) => setDefense('conditionImmune', v)}
+            />
+          </label>
+          {(['darkvision', 'blindsight', 'tremorsense', 'truesight'] as const).map((k) => (
+            <label key={k} className="field">
+              {`${k[0]!.toUpperCase()}${k.slice(1)} (ft)`}
+              <NumField
+                label={`${k[0]!.toUpperCase()}${k.slice(1)}`}
+                value={sheet.senses?.[k]}
+                min={0}
+                max={1000}
+                optional
+                onChange={(v) => set({ senses: { ...sheet.senses, [k]: v } })}
+              />
+            </label>
+          ))}
+          {(['fly', 'swim', 'climb', 'burrow'] as const).map((k) => (
+            <label key={k} className="field">
+              {`${k[0]!.toUpperCase()}${k.slice(1)} speed (ft)`}
+              <NumField
+                label={`${k[0]!.toUpperCase()}${k.slice(1)} speed`}
+                value={sheet.speeds?.[k]}
+                min={0}
+                max={1000}
+                optional
+                onChange={(v) => set({ speeds: { ...sheet.speeds, [k]: v } })}
+              />
+            </label>
+          ))}
         </div>
       </section>
 
@@ -787,6 +915,70 @@ export function TrifoldSheet({ character }: { character: Character }) {
                 label={item.name || `item ${i + 1}`}
                 onRemove={() => equipment.remove(i)}
               />
+              <div className="sheet-row-more">
+                <input
+                  type="text"
+                  aria-label={`${item.name || `Item ${i + 1}`} place`}
+                  placeholder="On you"
+                  list={`places-${id}`}
+                  maxLength={60}
+                  value={item.place ?? ''}
+                  onChange={(e) => equipment.patch(i, { place: e.target.value || undefined })}
+                />
+                <label className="field inline">
+                  <input
+                    type="checkbox"
+                    checked={!!item.equipped}
+                    onChange={() => void toggleItem(latestSheet, saveSheet, item.id, 'equipped')}
+                  />
+                  Equipped
+                </label>
+                <label className="field inline">
+                  <input
+                    type="checkbox"
+                    checked={!!item.attuned}
+                    onChange={() => void toggleItem(latestSheet, saveSheet, item.id, 'attuned')}
+                  />
+                  Attuned
+                </label>
+                <label className="field inline">
+                  Charges
+                  <NumField
+                    label={`${item.name || `Item ${i + 1}`} charges`}
+                    value={item.uses?.max}
+                    min={1}
+                    max={99}
+                    optional
+                    onChange={(v) =>
+                      equipment.patch(i, {
+                        uses:
+                          v === undefined
+                            ? undefined
+                            : {
+                                max: v,
+                                used: Math.min(v, item.uses?.used ?? 0),
+                                reset: item.uses?.reset ?? 'dawn',
+                              },
+                      })
+                    }
+                  />
+                </label>
+                {item.uses && (
+                  <select
+                    aria-label={`${item.name || `Item ${i + 1}`} charges come back`}
+                    value={item.uses.reset}
+                    onChange={(e) =>
+                      equipment.patch(i, {
+                        uses: { ...item.uses!, reset: e.target.value as 'short' | 'long' | 'dawn' },
+                      })
+                    }
+                  >
+                    <option value="dawn">at dawn</option>
+                    <option value="long">on a long rest</option>
+                    <option value="short">on a short rest</option>
+                  </select>
+                )}
+              </div>
               {item.ref && reading.has(item.id) && (
                 <div className="sheet-row-record">
                   <LinkedText sheetRef={item.ref} />
@@ -795,16 +987,36 @@ export function TrifoldSheet({ character }: { character: Character }) {
             </li>
           ))}
         </ul>
-        <label className="field inline">
-          Gold
-          <NumField
-            label="Gold"
-            value={sheet.gp}
-            min={0}
-            max={10_000_000}
-            onChange={(v) => v !== undefined && set({ gp: v })}
-          />
-        </label>
+        <datalist id={`places-${id}`}>
+          {places.map((p) => (
+            <option key={p} value={p} />
+          ))}
+        </datalist>
+        <div className="sheet-row" role="group" aria-label="Coins">
+          {(
+            [
+              ['pp', 'Platinum (PP)'],
+              ['gp', 'Gold (GP)'],
+              ['ep', 'Electrum (EP)'],
+              ['sp', 'Silver (SP)'],
+              ['cp', 'Copper (CP)'],
+            ] as const
+          ).map(([k, label]) => (
+            <label key={k} className="field inline">
+              {label}
+              <NumField
+                label={label}
+                value={k === 'gp' ? sheet.gp : coins[k]}
+                min={0}
+                max={10_000_000}
+                onChange={(v) =>
+                  v !== undefined &&
+                  (k === 'gp' ? set({ gp: v }) : set({ coins: { ...coins, [k]: v } }))
+                }
+              />
+            </label>
+          ))}
+        </div>
         <AddButton
           label="Add an item"
           onAdd={() => equipment.add({ id: ulid(), name: '', quantity: 1 })}

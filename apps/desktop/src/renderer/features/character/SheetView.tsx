@@ -8,7 +8,10 @@ import {
 } from 'react';
 import {
   ABILITY_NAMES,
+  armourWorn,
+  normalizeKey,
   attackBonus,
+  attunedCount,
   classLine,
   deriveSheet,
   setSlotsUsed,
@@ -19,7 +22,8 @@ import {
   tableNumbers,
   type RollMode,
 } from '@trifold/rules';
-import type { Ability, Character, Sheet, Skill } from '@trifold/schema';
+import { ulid } from 'ulid';
+import type { Ability, Character, Sheet, SheetItem, Skill } from '@trifold/schema';
 import { useRollLogStore } from '../../stores/rollLogStore';
 import { useShellStore } from '../../stores/shellStore';
 import { Icon } from '../shell/icons';
@@ -28,6 +32,8 @@ import { SheetRow } from './LinkedRow';
 import { Pips, ResourcesSection, type SheetEvent } from './Resources';
 import { signed } from './fields';
 import { d20, damageDice, rollFromSheet, type SheetRollOptions } from './sheetRolls';
+import { toggleItem, useAttunementNeeded } from './itemFacts';
+import { AddPanel, ItemEditor, type Added } from './SheetEdit';
 
 /**
  * A character's sheet to read and use at the table (docs/PLAYER-MODE.md, "My characters and
@@ -186,15 +192,57 @@ function SheetLink({ character }: { character: Character }) {
   );
 }
 
-/** The armour behind AC, as the AC tile's tooltip. */
+/** The armour behind AC, as the AC tile's tooltip: what is worn, from items or the setting. */
 function armourText(sheet: Sheet | undefined): string | undefined {
   if (!sheet) return undefined;
-  const a = sheet.armor;
-  const kind =
-    a.kind === 'none'
-      ? 'No armour'
-      : `${a.kind[0]!.toUpperCase()}${a.kind.slice(1)} armour, base ${a.base}`;
-  return `${kind}${a.shield ? ', shield' : ''}${a.bonus ? `, ${signed(a.bonus)}` : ''}`;
+  const { body, shield } = armourWorn(sheet);
+  const kind = body ? `${body.armor.kind[0]!.toUpperCase()}${body.armor.kind.slice(1)}` : '';
+  const bodyText = body
+    ? body.item
+      ? `${body.item} (${body.armor.kind}, base ${body.armor.base})`
+      : `${kind} armour, base ${body.armor.base}`
+    : 'No armour';
+  const shieldText = shield ? `, ${shield.item ?? 'shield'} (+${shield.armor.base})` : '';
+  const bonus = sheet.armor.bonus ? `, ${signed(sheet.armor.bonus)}` : '';
+  return `${bodyText}${shieldText}${bonus}`;
+}
+
+/** Coins as the Equipment tab shows them, largest first: "5 PP · 47 GP · 12 SP". */
+function coinsText(sheet: Sheet): string {
+  const c = sheet.coins;
+  return (
+    [
+      ['PP', c?.pp ?? 0],
+      ['GP', sheet.gp],
+      ['EP', c?.ep ?? 0],
+      ['SP', c?.sp ?? 0],
+      ['CP', c?.cp ?? 0],
+    ] as const
+  )
+    .filter(([, n]) => n > 0)
+    .map(([k, n]) => `${n.toLocaleString()} ${k}`)
+    .join(' · ');
+}
+
+/** "fly 30 ft, swim 30 ft": a list of named distances, the ones set. */
+function feet(list: Partial<Record<string, number>> | undefined): string {
+  return Object.entries(list ?? {})
+    .filter((e): e is [string, number] => typeof e[1] === 'number' && e[1] > 0)
+    .map(([k, n]) => `${k} ${n} ft`)
+    .join(', ');
+}
+
+/** Defences, senses and other speeds the sheet has (docs/CHARACTER-SHEET.md, items 20 and 21). */
+function defenceLines(sheet: Sheet): { label: string; value: string }[] {
+  const d = sheet.defenses;
+  return [
+    { label: 'Resistant', value: d?.resist.join(', ') ?? '' },
+    { label: 'Immune', value: d?.immune.join(', ') ?? '' },
+    { label: 'Vulnerable', value: d?.vulnerable.join(', ') ?? '' },
+    { label: 'Condition immunities', value: d?.conditionImmune.join(', ') ?? '' },
+    { label: 'Senses', value: feet(sheet.senses) },
+    { label: 'Other speeds', value: feet(sheet.speeds) },
+  ].filter((l) => l.value);
 }
 
 /** "Armor: light, heavy. Languages: Common." as label and value pairs, one per sentence. */
@@ -359,15 +407,121 @@ export function SheetView({
     : null;
   const save = sheet && resources ? resources.onChange : null;
   const say = (e: SheetEvent) => setEvent({ ...e, at: Date.now() });
+  // An equip or attune reads the item's record first (toggleItem), then saves the latest sheet.
+  const latest = useRef(sheet);
+  latest.current = sheet;
+  const needAttune = useAttunementNeeded(sheet?.equipment ?? []);
+  const toggle = (id: string, field: 'equipped' | 'attuned') =>
+    save && void toggleItem(() => latest.current, save, id, field);
+  /** The add search open in a tab, and the item being changed in place. */
+  const [adding, setAdding] = useState<'spell' | 'item' | null>(null);
+  // The item being changed keeps the place it had when its editor opened, so typing a new
+  // place does not move the row (and its editor) away mid-word; it moves on Done.
+  const [editing, setEditing] = useState<{ id: string; place: string } | null>(null);
+  const editingItem = editing?.id ?? null;
+  const setEditingItem = (id: string | null) => {
+    const item = id ? latest.current?.equipment.find((i) => i.id === id) : undefined;
+    setEditing(item ? { id: item.id, place: item.place?.trim() ?? '' } : null);
+  };
+  const placeOf = (i: SheetItem) =>
+    editing?.id === i.id ? editing.place : (i.place?.trim() ?? '');
+  const addSpell = (added: Added) => {
+    const now = latest.current;
+    if (!now || !save) return;
+    const spell =
+      'row' in added
+        ? {
+            id: ulid(),
+            name: added.row.displayName,
+            level: Math.min(9, Math.max(0, added.row.level ?? 0)),
+            prepared: true,
+            ref: { kind: 'spell' as const, key: added.row.key, name: added.row.displayName },
+          }
+        : { id: ulid(), name: added.name, level: added.level, prepared: true };
+    save({ ...now, spells: [...now.spells, spell] });
+    say({ label: spell.name, detail: 'added to your spells', undo: now });
+  };
+  const addItem = (added: Added) => {
+    const now = latest.current;
+    if (!now || !save) return;
+    const item: SheetItem =
+      'row' in added
+        ? {
+            id: ulid(),
+            name: added.row.displayName,
+            quantity: 1,
+            ref: { kind: 'item', key: added.row.key, name: added.row.displayName },
+          }
+        : { id: ulid(), name: added.name, quantity: 1 };
+    save({ ...now, equipment: [...now.equipment, item] });
+    say({ label: item.name, detail: 'added to your equipment', undo: now });
+  };
+  /** Changes an item; a new name drops a link to a record with another name, and what it knew. */
+  const patchItem = (id: string, patch: Partial<SheetItem>) => {
+    const now = latest.current;
+    if (!now || !save) return;
+    save({
+      ...now,
+      equipment: now.equipment.map((i) => {
+        if (i.id !== id) return i;
+        const next = { ...i, ...patch };
+        if (
+          patch.name !== undefined &&
+          i.ref &&
+          normalizeKey(patch.name) !== normalizeKey(i.ref.name)
+        ) {
+          delete next.ref;
+          delete next.armor;
+          delete next.attunement;
+        }
+        return next;
+      }),
+    });
+  };
+  const removeFrom = (list: 'spells' | 'equipment', id: string, name: string) => {
+    const now = latest.current;
+    if (!now || !save) return;
+    if (list === 'spells') save({ ...now, spells: now.spells.filter((x) => x.id !== id) });
+    else save({ ...now, equipment: now.equipment.filter((x) => x.id !== id) });
+    if (editingItem === id) setEditingItem(null);
+    say({ label: name, detail: 'removed from the sheet', undo: now });
+  };
+  const togglePrepared = (id: string) => {
+    const now = latest.current;
+    if (!now || !save) return;
+    save({
+      ...now,
+      spells: now.spells.map((x) => (x.id === id ? { ...x, prepared: !x.prepared } : x)),
+    });
+  };
+  /** The tab's Add button, in its header (UI guidelines §9). */
+  const addButton = (kind: 'spell' | 'item') =>
+    save && (
+      <button
+        type="button"
+        className="btn small"
+        aria-expanded={adding === kind}
+        onClick={() => setAdding(adding === kind ? null : kind)}
+      >
+        <Icon name="plus" />
+        {kind === 'spell' ? 'Add a spell' : 'Add an item'}
+      </button>
+    );
 
   const pinned = width >= PIN_FROM;
   const groups: SubTab<Group>[] = [{ id: 'actions', label: 'Actions' }];
-  if (sheet && (sheet.spells.length > 0 || sheet.slots.some((x) => x > 0))) {
+  const editable = !!sheet && !!resources;
+  if (
+    sheet &&
+    (sheet.spells.length > 0 ||
+      sheet.slots.some((x) => x > 0) ||
+      (editable && sheet.spellcastingAbility))
+  ) {
     groups.push({ id: 'spells', label: 'Spells' });
   }
   if (!pinned) groups.push({ id: 'abilities', label: 'Abilities' });
   if (sheet && sheet.features.length > 0) groups.push({ id: 'features', label: 'Features' });
-  if (sheet && (sheet.equipment.length > 0 || sheet.gp > 0)) {
+  if (sheet && (editable || sheet.equipment.length > 0 || coinsText(sheet))) {
     groups.push({ id: 'equipment', label: 'Equipment' });
   }
   if (character.notes.trim()) groups.push({ id: 'notes', label: 'Notes' });
@@ -617,6 +771,7 @@ export function SheetView({
                       <span className="num">{n.spellSaveDc.value}</span>
                     </span>
                   )}
+                  {addButton('spell')}
                   {unprepared && (
                     <button
                       type="button"
@@ -632,6 +787,12 @@ export function SheetView({
                 </>
               }
             >
+              {adding === 'spell' && (
+                <AddPanel kind="spell" onAdd={addSpell} onClose={() => setAdding(null)} />
+              )}
+              {sheet.spells.length === 0 && (
+                <p className="muted small">No spells on this sheet yet.</p>
+              )}
               <div className="sh-lvls">
                 {levels.map((level) => {
                   const all = sheet.spells
@@ -669,11 +830,15 @@ export function SheetView({
                       {list.map((s) => {
                         const name = s.name || 'Spell';
                         const unready = level > 0 && !s.prepared;
-                        const why = unready
-                          ? 'Not prepared'
-                          : left <= 0
-                            ? `No level ${level} slots left`
-                            : '';
+                        // A cantrip casts too; it just spends nothing.
+                        const why =
+                          level === 0
+                            ? ''
+                            : unready
+                              ? 'Not prepared'
+                              : left <= 0
+                                ? `No level ${level} slots left`
+                                : '';
                         return (
                           <SheetRow
                             key={s.id}
@@ -682,27 +847,70 @@ export function SheetView({
                             muted={unready}
                             after={unready ? <span className="badge">not prepared</span> : null}
                             actions={
-                              save &&
-                              level > 0 && (
-                                <button
-                                  type="button"
-                                  className="chrome-btn xs"
-                                  disabled={!!why}
-                                  aria-label={`Cast ${name} with a level ${level} slot`}
-                                  title={why || `Cast: uses a level ${level} slot`}
-                                  onClick={() => {
-                                    const next = spendSlot(sheet, level);
-                                    if (!next) return;
-                                    save(next);
-                                    say({
-                                      label: name,
-                                      detail: `cast with a level ${level} slot, ${left - 1} left`,
-                                      undo: sheet,
-                                    });
-                                  }}
-                                >
-                                  <Icon name="cast" />
-                                </button>
+                              save && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="chrome-btn xs"
+                                    aria-pressed={level === 0 || s.prepared}
+                                    disabled={level === 0}
+                                    aria-label={`Prepare ${name}`}
+                                    title={
+                                      level === 0
+                                        ? 'Cantrips are always ready'
+                                        : s.prepared
+                                          ? 'Prepared: press to unprepare'
+                                          : 'Prepare'
+                                    }
+                                    onClick={() => togglePrepared(s.id)}
+                                  >
+                                    <Icon name="checklist" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="chrome-btn xs"
+                                    disabled={!!why}
+                                    aria-label={
+                                      level === 0
+                                        ? `Cast ${name}`
+                                        : `Cast ${name} with a level ${level} slot`
+                                    }
+                                    title={
+                                      why ||
+                                      (level === 0
+                                        ? 'Cast: a cantrip uses no slot'
+                                        : `Cast: uses a level ${level} slot`)
+                                    }
+                                    onClick={() => {
+                                      if (level === 0) {
+                                        say({
+                                          label: name,
+                                          detail: 'cast, a cantrip uses no slot',
+                                        });
+                                        return;
+                                      }
+                                      const next = spendSlot(sheet, level);
+                                      if (!next) return;
+                                      save(next);
+                                      say({
+                                        label: name,
+                                        detail: `cast with a level ${level} slot, ${left - 1} left`,
+                                        undo: sheet,
+                                      });
+                                    }}
+                                  >
+                                    <Icon name="cast" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="chrome-btn xs"
+                                    aria-label={`Remove ${name}`}
+                                    title="Remove from the sheet"
+                                    onClick={() => removeFrom('spells', s.id, name)}
+                                  >
+                                    <Icon name="close" />
+                                  </button>
+                                </>
                               )
                             }
                           />
@@ -756,32 +964,166 @@ export function SheetView({
     </Section>
   );
 
-  const equipment = sheet && (sheet.equipment.length > 0 || sheet.gp > 0) && (
-    <Section
-      title="Equipment"
-      solo
-      className="sh-gear"
-      meta={
-        sheet.gp > 0 && (
-          <span className="sh-kv">
-            <span className="k">Gold</span>
-            <span className="num">{sheet.gp.toLocaleString()} GP</span>
-          </span>
-        )
-      }
-    >
-      <div className="sh-flow">
-        {sheet.equipment.map((item) => (
+  const equipment =
+    sheet &&
+    (sheet.equipment.length > 0 || coinsText(sheet)) &&
+    (() => {
+      // Grouped by where each item is kept: on the character first, then each place by name.
+      const places = [...new Set(sheet.equipment.map(placeOf))].sort((a, b) =>
+        a === '' ? -1 : b === '' ? 1 : a.localeCompare(b),
+      );
+      const allPlaces = [...new Set([...places.filter(Boolean), 'Backpack', 'Mount', 'Home'])];
+      const attuned = attunedCount(sheet);
+      const attunable = sheet.equipment.some(
+        (i) => i.attunement || i.attuned || needAttune.has(i.id),
+      );
+      const row = (item: SheetItem) => {
+        const name = item.name || 'Item';
+        const canAttune = item.attunement || item.attuned || needAttune.has(item.id);
+        return (
           <SheetRow
             key={item.id}
-            name={item.name || 'Item'}
+            name={name}
             sheetRef={item.ref}
-            after={item.quantity !== 1 && <span className="sh-qty">×{item.quantity}</span>}
+            after={
+              <>
+                {item.quantity !== 1 && <span className="sh-qty">×{item.quantity}</span>}
+                {item.uses && (
+                  <Pips
+                    label={`${name} charge`}
+                    max={item.uses.max}
+                    used={item.uses.used}
+                    onChange={
+                      save &&
+                      ((used) =>
+                        save({
+                          ...sheet,
+                          equipment: sheet.equipment.map((x) =>
+                            x.id === item.id && x.uses ? { ...x, uses: { ...x.uses, used } } : x,
+                          ),
+                        }))
+                    }
+                  />
+                )}
+                {/* Where nothing can be changed, say it in words. */}
+                {!save && item.equipped && <span className="sh-tag">equipped</span>}
+                {!save && item.attuned && <span className="sh-tag">attuned</span>}
+              </>
+            }
+            actions={
+              save && (
+                <>
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-pressed={!!item.equipped}
+                    aria-label={`Equip ${name}`}
+                    title={item.equipped ? 'Equipped: press to take it off' : 'Equip'}
+                    onClick={() => toggle(item.id, 'equipped')}
+                  >
+                    <Icon name="hand" />
+                  </button>
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-pressed={!!item.attuned}
+                    disabled={!canAttune}
+                    aria-label={`Attune to ${name}`}
+                    title={
+                      !canAttune
+                        ? 'It does not need attunement'
+                        : item.attuned
+                          ? 'Attuned: press to end it'
+                          : 'Attune'
+                    }
+                    onClick={() => toggle(item.id, 'attuned')}
+                  >
+                    <Icon name="gem" />
+                  </button>
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-pressed={editingItem === item.id}
+                    aria-label={`Change ${name}`}
+                    title="Change its name, how many, where it is kept or its charges"
+                    onClick={() => setEditingItem(editingItem === item.id ? null : item.id)}
+                  >
+                    <Icon name="pencil" />
+                  </button>
+                  <button
+                    type="button"
+                    className="chrome-btn xs"
+                    aria-label={`Remove ${name}`}
+                    title="Remove from the sheet"
+                    onClick={() => removeFrom('equipment', item.id, name)}
+                  >
+                    <Icon name="close" />
+                  </button>
+                </>
+              )
+            }
+            below={
+              save &&
+              editingItem === item.id && (
+                <ItemEditor
+                  item={item}
+                  places={allPlaces}
+                  onChange={(patch) => patchItem(item.id, patch)}
+                  onDone={() => setEditingItem(null)}
+                />
+              )
+            }
           />
-        ))}
-      </div>
-    </Section>
-  );
+        );
+      };
+      return (
+        <Section
+          title="Equipment"
+          solo
+          className="sh-gear"
+          meta={
+            <>
+              {addButton('item')}
+              {coinsText(sheet) && (
+                <span className="sh-kv">
+                  <span className="k">Coins</span>
+                  <span className="num">{coinsText(sheet)}</span>
+                </span>
+              )}
+              {attunable && (
+                <span
+                  className={`sh-kv${attuned > 3 ? ' over' : ''}`}
+                  title={attuned > 3 ? 'A character attunes to at most three items' : undefined}
+                >
+                  <span className="k">Attuned</span>
+                  <span className="num">{attuned} of 3</span>
+                </span>
+              )}
+            </>
+          }
+        >
+          {adding === 'item' && (
+            <AddPanel kind="item" onAdd={addItem} onClose={() => setAdding(null)} />
+          )}
+          {sheet.equipment.length === 0 && (
+            <p className="muted small">No equipment on this sheet yet.</p>
+          )}
+          {places.map((place) => {
+            const items = sheet.equipment.filter((i) => placeOf(i) === place);
+            return (
+              <div key={place || 'on-you'} className="sh-place" data-testid="item-place">
+                {/* Always named, so where things are kept is plain before any place is set. */}
+                <h4 className="sh-place-head">
+                  {place || 'On you'}
+                  <span className="sh-lvl-count">{items.length}</span>
+                </h4>
+                <div className="sh-flow">{items.map(row)}</div>
+              </div>
+            );
+          })}
+        </Section>
+      );
+    })();
 
   const notes = character.notes.trim() && (
     <Section title="Notes" solo className="sh-notes-sec">
@@ -932,8 +1274,22 @@ export function SheetView({
             </>
           }
           extra={n?.speed.overridden && <HandMark />}
+          {...(feet(sheet?.speeds)
+            ? { title: `Walking ${t.speed} ft; ${feet(sheet?.speeds)}` }
+            : {})}
         />
       </div>
+
+      {sheet && defenceLines(sheet).length > 0 && (
+        <dl className="sh-defs" aria-label="Defences and senses">
+          {defenceLines(sheet).map((d) => (
+            <div key={d.label}>
+              <dt>{d.label}</dt>
+              <dd>{d.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
 
       <div className="sh-cols">
         <div className="sh-ref">

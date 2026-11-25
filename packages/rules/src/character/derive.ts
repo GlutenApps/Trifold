@@ -4,6 +4,7 @@ import type {
   DerivedKey,
   Sheet,
   SheetAttack,
+  SheetItem,
   Skill,
   TableNumbers,
 } from '@trifold/schema';
@@ -168,16 +169,16 @@ export function deriveSheet(sheet: Sheet): SheetNumbers {
   ) as Record<Skill, Derived>;
 
   const dex = modifiers.dex;
-  const armor = sheet.armor;
-  const armorAc =
-    armor.kind === 'none'
-      ? 10 + dex
-      : armor.kind === 'light'
-        ? armor.base + dex
-        : armor.kind === 'medium'
-          ? armor.base + Math.min(dex, 2)
-          : armor.base;
-  const ac = make('ac', armorAc + (armor.shield ? 2 : 0) + armor.bonus);
+  const worn = armourWorn(sheet);
+  const body = worn.body?.armor;
+  const armorAc = !body
+    ? 10 + dex
+    : body.kind === 'light'
+      ? body.base + dex
+      : body.kind === 'medium'
+        ? body.base + Math.min(dex, 2)
+        : body.base;
+  const ac = make('ac', armorAc + (worn.shield?.armor.base ?? 0) + sheet.armor.bonus);
 
   const casting = sheet.spellcastingAbility;
   const castMod = casting ? modifiers[casting] : 0;
@@ -201,6 +202,42 @@ export function deriveSheet(sheet: Sheet): SheetNumbers {
     spellSaveDc,
     spellAttack,
   };
+}
+
+/** A piece of armour that counts toward AC, and where it comes from. */
+export interface WornPiece {
+  armor: { kind: 'light' | 'medium' | 'heavy' | 'shield'; base: number };
+  /** The equipped item's name; null when it is the sheet's armour setting. */
+  item: string | null;
+}
+
+/**
+ * The body armour and shield that count toward AC (docs/CHARACTER-SHEET.md, item 1). Each is
+ * worked out on its own: once the sheet knows an item of that kind (one with `armor`), the
+ * equipped one counts, or none; until then the sheet's armour setting does, so a character made
+ * before items could be equipped keeps its AC.
+ */
+export function armourWorn(sheet: Pick<Sheet, 'armor' | 'equipment'>): {
+  body: WornPiece | null;
+  shield: WornPiece | null;
+} {
+  const items = sheet.equipment;
+  const piece = (shield: boolean): WornPiece | null => {
+    const isKind = (i: SheetItem) => !!i.armor && (i.armor.kind === 'shield') === shield;
+    if (items.some(isKind)) {
+      const on = items.find((i) => i.equipped && isKind(i));
+      return on ? { armor: on.armor!, item: on.name || on.armor!.kind } : null;
+    }
+    const a = sheet.armor;
+    if (shield) return a.shield ? { armor: { kind: 'shield', base: 2 }, item: null } : null;
+    return a.kind === 'none' ? null : { armor: { kind: a.kind, base: a.base }, item: null };
+  };
+  return { body: piece(false), shield: piece(true) };
+}
+
+/** Items attuned to the character, against the limit of three. */
+export function attunedCount(sheet: Pick<Sheet, 'equipment'>): number {
+  return sheet.equipment.filter((i) => i.attuned).length;
 }
 
 /** An attack's bonus to hit on a sheet: ability, proficiency and its own bonus. */

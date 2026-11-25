@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRecord } from '@trifold/schema';
-import { equipmentToSheet, findItem, optionItems } from './equipment';
+import { equipmentToSheet, findItem, itemArmor, optionItems } from './equipment';
 
 const item = (name: string, data: Record<string, unknown>) =>
   ({
@@ -98,6 +98,35 @@ describe('starting equipment (docs/BUILDER.md)', () => {
       // Finesse takes the better of the two: Strength here.
       ['Dagger', 'str', '1d4+3 piercing'],
     ]);
+  });
+
+  it('wears the first body armour and shield, and knows what each adds to AC', () => {
+    const out = equipmentToSheet(
+      [
+        { name: 'Chain Mail', quantity: 1 },
+        { name: 'Leather Armor', quantity: 1 },
+        { name: 'Shield', quantity: 1 },
+        { name: 'Dagger', quantity: 1 },
+      ],
+      items,
+      abilities,
+    );
+    expect(out.equipment.map((e) => [e.name, e.equipped, e.armor])).toEqual([
+      ['Chain Mail', true, { kind: 'heavy', base: 16 }],
+      ['Leather Armor', false, { kind: 'light', base: 11 }],
+      ['Shield', true, { kind: 'shield', base: 2 }],
+      ['Dagger', undefined, undefined],
+    ]);
+  });
+
+  it('reads armour from a record: body armour by type, a shield by type or name', () => {
+    expect(itemArmor('Breastplate', { typeCode: 'MA', ac: 14 })).toEqual({
+      kind: 'medium',
+      base: 14,
+    });
+    expect(itemArmor('Shield', { typeCode: 'S' })).toEqual({ kind: 'shield', base: 2 });
+    expect(itemArmor('Shield +1', { typeCode: 'HA', ac: 3 })).toEqual({ kind: 'shield', base: 3 });
+    expect(itemArmor('Rope', { typeCode: 'G' })).toBeUndefined();
   });
 
   it('leaves the armour alone without body armour or a shield', () => {

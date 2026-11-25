@@ -113,3 +113,28 @@ describe('spell slots', () => {
     expect(setSlotsUsed(caster(), 1, -1).slotsUsed).toEqual([0]);
   });
 });
+
+describe('item charges', () => {
+  const wand = (reset: 'short' | 'long' | 'dawn', used = 2) => ({
+    id: `w-${reset}`,
+    name: `Wand (${reset})`,
+    quantity: 1,
+    uses: { max: 7, used, reset },
+  });
+  const sheet = (): Sheet => ({
+    ...blankSheet(),
+    equipment: [wand('short'), wand('dawn'), wand('long', 0)],
+  });
+
+  it('a short rest refills only short-rest charges', () => {
+    const out = shortRest(sheet());
+    expect(out.sheet.equipment.map((i) => i.uses?.used)).toEqual([0, 2, 0]);
+    expect(out.restored).toEqual(['Wand (short)']);
+  });
+
+  it('a long rest refills every charge, dawn ones too', () => {
+    const out = longRest(sheet(), '2024');
+    expect(out.sheet.equipment.map((i) => i.uses?.used)).toEqual([0, 0, 0]);
+    expect(out.restored).toEqual(['Wand (short)', 'Wand (dawn)']);
+  });
+});

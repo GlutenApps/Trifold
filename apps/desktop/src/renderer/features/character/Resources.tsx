@@ -201,6 +201,36 @@ export function ResourcesSection({
             />
           );
         })}
+        {sheet.equipment
+          .filter((item) => item.uses)
+          .map((item) => {
+            const uses = item.uses!;
+            const used = Math.min(uses.max, uses.used);
+            const back =
+              uses.reset === 'short' ? 'Short rest' : uses.reset === 'long' ? 'Long rest' : 'Dawn';
+            return (
+              <ResourceRow
+                key={item.id}
+                name={item.name || 'Item'}
+                sub={`${back}, ${uses.max - used} of ${uses.max} charges left`}
+                pips={
+                  <Pips
+                    label={`${item.name || 'Item'} charge`}
+                    max={uses.max}
+                    used={used}
+                    onChange={(n) =>
+                      onChange({
+                        ...sheet,
+                        equipment: sheet.equipment.map((x) =>
+                          x.id === item.id && x.uses ? { ...x, uses: { ...x.uses, used: n } } : x,
+                        ),
+                      })
+                    }
+                  />
+                }
+              />
+            );
+          })}
         {pools.map((p) => (
           <ResourceRow
             key={`hd${p.die}`}
