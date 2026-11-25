@@ -3,9 +3,12 @@ import type { Sheet } from '@trifold/schema';
 import { blankSheet } from './derive';
 import {
   hitDice,
+  castSpell,
+  endConcentration,
   hitDieOf,
   longRest,
   setSlotsUsed,
+  slotChoices,
   shortRest,
   slotsAt,
   spendHitDie,
@@ -136,5 +139,50 @@ describe('item charges', () => {
     const out = longRest(sheet(), '2024');
     expect(out.sheet.equipment.map((i) => i.uses?.used)).toEqual([0, 0, 0]);
     expect(out.restored).toEqual(['Wand (short)', 'Wand (dawn)']);
+  });
+});
+
+describe('casting (docs/CHARACTER-SHEET.md, items 13 and 14)', () => {
+  const caster = (): Sheet => ({ ...blankSheet(), slots: [4, 3, 2], slotsUsed: [0, 3] });
+  const bless = { id: 's1', name: 'Bless', level: 1 };
+  const guidance = { id: 's0', name: 'Guidance', level: 0 };
+
+  it('offers the spell’s own slot level and every higher one there is', () => {
+    expect(slotChoices(caster(), 1)).toEqual([
+      { level: 1, max: 4, left: 4 },
+      { level: 2, max: 3, left: 0 },
+      { level: 3, max: 2, left: 2 },
+    ]);
+    expect(slotChoices(caster(), 3).map((c) => c.level)).toEqual([3]);
+    expect(slotChoices(caster(), 0).map((c) => c.level)).toEqual([1, 2, 3]);
+  });
+
+  it('spends a slot of the level chosen, higher to upcast, and refuses a spent or lower one', () => {
+    expect(castSpell(caster(), bless, 3, false)!.sheet.slotsUsed).toEqual([0, 3, 1]);
+    expect(castSpell(caster(), bless, 2, false)).toBeNull();
+    expect(castSpell(caster(), { ...bless, level: 2 }, 1, false)).toBeNull();
+  });
+
+  it('a cantrip spends nothing', () => {
+    const out = castSpell(caster(), guidance, 0, false)!;
+    expect(out.sheet.slotsUsed).toEqual([0, 3]);
+  });
+
+  it('a concentration spell is concentrated on, ending the one before', () => {
+    const first = castSpell(caster(), bless, 1, true)!;
+    expect(first.ended).toBeNull();
+    expect(first.sheet.concentrating).toEqual({ name: 'Bless', spellId: 's1' });
+    const second = castSpell(first.sheet, guidance, 0, true)!;
+    expect(second.ended).toBe('Bless');
+    expect(second.sheet.concentrating?.name).toBe('Guidance');
+    // A spell without concentration leaves it as it was.
+    expect(castSpell(second.sheet, bless, 1, false)!.sheet.concentrating?.name).toBe('Guidance');
+  });
+
+  it('ends by hand or with a long rest, not a short one', () => {
+    const on = castSpell(caster(), bless, 1, true)!.sheet;
+    expect(endConcentration(on).concentrating).toBeUndefined();
+    expect(shortRest(on).sheet.concentrating?.name).toBe('Bless');
+    expect(longRest(on, '2024').sheet.concentrating).toBeUndefined();
   });
 });
