@@ -1,6 +1,7 @@
 import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { keepLogs } from './keepLogs';
 import { _electron as electron, expect, test, type Locator, type Page } from '@playwright/test';
 import { chooseGameMaster } from './firstRun';
 
@@ -566,6 +567,10 @@ test('players join on the LAN, claim a PC, see only what they may, and are relea
     // The phone windows are the test's own; the app quits when its last window closes.
     await tablet.close();
     await phone.close();
+  } catch (err) {
+    // A failure on CI keeps what main logged (the table server, the map image it was sent).
+    await keepLogs({ library, userData });
+    throw err;
   } finally {
     await app.close();
   }

@@ -1,6 +1,7 @@
 import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { keepLogs } from './keepLogs';
 import { _electron as electron, expect, test, type Page } from '@playwright/test';
 import { fieldPdf } from './fieldPdf';
 import { chooseGameMaster } from './firstRun';
@@ -706,6 +707,10 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
       const text = await readFile(join(own, 'shared', 'records.jsonl'), 'utf8');
       expect(text).toContain('Greyford Lantern');
     }).toPass({ timeout: 10_000 });
+  } catch (err) {
+    // A failure on CI keeps what both Trifolds' main processes logged.
+    await keepLogs({ gmLibrary, gmData, playerLibrary, playerData });
+    throw err;
   } finally {
     await player?.close();
     // Already closed when the test got as far as the offline view.
