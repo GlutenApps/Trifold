@@ -4,6 +4,25 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.5.0-beta.4] - 2026-11-24
+
+A redesigned character sheet with equipment you can wear, attune and stash, spells and gear you can change without leaving the sheet, and the player console's top bar brought in line with the GM's.
+
+### Added
+
+- **Equipment on the sheet** (ADR 0081): equip items, attune to up to three, keep them in a named place (on you, Backpack, Mount, Home or any name) and give wands and staffs charges that come back at dawn or on a rest. Equipped armour and shields set your AC. Coins are kept as platinum, gold, electrum, silver and copper.
+- **Change spells and gear in their tabs** (ADR 0082): **Add a spell** and **Add an item** search the compendium right on the sheet. Prepare, cast or remove a spell from its row; change an item's name, quantity, place or charges under its row, or remove it, with **Undo**. Cantrips cast from their row too.
+- **Defences and senses**: resistances, immunities, vulnerabilities, senses and other speeds, shown under the sheet's tiles.
+- **Player layouts**: a player's own named layouts, shared by every campaign they play in and kept apart from the GM's.
+- **Filter campaigns** by name once a Library has more than eight.
+
+### Changed
+
+- **The character sheet is redesigned** (ADR 0080): a bar that stays at the top with your HP, conditions, roll mode and last roll; AC, Max HP, Initiative and Speed; abilities and skills beside tabs for Actions, Spells, Features, Equipment and Notes. Spell slots sit on each spell level, resources are dots to press, and anything you can press looks pressable.
+- **The player console's top bar** matches the GM's: the campaign switcher, Layouts and Settings. The switcher lists the campaigns you run and the ones you play in.
+- **Campaigns are listed most recently opened first**, on the Campaigns page and in the switcher, which shows the five most recent of each kind.
+- **PDF import keeps each coin as itself** instead of folding them into gold.
+
 ## [0.5.0-beta.3] - 2026-11-24
 
 Trifold opens on your campaigns list every time, and no longer gets stuck on the loading screen.
