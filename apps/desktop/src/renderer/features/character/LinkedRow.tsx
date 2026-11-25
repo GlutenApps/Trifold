@@ -1,32 +1,71 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { errorMessage, type CompendiumRecord, type SheetRef } from '@trifold/schema';
 import { RecordBody } from '../compendium/RecordDetail';
+import { Icon } from '../shell/icons';
 
 /**
- * A sheet row linked to a compendium record (ADR 0073; PLAYER-MODE.md, Way 3): opening it shows
- * the record's text, read from the compendium when it opens. A record that is gone (shared
- * content after leaving a campaign, a removed book) says so, and shows again once it is back.
+ * A row on the sheet (ADR 0080): a spell, a feature or an item. One with something to read (its
+ * own text, or a compendium record it links to, ADR 0073) opens in place from its name, which is
+ * a button with a chevron; the record is read from the compendium when it opens, and a record
+ * that is gone says so. One with nothing to read is plain text, with a blank where the chevron
+ * would be so the names line up. Only a row that does something lights up on hover.
  */
-export function LinkedRow({
+export function SheetRow({
+  name,
   sheetRef,
-  summary,
-  children,
+  text,
+  muted,
+  after,
+  actions,
+  className,
 }: {
-  sheetRef: SheetRef;
-  summary: ReactNode;
+  name: string;
+  sheetRef?: SheetRef | undefined;
   /** The row's own text, shown above the record's. */
-  children?: ReactNode;
+  text?: string | undefined;
+  /** An unprepared spell: the name is dimmed. */
+  muted?: boolean;
+  /** What follows the name: a source, a badge, a quantity, a row of pips. */
+  after?: ReactNode;
+  /** Quiet per-row actions (ADR 0020), always on screen, full when the row is hovered. */
+  actions?: ReactNode;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const opens = !!sheetRef || !!text?.trim();
+  const live = opens || !!actions;
   return (
-    <details
-      className="sheet-view-feature sheet-view-linked"
-      onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
-    >
-      <summary>{summary}</summary>
-      {children}
-      {open && <LinkedText sheetRef={sheetRef} />}
-    </details>
+    <div className={`sh-item${className ? ` ${className}` : ''}`}>
+      <div className={`sh-row${live ? ' acts' : ''}${muted ? ' muted-row' : ''}`}>
+        {opens ? (
+          <button
+            type="button"
+            className="sh-disc"
+            aria-expanded={open}
+            title={open ? `Close ${name}` : `Read ${name}`}
+            onClick={() => setOpen((v) => !v)}
+          >
+            <span className="sh-chev">
+              <Icon name="right" size={12} />
+            </span>
+            <span className="sh-name">{name}</span>
+          </button>
+        ) : (
+          <span className="sh-plain">
+            <span className="sh-chev" aria-hidden="true" />
+            <span className="sh-name">{name}</span>
+          </span>
+        )}
+        {after}
+        {actions && <span className="row-actions">{actions}</span>}
+      </div>
+      {open && (
+        <div className="sh-expand">
+          {text?.trim() && <p className="sh-text">{text}</p>}
+          {sheetRef && <LinkedText sheetRef={sheetRef} />}
+        </div>
+      )}
+    </div>
   );
 }
 

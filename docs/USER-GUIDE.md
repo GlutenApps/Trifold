@@ -234,10 +234,9 @@ On a Trifold sheet, any number can be set by hand and shows as set by hand, with
 
 **Resources.** Every Trifold sheet has a Resources section:
 
-- **Heroic Inspiration**.
-- **Spell slots** and **limited-use features** as rows of boxes: tick one to spend it, untick it to get it back. Set a feature's uses beside it in the sheet, and tick **Slots come back on a short rest** for Pact Magic.
-- **Hit dice**, with **Spend a d8** (and so on). Spending one rolls it with your Constitution; at the table the healing goes straight to your HP.
-- **Short rest** and **Long rest** bring back what each rest restores, and say what came back, with **Undo**. Your HP and death saves are your GM's to track.
+- **Heroic Inspiration**, **spell slots**, **limited-use features** and **hit dice** as rows of dots: a filled dot is one left. Press a filled dot to spend one, a hollow one to get it back. Set a feature's uses beside it in the sheet, and tick **Slots come back on a short rest** for Pact Magic.
+- **Spend a d8** (and so on) rolls a hit die with your Constitution; at the table the healing goes straight to your HP.
+- **Short rest** and **Long rest** bring back what each rest restores, and say what came back, with **Undo**. Long rest asks first. Your HP and death saves are your GM's to track.
 
 **Forms.** For a wild shape or any other transformation, add creatures under **Forms** on the character, or press **Pin as a form** (the paw) on a creature's page in the compendium while you are in a campaign. Each form is a tab on the Sheets tab, beside your character, to read; your HP and token stay your own.
 
@@ -256,7 +255,7 @@ The campaign is now under **Playing** on the Campaigns page, with **Open** and *
 **Open** a campaign under Playing for the player console. Its tabs and tools work like a GM's console, arranged for a player:
 
 - **VTT**: pick your character the first time, then the map or whatever the TV shows, with its overlays. Drag your token, or use **Move**, as on a phone. If your character has no sheet here yet, **Your sheet for …** above the map offers one: **Use** a character from your Library (one with the same name comes first), **Build one**, **Import from PDF**, or **Not now**. Not on the list? **Bringing a new character?** under the list does the same, then **Ask your GM to add** it.
-- **Sheets**: your character's sheet, with the table's live HP and conditions above it, and **Edit**. Click a save, a skill, initiative, an attack, its damage or your spell attack to roll it; **Roll with** gives the next roll advantage or disadvantage. When the fight is waiting for your initiative, rolling it enters it. A companion's tab shows its stat block, and your forms have tabs too.
+- **Sheets**: your character's sheet, with **Edit**. A bar at the top stays in view as you scroll: the table's live HP and conditions, **Roll with** (advantage or disadvantage for the next roll), and your last roll. Under it are AC, Max HP, Initiative and Speed, then your abilities and skills, and tabs for Actions, Spells, Features, Equipment and Notes. In a wide panel your abilities stay on the left; in a narrow one they are a tab. Anything boxed rolls when you click it: a save, a skill, Initiative, an attack, its damage or your spell attack. When the fight is waiting for your initiative, rolling it enters it. Spells are grouped by level, each with its slots; **Cast** (beside a prepared spell) spends a slot of its level, with **Undo** in the bar. The filter hides spells you have not prepared. A companion's tab shows its stat block, and your forms have tabs too.
 - **My characters**: your character and your companions, with HP and conditions to change, **Add a companion**, **Switch character**, and **Link a character** to choose which of your characters this campaign uses. Linking offers your sheet's numbers to your GM, who accepts or dismisses them, and lets your GM read your sheet (never your private notes); if your GM has no card for you yet, **Ask your GM to add** your character.
 - **Initiative**: the order as the TV shows it, and the box to type your roll. The strip says **Your turn** and **You're next**.
 - **Quick notes**: your own notes for this campaign, never sent to the table.

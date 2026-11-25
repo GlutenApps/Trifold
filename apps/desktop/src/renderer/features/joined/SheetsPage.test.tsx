@@ -145,8 +145,10 @@ describe('Sheets (ADR 0069)', () => {
     // Dex 16, no armour: AC 13; stealth with expertise at 3rd level: +7.
     expect(within(screen.getByLabelText('Numbers')).getByText('13')).toBeInTheDocument();
     expect(within(screen.getByLabelText('Skills')).getByText('+7')).toBeInTheDocument();
-    expect(screen.getByLabelText('Attacks')).toHaveTextContent('+5 to hit');
+    expect(screen.getByRole('button', { name: 'Roll Rapier attack' })).toHaveTextContent('+5');
     expect(screen.getByTestId('sheet-live')).toHaveTextContent('20');
+    // The table's maximum (24) is not the sheet's (10) until the GM takes the new numbers.
+    expect(within(screen.getByLabelText('Numbers')).getByText('table 24')).toBeInTheDocument();
   });
 
   it('rolls from the sheet at the table, saying what the roll is for (ADR 0075)', async () => {
@@ -154,7 +156,7 @@ describe('Sheets (ADR 0069)', () => {
     const user = userEvent.setup();
     mount(<SheetsPage />, view([creature()]));
     await screen.findByTestId('sheet-view');
-    await user.click(screen.getByRole('radio', { name: 'Advantage' }));
+    await user.click(screen.getByRole('button', { name: 'Advantage' }));
     await user.click(screen.getByRole('button', { name: 'Roll Stealth check' }));
     expect(window.trifold.joined.send).toHaveBeenLastCalledWith('c1', {
       type: 'roll',
@@ -162,7 +164,7 @@ describe('Sheets (ADR 0069)', () => {
       for: 'Stealth check',
     });
     // Advantage was for that roll only.
-    expect(screen.getByRole('radio', { name: 'Normal' })).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Normal' })).toHaveAttribute('aria-pressed', 'true');
     await user.click(screen.getByRole('button', { name: 'Roll Rapier damage' }));
     expect(window.trifold.joined.send).toHaveBeenLastCalledWith('c1', {
       type: 'roll',

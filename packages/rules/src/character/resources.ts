@@ -77,6 +77,37 @@ export function spendHitDie(
   };
 }
 
+/** Spell slots of one level (1st first, like `slots`): how many, and how many are left. */
+export function slotsAt(
+  sheet: Pick<Sheet, 'slots' | 'slotsUsed'>,
+  level: number,
+): {
+  max: number;
+  left: number;
+} {
+  const max = sheet.slots[level - 1] ?? 0;
+  return { max, left: Math.max(0, max - (sheet.slotsUsed?.[level - 1] ?? 0)) };
+}
+
+/**
+ * Marks `used` slots of one level spent, held between none and all of them. The sheet the
+ * slot pips and the cast action save.
+ */
+export function setSlotsUsed(sheet: Sheet, level: number, used: number): Sheet {
+  const max = sheet.slots[level - 1] ?? 0;
+  const slotsUsed = [...(sheet.slotsUsed ?? [])];
+  while (slotsUsed.length < level) slotsUsed.push(0);
+  slotsUsed[level - 1] = Math.min(max, Math.max(0, used));
+  return { ...sheet, slotsUsed };
+}
+
+/** Casting with a slot of `level`: one more spent, or null when none of that level is left. */
+export function spendSlot(sheet: Sheet, level: number): Sheet | null {
+  const { max, left } = slotsAt(sheet, level);
+  if (left <= 0) return null;
+  return setSlotsUsed(sheet, level, max - left + 1);
+}
+
 /** What a rest brought back, to say so. */
 export interface RestResult {
   sheet: Sheet;

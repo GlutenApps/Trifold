@@ -100,6 +100,8 @@ export type IconName =
   | 'ruler'
   | 'area'
   | 'imageOff'
+  | 'cast'
+  | 'filter'
   | 'tally'
   | 'lock'
   | 'unlock'
@@ -250,6 +252,10 @@ const PATHS: Record<IconName, string> = {
   ruler: 'M3 16L16 3l5 5L8 21zM7 12l2 2M10 9l2 2M13 6l2 2',
   area: 'M4 12l16-7v14zM4 12h0M14 7.6v8.8',
   imageOff: 'M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4M3 3l18 18',
+  // Casting a spell with a slot: a burst of eight rays.
+  cast: 'M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2.5 2.5M15 15l2.5 2.5M6.5 17.5L9 15M15 9l2.5-2.5',
+  // Narrowing a list: three bars, each shorter.
+  filter: 'M4 6h16M7 12h10M10 18h4',
 };
 
 export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {

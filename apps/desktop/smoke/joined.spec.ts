@@ -357,8 +357,12 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(page.getByTestId('sheet-live')).toContainText('Prone');
     // Rolling from the sheet (ADR 0075): Table is the default, so the GM's Trifold makes the
     // roll and it comes back named for what it was. Dexterity 16 makes Stealth +3.
+    // A narrow sheet (CI's screens are narrow) keeps skills under an Abilities tab (ADR 0080).
+    const abilitiesTab = sheet.getByRole('tab', { name: 'Abilities' });
+    if (await abilitiesTab.isVisible()) await abilitiesTab.click();
     await sheet.getByRole('button', { name: 'Roll Stealth check' }).click();
-    await expect(sheet.getByTestId('sheet-last-roll')).toContainText('Stealth check: 1d20+3', {
+    // The turn bar's readout (ADR 0080): the total, the roll's name, then the dice.
+    await expect(sheet.getByTestId('sheet-last-roll')).toContainText(/Stealth check.*1d20\+3/, {
       timeout: 10_000,
     });
     await expect

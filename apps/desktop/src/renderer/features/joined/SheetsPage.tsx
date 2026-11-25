@@ -309,6 +309,7 @@ export function SheetsPage() {
             character={character}
             onEdit={() => setEditing(true)}
             live={view && me ? <LiveStatus creature={me} /> : undefined}
+            tableHp={view && me?.hp ? { max: me.hp.max } : undefined}
             // Rolling (ADR 0075): an initiative roll while the fight waits for it is entered there.
             rolls={{
               actor: me?.name ?? character.name,
