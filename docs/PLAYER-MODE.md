@@ -80,7 +80,7 @@ A joined campaign is a local shell that points at the GM's machine, never a copy
 
 ### The campaign list
 
-`features/library/CampaignsPage.tsx` splits into **Running** and **Playing**. Running is today's list, unchanged. Playing lists joined campaigns with the last time each was live. A Library with no joined campaigns shows no Playing section; **Join a campaign** sits beside Create campaign.
+`features/library/CampaignsPage.tsx` splits into **Running** and **Playing**. Both list the most recently opened first (`compareRecent` in `packages/rules/src/recentCampaigns.ts`): a running campaign's last opening is kept in `library.json` (`campaignOpenedAt`), a joined one's in its `joined.json` (`openedAt`), and one never opened goes by when it last changed, or for a joined one when it was last live or joined. Each card says when it was opened; a Playing card also says when it was last live. Past eight campaigns in all, a filter by name sits above the list. The top bar's switcher lists the five most recent of each kind, always with the open one, and **More campaigns…** when there are more. A Library with no joined campaigns shows no Playing section; **Join a campaign** sits beside Create campaign.
 
 The list does not connect to anything. Whether a GM's table is up is only found out when the player opens a joined campaign.
 
@@ -229,7 +229,7 @@ The strip shows "Your turn" or "You're next" with the creature's name when the p
 
 ### Layouts
 
-`MAJOR_KINDS` and `MINOR_KINDS` are schema enums stored in saved layouts. Add `PLAYER_MAJOR_KINDS` (`table`, `sheets`, `compendium`; the `table` tab is titled VTT, like the GM's) and `PLAYER_MINOR_KINDS` (`myCharacters`, `initiative`, `quickNotes`), a `PlayerShellLayout` built from them, and `workspace.playerConsoles` keyed by joined campaign id, so neither role's layout can name the other's panels. All additive with defaults: no `library.json` version bump. `majors.tsx` and `minors.tsx` stay the registries and gain the player entries. Named layouts (Prep, Table, Combat) stay the GM's; the player console keeps one layout per joined campaign.
+`MAJOR_KINDS` and `MINOR_KINDS` are schema enums stored in saved layouts. Add `PLAYER_MAJOR_KINDS` (`table`, `sheets`, `compendium`; the `table` tab is titled VTT, like the GM's) and `PLAYER_MINOR_KINDS` (`myCharacters`, `initiative`, `quickNotes`), a `PlayerShellLayout` built from them, and `workspace.playerConsoles` keyed by joined campaign id, so neither role's layout can name the other's panels. All additive with defaults: no `library.json` version bump. `majors.tsx` and `minors.tsx` stay the registries and gain the player entries. Named layouts are kept per role: the GM's (Prep, Table, Combat and their own) in `workspace.presets`, the player's in `workspace.playerPresets`, one list shared by every joined campaign, with no starter set. Each console's Layouts pop-up and `Ctrl+1` to `Ctrl+9` use its own role's list, and the player console still keeps its last layout per joined campaign. The player console's top bar matches the GM's: the mark alone, the campaign switcher (listing Running and Playing campaigns, with headings when the Library has both), Layouts and Settings; Hotkeys is left out for now.
 
 Player hotkeys register in `hotkeys.ts` like the rest, active only while a joined campaign is open. The GM's table hotkeys (blackout, next turn, go live and the others registered in `AppShell`) must do nothing there.
 

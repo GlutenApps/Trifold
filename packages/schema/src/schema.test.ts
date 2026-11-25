@@ -24,6 +24,7 @@ describe('LibrarySettings', () => {
       schemaVersion: 5,
       indexVersion: 0,
       lastOpenCampaignSlug: null,
+      campaignOpenedAt: {},
       theme: 'dark',
       playerDisplayId: null,
       checkForUpdates: false,
@@ -42,7 +43,14 @@ describe('LibrarySettings', () => {
         sfxVolume: 0.8,
         crossfadeSec: 4,
       },
-      workspace: { presets: [], seeded: false, consoles: {}, webTabs: [], playerConsoles: {} },
+      workspace: {
+        presets: [],
+        seeded: false,
+        consoles: {},
+        webTabs: [],
+        playerConsoles: {},
+        playerPresets: [],
+      },
       sampleCampaign: { added: false },
       role: null,
     });

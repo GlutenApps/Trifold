@@ -272,6 +272,11 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     // Opening it enters the player console: the GM's shell, the player's tabs, and the picker.
     await card.getByRole('button', { name: 'Open The Lantern at Greyford' }).click();
     await expect(page.getByTestId('joined-crumb')).toHaveText('The Lantern at Greyford');
+    // The same bar as the GM's: the mark alone, the switcher, Layouts and Settings.
+    await expect(page.getByTestId('topbar').getByRole('button', { name: 'Layouts' })).toBeVisible();
+    await expect(
+      page.getByTestId('topbar').getByRole('button', { name: 'Settings' }),
+    ).toBeVisible();
     await expect(page.getByRole('tab', { name: 'VTT', exact: true })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Sheets', exact: true })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Compendium', exact: true })).toBeVisible();
@@ -629,7 +634,8 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await gmPage.keyboard.press('Escape');
 
     // Closing the campaign and opening it again lands straight on the character: no picking.
-    await page.getByRole('button', { name: 'Close campaign' }).click();
+    await page.getByRole('button', { name: 'Campaign: The Lantern at Greyford' }).click();
+    await page.getByRole('menuitem', { name: 'Close campaign' }).click();
     await expect(page.getByTestId('player-strip')).toHaveCount(0);
     await card.getByRole('button', { name: 'Open The Lantern at Greyford' }).click();
     await expect(table.locator('.pc-map')).toBeVisible({ timeout: 20_000 });
@@ -666,7 +672,8 @@ test('a player’s Trifold joins a GM’s table on the local network', async () 
     await expect(lastRow.getByRole('button')).toHaveCount(1);
     await expect(lastRow.getByRole('button')).toHaveAccessibleName('Open Brannoc Hale’s sheet');
     // After closing and opening the campaign it comes from main's cache, the picture included.
-    await page.getByRole('button', { name: 'Close campaign' }).click();
+    await page.getByRole('button', { name: 'Campaign: The Lantern at Greyford' }).click();
+    await page.getByRole('menuitem', { name: 'Close campaign' }).click();
     await card.getByRole('button', { name: 'Open The Lantern at Greyford' }).click();
     await expect(table.getByText(/This is the map as you last saw it/)).toBeVisible({
       timeout: 20_000,

@@ -120,7 +120,7 @@ describe('JoinedStore', () => {
     await joined.join({ campaignId: 'b', campaignName: 'Beta', displayName: '', now: T });
     await joined.join({ campaignId: 'a', campaignName: 'Alpha', displayName: '', now: T });
     await joined.join({ campaignId: 'c', campaignName: 'Gamma', displayName: '', now: T });
-    await joined.connected('c', '10.0.0.1:80', T);
+    await joined.connected('c', '10.0.0.1:80', new Date(T.getTime() + 60_000));
     await mkdir(join(root, 'joined', 'broken'), { recursive: true });
     await writeFile(join(root, 'joined', 'broken', 'joined.json'), '{ not json');
     // A folder whose file names another campaign is not listed as either.
@@ -130,6 +130,21 @@ describe('JoinedStore', () => {
       JSON.stringify(await joined.get('a')),
     );
     expect((await joined.list()).map((j) => j.campaignName)).toEqual(['Gamma', 'Alpha', 'Beta']);
+  });
+
+  it('lists the most recently opened first, whether or not it was ever at the table', async () => {
+    const later = (minutes: number) => new Date(T.getTime() + minutes * 60_000);
+    await joined.join({ campaignId: 'a', campaignName: 'Alpha', displayName: '', now: T });
+    await joined.join({ campaignId: 'b', campaignName: 'Beta', displayName: '', now: T });
+    await joined.join({ campaignId: 'c', campaignName: 'Gamma', displayName: '', now: T });
+    await joined.connected('a', '10.0.0.1:80', later(5));
+    // Beta came from a player pack and never reached a table, but was opened last.
+    await joined.opened('b', later(10));
+    const opened = await joined.opened('c', later(1));
+    expect(opened?.openedAt).toBe(later(1).toISOString());
+    // Alpha was never opened, so it goes by when it was live: after Gamma's opening.
+    expect((await joined.list()).map((j) => j.campaignName)).toEqual(['Beta', 'Alpha', 'Gamma']);
+    expect(await joined.opened('nope')).toBeNull();
   });
 
   it('refuses a campaign id that is not a plain folder name', async () => {

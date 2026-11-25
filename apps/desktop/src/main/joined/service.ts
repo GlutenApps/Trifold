@@ -98,6 +98,7 @@ export function summarize(joined: JoinedCampaign): JoinedSummary {
     characterId: joined.characterId,
     joinedAt: joined.joinedAt,
     lastLiveAt: joined.lastLiveAt,
+    openedAt: joined.openedAt,
     claimed: !!joined.deviceToken,
   };
 }
@@ -579,6 +580,8 @@ export class JoinedService {
     if (!joined) return null;
     if (this.current?.campaignId === campaignId) return summarize(joined);
     if (this.current) this.close(this.current.campaignId);
+    // The lists put recently opened campaigns first. Queued with the file's other changes.
+    this.save('when it was opened', (store) => store.opened(campaignId));
     this.current = {
       campaignId,
       client: null,

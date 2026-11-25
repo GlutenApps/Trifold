@@ -23,6 +23,7 @@ const campaign = (characterId: string | null = null): JoinedSummary => ({
   characterId,
   joinedAt: now,
   lastLiveAt: null,
+  openedAt: null,
   claimed: true,
 });
 

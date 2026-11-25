@@ -84,13 +84,16 @@ export class LibraryStore {
   /**
    * Applies a patch to the Library's settings and writes them. Changes run one at a time: two
    * that overlapped (the console saving its layout while another setting changes) both started
-   * from the old settings, and the second write dropped the first change.
+   * from the old settings, and the second write dropped the first change. A function patch is
+   * given the settings as they are when its turn comes, for a change that reads before it writes.
    */
-  updateSettings(patch: Partial<LibrarySettings>): Promise<LibrarySettings> {
+  updateSettings(
+    patch: Partial<LibrarySettings> | ((settings: LibrarySettings) => Partial<LibrarySettings>),
+  ): Promise<LibrarySettings> {
     const run = this.settingsQueue.then(async () => {
       const next = LibrarySettings.parse({
         ...this.settings,
-        ...patch,
+        ...(typeof patch === 'function' ? patch(this.settings) : patch),
         schemaVersion: LIBRARY_SCHEMA_VERSION,
       });
       await this.writeJson(LIBRARY_FILE, next);

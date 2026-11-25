@@ -1,15 +1,17 @@
 import { useState } from 'react';
+import { matchesCampaignFilter, openedAgo } from '@trifold/rules';
 import { useJoinedStore } from '../../stores/joinedStore';
 import { Icon } from '../shell/icons';
 import { InlineConfirm } from '../shell/InlineConfirm';
 
 /**
  * Library › Campaigns › Playing (docs/PLAYER-MODE.md, "The campaign list"): the campaigns this
- * Library has joined, each with Open, when it was last at the table, and Leave. The list shows what the
+ * Library has joined, most recently opened first, each with Open, when it was last opened and
+ * last at the table, and Leave. `filter` is the Campaigns page's filter by name. The list shows what the
  * Library knows and connects to nothing: whether a GM's table is up is found out only when the
  * player opens the campaign.
  */
-export function PlayingSection() {
+export function PlayingSection({ filter = '' }: { filter?: string }) {
   const joined = useJoinedStore((s) => s.joined);
   const leave = useJoinedStore((s) => s.leave);
   const current = useJoinedStore((s) => s.current);
@@ -17,11 +19,17 @@ export function PlayingSection() {
   const [leaving, setLeaving] = useState<string | null>(null);
 
   if (joined.length === 0) return null;
+  const shown = joined.filter((j) =>
+    matchesCampaignFilter(j.campaignName || 'Unnamed campaign', filter),
+  );
   return (
     <>
       <h2>Playing</h2>
+      {shown.length === 0 && (
+        <p className="muted">No campaigns you play in match “{filter.trim()}”.</p>
+      )}
       <div className="campaign-grid" data-testid="playing-campaigns">
-        {joined.map((j) => {
+        {shown.map((j) => {
           const title = j.campaignName || 'Unnamed campaign';
           return (
             <div
@@ -32,14 +40,16 @@ export function PlayingSection() {
                 <strong className="campaign-card-name">{title}</strong>
                 <span className="spacer" />
                 <span className="muted small">
-                  {j.lastLiveAt
-                    ? `last at the table ${new Date(j.lastLiveAt).toLocaleDateString()}`
-                    : 'not at the table yet'}
+                  {j.openedAt ? `opened ${openedAgo(j.openedAt)}` : 'not opened yet'}
                 </span>
               </div>
               <p className="muted small">
                 {j.displayName ? `Playing as ${j.displayName}` : 'No name set'}
                 {j.claimed ? ' · character picked' : ''}
+                {' · '}
+                {j.lastLiveAt
+                  ? `last at the table ${new Date(j.lastLiveAt).toLocaleDateString()}`
+                  : 'not at the table yet'}
               </p>
               <div className="row">
                 <button

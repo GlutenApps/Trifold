@@ -52,6 +52,21 @@ describe('LibraryStore.open', () => {
     expect(reopened.getSettings()).toMatchObject({ playerDisplayId: 7, theme: 'light' });
   });
 
+  it('gives a change that reads before it writes the settings as they are on its turn', async () => {
+    const store = await LibraryStore.open(join(dir, 'opened'));
+    const open = (id: string, at: string) =>
+      store.updateSettings((s) => ({ campaignOpenedAt: { ...s.campaignOpenedAt, [id]: at } }));
+    // Two campaigns opened in quick succession: neither entry is lost.
+    await Promise.all([
+      open('c1', '2026-11-24T10:00:00.000Z'),
+      open('c2', '2026-11-24T10:01:00.000Z'),
+    ]);
+    expect(store.getSettings().campaignOpenedAt).toEqual({
+      c1: '2026-11-24T10:00:00.000Z',
+      c2: '2026-11-24T10:01:00.000Z',
+    });
+  });
+
   it('rejects a library.json from a newer app', async () => {
     const root = join(dir, 'newer');
     await LibraryStore.open(root);

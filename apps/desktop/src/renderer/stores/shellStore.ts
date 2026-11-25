@@ -5,6 +5,7 @@ import {
   webTabKey,
   type DockMode,
   type PlayerShellLayout,
+  type PlayerWorkspacePreset,
   type ShellLayout,
   type TrayItem,
   type WebTab,
@@ -61,7 +62,8 @@ import {
  * One console is loaded at a time, in one of two roles (docs/PLAYER-MODE.md): the GM's, for a
  * campaign this Library runs, or the player's, for one it joined. The role decides which tabs and
  * tools the layout may hold and where it is saved (`consoles` by slug, `playerConsoles` by the
- * joined campaign's id). Named layouts are the GM's.
+ * joined campaign's id). Named layouts are kept per role too: the GM's `presets` and the
+ * player's `playerPresets`, one list each for every campaign of that role.
  */
 export type Space = 'library' | 'console';
 /** Tools that pop up from their own button rather than living in the dock (ADR 0009), plus the
@@ -83,6 +85,8 @@ interface ShellState {
   /** Which stage group has keyboard focus (N/P, Ctrl+K act on it where it matters). */
   focusedGroup: 0 | 1;
   presets: WorkspacePreset[];
+  /** The player's named layouts, shared by every joined campaign; never the GM's. */
+  playerPresets: PlayerWorkspacePreset[];
   consoles: Record<string, ShellLayout>;
   /** Each joined campaign's player console as it was left, by the GM's campaign id. */
   playerConsoles: Record<string, PlayerShellLayout>;
@@ -177,10 +181,10 @@ function persist(get: () => ShellState): void {
   scheduleSave(
     'shell',
     () => {
-      const { presets, webTabs } = get();
+      const { presets, playerPresets, webTabs } = get();
       const { consoles, playerConsoles } = withLoaded(get());
       return useAppStore.getState().updateSettings({
-        workspace: { presets, seeded: true, consoles, webTabs, playerConsoles },
+        workspace: { presets, seeded: true, consoles, webTabs, playerConsoles, playerPresets },
       });
     },
     500,
@@ -213,6 +217,23 @@ function withLoaded(
   };
 }
 
+/** A named layout as the shell works on it, whichever role's list it came from. */
+export interface RolePreset {
+  name: string;
+  layout: Layout;
+}
+
+/** The named layouts a console of `role` offers: the GM's, or the player's without a tray. */
+export function presetsFor(
+  role: ShellRole,
+  presets: readonly WorkspacePreset[],
+  playerPresets: readonly PlayerWorkspacePreset[],
+): RolePreset[] {
+  return role === 'player'
+    ? playerPresets.map((p) => ({ name: p.name, layout: fromPlayerLayout(p.layout) }))
+    : [...presets];
+}
+
 /**
  * A new web tab's first title: the site's host without a leading `www.`, until the page reports
  * its own. An address that does not parse gets the generic label rather than an error.
@@ -231,7 +252,7 @@ function hostOf(url: string): string {
  * appended while it clashes. `skip` is the preset being renamed, so keeping its own name is
  * never a clash.
  */
-function uniqueName(name: string, presets: WorkspacePreset[], skip = -1): string {
+function uniqueName(name: string, presets: readonly { name: string }[], skip = -1): string {
   const base = name.trim() || 'Layout';
   let candidate = base;
   for (let n = 2; presets.some((p, i) => i !== skip && p.name === candidate); n++) {
@@ -248,6 +269,16 @@ export const useShellStore = create<ShellState>((set, get) => {
   };
   /** The loaded console's dock tools, in the dock's order. */
   const tools = () => ROLE_TOOLS[get().role];
+  /** The loaded console's named layouts. */
+  const rolePresets = () => presetsFor(get().role, get().presets, get().playerPresets);
+  /** The screen as a named layout of the loaded role saves it. */
+  const snapshot = () => cloneLayout(get().layout);
+  /** Edits the loaded role's list of named layouts (names and order only), then saves. */
+  const editPresets = (edit: <P extends { name: string }>(list: P[]) => P[]) => {
+    if (get().role === 'player') set({ playerPresets: edit(get().playerPresets) });
+    else set({ presets: edit(get().presets) });
+    persist(get);
+  };
   const dockShowsSections = () => {
     const s = get().effectiveDock();
     return s === 'wide' || s === 'narrow';
@@ -262,6 +293,7 @@ export const useShellStore = create<ShellState>((set, get) => {
     layout: defaultLayout(),
     focusedGroup: 0,
     presets: [],
+    playerPresets: [],
     consoles: {},
     playerConsoles: {},
     webTabs: [],
@@ -301,6 +333,7 @@ export const useShellStore = create<ShellState>((set, get) => {
           : STARTER_PRESETS.map((p) => ({ name: p.name, layout: cloneLayout(p.layout) })),
         consoles: settings?.consoles ?? {},
         playerConsoles: settings?.playerConsoles ?? {},
+        playerPresets: settings?.playerPresets ?? [],
         webTabs: settings?.webTabs ?? [],
       });
       if (!seeded) persist(get);
@@ -493,7 +526,7 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     removeWebTab(id) {
-      const { webTabs, presets, consoles, playerConsoles, layout } = get();
+      const { webTabs, presets, playerPresets, consoles, playerConsoles, layout } = get();
       const remaining = webTabs.filter((t) => t.id !== id);
       if (remaining.length === webTabs.length) return;
       const playerTools = ROLE_TOOLS.player;
@@ -507,6 +540,10 @@ export const useShellStore = create<ShellState>((set, get) => {
           ]),
         ),
         presets: presets.map((p) => ({ ...p, layout: pruneTabs(p.layout, remaining) })),
+        playerPresets: playerPresets.map((p) => ({
+          ...p,
+          layout: toPlayerLayout(pruneTabs(fromPlayerLayout(p.layout), remaining, playerTools)),
+        })),
         consoles: Object.fromEntries(
           Object.entries(consoles).map(([slug, l]) => [slug, pruneTabs(l, remaining)]),
         ),
@@ -589,58 +626,78 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     applyLayout(index) {
-      const preset = get().presets[index];
-      // Named layouts are the GM's: they name GM tabs and tools.
-      if (!preset || get().space !== 'console' || get().role !== 'gm') return;
-      change(applyPreset(preset.layout, get().webTabs));
+      const preset = rolePresets()[index];
+      // Each role applies its own list: a GM layout never lands in a player console.
+      if (!preset || get().space !== 'console') return;
+      change(applyPreset(preset.layout, get().webTabs, tools()));
       set({ focusedGroup: 0, flyout: null });
     },
 
     savePreset(name) {
-      const presets = get().presets;
-      if (get().role !== 'gm') return;
-      set({
-        presets: presets.concat({
-          name: uniqueName(name, presets),
-          layout: cloneLayout(get().layout as ShellLayout),
-        }),
-      });
+      if (get().space !== 'console') return;
+      const layout = snapshot();
+      if (get().role === 'player') {
+        const list = get().playerPresets;
+        set({
+          playerPresets: list.concat({
+            name: uniqueName(name, list),
+            layout: toPlayerLayout(layout),
+          }),
+        });
+      } else {
+        const list = get().presets;
+        set({
+          presets: list.concat({ name: uniqueName(name, list), layout: layout as ShellLayout }),
+        });
+      }
       persist(get);
     },
 
     updatePreset(index) {
-      if (get().role !== 'gm') return;
-      set({
-        presets: get().presets.map((p, i) =>
-          i === index ? { ...p, layout: cloneLayout(get().layout as ShellLayout) } : p,
-        ),
-      });
+      if (get().space !== 'console') return;
+      const layout = snapshot();
+      if (get().role === 'player') {
+        set({
+          playerPresets: get().playerPresets.map((p, i) =>
+            i === index ? { ...p, layout: toPlayerLayout(layout) } : p,
+          ),
+        });
+      } else {
+        set({
+          presets: get().presets.map((p, i) =>
+            i === index ? { ...p, layout: layout as ShellLayout } : p,
+          ),
+        });
+      }
       persist(get);
     },
 
     renamePreset(index, name) {
-      const presets = get().presets;
-      if (!presets[index] || !name.trim()) return;
-      const fresh = uniqueName(name, presets, index);
-      set({ presets: presets.map((p, i) => (i === index ? { ...p, name: fresh } : p)) });
-      persist(get);
+      if (!rolePresets()[index] || !name.trim()) return;
+      editPresets((list) => {
+        const fresh = uniqueName(name, list, index);
+        return list.map((p, i) => (i === index ? { ...p, name: fresh } : p));
+      });
     },
 
     movePreset(index, direction) {
-      const presets = [...get().presets];
       const to = index + direction;
-      if (!presets[index] || to < 0 || to >= presets.length) return;
-      [presets[index], presets[to]] = [presets[to]!, presets[index]!];
-      set({ presets });
-      persist(get);
+      const count = rolePresets().length;
+      if (index < 0 || index >= count || to < 0 || to >= count) return;
+      editPresets((list) => {
+        const next = [...list];
+        [next[index], next[to]] = [next[to]!, next[index]!];
+        return next;
+      });
     },
 
     deletePreset(index) {
-      set({ presets: get().presets.filter((_, i) => i !== index) });
-      persist(get);
+      editPresets((list) => list.filter((_, i) => i !== index));
     },
 
     restoreStarterLayouts() {
+      // The starter set names GM tabs and tools.
+      if (get().role !== 'gm') return;
       const presets = get().presets;
       const missing = STARTER_PRESETS.filter((b) => !presets.some((p) => p.name === b.name)).map(
         (b) => ({ name: b.name, layout: cloneLayout(b.layout) }),
@@ -651,9 +708,8 @@ export const useShellStore = create<ShellState>((set, get) => {
     },
 
     currentPresetIndex() {
-      const { layout, presets, role } = get();
-      if (role !== 'gm') return -1;
-      return presets.findIndex((p) => matchesPreset(layout, p.layout));
+      const { layout } = get();
+      return rolePresets().findIndex((p) => matchesPreset(layout, p.layout, tools()));
     },
   };
 });

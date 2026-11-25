@@ -116,6 +116,30 @@
   text-overflow: ellipsis;
 }
 
+/* Running and Playing, when the Library has campaigns of both kinds. */
+.switcher-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.switcher-group + .switcher-group {
+  margin-top: 6px;
+}
+
+/* Under the lists, lined up with the names rather than the check column. */
+.menu button[role='menuitem'].switcher-more {
+  padding-left: 30px;
+  color: var(--text-muted);
+}
+
+.switcher-heading {
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
 .window-controls-space {
   width: 140px;
   flex-shrink: 0;
@@ -1196,6 +1220,13 @@ body.resizing {
 }
 
 /* Two campaigns per row: wide enough that the open one's three buttons sit on one line. */
+/* The Campaigns page's filter, shown once the Library has more campaigns than fit at a glance. */
+.campaign-filter {
+  width: 100%;
+  max-width: 360px;
+  margin-top: 4px;
+}
+
 .campaign-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

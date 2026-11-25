@@ -542,6 +542,7 @@ May come after the beta; new ideas land here first. Not in priority order.
 - Subclass editors (subclasses need a data model first).
 - Hex grids.
 - Optional open third-party content (§6.1), each document's license checked and shipped with its notices.
+- Archiving campaigns: an **Archive** action on a campaign card (running or playing) that takes a finished campaign out of the Campaigns page and the top bar's switcher until **Show archived** brings it back. Nothing is deleted. Recent-first order, the switcher's five most recent and the filter (built) cover most Libraries; this is for one with dozens of campaigns.
 
 Ambience and effects layers, stingers and ducking, `[[links]]` between notes, drag-and-drop art on records, and pre-filling PCs from an online character service are out of scope (ADR 0029). Importing a player's exported PDF sheet left this list: it is built with player characters (ADR 0073).
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CampaignSummary } from '@trifold/api';
+import { FILTER_FROM, matchesCampaignFilter, openedAgo } from '@trifold/rules';
 import { useAppStore } from '../../stores/appStore';
 import { useCampaignStore } from '../../stores/campaignStore';
 import { useJoinedStore } from '../../stores/joinedStore';
@@ -182,7 +183,10 @@ function CreateCampaignPanel({
   );
 }
 
-/** Library › Campaigns: create, import, open. Opening one enters the console. */
+/**
+ * Library › Campaigns: create, import, open. Opening one enters the console. Both sections list
+ * the most recently opened first, and a Library with many campaigns gets a filter by name.
+ */
 export function CampaignsPage() {
   const campaigns = useCampaignStore((s) => s.campaigns);
   const current = useCampaignStore((s) => s.current);
@@ -192,7 +196,13 @@ export function CampaignsPage() {
   const error = useCampaignStore((s) => s.error);
   const clearError = useCampaignStore((s) => s.clearError);
   const [creating, setCreating] = useState(false);
-  const playing = useJoinedStore((s) => s.joined.length > 0);
+  const joinedCount = useJoinedStore((s) => s.joined.length);
+  const playing = joinedCount > 0;
+  const [filter, setFilter] = useState('');
+  // A short list needs no filter; one that grows past a screenful gets it.
+  const filterable = campaigns.length + joinedCount > FILTER_FROM;
+  const query = filterable ? filter : '';
+  const running = campaigns.filter((c) => matchesCampaignFilter(c.name, query));
   const joinError = useJoinedStore((s) => s.error);
   const clearJoinError = useJoinedStore((s) => s.clearError);
   const loadJoined = useJoinedStore((s) => s.load);
@@ -277,20 +287,35 @@ export function CampaignsPage() {
             : ''}
         </p>
       )}
+      {filterable && (
+        <input
+          type="search"
+          className="campaign-filter"
+          aria-label="Filter campaigns"
+          placeholder="Filter campaigns by name"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+      )}
       {split && <h2>Running</h2>}
       {campaigns.length === 0 ? (
         <p className="muted">No campaigns yet. Start one, or bring one in, with Create campaign.</p>
+      ) : running.length === 0 ? (
+        <p className="muted">No running campaigns match “{query.trim()}”.</p>
       ) : (
         <div className="campaign-grid">
-          {campaigns.map((c) => {
+          {running.map((c) => {
             const isCurrent = current?.campaign.id === c.id;
             return (
               <div key={c.id} className={`card campaign-card${isCurrent ? ' live' : ''}`}>
                 <div className="row">
                   <strong className="campaign-card-name">{c.name}</strong>
                   <span className="spacer" />
+                  {/* A campaign not opened since this was recorded shows when it changed. */}
                   <span className="muted small">
-                    updated {new Date(c.updatedAt).toLocaleDateString()}
+                    {c.openedAt
+                      ? `opened ${openedAgo(c.openedAt)}`
+                      : `updated ${new Date(c.updatedAt).toLocaleDateString()}`}
                   </span>
                 </div>
                 <p className="muted small">
@@ -349,7 +374,7 @@ export function CampaignsPage() {
           })}
         </div>
       )}
-      <PlayingSection />
+      <PlayingSection filter={query} />
       <p className="muted small">
         A campaign holds its party, NPCs, notes, encounters, scenes and playlists. Opening one
         enters the console with its tabs, dock and layouts as you left them; the Library stays a

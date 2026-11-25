@@ -47,5 +47,7 @@ export const JoinedCampaign = z.object({
   joinedAt: IsoDateTime,
   /** When this Library was last connected to the campaign's table. */
   lastLiveAt: IsoDateTime.nullable().default(null),
+  /** When the player last opened this campaign's console, connected or not: the lists' order. */
+  openedAt: IsoDateTime.nullable().default(null),
 });
 export type JoinedCampaign = z.infer<typeof JoinedCampaign>;

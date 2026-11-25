@@ -116,6 +116,7 @@ describe('JoinedService: an open campaign', () => {
       JSON.parse(await readFile(join(root, 'joined', 'c1', 'joined.json'), 'utf8')) as {
         deviceToken?: string;
         lastLiveAt: string | null;
+        openedAt: string | null;
         campaignName: string;
         addresses: string[];
       };
@@ -152,17 +153,24 @@ describe('JoinedService: an open campaign', () => {
     expect(net.all[0]?.url).toBe('ws://192.168.1.23:8130/ws');
 
     // The table names the campaign, the player claims, the table hands over the token: three
-    // saves to one file within moments, and none of them may undo another.
+    // saves to one file within moments, and none of them may undo another. With opening's own
+    // save that is four atomic writes in a row, each synced to disk; CI's Windows runners take
+    // longer than the default second for them, so the wait is longer.
     net.all[0]!.receive(campaign);
     net.all[0]!.receive({ type: 'token', token: 'secret', campaignId: 'c1' });
-    await vi.waitFor(async () => {
-      expect(await file()).toMatchObject({
-        deviceToken: 'secret',
-        campaignName: 'Greyford, renamed',
-        addresses: ['192.168.1.23:8130'],
-      });
-      expect((await file()).lastLiveAt).not.toBeNull();
-    });
+    await vi.waitFor(
+      async () => {
+        expect(await file()).toMatchObject({
+          deviceToken: 'secret',
+          campaignName: 'Greyford, renamed',
+          addresses: ['192.168.1.23:8130'],
+        });
+        expect((await file()).lastLiveAt).not.toBeNull();
+        // Opening was recorded too, and no later save dropped it.
+        expect((await file()).openedAt).not.toBeNull();
+      },
+      { timeout: 10_000 },
+    );
     expect(links).toEqual(['connecting', 'open']);
 
     // The token is the claim and stays in main: the console never receives it.

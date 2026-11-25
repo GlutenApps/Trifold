@@ -320,6 +320,8 @@ export const useCampaignStore = create<CampaignState>((set, get) => {
       await guard(async () => {
         await flushPendingSaves();
         set({ current: await window.trifold.campaigns.open(campaignId) });
+        // Opening moved it to the top of the list (most recently opened first).
+        await refreshList();
       });
     },
 
