@@ -258,3 +258,78 @@ export function ItemEditor({
     </div>
   );
 }
+
+/**
+ * Casting with a higher slot (docs/CHARACTER-SHEET.md, item 13): a row action beside Cast that
+ * opens the slot levels above the one Cast would use, each with how many are left. It keeps its
+ * place on every spell row, disabled with the reason where there is nothing to choose (UI
+ * guidelines §8). Escape or a click elsewhere closes it.
+ */
+export function UpcastMenu({
+  name,
+  choices,
+  why,
+  onCast,
+}: {
+  name: string;
+  choices: readonly { level: number; left: number }[];
+  /** Why it cannot open; empty when it can. */
+  why: string;
+  onCast(slotLevel: number): void;
+}) {
+  const [open, setOpen] = useState(false);
+  const anchor = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    anchor.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus();
+    const close = (e: MouseEvent) => {
+      if (!anchor.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+  return (
+    <span
+      className="menu-anchor"
+      ref={anchor}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && open) {
+          e.stopPropagation();
+          setOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        className="chrome-btn xs"
+        disabled={!!why}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Cast ${name} with a higher slot`}
+        title={why || 'Cast with a higher slot'}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Icon name="up" />
+      </button>
+      {open && (
+        <div className="menu sh-upcast" role="menu" aria-label={`Cast ${name} with`}>
+          {choices.map((c) => (
+            <button
+              key={c.level}
+              type="button"
+              role="menuitem"
+              disabled={c.left === 0}
+              onClick={() => {
+                setOpen(false);
+                onCast(c.level);
+              }}
+            >
+              Level {c.level} slot
+              <span className="muted small">{c.left === 0 ? 'none left' : `${c.left} left`}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}

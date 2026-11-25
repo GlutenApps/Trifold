@@ -3297,6 +3297,23 @@ button.chrome-btn:disabled:not(.primary, .tally) {
   order: 3;
 }
 
+/* What the character is concentrating on, between the roll mode and the readout: a read-only
+   line with the save to roll and End. */
+.tb-conc {
+  grid-column: 1 / -1;
+  order: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-height: var(--control-h-row);
+}
+
+.tb-conc-name {
+  font-weight: 600;
+  margin-right: auto;
+}
+
 .tb-problem {
   margin: 0;
 }
@@ -4286,6 +4303,33 @@ button.sh-vital.rolls:hover .sh-v-label {
 
 .sh-item-edit .field input[type='text'] {
   width: 160px;
+}
+
+/* A spell's casting time and range, and its concentration and ritual marks: read only. */
+.sh-spell-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.sh-flag {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: help;
+}
+
+.sh-upcast button[role='menuitem'] {
+  justify-content: space-between;
+  gap: 16px;
 }
 
 /* Equipped or attuned, said in words where nothing can be changed. */

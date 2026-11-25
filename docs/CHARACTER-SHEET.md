@@ -19,7 +19,7 @@ So the list below does not repeat it:
 
 **The table owns some things on purpose** (PLAYER-MODE.md, Who owns what): current HP, temp HP, death saves and conditions. The sheet shows them while connected and does not keep its own copy.
 
-**Built since:** items 1 to 5, 20 and 21 (ADR 0081): equipped (with AC from equipped armour and shields), attunement, places, coins, item charges, defences, senses and other speeds. Spells and equipment are also added, changed and removed in their own tabs (ADR 0082).
+**Built since:** items 1 to 5, 20 and 21 (ADR 0081): equipped (with AC from equipped armour and shields), attunement, places, coins, item charges, defences, senses and other speeds. Spells and equipment are also added, changed and removed in their own tabs (ADR 0082). Items 13 to 15 (ADR 0083): upcasting, concentration in the turn bar, and spell details on the row.
 
 ## Inventory and equipment
 

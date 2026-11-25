@@ -108,6 +108,60 @@ export function spendSlot(sheet: Sheet, level: number): Sheet | null {
   return setSlotsUsed(sheet, level, max - left + 1);
 }
 
+/** The slot levels a spell of `level` can be cast with: its own and every higher one there is. */
+export function slotChoices(
+  sheet: Pick<Sheet, 'slots' | 'slotsUsed'>,
+  level: number,
+): { level: number; max: number; left: number }[] {
+  const out: { level: number; max: number; left: number }[] = [];
+  for (let l = Math.max(1, level); l <= sheet.slots.length; l++) {
+    const { max, left } = slotsAt(sheet, l);
+    if (max > 0) out.push({ level: l, max, left });
+  }
+  return out;
+}
+
+/**
+ * Casting a spell (docs/CHARACTER-SHEET.md, items 13 and 14): a cantrip spends nothing, any
+ * other spell a slot of `slotLevel` (its own level or higher, to upcast). A concentration spell
+ * becomes what the character concentrates on, ending the one before (`ended`). Null when that
+ * slot is spent or below the spell's level.
+ */
+export function castSpell(
+  sheet: Sheet,
+  spell: Pick<Sheet['spells'][number], 'id' | 'name' | 'level' | 'ref'>,
+  slotLevel: number,
+  concentration: boolean,
+): { sheet: Sheet; ended: string | null } | null {
+  let next = sheet;
+  if (spell.level > 0) {
+    if (slotLevel < spell.level) return null;
+    const spent = spendSlot(sheet, slotLevel);
+    if (!spent) return null;
+    next = spent;
+  }
+  if (!concentration) return { sheet: next, ended: null };
+  const ended = sheet.concentrating?.name ?? null;
+  return {
+    sheet: {
+      ...next,
+      concentrating: {
+        name: spell.name || 'Spell',
+        spellId: spell.id,
+        ...(spell.ref ? { ref: spell.ref } : {}),
+      },
+    },
+    ended,
+  };
+}
+
+/** Concentration ends: by hand, or because the spell is done. */
+export function endConcentration(sheet: Sheet): Sheet {
+  const next = { ...sheet };
+  delete next.concentrating;
+  return next;
+}
+
 /** What a rest brought back, to say so. */
 export interface RestResult {
   sheet: Sheet;
@@ -174,7 +228,8 @@ export function longRest(sheet: Sheet, edition: CharacterEdition): RestResult {
   }
   if (spent > 0) restored.push('hit dice');
   return {
-    sheet: { ...sheet, features, equipment, slotsUsed: [], hitDiceUsed },
+    // Eight hours outlast any concentration a character keeps up.
+    sheet: endConcentration({ ...sheet, features, equipment, slotsUsed: [], hitDiceUsed }),
     restored,
   };
 }

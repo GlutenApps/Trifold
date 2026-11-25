@@ -6,6 +6,7 @@ import { blankSheet } from '@trifold/rules';
 import type { Character, CompendiumRecord, Sheet } from '@trifold/schema';
 import { useRollLogStore } from '../../stores/rollLogStore';
 import { clearItemFacts } from './itemFacts';
+import { clearSpellFacts } from './spellFacts';
 import { SheetView } from './SheetView';
 
 /** The character sheet's layout (ADR 0080): tabs, pips, slots by spell level, the readout. */
@@ -479,5 +480,108 @@ describe('changing spells and equipment in their tabs (ADR 0082)', () => {
     render(<SheetView character={cleric} />);
     expect(screen.queryByRole('button', { name: /^Add a/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /^Remove / })).toBeNull();
+  });
+});
+
+describe('spells at the table (docs/CHARACTER-SHEET.md, items 13 to 15)', () => {
+  const spellRecord = (name: string, level: number, duration: string, ritual = false) =>
+    ({
+      kind: 'spell',
+      key: name.toLowerCase(),
+      name,
+      displayName: name,
+      data: {
+        level,
+        school: 'EN',
+        ritual,
+        time: '1 action',
+        range: '30 feet',
+        components: 'V, S',
+        duration,
+        classes: [],
+        text: '',
+        rolls: [],
+        modifiers: [],
+        extra: {},
+      },
+    }) as unknown as CompendiumRecord;
+  const records: Record<string, CompendiumRecord> = {
+    bless: spellRecord('Bless', 1, 'Concentration, up to 1 minute'),
+    guidance: spellRecord('Guidance', 0, 'Concentration, up to 1 minute'),
+    'detect magic': spellRecord('Detect Magic', 1, 'Concentration, up to 10 minutes', true),
+  };
+  const ref = (name: string) => ({ kind: 'spell' as const, key: name.toLowerCase(), name });
+  const linked: Character = {
+    ...cleric,
+    sheet: {
+      ...cleric.sheet!,
+      slots: [4, 2],
+      slotsUsed: [1],
+      spells: [
+        { id: 's0', name: 'Guidance', level: 0, prepared: true, ref: ref('Guidance') },
+        { id: 's1', name: 'Bless', level: 1, prepared: true, ref: ref('Bless') },
+        { id: 's2', name: 'Detect Magic', level: 1, prepared: true, ref: ref('Detect Magic') },
+        { id: 's3', name: 'Aid', level: 2, prepared: true },
+      ],
+    },
+  };
+
+  beforeEach(() => {
+    clearSpellFacts();
+    vi.mocked(window.trifold.compendium.findByKey).mockImplementation(async (_kind, key) => {
+      const r = records[key];
+      return r ? [r] : [];
+    });
+  });
+
+  it('shows concentration, ritual, casting time and range on linked rows', async () => {
+    render(<AtTheTable start={linked} />);
+    const one = within(screen.getByTestId('spell-level-1'));
+    await waitFor(() => expect(one.getAllByTitle('Needs concentration')).toHaveLength(2));
+    expect(one.getAllByTitle('Can be cast as a ritual')).toHaveLength(1);
+    expect(one.getAllByText('1 action · 30 feet')).toHaveLength(2);
+    // An unlinked spell shows only what the sheet has.
+    expect(
+      within(screen.getByTestId('spell-level-2')).queryByTitle('Needs concentration'),
+    ).toBeNull();
+  });
+
+  it('upcasts from the menu beside Cast, and says so', async () => {
+    const seen = vi.fn();
+    const user = userEvent.setup();
+    render(<AtTheTable seen={seen} start={linked} />);
+    await user.click(screen.getByRole('button', { name: 'Cast Detect Magic with a higher slot' }));
+    await user.click(screen.getByRole('menuitem', { name: /Level 2 slot/ }));
+    await waitFor(() => expect(seen.mock.lastCall![0].slotsUsed).toEqual([1, 1]));
+    expect(screen.getByTestId('sheet-last-roll')).toHaveTextContent(
+      'cast with a level 2 slot (upcast), 1 left',
+    );
+    // Aid is level 2, the highest slot there is: nothing higher to choose.
+    expect(screen.getByRole('button', { name: 'Cast Aid with a higher slot' })).toBeDisabled();
+  });
+
+  it('casts with the next slot up when the spell’s own level is spent', () => {
+    render(<AtTheTable start={{ ...linked, sheet: { ...linked.sheet!, slotsUsed: [4] } }} />);
+    expect(screen.getByRole('button', { name: 'Cast Bless with a level 2 slot' })).toBeEnabled();
+  });
+
+  it('holds concentration in the turn bar; another concentration spell ends it; End ends it', async () => {
+    const seen = vi.fn();
+    const user = userEvent.setup();
+    render(<AtTheTable seen={seen} start={linked} />);
+    await user.click(screen.getByRole('button', { name: 'Cast Bless with a level 1 slot' }));
+    const held = await screen.findByTestId('concentration');
+    expect(held).toHaveTextContent('Bless');
+    expect(within(held).getByRole('button', { name: 'Roll Concentration save' })).toHaveTextContent(
+      '+2',
+    );
+    await user.click(screen.getByRole('button', { name: 'Cast Guidance' }));
+    await waitFor(() => expect(screen.getByTestId('concentration')).toHaveTextContent('Guidance'));
+    expect(screen.getByTestId('sheet-last-roll')).toHaveTextContent(
+      'concentrating now, Bless ends',
+    );
+    await user.click(screen.getByRole('button', { name: 'End concentration on Guidance' }));
+    expect(screen.queryByTestId('concentration')).toBeNull();
+    expect(seen.mock.lastCall![0].concentrating).toBeUndefined();
   });
 });

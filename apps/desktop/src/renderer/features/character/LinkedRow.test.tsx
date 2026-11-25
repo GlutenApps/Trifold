@@ -83,11 +83,12 @@ beforeEach(() => {
 });
 
 describe('linked rows on a sheet', () => {
-  it('reads the record only when the row is opened, and shows its text', async () => {
+  it('shows the record’s text only when the row is opened', async () => {
     const user = userEvent.setup();
     render(<SheetView character={character} />);
-    // Items are read to learn whether they need attunement; a spell's text waits for opening.
-    expect(window.trifold.compendium.findByKey).not.toHaveBeenCalledWith('spell', 'fire bolt');
+    // Linked records are read for the row's marks (concentration, attunement); the text itself
+    // shows only once the row is opened.
+    expect(screen.queryByTestId('linked-record')).toBeNull();
     await user.click(screen.getByText('Fire Bolt'));
     expect(await screen.findByTestId('linked-record')).toHaveTextContent('You hurl a mote of fire');
     expect(window.trifold.compendium.findByKey).toHaveBeenCalledWith('spell', 'fire bolt');

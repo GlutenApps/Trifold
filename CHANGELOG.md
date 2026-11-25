@@ -4,6 +4,12 @@ All notable changes to Trifold. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+
+- **Upcasting** (ADR 0083): the arrow beside a spell's Cast casts it with a higher slot. Cast itself uses the next level up when the spell's own slots are spent.
+- **Concentration** (ADR 0083): casting a concentration spell shows what you're concentrating on in the sheet's top bar, with the Constitution save to roll and End. Casting another ends the first; a long rest ends it.
+- **Spell details on the row**: casting time, range, and C or R for concentration and ritual, for spells from the compendium.
+
 ## [0.5.0-beta.4] - 2026-11-24
 
 A redesigned character sheet with equipment you can wear, attune and stash, spells and gear you can change without leaving the sheet, and the player console's top bar brought in line with the GM's.
