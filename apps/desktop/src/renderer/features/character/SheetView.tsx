@@ -14,11 +14,13 @@ import {
   attunedCount,
   classLine,
   deriveSheet,
+  castSpell,
+  endConcentration,
   setSlotsUsed,
+  slotChoices,
   SKILL_ABILITY,
   SKILL_NAMES,
   slotsAt,
-  spendSlot,
   tableNumbers,
   type RollMode,
 } from '@trifold/rules';
@@ -33,7 +35,8 @@ import { Pips, ResourcesSection, type SheetEvent } from './Resources';
 import { signed } from './fields';
 import { d20, damageDice, rollFromSheet, type SheetRollOptions } from './sheetRolls';
 import { toggleItem, useAttunementNeeded } from './itemFacts';
-import { AddPanel, ItemEditor, type Added } from './SheetEdit';
+import { AddPanel, ItemEditor, UpcastMenu, type Added } from './SheetEdit';
+import { spellFacts, useSpellFacts } from './spellFacts';
 
 /**
  * A character's sheet to read and use at the table (docs/PLAYER-MODE.md, "My characters and
@@ -494,6 +497,33 @@ export function SheetView({
       spells: now.spells.map((x) => (x.id === id ? { ...x, prepared: !x.prepared } : x)),
     });
   };
+  const facts = useSpellFacts(sheet?.spells ?? []);
+  /**
+   * Casts a spell with a slot of `slotLevel` (0 for a cantrip): the slot is spent, and a
+   * concentration spell becomes what the character concentrates on, ending the one before
+   * (docs/CHARACTER-SHEET.md, items 13 and 14). The readout says what happened, with Undo.
+   */
+  const cast = async (spell: Sheet['spells'][number], slotLevel: number) => {
+    const known = spell.ref ? await spellFacts(spell.ref) : null;
+    const now = latest.current;
+    if (!now || !save) return;
+    const out = castSpell(now, spell, slotLevel, !!known?.concentration);
+    if (!out) return;
+    const name = spell.name || 'Spell';
+    const changed = out.sheet !== now;
+    if (changed) save(out.sheet);
+    const left = slotLevel > 0 ? slotsAt(out.sheet, slotLevel).left : 0;
+    const what =
+      slotLevel === 0
+        ? 'cast, a cantrip uses no slot'
+        : `cast with a level ${slotLevel} slot${slotLevel > spell.level ? ' (upcast)' : ''}, ${left} left`;
+    const held = known?.concentration
+      ? out.ended
+        ? `; concentrating now, ${out.ended} ends`
+        : '; concentrating now'
+      : '';
+    say({ label: name, detail: `${what}${held}`, ...(changed ? { undo: now } : {}) });
+  };
   /** The tab's Add button, in its header (UI guidelines §9). */
   const addButton = (kind: 'spell' | 'item') =>
     save && (
@@ -830,22 +860,51 @@ export function SheetView({
                       {list.map((s) => {
                         const name = s.name || 'Spell';
                         const unready = level > 0 && !s.prepared;
-                        // A cantrip casts too; it just spends nothing.
+                        // One click casts with the lowest slot free at the spell's level or above;
+                        // a cantrip casts too, and spends nothing.
+                        const choices = slotChoices(sheet, level);
+                        const lowest =
+                          level === 0 ? 0 : (choices.find((c) => c.left > 0)?.level ?? null);
+                        const higher = choices.filter((c) => c.level > (lowest ?? level));
                         const why =
                           level === 0
                             ? ''
                             : unready
                               ? 'Not prepared'
-                              : left <= 0
-                                ? `No level ${level} slots left`
+                              : lowest === null
+                                ? `No slot of level ${level} or higher left`
                                 : '';
+                        const known = facts.get(s.id);
+                        const ends =
+                          known?.concentration && sheet.concentrating
+                            ? `; ends concentration on ${sheet.concentrating.name}`
+                            : '';
                         return (
                           <SheetRow
                             key={s.id}
                             name={name}
                             sheetRef={s.ref}
                             muted={unready}
-                            after={unready ? <span className="badge">not prepared</span> : null}
+                            after={
+                              <>
+                                {known && (known.time || known.range) && (
+                                  <span className="sh-src sh-spell-meta">
+                                    {[known.time, known.range].filter(Boolean).join(' · ')}
+                                  </span>
+                                )}
+                                {known?.concentration && (
+                                  <span className="sh-flag" title="Needs concentration">
+                                    C<span className="sr-only">oncentration</span>
+                                  </span>
+                                )}
+                                {known?.ritual && (
+                                  <span className="sh-flag" title="Can be cast as a ritual">
+                                    R<span className="sr-only">itual</span>
+                                  </span>
+                                )}
+                                {unready && <span className="badge">not prepared</span>}
+                              </>
+                            }
                             actions={
                               save && (
                                 <>
@@ -873,34 +932,34 @@ export function SheetView({
                                     aria-label={
                                       level === 0
                                         ? `Cast ${name}`
-                                        : `Cast ${name} with a level ${level} slot`
+                                        : `Cast ${name} with a level ${lowest ?? level} slot`
                                     }
                                     title={
                                       why ||
                                       (level === 0
-                                        ? 'Cast: a cantrip uses no slot'
-                                        : `Cast: uses a level ${level} slot`)
+                                        ? `Cast: a cantrip uses no slot${ends}`
+                                        : `Cast: uses a level ${lowest} slot${
+                                            lowest !== level ? ` (none of level ${level} left)` : ''
+                                          }${ends}`)
                                     }
-                                    onClick={() => {
-                                      if (level === 0) {
-                                        say({
-                                          label: name,
-                                          detail: 'cast, a cantrip uses no slot',
-                                        });
-                                        return;
-                                      }
-                                      const next = spendSlot(sheet, level);
-                                      if (!next) return;
-                                      save(next);
-                                      say({
-                                        label: name,
-                                        detail: `cast with a level ${level} slot, ${left - 1} left`,
-                                        undo: sheet,
-                                      });
-                                    }}
+                                    onClick={() => void cast(s, lowest ?? 0)}
                                   >
                                     <Icon name="cast" />
                                   </button>
+                                  <UpcastMenu
+                                    name={name}
+                                    choices={higher}
+                                    why={
+                                      level === 0
+                                        ? 'Cantrips use no slot'
+                                        : unready
+                                          ? 'Not prepared'
+                                          : higher.every((c) => c.left === 0)
+                                            ? 'No higher slot left'
+                                            : ''
+                                    }
+                                    onCast={(slot) => void cast(s, slot)}
+                                  />
                                   <button
                                     type="button"
                                     className="chrome-btn xs"
@@ -1197,6 +1256,40 @@ export function SheetView({
                   </button>
                 ))}
               </span>
+            </div>
+          )}
+          {sheet?.concentrating && (
+            <div className="tb-conc" role="status" data-testid="concentration">
+              <span className="tb-label">Concentrating</span>
+              <span className="tb-conc-name">{sheet.concentrating.name}</span>
+              {t.saves.con !== undefined && (
+                <span className="sh-kv">
+                  <span className="k">Con save</span>
+                  <RollNum label="Concentration save" expression={d20(t.saves.con)} onRoll={roll}>
+                    {signed(t.saves.con)}
+                  </RollNum>
+                </span>
+              )}
+              {save && (
+                <button
+                  type="button"
+                  className="chrome-btn xs"
+                  aria-label={`End concentration on ${sheet.concentrating.name}`}
+                  title="End concentration"
+                  onClick={() => {
+                    const now = latest.current;
+                    if (!now?.concentrating) return;
+                    save(endConcentration(now));
+                    say({
+                      label: now.concentrating.name,
+                      detail: 'concentration ended',
+                      undo: now,
+                    });
+                  }}
+                >
+                  <Icon name="close" />
+                </button>
+              )}
             </div>
           )}
           <Readout

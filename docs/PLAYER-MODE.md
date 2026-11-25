@@ -517,7 +517,7 @@ What is left of Parts 1 to 3, and what a player needs beyond them, in order. Ite
 | 9 | *Added:* a first-run choice for a new Library (running games or playing); the playing path leads with Join a campaign and Characters | S–M | Built (ADR 0077) |
 | 10 | The user guide's player section and the docs pass in phase 9 | M | Built: USER-GUIDE "Playing from your own Trifold"; DESIGN §1, §1.1, §1.2, §3, §4.2, §6.10, §8 and §10; docs/README |
 | **E** | **Acceptance and release** | | |
-| 11 | The acceptance checks below on two computers, Windows and macOS | | Ian runs; fixes follow |
+| 11 | The acceptance checks below on two computers, Windows and macOS | | Run by Ian on two PCs, 2026-11-25: worked as expected so far. Fixes follow anything found later |
 | 12 | The `TRIFOLD_PLAYER_MODE` flag removed, and a release | S | Flag removed by Ian's call on 2026-11-24, ahead of item 11; released as the 0.5.0-beta.1 pre-release |
 | **F** | **After release** | | |
 | 13 | Character builder, 2014 (phase 8) | L | Built (docs/BUILDER.md) |

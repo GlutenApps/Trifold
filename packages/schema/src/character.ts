@@ -253,6 +253,17 @@ export const Sheet = z.object({
   hitDiceUsed: z.partialRecord(z.enum(['6', '8', '10', '12']), int.min(0).max(20)).optional(),
   /** Heroic Inspiration. */
   inspiration: z.boolean().optional(),
+  /**
+   * The spell the character is concentrating on (docs/CHARACTER-SHEET.md, item 14): set by
+   * casting a concentration spell, ended by hand, by another concentration spell or a long rest.
+   */
+  concentrating: z
+    .object({
+      name: z.string().max(120),
+      spellId: Id.optional(),
+      ref: SheetRef.optional(),
+    })
+    .optional(),
   attacks: z.array(SheetAttack).max(100).default([]),
   features: z.array(SheetFeature).max(300).default([]),
   spells: z.array(SheetSpell).max(500).default([]),
